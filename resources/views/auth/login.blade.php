@@ -301,10 +301,7 @@
         </div>
 
 
-        <div class="test-credentials">
-            <strong><i class="fas fa-vial"></i> حساب المسؤول:</strong>
-            <code>donia.a5ra2019@gmail.com</code> | كلمة المرور: <code>123456789</code>
-        </div>
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
