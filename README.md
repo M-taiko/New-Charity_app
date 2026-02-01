@@ -1,59 +1,324 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🤝 نظام إدارة المؤسسة الخيرية
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+نظام متكامل لإدارة الجمعيات والمؤسسات الخيرية - مبني على Laravel مع واجهة حديثة وآمنة.
 
-## About Laravel
+![Laravel](https://img.shields.io/badge/Laravel-12-ff2d20?style=for-the-badge)
+![PHP](https://img.shields.io/badge/PHP-8.2+-777bb4?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## ✨ المميزات الرئيسية
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 📊 إدارة الموارد المالية
+- **الخزينة**: تتبع الأرصدة والمعاملات
+- **العهد**: إدارة العهد المالية والمتابعة
+- **المصروفات**: تسجيل وتتبع جميع المصروفات
+- **التقارير**: تقارير مالية شاملة وإحصائيات
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 👥 إدارة الحالات الاجتماعية
+- إنشاء وتتبع الحالات الاجتماعية
+- رفع الملفات والمستندات
+- تصنيف حسب نوع المساعدة (مالية، راتب، أدوية، علاج...)
+- متابعة حالة الحالات
 
-## Learning Laravel
+### 🔐 نظام الأدوار والصلاحيات المتقدم
+- **مدير**: صلاحيات كاملة
+- **محاسب**: إدارة الموارد المالية
+- **مندوب**: تسجيل المصروفات والعهد
+- **باحث اجتماعي**: إدارة الحالات الاجتماعية
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 🎨 واجهة المستخدم
+- تصميم حديث وجميل (Modern UI/UX)
+- واجهة عربية (RTL) محسّنة
+- سهولة الاستخدام على جميع الأجهزة
+- تصميم responsive
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 🔔 نظام الإخطارات
+- إخطارات فورية للعمليات المهمة
+- لوحة تحكم مركزية
+- سهولة المتابعة والتتبع
 
-## Laravel Sponsors
+---
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+## 🚀 البدء السريع
 
-### Premium Partners
+### المتطلبات
+```
+PHP >= 8.2
+Composer
+MySQL 5.7+
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### التثبيت المحلي
 
-## Contributing
+1. **استنساخ المستودع**
+```bash
+git clone https://github.com/M-taiko/New-Charity_app.git
+cd New-Charity_app
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+2. **تثبيت التبعيات**
+```bash
+composer install
+```
 
-## Code of Conduct
+3. **إعداد متغيرات البيئة**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+4. **إعداد قاعدة البيانات**
+```bash
+# تحديث بيانات الـ database في .env
+php artisan migrate
+php artisan db:seed
+```
 
-## Security Vulnerabilities
+5. **تشغيل الخادم**
+```bash
+php artisan serve
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+افتح المتصفح وادخل: `http://localhost:8000`
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🌐 الرفع على الإنتاج
+
+المشروع مضبوط للرفع على `https://charity.masarsoft.io/`
+
+### دليل الرفع السريع
+اقرأ **QUICK_START.txt** للخطوات السريعة
+
+### دليل الرفع التفصيلي
+اقرأ **MASARSOFT_DEPLOYMENT.md** للتفاصيل الكاملة
+
+---
+
+## 📖 الوثائق
+
+| الملف | الوصف |
+|------|-------|
+| **QUICK_START.txt** | ملخص سريع بالعربية |
+| **MASARSOFT_DEPLOYMENT.md** | دليل شامل للرفع على masarsoft.io |
+| **HOSTING_SETUP.md** | إرشادات hosting عام |
+| **PRE_DEPLOYMENT.md** | قائمة تحقق قبل الرفع |
+| **HOSTING_NOTES.md** | شرح مفصل لمشكلة storage:link |
+| **DEPLOYMENT_SUMMARY.txt** | ملخص الحل |
+
+---
+
+## 🔑 بيانات الدخول الافتراضية
+
+```
+البريد الإلكتروني: donia.a5ra2019@gmail.com
+كلمة المرور: 123456789
+الدور: مدير
+```
+
+⚠️ **غيّر كلمة المرور بعد أول تسجيل دخول!**
+
+---
+
+## 📱 الأدوار والمستخدمون
+
+### المدير (Manager)
+- صلاحيات كاملة
+- إدارة المستخدمين
+- إدارة الإعدادات
+- عرض التقارير الشاملة
+
+### المحاسب (Accountant)
+- إدارة الخزينة والعهد
+- تتبع المصروفات
+- عرض التقارير المالية
+- تعديل الحالات الاجتماعية
+
+### المندوب (Agent)
+- تسجيل المصروفات
+- إدارة العهد المالية
+- عرض إحصائياته الخاصة
+
+### الباحث الاجتماعي (Researcher)
+- إنشاء وتعديل الحالات الاجتماعية
+- رفع المستندات
+- عرض حالاته الخاصة
+
+---
+
+## 🏗️ البنية المعمارية
+
+```
+New-Charity_app/
+├── app/
+│   ├── Http/Controllers/     # وحدات التحكم
+│   ├── Models/               # نماذج قاعدة البيانات
+│   └── Services/             # الخدمات المساعدة
+├── database/
+│   ├── migrations/           # تعديلات قاعدة البيانات
+│   └── seeders/              # بيانات افتراضية
+├── resources/
+│   ├── views/                # واجهات المستخدم
+│   ├── css/                  # أنماط
+│   └── lang/                 # الترجمات
+├── public/
+│   ├── index.php             # نقطة دخول التطبيق
+│   └── storage/              # حفظ الملفات المرفوعة
+├── routes/
+│   ├── web.php               # مسارات الويب
+│   └── auth.php              # مسارات المصادقة
+└── storage/
+    ├── app/                  # ملفات التطبيق
+    ├── logs/                 # سجلات الأخطاء
+    └── cache/                # ملفات التخزين المؤقت
+```
+
+---
+
+## 🛠️ التكنولوجيات المستخدمة
+
+### الخادم
+- **Laravel 12**: إطار العمل الرئيسي
+- **PHP 8.2+**: لغة البرمجة
+- **MySQL**: قاعدة البيانات
+
+### الواجهة الأمامية
+- **Bootstrap 5 RTL**: إطار عمل للتصميم
+- **DataTables**: جداول البيانات
+- **Font Awesome**: الرموز
+
+### الحزم الإضافية
+- **Spatie Laravel Permission**: نظام الأدوار والصلاحيات
+- **Yajra DataTables**: عرض البيانات المتقدم
+- **Maatwebsite Excel**: (اختياري) التعامل مع ملفات Excel
+
+---
+
+## 🔐 الأمان
+
+- ✅ نظام مصادقة آمن
+- ✅ تشفير كلمات المرور
+- ✅ حماية CSRF
+- ✅ حماية XSS
+- ✅ نظام أدوار وصلاحيات متقدم
+- ✅ تسجيل جميع العمليات
+- ✅ دعم HTTPS
+
+---
+
+## 🧪 الاختبار
+
+```bash
+# تشغيل الاختبارات
+php artisan test
+
+# اختبار محدد
+php artisan test tests/Feature/ExampleTest.php
+```
+
+---
+
+## 📊 قاعدة البيانات
+
+### جداول رئيسية
+- `users` - المستخدمون
+- `treasuries` - الخزينة
+- `custodies` - العهد
+- `expenses` - المصروفات
+- `social_cases` - الحالات الاجتماعية
+- `notifications` - الإخطارات
+
+---
+
+## 🐛 استكشاف الأخطاء
+
+### مشكلة: 500 Error
+```bash
+tail -f storage/logs/laravel.log
+php artisan cache:clear
+php artisan config:clear
+```
+
+### مشكلة: Composer Platform Check
+```bash
+# تعديل composer.json إذا لزم الأمر
+composer install --ignore-platform-req=php
+```
+
+### مشكلة: الصور لا تظهر
+```bash
+chmod -R 755 storage/
+php artisan storage:link  # على سيرفر يدعم symlinks
+```
+
+---
+
+## 📝 الملفات المهمة
+
+| الملف | الدور |
+|------|-------|
+| `.env` | متغيرات البيئة والإعدادات الحساسة |
+| `.htaccess` | إعادة توجيه الطلبات |
+| `composer.json` | التبعيات والحزم |
+| `package.json` | حزم Node.js (اختياري) |
+
+---
+
+## 🤝 المساهمة
+
+المساهمات مرحب بها! يرجى:
+
+1. عمل Fork للمستودع
+2. إنشاء branch للميزة الجديدة
+3. Commit التغييرات
+4. Push إلى Branch
+5. فتح Pull Request
+
+---
+
+## 📄 الترخيص
+
+هذا المشروع مرخص تحت رخصة MIT. اقرأ ملف LICENSE للمزيد.
+
+---
+
+## 👨‍💻 الدعم والمساعدة
+
+- 📖 اقرأ الوثائق في مجلد root
+- 🔍 افحص سجل الأخطاء: `storage/logs/laravel.log`
+- 💬 افتح issue في GitHub
+- 📧 تواصل عبر البريد الإلكتروني
+
+---
+
+## 🎯 خارطة الطريق
+
+- [ ] إضافة تقارير PDF
+- [ ] تصدير البيانات إلى Excel
+- [ ] نظام الرسائل النصية
+- [ ] تطبيق جوال
+- [ ] نسخة ويب متقدمة
+
+---
+
+## 📞 معلومات الاتصال
+
+- **الدومين**: https://charity.masarsoft.io/
+- **الدعم**: masarsoft.io
+- **الترخيص**: MIT
+
+---
+
+## ✅ آخر تحديث
+
+- **التاريخ**: 2026-02-01
+- **النسخة**: 1.0.0
+- **الحالة**: متاح للإنتاج
+
+---
+
+**شكراً لاستخدامك نظام إدارة المؤسسة الخيرية! 🙏**
+
+---
+
+*تم تطويره بعناية بواسطة [masarsoft.io](https://masarsoft.io)*
