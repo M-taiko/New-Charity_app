@@ -1,0 +1,212 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Custody;
+use App\Models\Treasury;
+use App\Models\User;
+use App\Services\TreasuryService;
+use Yajra\DataTables\DataTables;
+use Illuminate\Http\Request;
+
+class CustodyController extends Controller
+{
+    public function __construct(private TreasuryService $service) {}
+
+    public function index()
+    {
+        $this->authorize('manage_treasury');
+        return view('custodies.modern');
+    }
+
+    public function create()
+    {
+        $this->authorize('create_custody');
+        $agents = User::role('مندوب')->get();
+        $treasury = Treasury::first();
+        return view('custodies.modern-create', compact('agents', 'treasury'));
+    }
+
+    public function store(Request $request)
+    {
+        $this->authorize('create_custody');
+        $request->validate([
+            'agent_id' => 'required|exists:users,id',
+            'amount' => 'required|numeric|min:1',
+            'notes' => 'nullable|string',
+        ]);
+
+        $this->service->createCustody(
+            Treasury::first()->id,
+            $request->agent_id,
+            auth()->id(),
+            $request->amount,
+            $request->notes
+        );
+
+        return redirect()->route('custodies.index')->with('success', 'تم إنشاء العهدة بنجاح');
+    }
+
+    public function show(Custody $custody)
+    {
+        return view('custodies.modern-show', compact('custody'));
+    }
+
+    public function edit(Custody $custody)
+    {
+        $this->authorize('manage_treasury');
+        return view('custodies.modern-edit', compact('custody'));
+    }
+
+    public function update(Request $request, Custody $custody)
+    {
+        $this->authorize('manage_treasury');
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'notes' => 'nullable|string',
+        ]);
+
+        $custody->update($request->only(['amount', 'notes']));
+
+        return redirect()->route('custodies.index')->with('success', 'تم تحديث العهدة بنجاح');
+    }
+
+    public function accept(Custody $custody)
+    {
+        $this->authorize('receive_custody');
+        $this->service->acceptCustody($custody);
+        return back()->with('success', 'تم قبول العهدة');
+    }
+
+    public function reject(Custody $custody, Request $request)
+    {
+        $this->authorize('approve_custody');
+        $this->service->rejectCustody($custody, $request->reason);
+        return back()->with('success', 'تم رفض العهدة');
+    }
+
+    public function return(Custody $custody, Request $request)
+    {
+        $this->authorize('receive_custody');
+        $request->validate([
+            'returned_amount' => 'required|numeric|min:1|max:' . ($custody->amount - $custody->spent),
+        ]);
+
+        $this->service->requestReturnCustody($custody, $request->returned_amount);
+        return back()->with('success', 'تم إرسال طلب رد العهدة للمحاسب');
+    }
+
+    public function approveReturn(Custody $custody)
+    {
+        $this->authorize('approve_custody');
+
+        if ($custody->pending_return <= 0) {
+            return back()->with('error', 'لا يوجد مبلغ معلق للموافقة عليه');
+        }
+
+        $this->service->approveCustodyReturn($custody);
+        return back()->with('success', 'تم قبول رد العهدة والتحويل للخزينة');
+    }
+
+    public function tableData()
+    {
+        $this->authorize('manage_treasury');
+        $custodies = Custody::with(['agent', 'accountant'])->get();
+
+        return DataTables::of($custodies)
+            ->addColumn('agent_name', fn($row) => $row->agent->name)
+            ->addColumn('spent_percent', fn($row) => round(($row->spent / $row->amount) * 100) . '%')
+            ->addColumn('remaining', fn($row) => number_format($row->getRemainingBalance(), 2))
+            ->addColumn('status_label', fn($row) => $this->getStatusLabel($row->status))
+            ->addColumn('actions', fn($row) => view('custodies.actions', compact('row'))->render())
+            ->rawColumns(['status_label', 'actions'])
+            ->toJson();
+    }
+
+    private function getStatusLabel($status)
+    {
+        $labels = [
+            'pending' => '<span class="badge bg-warning">قيد الانتظار</span>',
+            'accepted' => '<span class="badge bg-success">مقبول</span>',
+            'rejected' => '<span class="badge bg-danger">مرفوض</span>',
+            'partially_returned' => '<span class="badge bg-info">مرتجع جزئياً</span>',
+            'closed' => '<span class="badge bg-secondary">مغلق</span>',
+        ];
+        return $labels[$status] ?? '';
+    }
+
+    public function agentTransactions()
+    {
+        $user = auth()->user();
+
+        // Check if user is agent (مندوب)
+        if (!$user->hasRole('مندوب')) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Get agent's custodies
+        $custodies = Custody::where('agent_id', $user->id)->get();
+        $custodiesCount = $custodies->count();
+
+        // Calculate totals
+        $totalReceived = $custodies->sum('amount');
+        $totalSpent = $custodies->sum('spent');
+        $totalReturned = $custodies->sum('returned');
+
+        return view('custodies.agent-transactions', compact('custodies', 'custodiesCount', 'totalReceived', 'totalSpent', 'totalReturned'));
+    }
+
+    public function agentTransactionsData()
+    {
+        $user = auth()->user();
+
+        // Check if user is agent (مندوب)
+        if (!$user->hasRole('مندوب')) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Get agent's custodies
+        $custodiesIds = Custody::where('agent_id', $user->id)->pluck('id');
+
+        // Get all transactions for agent's custodies
+        $transactions = \App\Models\TreasuryTransaction::whereIn('custody_id', $custodiesIds)
+            ->orderBy('transaction_date', 'desc')
+            ->get();
+
+        return DataTables::of($transactions)
+            ->addColumn('type', fn($row) => $row->type)
+            ->addColumn('description', fn($row) => $row->description)
+            ->addColumn('amount', fn($row) => $row->amount)
+            ->addColumn('transaction_date', fn($row) => $row->transaction_date)
+            ->toJson();
+    }
+
+    public function agentReturnedData()
+    {
+        $user = auth()->user();
+
+        // Check if user is agent (مندوب)
+        if (!$user->hasRole('مندوب')) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Get agent's custodies
+        $custodiesIds = Custody::where('agent_id', $user->id)->pluck('id');
+
+        // Get only return transactions
+        $transactions = \App\Models\TreasuryTransaction::whereIn('custody_id', $custodiesIds)
+            ->where('type', 'custody_return')
+            ->with('custody')
+            ->orderBy('transaction_date', 'desc')
+            ->get();
+
+        return DataTables::of($transactions)
+            ->addColumn('type', fn($row) => 'رد عهدة')
+            ->addColumn('description', fn($row) => $row->description)
+            ->addColumn('amount', fn($row) => $row->amount)
+            ->addColumn('transaction_date', fn($row) => $row->transaction_date)
+            ->addColumn('custody_id', fn($row) => $row->custody_id)
+            ->addColumn('custody', fn($row) => $row->custody)
+            ->toJson();
+    }
+}
