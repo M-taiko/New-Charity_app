@@ -6,7 +6,8 @@
       "Bash(git remote add:*)",
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Complete Charity Management System\n\n- User authentication and role-based access control\n- Dashboard with statistics and role-specific views\n- Treasury and custody management system\n- Expense tracking with agent and accountant views\n- Social case management with file uploads\n- Settings management with logo and organization info\n- Personal profile management with picture upload\n- Responsive modern UI with Arabic RTL support\n- DataTables for data visualization\n- Notification system\n- Admin user hidden from users list\n- Footer with masarsoft.io credit\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(composer update:*)"
     ]
   }
 }

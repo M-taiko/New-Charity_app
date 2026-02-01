@@ -11,5 +11,5 @@
     RewriteCond %{REQUEST_FILENAME} !-d
 
     # Rewrite everything else to public/index.php
-    RewriteRule ^(.*)$ public/index.php/$1 [L]
+    RewriteRule ^(.*)$ public/index.php [L]
 </IfModule>
