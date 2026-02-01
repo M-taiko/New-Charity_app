@@ -4,7 +4,7 @@
     </IfModule>
 
     RewriteEngine On
-    RewriteBase /New-Charity_app/
+    RewriteBase /
 
     # If the request is for files or directories that exist, skip the rewriting
     RewriteCond %{REQUEST_FILENAME} !-f

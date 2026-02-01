@@ -10,11 +10,6 @@
 // Determine if the application is accessing from the public directory directly
 $uri = urldecode(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH));
 
-// Remove the base path from the URI
-if (strpos($uri, '/New-Charity_app') === 0) {
-    $uri = substr($uri, strlen('/New-Charity_app'));
-}
-
 // Check if the requested resource exists in the public directory
 if ($uri !== '/' && file_exists(__DIR__.'/public'.$uri)) {
     return false;
