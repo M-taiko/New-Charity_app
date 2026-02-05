@@ -251,6 +251,10 @@ class TreasuryService
         return DB::transaction(function () use ($amount, $source, $description, $userId) {
             $treasury = Treasury::first();
 
+            if (!$treasury) {
+                throw new \Exception('لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+            }
+
             $treasury->increment('balance', $amount);
 
             return TreasuryTransaction::create([
