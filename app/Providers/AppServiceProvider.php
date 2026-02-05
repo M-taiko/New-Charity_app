@@ -19,6 +19,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Register storage_url Blade directive
+        \Blade::directive('storageUrl', function ($path) {
+            return "<?php echo storage_url($path); ?>";
+        });
     }
 }
