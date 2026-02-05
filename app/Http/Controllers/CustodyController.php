@@ -24,6 +24,11 @@ class CustodyController extends Controller
         $this->authorize('create_custody');
         $agents = User::role('مندوب')->get();
         $treasury = Treasury::first();
+
+        if (!$treasury) {
+            return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+        }
+
         return view('custodies.modern-create', compact('agents', 'treasury'));
     }
 
@@ -36,8 +41,13 @@ class CustodyController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        $treasury = Treasury::first();
+        if (!$treasury) {
+            return back()->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+        }
+
         $this->service->createCustody(
-            Treasury::first()->id,
+            $treasury->id,
             $request->agent_id,
             auth()->id(),
             $request->amount,
@@ -88,8 +98,11 @@ class CustodyController extends Controller
     public function return(Custody $custody, Request $request)
     {
         $this->authorize('receive_custody');
+
+        $remainingBalance = $custody->getRemainingBalance();
+
         $request->validate([
-            'returned_amount' => 'required|numeric|min:1|max:' . ($custody->amount - $custody->spent),
+            'returned_amount' => 'required|numeric|min:1|max:' . $remainingBalance,
         ]);
 
         $this->service->requestReturnCustody($custody, $request->returned_amount);

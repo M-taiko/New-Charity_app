@@ -16,6 +16,11 @@ class TreasuryController extends Controller
     {
         $this->authorize('manage_treasury');
         $treasury = Treasury::first();
+
+        if (!$treasury) {
+            return view('treasury.modern', ['treasury' => null, 'error' => 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.']);
+        }
+
         return view('treasury.modern', compact('treasury'));
     }
 
