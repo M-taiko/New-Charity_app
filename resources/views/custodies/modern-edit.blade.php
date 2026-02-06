@@ -81,7 +81,7 @@
                             <strong>المبلغ المصروف:</strong> {{ number_format($custody->getTotalSpent(), 2) }} ر.س
                         </div>
                         <div class="mb-2">
-                            <strong>المبلغ المتبقي:</strong> {{ number_format($custody->amount - $custody->getTotalSpent(), 2) }} ر.س
+                            <strong>المبلغ المتبقي:</strong> {{ number_format($custody->getRemainingBalance(), 2) }} ر.س
                         </div>
                     </div>
                 </div>

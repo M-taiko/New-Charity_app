@@ -192,7 +192,7 @@
                             <!-- Remaining Balance -->
                             <div class="mb-3" style="padding-bottom: 1rem; border-bottom: 1px solid rgba(245, 124, 0, 0.2);">
                                 <p style="margin: 0; color: #666; font-size: 0.8rem;">المبلغ المتبقي</p>
-                                <h4 style="margin: 0.5rem 0 0; color: #43a047; font-weight: 700;">{{ number_format($custody->amount - $custody->getTotalSpent(), 2) }} ر.س</h4>
+                                <h4 style="margin: 0.5rem 0 0; color: #43a047; font-weight: 700;">{{ number_format($custody->getRemainingBalance(), 2) }} ر.س</h4>
                             </div>
 
                             <!-- Spending Percentage -->
@@ -311,12 +311,12 @@
                     </div>
                     <div class="mb-3">
                         <p><strong>المتبقي من العهدة:</strong><br>
-                        <span style="color: #4caf50; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->amount - $custody->getTotalSpent(), 2) }} ر.س</span></p>
+                        <span style="color: #4caf50; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->getRemainingBalance(), 2) }} ر.س</span></p>
                     </div>
                     <div class="mb-3">
                         <label class="form-label"><strong>المبلغ المراد رده</strong></label>
-                        <input type="number" name="returned_amount" class="form-control" step="0.01" min="0.01" max="{{ $custody->amount - $custody->getTotalSpent() }}" required placeholder="أدخل المبلغ...">
-                        <small class="text-muted">يجب ألا يتجاوز {{ number_format($custody->amount - $custody->getTotalSpent(), 2) }} ر.س</small>
+                        <input type="number" name="returned_amount" class="form-control" step="0.01" min="0.01" max="{{ $custody->getRemainingBalance() }}" required placeholder="أدخل المبلغ...">
+                        <small class="text-muted">يجب ألا يتجاوز {{ number_format($custody->getRemainingBalance(), 2) }} ر.س</small>
                     </div>
                     <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
                         <i class="fas fa-arrow-left"></i> عند الرد، سيتم:

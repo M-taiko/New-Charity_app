@@ -31,7 +31,7 @@
             $totalReturned = $agentCustodies->sum('returned');
             $actualSpent = $totalSpent - $totalReturned;
             $totalRemaining = $agentCustodies->sum(function($c) {
-                return $c->amount - ($c->spent - $c->returned);
+                return $c->getRemainingBalance();
             });
         @endphp
         <div class="row g-4 mb-4">
