@@ -1,5 +1,11 @@
 <?php
 
+// Register mbstring polyfill if extension is not available
+if (!extension_loaded('mbstring')) {
+    require_once __DIR__ . '/../app/Helpers/MbstringPolyfill.php';
+    \App\Helpers\MbstringPolyfill::register();
+}
+
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
