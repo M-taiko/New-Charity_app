@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\HasStatusScopes;
 
 class Custody extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasStatusScopes;
 
     protected $fillable = [
         'treasury_id',
