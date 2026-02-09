@@ -269,6 +269,116 @@ class TreasuryService
         });
     }
 
+    public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null)
+    {
+        return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId) {
+            $custody = Custody::findOrFail($custodyId);
+
+            if ($custody->getRemainingBalance() < $amount) {
+                throw new \Exception('الرصيد غير كافي');
+            }
+
+            $expense = Expense::create([
+                'custody_id' => $custodyId,
+                'user_id' => $userId,
+                'social_case_id' => $socialCaseId,
+                'expense_category_id' => $categoryId,
+                'expense_item_id' => $itemId,
+                'amount' => $amount,
+                'description' => $description,
+                'location' => $location,
+                'source' => 'custody',
+                'expense_date' => now(),
+            ]);
+
+            // Update custody spent
+            $custody->increment('spent', $amount);
+
+            // Create transaction with category and item tracking
+            TreasuryTransaction::create([
+                'treasury_id' => $custody->treasury_id,
+                'type' => 'expense',
+                'amount' => $amount,
+                'description' => $description,
+                'user_id' => $userId,
+                'custody_id' => $custodyId,
+                'expense_id' => $expense->id,
+                'expense_category_id' => $categoryId,
+                'expense_item_id' => $itemId,
+                'transaction_date' => now(),
+            ]);
+
+            // Notify if large expense
+            if ($amount > 1000) {
+                $this->notifyManagers(
+                    'مصروف كبير',
+                    "عملية صرف بقيمة {$amount} من العهدة",
+                    'warning',
+                    $expense->id,
+                    'expense'
+                );
+            }
+
+            return $expense;
+        });
+    }
+
+    public function recordDirectExpenseFromTreasury($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null)
+    {
+        return DB::transaction(function () use ($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId) {
+            $treasury = Treasury::first();
+
+            if (!$treasury) {
+                throw new \Exception('لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+            }
+
+            if ($treasury->balance < $amount) {
+                throw new \Exception('رصيد الخزينة غير كافي');
+            }
+
+            // Create expense with treasury source and null custody_id
+            $expense = Expense::create([
+                'custody_id' => null,
+                'user_id' => $userId,
+                'social_case_id' => $socialCaseId,
+                'expense_category_id' => $categoryId,
+                'expense_item_id' => $itemId,
+                'amount' => $amount,
+                'description' => $description,
+                'location' => $location,
+                'source' => 'treasury',
+                'expense_date' => now(),
+            ]);
+
+            // Deduct from treasury
+            $treasury->decrement('balance', $amount);
+
+            // Create transaction
+            TreasuryTransaction::create([
+                'treasury_id' => $treasury->id,
+                'type' => 'expense',
+                'amount' => $amount,
+                'description' => $description,
+                'user_id' => $userId,
+                'expense_id' => $expense->id,
+                'expense_category_id' => $categoryId,
+                'expense_item_id' => $itemId,
+                'transaction_date' => now(),
+            ]);
+
+            // Notify managers about direct treasury spending
+            $this->notifyManagers(
+                'صرف مباشر من الخزينة',
+                "تم صرف {$amount} ر.س مباشرة من الخزينة من قبل {$expense->user->name}",
+                'warning',
+                $expense->id,
+                'expense'
+            );
+
+            return $expense;
+        });
+    }
+
     private function notifyUser($userId, $title, $message, $type, $relatedId, $relatedType)
     {
         Notification::create([

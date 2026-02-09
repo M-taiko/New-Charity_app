@@ -25,6 +25,10 @@ class RoleAndPermissionSeeder extends Seeder
             'view_reports',
             'manage_users',
             'manage_settings',
+            'transfer_custody',
+            'approve_custody_transfer',
+            'direct_spend_from_treasury',
+            'manage_expense_categories',
         ];
 
         foreach ($permissions as $permission) {
@@ -47,6 +51,10 @@ class RoleAndPermissionSeeder extends Seeder
             'view_reports',
             'manage_users',
             'manage_settings',
+            'transfer_custody',
+            'approve_custody_transfer',
+            'direct_spend_from_treasury',
+            'manage_expense_categories',
         ]);
 
         // Assign permissions to accountant
@@ -57,12 +65,16 @@ class RoleAndPermissionSeeder extends Seeder
             'spend_money',
             'review_social_case',
             'view_reports',
+            'direct_spend_from_treasury',
+            'manage_expense_categories',
         ]);
 
         // Assign permissions to agent
         $agentRole->syncPermissions([
             'receive_custody',
             'spend_money',
+            'transfer_custody',
+            'approve_custody_transfer',
         ]);
 
         // Assign permissions to researcher

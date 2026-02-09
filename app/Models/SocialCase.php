@@ -26,10 +26,33 @@ class SocialCase extends Model
         'reviewed_at',
         'reviewed_by',
         'is_active',
+        // New fields from Excel
+        'address',
+        'city',
+        'district',
+        'birth_date',
+        'gender',
+        'marital_status',
+        'family_members_count',
+        'monthly_income',
+        'monthly_expenses',
+        'health_conditions',
+        'has_disability',
+        'disability_description',
+        'special_needs',
+        'requested_amount',
+        'is_verified',
     ];
 
     protected $casts = [
         'reviewed_at' => 'datetime',
+        'birth_date' => 'date',
+        'has_disability' => 'boolean',
+        'is_verified' => 'boolean',
+        'family_members_count' => 'integer',
+        'monthly_income' => 'decimal:2',
+        'monthly_expenses' => 'decimal:2',
+        'requested_amount' => 'decimal:2',
     ];
 
     public function researcher(): BelongsTo

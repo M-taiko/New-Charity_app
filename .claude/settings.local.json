@@ -10,7 +10,10 @@
       "Bash(composer update:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nConfigure application for production deployment on charity.masarsoft.io\n\n- Updated APP_URL to https://charity.masarsoft.io\n- Changed APP_ENV from local to production\n- Set APP_DEBUG to false for security\n- Updated .htaccess to work from root directory \\(no subdirectory\\)\n- Updated index.php to work from root\n- Updated public/storage/.htaccess for correct rewrite base\n- Application now works directly from domain root instead of subdirectory\n\nReady for deployment to charity.masarsoft.io\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(find:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TreasuryController;
 use App\Http\Controllers\CustodyController;
+use App\Http\Controllers\CustodyTransferController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\SocialCaseController;
 use App\Http\Controllers\UserController;
@@ -36,6 +37,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/my-expenses', [ExpenseController::class, 'agentExpenses'])->name('expenses.agent');
     Route::get('/api/agent-expenses', [ExpenseController::class, 'agentExpensesData'])->name('api.agent-expenses.data');
 
+    // Custody Transfers
+    Route::resource('custody-transfers', CustodyTransferController::class)->only(['index', 'create', 'store', 'show']);
+    Route::post('/custody-transfers/{custodyTransfer}/approve', [CustodyTransferController::class, 'approve'])->name('custody-transfers.approve');
+    Route::post('/custody-transfers/{custodyTransfer}/reject', [CustodyTransferController::class, 'reject'])->name('custody-transfers.reject');
+    Route::get('/api/custody-transfers/sent', [CustodyTransferController::class, 'sentTransfersData'])->name('api.custody-transfers.sent');
+    Route::get('/api/custody-transfers/received', [CustodyTransferController::class, 'receivedTransfersData'])->name('api.custody-transfers.received');
+
     Route::resource('social-cases', SocialCaseController::class)->names('social_cases');
     Route::post('/social-cases/{socialCase}/approve', [SocialCaseController::class, 'approve'])->name('social_cases.approve');
     Route::post('/social-cases/{socialCase}/reject', [SocialCaseController::class, 'reject'])->name('social_cases.reject');
@@ -54,6 +62,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/reports', [ReportController::class, 'dashboard'])->name('reports.dashboard');
     Route::get('/analytics/researchers', [ReportController::class, 'researcherStats'])->name('analytics.researcher');
+    Route::get('/reports/social-case-expenses', [ReportController::class, 'socialCaseExpensesReport'])->name('reports.social-case-expenses');
+    Route::get('/reports/expense-items', [ReportController::class, 'expenseItemsReport'])->name('reports.expense-items');
 
     // DataTables APIs
     Route::get('/api/treasury-transactions', [TreasuryController::class, 'transactionsData'])->name('api.treasury.transactions');
@@ -62,10 +72,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/social-cases', [SocialCaseController::class, 'tableData'])->name('api.social_cases.data');
     Route::get('/api/users', [UserController::class, 'tableData'])->name('api.users.data');
 
-    // Notification APIs
-    Route::post('/api/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('api.notifications.read');
-    Route::post('/api/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('api.notifications.markAllAsRead');
-    Route::get('/api/notifications/unread-count', [NotificationController::class, 'getUnreadCount'])->name('api.notifications.unreadCount');
+    // Notification Routes (converted from API to traditional form submissions)
+    Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 });
 
 require __DIR__.'/auth.php';

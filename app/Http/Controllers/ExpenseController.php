@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\Custody;
 use App\Models\SocialCase;
+use App\Models\ExpenseCategory;
+use App\Models\ExpenseItem;
 use App\Services\TreasuryService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
@@ -24,30 +26,66 @@ class ExpenseController extends Controller
         $this->authorize('spend_money');
         $custodies = Custody::where('status', 'accepted')->get();
         $cases = SocialCase::where('status', 'approved')->get();
-        return view('expenses.modern-create', compact('custodies', 'cases'));
+        $categories = ExpenseCategory::active()->with('items')->ordered()->get();
+
+        // Check if current user is accountant (محاسب) - can spend from treasury
+        $canSpendFromTreasury = auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير');
+
+        return view('expenses.modern-create', compact('custodies', 'cases', 'categories', 'canSpendFromTreasury'));
     }
 
     public function store(Request $request)
     {
         $this->authorize('spend_money');
-        $request->validate([
-            'custody_id' => 'required|exists:custodies,id',
-            'type' => 'required|in:social_case,general',
-            'amount' => 'required|numeric|min:1',
-            'description' => 'required|string|max:500',
-            'location' => 'nullable|string',
-            'social_case_id' => 'nullable|exists:social_cases,id',
-        ]);
 
-        $this->service->recordExpense(
-            $request->custody_id,
-            auth()->id(),
-            $request->amount,
-            $request->type,
-            $request->description,
-            $request->location,
-            $request->social_case_id
-        );
+        // Determine source (default to custody)
+        $source = $request->input('source', 'custody');
+
+        if ($source === 'treasury') {
+            // Direct treasury spending (for accountants)
+            $this->authorize('direct_spend_from_treasury');
+
+            $request->validate([
+                'amount' => 'required|numeric|min:1',
+                'expense_category_id' => 'required|exists:expense_categories,id',
+                'expense_item_id' => 'required|exists:expense_items,id',
+                'description' => 'required|string|max:500',
+                'location' => 'nullable|string',
+                'social_case_id' => 'nullable|exists:social_cases,id',
+            ]);
+
+            $this->service->recordDirectExpenseFromTreasury(
+                auth()->id(),
+                $request->amount,
+                $request->expense_category_id,
+                $request->expense_item_id,
+                $request->description,
+                $request->location,
+                $request->social_case_id
+            );
+        } else {
+            // Custody spending
+            $request->validate([
+                'custody_id' => 'required|exists:custodies,id',
+                'amount' => 'required|numeric|min:1',
+                'expense_category_id' => 'required|exists:expense_categories,id',
+                'expense_item_id' => 'required|exists:expense_items,id',
+                'description' => 'required|string|max:500',
+                'location' => 'nullable|string',
+                'social_case_id' => 'nullable|exists:social_cases,id',
+            ]);
+
+            $this->service->recordExpenseWithItems(
+                $request->custody_id,
+                auth()->id(),
+                $request->amount,
+                $request->expense_category_id,
+                $request->expense_item_id,
+                $request->description,
+                $request->location,
+                $request->social_case_id
+            );
+        }
 
         return redirect()->route('expenses.index')->with('success', 'تم تسجيل المصروف');
     }

@@ -85,25 +85,6 @@
     const isAccountant = userRoles.includes('محاسب');
     const canManage = isManager || isAccountant;
 
-    function toggleCaseStatus(caseId) {
-        fetch(`/social-cases/${caseId}/toggle-active`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json'
-            }
-        }).then(response => {
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('حدث خطأ عند تحديث حالة النشاط');
-            }
-        }).catch(error => {
-            console.error('Error:', error);
-            alert('حدث خطأ عند تحديث حالة النشاط');
-        });
-    }
-
     $(document).ready(function() {
         $('#casesTable').DataTable({
             processing: true,
@@ -139,9 +120,12 @@
                             const toggleTitle = isActive ? 'إيقاف النشاط' : 'تنشيط';
                             const toggleColor = isActive ? 'btn-outline-success' : 'btn-outline-secondary';
 
-                            buttons += `<button class="btn ${toggleColor}" title="${toggleTitle}" onclick="toggleCaseStatus(${row.id})">
-                                            <i class="fas ${toggleIcon}"></i>
-                                        </button>`;
+                            buttons += `<form action="/social-cases/${row.id}/toggle-active" method="POST" style="display: inline;">
+                                            <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn ${toggleColor}" title="${toggleTitle}">
+                                                <i class="fas ${toggleIcon}"></i>
+                                            </button>
+                                        </form>`;
                         }
 
                         buttons += `</div>`;

@@ -83,4 +83,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(TreasuryTransaction::class);
     }
+
+    public function transfersSent()
+    {
+        return $this->hasMany(CustodyTransfer::class, 'from_agent_id');
+    }
+
+    public function transfersReceived()
+    {
+        return $this->hasMany(CustodyTransfer::class, 'to_agent_id');
+    }
 }

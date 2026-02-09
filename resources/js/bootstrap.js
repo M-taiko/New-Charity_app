@@ -1,4 +1,2 @@
-import axios from 'axios';
-window.axios = axios;
-
-window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+// Bootstrap JavaScript
+// Axios has been removed - this application uses traditional server-side form submissions instead of AJAX.

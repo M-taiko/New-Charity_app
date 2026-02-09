@@ -122,12 +122,18 @@ class SocialCaseController extends Controller
     public function toggleActive(SocialCase $socialCase)
     {
         $this->authorize('manage_social_cases');
+
         $socialCase->update([
             'is_active' => !$socialCase->is_active,
         ]);
 
-        $status = $socialCase->is_active ? 'تم تنشيط الحالة' : 'تم إيقاف الحالة';
-        return back()->with('success', $status);
+        $statusMessage = $socialCase->is_active
+            ? 'تم تنشيط الحالة بنجاح'
+            : 'تم إيقاف الحالة بنجاح';
+
+        return redirect()
+            ->route('social_cases.index')
+            ->with('success', $statusMessage);
     }
 
     public function tableData()

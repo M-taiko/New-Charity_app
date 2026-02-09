@@ -640,26 +640,17 @@
                         @endphp
 
                         @forelse($notifications as $notification)
-                            @php
-                                $url = '#';
-                                if ($notification->related_type === 'social_case' && $notification->related_id) {
-                                    $url = route('social_cases.show', $notification->related_id);
-                                } elseif ($notification->related_type === 'custody' && $notification->related_id) {
-                                    $url = route('custodies.show', $notification->related_id);
-                                } elseif ($notification->related_type === 'expense' && $notification->related_id) {
-                                    $url = route('expenses.show', $notification->related_id);
-                                }
-                            @endphp
-                            <a href="{{ $url }}" style="text-decoration: none; color: inherit; display: block;" onclick="markNotificationAsRead(event, {{ $notification->id }})">
-                                <div class="notification-item {{ !$notification->is_read ? 'unread' : '' }}" style="cursor: pointer; transition: all 0.3s ease;">
+                            <form action="{{ route('notifications.read', $notification->id) }}" method="POST" style="margin: 0;">
+                                @csrf
+                                <button type="submit" class="notification-item {{ !$notification->is_read ? 'unread' : '' }}" style="width: 100%; text-align: right; border: none; background: none; padding: 1rem; cursor: pointer; transition: all 0.3s ease; display: block;">
                                     <div class="notification-item-title">{{ $notification->title }}</div>
                                     <div class="notification-item-text">{{ $notification->message }}</div>
                                     <div class="notification-item-time">
                                         <i class="fas fa-clock"></i>
                                         {{ $notification->created_at->diffForHumans() }}
                                     </div>
-                                </div>
-                            </a>
+                                </button>
+                            </form>
                         @empty
                             <div style="padding: 2rem; text-align: center; color: #6b7280;">
                                 <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
@@ -915,23 +906,6 @@
                 bsAlert.close();
             }, 5000);
         });
-
-        // Mark Notification as Read
-        function markNotificationAsRead(event, notificationId) {
-            // Don't prevent the navigation
-            // Just mark the notification as read in the background
-            fetch(`/api/notifications/${notificationId}/read`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
-            }).catch(error => {
-                // Silently fail - still allow navigation
-                console.log('Notification marked as read');
-            });
-        }
     </script>
 
     @stack('scripts')

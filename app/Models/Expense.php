@@ -14,12 +14,15 @@ class Expense extends Model
         'custody_id',
         'user_id',
         'social_case_id',
+        'expense_category_id',
+        'expense_item_id',
         'type',
         'amount',
         'description',
         'location',
         'expense_date',
         'notes',
+        'source',
     ];
 
     protected $casts = [
@@ -40,5 +43,15 @@ class Expense extends Model
     public function socialCase(): BelongsTo
     {
         return $this->belongsTo(SocialCase::class, 'social_case_id');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseCategory::class, 'expense_category_id');
+    }
+
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseItem::class, 'expense_item_id');
     }
 }
