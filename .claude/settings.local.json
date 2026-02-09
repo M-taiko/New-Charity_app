@@ -13,7 +13,10 @@
       "Bash(git commit:*)",
       "Bash(find:*)",
       "Bash(npm uninstall:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(php artisan route:list:*)",
+      "Bash(php artisan migrate:*)",
+      "Bash(php artisan db:seed:*)"
     ]
   }
 }

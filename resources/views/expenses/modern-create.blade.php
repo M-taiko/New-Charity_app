@@ -26,9 +26,30 @@
                     <form action="{{ route('expenses.store') }}" method="POST">
                         @csrf
 
-                        <div class="mb-3">
+                        <!-- Source Selection (for accountants only) -->
+                        @if($canSpendFromTreasury)
+                            <div class="mb-3">
+                                <label class="form-label"><strong>مصدر الصرف</strong></label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" name="source" id="source_custody" value="custody" class="btn-check" checked onchange="toggleSourceFields()">
+                                    <label class="btn btn-outline-primary" for="source_custody">
+                                        <i class="fas fa-briefcase"></i> من العهدة
+                                    </label>
+
+                                    <input type="radio" name="source" id="source_treasury" value="treasury" class="btn-check" onchange="toggleSourceFields()">
+                                    <label class="btn btn-outline-primary" for="source_treasury">
+                                        <i class="fas fa-vault"></i> من الخزينة
+                                    </label>
+                                </div>
+                            </div>
+                        @else
+                            <input type="hidden" name="source" value="custody">
+                        @endif
+
+                        <!-- Custody Selection (hidden when treasury is selected) -->
+                        <div class="mb-3" id="custody-field">
                             <label class="form-label"><strong>اختر العهدة</strong></label>
-                            <select name="custody_id" class="form-select @error('custody_id') is-invalid @enderror" required onchange="updateCustodyInfo()">
+                            <select name="custody_id" class="form-select @error('custody_id') is-invalid @enderror" onchange="updateCustodyInfo()">
                                 <option value="">-- اختر عهدة --</option>
                                 @foreach($custodies as $custody)
                                     @php
@@ -50,37 +71,48 @@
                             </small>
                         </div>
 
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label"><strong>نوع المصروف</strong></label>
-                                <select name="type" class="form-select @error('type') is-invalid @enderror" required onchange="handleTypeChange()">
-                                    <option value="">-- اختر نوعاً --</option>
-                                    <option value="social_case" {{ old('type') == 'social_case' ? 'selected' : '' }}>حالة اجتماعية</option>
-                                    <option value="general" {{ old('type') == 'general' ? 'selected' : '' }}>مصروف عام</option>
-                                </select>
-                                @error('type')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-6" id="social-case-field" style="display: {{ old('type') == 'social_case' ? 'block' : 'none' }};">
-                                <label class="form-label"><strong>الحالة الاجتماعية</strong></label>
-                                <select name="social_case_id" class="form-select @error('social_case_id') is-invalid @enderror">
-                                    <option value="">-- اختر حالة --</option>
-                                    @foreach(\App\Models\SocialCase::all() as $case)
-                                        <option value="{{ $case->id }}" {{ old('social_case_id') == $case->id ? 'selected' : '' }}>{{ $case->name }}</option>
-                                    @endforeach
-                                </select>
-                                @error('social_case_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
+                        <!-- Category Selection -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong>
+                                <i class="fas fa-list"></i> فئة المصروف
+                            </strong></label>
+                            <select name="expense_category_id" id="category_select" class="form-select @error('expense_category_id') is-invalid @enderror" required onchange="loadExpenseItems()">
+                                <option value="">-- اختر فئة --</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->id }}" data-items="{{ json_encode($category->items->map(fn($item) => ['id' => $item->id, 'name' => $item->name, 'default_amount' => $item->default_amount])) }}" {{ old('expense_category_id') == $category->id ? 'selected' : '' }}>
+                                        {{ $category->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('expense_category_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <!-- Item Selection -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong>
+                                <i class="fas fa-tag"></i> البند
+                            </strong></label>
+                            <select name="expense_item_id" id="item_select" class="form-select @error('expense_item_id') is-invalid @enderror" required onchange="setDefaultAmount()">
+                                <option value="">-- اختر بند --</option>
+                            </select>
+                            @error('expense_item_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted d-block mt-2" id="default-amount-info"></small>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label"><strong>المبلغ (ر.س)</strong></label>
-                                <input type="number" name="amount" class="form-control @error('amount') is-invalid @enderror" step="0.01" value="{{ old('amount') }}" required>
-                                @error('amount')
+                                <label class="form-label"><strong>الحالة الاجتماعية (اختياري)</strong></label>
+                                <select name="social_case_id" class="form-select @error('social_case_id') is-invalid @enderror">
+                                    <option value="">-- لا توجد حالة --</option>
+                                    @foreach($cases as $case)
+                                        <option value="{{ $case->id }}" {{ old('social_case_id') == $case->id ? 'selected' : '' }}>{{ $case->name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('social_case_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -91,6 +123,17 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label"><strong>
+                                <i class="fas fa-coins"></i> المبلغ (ر.س)
+                            </strong></label>
+                            <input type="number" name="amount" class="form-control @error('amount') is-invalid @enderror" step="0.01" value="{{ old('amount') }}" required placeholder="أدخل المبلغ">
+                            @error('amount')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted d-block mt-2" id="balance-warning"></small>
                         </div>
 
                         <div class="mb-3">
@@ -141,33 +184,91 @@
 </div>
 
 <script>
-    function handleTypeChange() {
-        const type = document.querySelector('select[name="type"]').value;
-        const field = document.getElementById('social-case-field');
-        if (type === 'social_case') {
-            field.style.display = 'block';
+    // Get all categories data
+    const categoriesData = {
+        @foreach($categories as $category)
+            {{ $category->id }}: {
+                items: @json($category->items->map(fn($item) => ['id' => $item->id, 'name' => $item->name, 'default_amount' => $item->default_amount]))
+            },
+        @endforeach
+    };
+
+    function toggleSourceFields() {
+        const source = document.querySelector('input[name="source"]:checked').value;
+        const custodyField = document.getElementById('custody-field');
+
+        if (source === 'treasury') {
+            custodyField.style.display = 'none';
+            document.querySelector('select[name="custody_id"]').removeAttribute('required');
+            document.getElementById('balance-warning').innerHTML = '';
         } else {
-            field.style.display = 'none';
+            custodyField.style.display = 'block';
+            document.querySelector('select[name="custody_id"]').setAttribute('required', 'required');
+            updateCustodyInfo();
+        }
+    }
+
+    function loadExpenseItems() {
+        const categoryId = document.getElementById('category_select').value;
+        const itemSelect = document.getElementById('item_select');
+        const defaultAmountInfo = document.getElementById('default-amount-info');
+
+        // Clear previous items
+        itemSelect.innerHTML = '<option value="">-- اختر بند --</option>';
+        defaultAmountInfo.innerHTML = '';
+
+        if (categoryId && categoriesData[categoryId]) {
+            const items = categoriesData[categoryId].items;
+            items.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.name;
+                option.setAttribute('data-default-amount', item.default_amount || '');
+                if (item.id == {{ old('expense_item_id') }}) {
+                    option.selected = true;
+                }
+                itemSelect.appendChild(option);
+            });
+
+            // Load default amount if item was selected
+            setDefaultAmount();
+        }
+    }
+
+    function setDefaultAmount() {
+        const itemSelect = document.getElementById('item_select');
+        const selectedOption = itemSelect.selectedOptions[0];
+        const defaultAmountInfo = document.getElementById('default-amount-info');
+        const amountInput = document.querySelector('input[name="amount"]');
+
+        if (selectedOption && selectedOption.value) {
+            const defaultAmount = selectedOption.getAttribute('data-default-amount');
+            if (defaultAmount && defaultAmount !== '') {
+                defaultAmountInfo.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${parseFloat(defaultAmount).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ر.س</strong>`;
+                if (!amountInput.value) {
+                    amountInput.value = defaultAmount;
+                }
+            }
         }
     }
 
     function updateCustodyInfo() {
         const custodySelect = document.querySelector('select[name="custody_id"]');
-        const selectedOption = custodySelect.options[custodySelect.selectedIndex];
-        const infoElement = document.getElementById('custody-info');
-        const amountElement = document.getElementById('remaining-amount');
+        const selectedOption = custodySelect.selectedOptions[0];
+        const balanceWarning = document.getElementById('balance-warning');
+        const amountInput = document.querySelector('input[name="amount"]');
 
-        if (selectedOption.value) {
+        if (selectedOption && selectedOption.value) {
             const remaining = selectedOption.getAttribute('data-remaining');
-            amountElement.textContent = parseFloat(remaining).toLocaleString('ar-SA', { minimumFractionDigits: 2 });
-            infoElement.style.display = 'block';
+            balanceWarning.innerHTML = `<i class="fas fa-info-circle"></i> الرصيد المتبقي: <strong>${parseFloat(remaining).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ر.س</strong>`;
         } else {
-            infoElement.style.display = 'none';
+            balanceWarning.innerHTML = '';
         }
     }
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
+        loadExpenseItems();
         updateCustodyInfo();
     });
 </script>

@@ -47,20 +47,26 @@
                     <hr>
 
                     @php
-                        $actualSpent = $custody->getTotalSpent() - $custody->returned;
-                        $remaining = $custody->amount - $actualSpent;
-                        $spendingPercent = $custody->amount > 0 ? round(($actualSpent / $custody->amount) * 100) : 0;
+                        $totalSpent = $custody->getTotalSpent();
+                        $remaining = $custody->getRemainingBalance();
+                        $spendingPercent = $custody->amount > 0 ? round(($totalSpent / $custody->amount) * 100) : 0;
+                        $returnedPercent = $custody->amount > 0 ? round(($custody->returned / $custody->amount) * 100) : 0;
                     @endphp
 
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-left: 4px solid #667eea; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-                                <p style="margin: 0; font-size: 0.85rem; color: #666;">المبلغ المصروف الفعلي</p>
-                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #667eea;">{{ number_format($actualSpent, 2) }} ر.س</h3>
-                                <small style="color: #999; font-size: 0.8rem;">الإجمالي: {{ number_format($custody->getTotalSpent(), 2) }} - المردود: {{ number_format($custody->returned, 2) }}</small>
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">إجمالي المصروفات</p>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #667eea;">{{ number_format($totalSpent, 2) }} ر.س</h3>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
+                            <div style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(251, 140, 0, 0.1)); border-left: 4px solid #ff9800; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">المبالغ المردودة</p>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #ff9800;">{{ number_format($custody->returned, 2) }} ر.س</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
                             <div style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1)); border-left: 4px solid #4caf50; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                                 <p style="margin: 0; font-size: 0.85rem; color: #666;">المبلغ المتبقي</p>
                                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #4caf50;">{{ number_format($remaining, 2) }} ر.س</h3>
@@ -68,30 +74,29 @@
                         </div>
                     </div>
 
-                    <!-- Spending Percentage -->
+                    <!-- Spending and Return Percentages -->
                     <div class="row mt-3">
-                        <div class="col-12">
+                        <div class="col-md-6">
                             <div style="background: white; border: 1px solid #e5e7eb; padding: 15px; border-radius: 4px;">
                                 <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">
-                                    <strong>نسبة الإنفاق الفعلية:</strong> {{ $spendingPercent }}%
+                                    <strong>نسبة الإنفاق:</strong> {{ $spendingPercent }}%
                                 </p>
                                 <div class="progress" style="height: 10px;">
                                     <div class="progress-bar" style="width: {{ $spendingPercent }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    @if($custody->returned > 0)
-                    <div class="row mt-3">
-                        <div class="col-12">
-                            <div style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(251, 140, 0, 0.1)); border-left: 4px solid #ff9800; padding: 15px; border-radius: 4px;">
-                                <p style="margin: 0; font-size: 0.85rem; color: #666;">المبالغ المردودة للخزينة</p>
-                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #ff9800;">{{ number_format($custody->returned, 2) }} ر.س</h3>
+                        <div class="col-md-6">
+                            <div style="background: white; border: 1px solid #e5e7eb; padding: 15px; border-radius: 4px;">
+                                <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">
+                                    <strong>نسبة المردود:</strong> {{ $returnedPercent }}%
+                                </p>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar" style="width: {{ $returnedPercent }}%; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    @endif
 
                     <div class="d-flex gap-2" style="margin-top: 2rem;">
                         @if(auth()->user()->hasRole('مندوب'))
@@ -117,7 +122,7 @@
                                     <i class="fas fa-times-circle"></i> رفض العهدة
                                 </button>
                             @endif
-                            @if($custody->status === 'accepted')
+                            @if($custody->status === 'accepted' && $custody->getRemainingBalance() > 0)
                                 <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#returnModal">
                                     <i class="fas fa-undo"></i> رد العهدة
                                 </button>
@@ -146,17 +151,35 @@
                     <div style="font-size: 0.9rem; line-height: 2;">
                         <div class="mb-3">
                             <strong>الحالة:</strong><br>
-                            @switch($custody->status)
-                                @case('pending')
-                                    <span class="badge bg-warning">قيد الانتظار</span>
-                                    @break
-                                @case('accepted')
-                                    <span class="badge bg-success">موافق عليه</span>
-                                    @break
-                                @case('rejected')
-                                    <span class="badge bg-danger">مرفوض</span>
-                                    @break
-                            @endswitch
+                            @php
+                                $custodyRemaining = $custody->getRemainingBalance();
+                            @endphp
+                            @if($custodyRemaining <= 0 && $custody->status === 'accepted')
+                                <span class="badge bg-dark">عهدة مستوفاة</span>
+                            @else
+                                @switch($custody->status)
+                                    @case('pending')
+                                        <span class="badge bg-warning">قيد الانتظار</span>
+                                        @break
+                                    @case('accepted')
+                                        <span class="badge bg-success">عهدة نشطة</span>
+                                        @break
+                                    @case('rejected')
+                                        <span class="badge bg-danger">مرفوض</span>
+                                        @break
+                                    @case('pending_return')
+                                        <span class="badge bg-info">انتظار موافقة رد العهدة</span>
+                                        @break
+                                    @case('partially_returned')
+                                        <span class="badge bg-primary">تم رد جزء من العهدة</span>
+                                        @break
+                                    @case('closed')
+                                        <span class="badge bg-secondary">عهدة مغلقة</span>
+                                        @break
+                                    @default
+                                        <span class="badge bg-secondary">{{ $custody->status }}</span>
+                                @endswitch
+                            @endif
                         </div>
                         <div class="mb-3">
                             <strong>نسبة الإنفاق:</strong><br>

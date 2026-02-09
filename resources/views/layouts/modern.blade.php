@@ -472,7 +472,7 @@
 
         @media (max-width: 576px) {
             .main-content {
-                margin-top: 70px;
+                margin-top: 129px;
             }
 
             .stat-number {
@@ -606,7 +606,7 @@
                 @endphp
 
                 @if($logo)
-                    <img src="{{ asset('storage/' . $logo) }}" alt="{{ $orgName }}" style="max-height: 40px; object-fit: contain;">
+                    <img src="{{ '/storage/app/public/' . $logo }}" alt="{{ $orgName }}" style="max-height: 40px; object-fit: contain;">
                 @else
                     <i class="fas fa-hand-holding-heart"></i>
                 @endif
@@ -665,7 +665,7 @@
                     <div class="d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="cursor: pointer;">
                         <div class="user-avatar" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                             @if(auth()->user()->profile_picture)
-                                <img src="{{ asset('storage/' . auth()->user()->profile_picture) }}" alt="{{ auth()->user()->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="{{ '/storage/app/public/' . auth()->user()->profile_picture }}" alt="{{ auth()->user()->name }}" style="width: 100%; height: 100%; object-fit: cover;">
                             @else
                                 <span style="font-size: 1.5rem;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
                             @endif
@@ -705,7 +705,7 @@
 
             @if($logo)
                 <div style="text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <img src="{{ asset('storage/' . $logo) }}" alt="شعار المؤسسة" style="max-height: 60px; object-fit: contain; filter: brightness(1.2);">
+                    <img src="{{ '/storage/app/public/' . $logo }}" alt="شعار المؤسسة" style="max-height: 60px; object-fit: contain; filter: brightness(1.2);">
                 </div>
             @endif
 

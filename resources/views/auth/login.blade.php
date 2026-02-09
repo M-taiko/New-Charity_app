@@ -245,7 +245,7 @@
 
             @if($logo)
                 <div class="logo-section">
-                    <img src="{{ asset('storage/' . $logo) }}" alt="شعار المؤسسة">
+                    <img src="{{ '/storage/app/public/' . $logo }}" alt="شعار المؤسسة">
                 </div>
             @endif
 

@@ -500,7 +500,7 @@
         <div class="container">
             <a class="navbar-brand" href="/">
                 @if(isset($settings) && $settings->logo)
-                    <img src="{{ asset('storage/' . $settings->logo) }}" alt="Logo">
+                    <img src="{{ '/storage/app/public/' . $settings->logo }}" alt="Logo">
                 @else
                     <i class="fas fa-hand-holding-heart"></i>
                 @endif

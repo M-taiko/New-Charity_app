@@ -26,14 +26,107 @@
         <!-- Agent Statistics -->
         @php
             $agentCustodies = \App\Models\Custody::where('agent_id', auth()->id())->get();
+            $activeCustody = $agentCustodies->where('status', 'accepted')->first();
             $totalReceived = $agentCustodies->sum('amount');
             $totalSpent = $agentCustodies->sum('spent');
             $totalReturned = $agentCustodies->sum('returned');
-            $actualSpent = $totalSpent - $totalReturned;
             $totalRemaining = $agentCustodies->sum(function($c) {
                 return $c->getRemainingBalance();
             });
         @endphp
+
+        <!-- Active Custody Card -->
+        @if($activeCustody)
+            @php
+                $custodySpent = $activeCustody->getTotalSpent();
+                $custodyRemaining = $activeCustody->getRemainingBalance();
+                $custodyPercent = $activeCustody->amount > 0 ? round(($custodySpent / $activeCustody->amount) * 100) : 0;
+                $returnedPercent = $activeCustody->amount > 0 ? round(($activeCustody->returned / $activeCustody->amount) * 100) : 0;
+            @endphp
+            <div class="row g-4 mb-4" data-aos="fade-up">
+                <div class="col-12">
+                    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
+                        <div class="card-body p-4">
+                            <div class="row align-items-center">
+                                <div class="col-lg-8">
+                                    <h4 style="margin: 0 0 0.5rem 0; color: white;">
+                                        <i class="fas fa-hand-holding-usd"></i> عهدتك النشطة
+                                    </h4>
+                                    <p style="margin: 0; opacity: 0.9; font-size: 0.95rem;">عهدة #{{ $activeCustody->id }} - منذ {{ $activeCustody->accepted_at ? $activeCustody->accepted_at->diffForHumans() : 'غير معروف' }}</p>
+
+                                    <div class="row mt-4">
+                                        <div class="col-md-3">
+                                            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">إجمالي العهدة</p>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->amount, 0) }}</h3>
+                                                <small style="opacity: 0.8;">ر.س</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">تم صرفه</p>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodySpent, 0) }}</h3>
+                                                <small style="opacity: 0.8;">ر.س ({{ $custodyPercent }}%)</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">تم رده</p>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->returned, 0) }}</h3>
+                                                <small style="opacity: 0.8;">ر.س ({{ $returnedPercent }}%)</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">المتبقي</p>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodyRemaining, 0) }}</h3>
+                                                <small style="opacity: 0.8;">ر.س</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Progress Bars -->
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <p style="margin: 0 0 8px 0; font-size: 0.9rem; opacity: 0.9;">نسبة الإنفاق</p>
+                                            <div class="progress" style="height: 12px; background: rgba(255,255,255,0.2);">
+                                                <div class="progress-bar" style="width: {{ $custodyPercent }}%; background: rgba(255,255,255,0.9);">{{ $custodyPercent }}%</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p style="margin: 0 0 8px 0; font-size: 0.9rem; opacity: 0.9;">نسبة المردود</p>
+                                            <div class="progress" style="height: 12px; background: rgba(255,255,255,0.2);">
+                                                <div class="progress-bar" style="width: {{ $returnedPercent }}%; background: rgba(255,152,0,0.9);">{{ $returnedPercent }}%</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4 text-center">
+                                    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 25px; backdrop-filter: blur(10px);">
+                                        <i class="fas fa-chart-pie" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.9;"></i>
+                                        <h5 style="margin: 0 0 1rem 0;">إجراءات سريعة</h5>
+                                        <div class="d-grid gap-2">
+                                            <a href="{{ route('custodies.show', $activeCustody->id) }}" class="btn btn-light">
+                                                <i class="fas fa-eye"></i> عرض التفاصيل
+                                            </a>
+                                            @if($custodyRemaining > 0)
+                                                <a href="{{ route('custodies.show', $activeCustody->id) }}#returnModal" class="btn btn-warning">
+                                                    <i class="fas fa-undo"></i> رد العهدة
+                                                </a>
+                                            @endif
+                                            <a href="{{ route('expenses.create') }}" class="btn btn-success">
+                                                <i class="fas fa-plus"></i> إضافة مصروف
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <div class="row g-4 mb-4">
             <!-- Total Custodies -->
             <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
@@ -49,15 +142,15 @@
                 </div>
             </div>
 
-            <!-- Actual Spent -->
+            <!-- Total Spent -->
             <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
                 <div class="stat-card danger">
                     <div class="stat-icon">
                         <i class="fas fa-money-bill-wave"></i>
                     </div>
-                    <div class="stat-label">المصروفات الفعلية</div>
+                    <div class="stat-label">إجمالي المصروفات</div>
                     <div class="stat-number" style="color: var(--danger);">
-                        {{ number_format($actualSpent, 0) }}
+                        {{ number_format($totalSpent, 0) }}
                     </div>
                     <small style="color: #6b7280;">ر.س</small>
                 </div>
@@ -170,39 +263,70 @@
                                     <tr>
                                         <th><i class="fas fa-hashtag"></i> العهدة</th>
                                         <th><i class="fas fa-money-bill"></i> المبلغ</th>
-                                        <th><i class="fas fa-chart-pie"></i> الصرف</th>
+                                        <th><i class="fas fa-chart-pie"></i> نسبة الإنفاق</th>
                                         <th><i class="fas fa-wallet"></i> المتبقي</th>
                                         <th><i class="fas fa-signal"></i> الحالة</th>
+                                        <th><i class="fas fa-cog"></i> إجراءات</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($agentCustodies as $custody)
                                         @php
-                                            $actualSpent = $custody->getTotalSpent() - $custody->returned;
-                                            $remaining = $custody->amount - $actualSpent;
+                                            $totalSpent = $custody->getTotalSpent();
+                                            $remaining = $custody->getRemainingBalance();
+                                            $spendingPercent = $custody->amount > 0 ? round(($totalSpent / $custody->amount) * 100) : 0;
                                         @endphp
                                         <tr>
                                             <td><a href="{{ route('custodies.show', $custody->id) }}" style="text-decoration: none; color: var(--primary); font-weight: 600;">عهدة #{{ $custody->id }}</a></td>
                                             <td><strong>{{ number_format($custody->amount, 0) }}</strong> ر.س</td>
-                                            <td><span style="color: #e53935;">{{ number_format($actualSpent, 0) }}</span> ر.س</td>
-                                            <td><span style="color: #4caf50;">{{ number_format($remaining, 0) }}</span> ر.س</td>
                                             <td>
-                                                @switch($custody->status)
-                                                    @case('pending')
-                                                        <span class="badge bg-warning">قيد الانتظار</span>
-                                                        @break
-                                                    @case('accepted')
-                                                        <span class="badge bg-success">نشطة</span>
-                                                        @break
-                                                    @case('pending_return')
-                                                        <span class="badge bg-info">قيد الموافقة</span>
-                                                        @break
-                                                    @case('closed')
-                                                        <span class="badge bg-secondary">مغلقة</span>
-                                                        @break
-                                                    @default
-                                                        <span class="badge bg-danger">{{ $custody->status }}</span>
-                                                @endswitch
+                                                <div style="min-width: 150px;">
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <small style="color: #666;">{{ $spendingPercent }}%</small>
+                                                        <small style="color: #999;">{{ number_format($totalSpent, 0) }} ر.س</small>
+                                                    </div>
+                                                    <div class="progress" style="height: 6px;">
+                                                        <div class="progress-bar" style="width: {{ $spendingPercent }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td><span style="color: #4caf50; font-weight: 600;">{{ number_format($remaining, 0) }}</span> ر.س</td>
+                                            <td>
+                                                @if($remaining <= 0 && $custody->status === 'accepted')
+                                                    <span class="badge bg-dark">عهدة مستوفاة</span>
+                                                @else
+                                                    @switch($custody->status)
+                                                        @case('pending')
+                                                            <span class="badge bg-warning">قيد الانتظار</span>
+                                                            @break
+                                                        @case('accepted')
+                                                            <span class="badge bg-success">نشطة</span>
+                                                            @break
+                                                        @case('pending_return')
+                                                            <span class="badge bg-info">انتظار موافقة</span>
+                                                            @break
+                                                        @case('partially_returned')
+                                                            <span class="badge bg-primary">مردودة جزئياً</span>
+                                                            @break
+                                                        @case('closed')
+                                                            <span class="badge bg-secondary">مغلقة</span>
+                                                            @break
+                                                        @default
+                                                            <span class="badge bg-secondary">{{ $custody->status }}</span>
+                                                    @endswitch
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{ route('custodies.show', $custody->id) }}" class="btn btn-outline-primary btn-sm" title="عرض">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    @if($custody->status === 'accepted' && $remaining > 0)
+                                                        <a href="{{ route('custodies.show', $custody->id) }}#returnModal" class="btn btn-outline-info btn-sm" title="رد العهدة">
+                                                            <i class="fas fa-undo"></i>
+                                                        </a>
+                                                    @endif
+                                                </div>
                                             </td>
                                         </tr>
                                     @empty
