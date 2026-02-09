@@ -17,7 +17,7 @@ class SocialCaseController extends Controller
 
     public function create()
     {
-        return view('social-cases.modern-create');
+        return view('social-cases.modern-form');
     }
 
     public function store(Request $request)
@@ -30,20 +30,38 @@ class SocialCaseController extends Controller
             'assistance_type' => 'required|in:cash,monthly_salary,medicine,treatment,other',
             'assistance_other' => 'nullable|string|max:100',
             'researcher_id' => 'required|exists:users,id',
+            // New fields from Excel
+            'address' => 'nullable|string|max:500',
+            'city' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'birth_date' => 'nullable|date',
+            'gender' => 'nullable|in:male,female',
+            'marital_status' => 'nullable|in:single,married,widowed,divorced',
+            'family_members_count' => 'nullable|integer|min:1',
+            'monthly_income' => 'nullable|numeric|min:0',
+            'monthly_expenses' => 'nullable|numeric|min:0',
+            'health_conditions' => 'nullable|string',
+            'has_disability' => 'nullable|boolean',
+            'disability_description' => 'nullable|string',
+            'special_needs' => 'nullable|string',
+            'requested_amount' => 'nullable|numeric|min:0',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png,gif,xlsx,xls',
         ]);
 
-        $case = SocialCase::create([
-            'researcher_id' => $request->researcher_id,
-            'name' => $request->name,
-            'national_id' => $request->national_id,
-            'phone' => $request->phone,
-            'description' => $request->description,
-            'assistance_type' => $request->assistance_type,
-            'assistance_other' => $request->assistance_other,
-            'status' => 'pending',
-        ]);
+        $case = SocialCase::create(array_merge(
+            [
+                'researcher_id' => $request->researcher_id,
+                'status' => 'pending',
+            ],
+            $request->only([
+                'name', 'national_id', 'phone', 'description', 'assistance_type', 'assistance_other',
+                'address', 'city', 'district', 'birth_date', 'gender', 'marital_status',
+                'family_members_count', 'monthly_income', 'monthly_expenses',
+                'health_conditions', 'has_disability', 'disability_description',
+                'special_needs', 'requested_amount'
+            ])
+        ));
 
         // Handle file uploads
         if ($request->hasFile('attachments')) {
@@ -74,7 +92,7 @@ class SocialCaseController extends Controller
     public function edit(SocialCase $socialCase)
     {
         $this->authorize('manage_social_cases');
-        return view('social-cases.modern-edit', compact('socialCase'));
+        return view('social-cases.modern-form', compact('socialCase'));
     }
 
     public function update(Request $request, SocialCase $socialCase)
@@ -87,9 +105,30 @@ class SocialCaseController extends Controller
             'description' => 'nullable|string',
             'assistance_type' => 'required|in:cash,monthly_salary,medicine,treatment,other',
             'researcher_id' => 'required|exists:users,id',
+            // New fields from Excel
+            'address' => 'nullable|string|max:500',
+            'city' => 'nullable|string|max:100',
+            'district' => 'nullable|string|max:100',
+            'birth_date' => 'nullable|date',
+            'gender' => 'nullable|in:male,female',
+            'marital_status' => 'nullable|in:single,married,widowed,divorced',
+            'family_members_count' => 'nullable|integer|min:1',
+            'monthly_income' => 'nullable|numeric|min:0',
+            'monthly_expenses' => 'nullable|numeric|min:0',
+            'health_conditions' => 'nullable|string',
+            'has_disability' => 'nullable|boolean',
+            'disability_description' => 'nullable|string',
+            'special_needs' => 'nullable|string',
+            'requested_amount' => 'nullable|numeric|min:0',
         ]);
 
-        $socialCase->update($request->only(['name', 'national_id', 'phone', 'description', 'assistance_type', 'researcher_id']));
+        $socialCase->update($request->only([
+            'name', 'national_id', 'phone', 'description', 'assistance_type', 'researcher_id',
+            'address', 'city', 'district', 'birth_date', 'gender', 'marital_status',
+            'family_members_count', 'monthly_income', 'monthly_expenses',
+            'health_conditions', 'has_disability', 'disability_description',
+            'special_needs', 'requested_amount'
+        ]));
 
         return redirect()->route('social_cases.index')->with('success', 'تم تحديث الحالة الاجتماعية');
     }
