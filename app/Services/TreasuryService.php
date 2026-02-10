@@ -74,8 +74,37 @@ class TreasuryService
                 'accepted_at' => now(),
             ]);
 
+            // Notify agent to acknowledge receipt
+            $this->notifyUser(
+                $custody->agent_id,
+                'تمت الموافقة على عهدتك',
+                "تم الموافقة على عهدتك بقيمة {$custody->amount} ج.م. يرجى تأكيد الاستقبال لصرف الفلوس",
+                'info',
+                $custody->id,
+                'custody'
+            );
+
+            return $custody;
+        });
+    }
+
+    public function receiveCustody($custody)
+    {
+        return DB::transaction(function () use ($custody) {
+            if ($custody->status !== 'accepted') {
+                throw new \Exception('العهدة يجب أن تكون في حالة مقبولة قبل الاستقبال');
+            }
+
+            $treasury = $custody->treasury;
+
             // Deduct from treasury
             $treasury->decrement('balance', $custody->amount);
+
+            // Update status and received timestamp
+            $custody->update([
+                'status' => 'active',
+                'received_at' => now(),
+            ]);
 
             // Create transaction record
             TreasuryTransaction::create([
@@ -83,16 +112,16 @@ class TreasuryService
                 'type' => 'custody_out',
                 'amount' => $custody->amount,
                 'description' => "صرف عهدة للمندوب {$custody->agent->name}",
-                'user_id' => auth()->id(),
+                'user_id' => $custody->agent_id,
                 'custody_id' => $custody->id,
                 'transaction_date' => now(),
             ]);
 
-            // Notify agent that custody was approved and transferred
+            // Notify agent that funds were transferred
             $this->notifyUser(
                 $custody->agent_id,
-                'تم الموافقة على العهدة',
-                "تم الموافقة على عهدتك بقيمة {$custody->amount} ج.م وتم صرفها في حسابك",
+                'تم صرف العهدة',
+                "تم صرف عهدتك بقيمة {$custody->amount} ج.م. يمكنك الآن استخدام المبلغ",
                 'success',
                 $custody->id,
                 'custody'

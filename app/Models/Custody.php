@@ -23,6 +23,7 @@ class Custody extends Model
         'status',
         'notes',
         'accepted_at',
+        'received_at',
         'returned_at',
     ];
 
@@ -32,6 +33,7 @@ class Custody extends Model
         'returned' => 'decimal:2',
         'pending_return' => 'decimal:2',
         'accepted_at' => 'datetime',
+        'received_at' => 'datetime',
         'returned_at' => 'datetime',
     ];
 

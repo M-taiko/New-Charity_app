@@ -27,6 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('treasury', TreasuryController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::resource('custodies', CustodyController::class);
     Route::post('/custodies/{custody}/accept', [CustodyController::class, 'accept'])->name('custodies.accept');
+    Route::post('/custodies/{custody}/receive', [CustodyController::class, 'receive'])->name('custodies.receive');
     Route::post('/custodies/{custody}/reject', [CustodyController::class, 'reject'])->name('custodies.reject');
     Route::post('/custodies/{custody}/return', [CustodyController::class, 'return'])->name('custodies.return');
     Route::post('/custodies/{custody}/approve-return', [CustodyController::class, 'approveReturn'])->name('custodies.approveReturn');

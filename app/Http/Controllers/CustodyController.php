@@ -101,9 +101,20 @@ class CustodyController extends Controller
 
     public function accept(Custody $custody)
     {
-        $this->authorize('receive_custody');
+        $this->authorize('approve_custody');
         $this->service->acceptCustody($custody);
-        return back()->with('success', 'تم قبول العهدة');
+        return back()->with('success', 'تم الموافقة على العهدة');
+    }
+
+    public function receive(Custody $custody)
+    {
+        // Only the agent who owns the custody can receive it
+        if ($custody->agent_id !== auth()->id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        $this->service->receiveCustody($custody);
+        return back()->with('success', 'تم استقبال العهدة وصرف الفلوس');
     }
 
     public function reject(Custody $custody, Request $request)
