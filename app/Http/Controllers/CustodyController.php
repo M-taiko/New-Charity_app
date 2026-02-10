@@ -39,12 +39,7 @@ class CustodyController extends Controller
         // Route to appropriate view based on request type
         if ($forType === 'agent') {
             // Creating custody for a user (accountant/manager creates for someone else)
-            $users = User::where(function($query) {
-                    $query->where('hidden', false)
-                          ->orWhereNull('hidden');
-                })
-                ->orderBy('name')
-                ->get();
+            $users = User::orderBy('name')->get();
 
             return view('custodies.create-for-user', compact('users', 'treasury'));
         } elseif ($forType === 'self') {
