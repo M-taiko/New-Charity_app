@@ -219,7 +219,7 @@ class TreasuryService
         return DB::transaction(function () use ($custody, $returnedAmount) {
             // Store as pending return
             $custody->increment('pending_return', $returnedAmount);
-            $custody->update(['status' => 'pending_return']);
+            // Status remains as 'accepted' - it's just marked as pending return internally
 
             // Send notification to accountant
             $this->notifyUser(
