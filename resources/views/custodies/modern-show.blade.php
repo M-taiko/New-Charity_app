@@ -98,7 +98,7 @@
                         </div>
                     </div>
 
-                    <div class="d-flex gap-2" style="margin-top: 2rem;">
+                    <div class="d-flex gap-2" style="margin-top: 2rem; flex-wrap: wrap;">
                         @if(auth()->user()->hasRole('مندوب'))
                             <a href="{{ route('agent.transactions') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> رجوع
@@ -113,6 +113,16 @@
                                 <i class="fas fa-edit"></i> تعديل
                             </a>
                         @endcan
+                        @role('مندوب')
+                            @if(auth()->user()->id === $custody->agent_id && $custody->status === 'accepted')
+                                <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
+                                    <i class="fas fa-exchange-alt"></i> تحويل إلى مندوب آخر
+                                </a>
+                            @endif
+                            <a href="{{ route('custodies.create') }}" class="btn btn-success">
+                                <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
+                            </a>
+                        @endrole
                         @can('receive_custody')
                             @if($custody->status === 'pending')
                                 <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#acceptModal">
@@ -123,7 +133,7 @@
                                 </button>
                             @endif
                             @if($custody->status === 'accepted' && $custody->getRemainingBalance() > 0)
-                                <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#returnModal">
+                                <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#returnModal">
                                     <i class="fas fa-undo"></i> رد العهدة
                                 </button>
                             @endif

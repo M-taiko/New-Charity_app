@@ -14,11 +14,18 @@
                         إدارة العهد المالية والموافقات
                     </p>
                 </div>
-                @can('create_custody')
-                <a href="{{ route('custodies.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus-circle"></i> إنشاء عهدة جديدة
-                </a>
-                @endcan
+                <div class="d-flex gap-2" style="flex-wrap: wrap;">
+                    @can('create_custody')
+                    <a href="{{ route('custodies.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle"></i> إنشاء عهدة جديدة
+                    </a>
+                    @endcan
+                    @role('مندوب')
+                    <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
+                        <i class="fas fa-exchange-alt"></i> تحويل عهدتي
+                    </a>
+                    @endrole
+                </div>
             </div>
         </div>
     </div>

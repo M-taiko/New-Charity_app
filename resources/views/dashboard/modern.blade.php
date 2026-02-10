@@ -109,6 +109,9 @@
                                             <a href="{{ route('custodies.show', $activeCustody->id) }}" class="btn btn-light">
                                                 <i class="fas fa-eye"></i> عرض التفاصيل
                                             </a>
+                                            <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
+                                                <i class="fas fa-exchange-alt"></i> تحويل العهدة
+                                            </a>
                                             @if($custodyRemaining > 0)
                                                 <a href="{{ route('custodies.show', $activeCustody->id) }}#returnModal" class="btn btn-warning">
                                                     <i class="fas fa-undo"></i> رد العهدة
@@ -116,6 +119,9 @@
                                             @endif
                                             <a href="{{ route('expenses.create') }}" class="btn btn-success">
                                                 <i class="fas fa-plus"></i> إضافة مصروف
+                                            </a>
+                                            <a href="{{ route('custodies.create') }}" class="btn btn-primary">
+                                                <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
                                             </a>
                                         </div>
                                     </div>
