@@ -31,8 +31,10 @@ class CustodyController extends Controller
         }
 
         // Get all users except hidden ones
-        $agents = User::where('hidden', false)
-            ->orWhereNull('hidden')
+        $agents = User::where(function($query) {
+                $query->where('hidden', false)
+                      ->orWhereNull('hidden');
+            })
             ->orderBy('name')
             ->get();
 
