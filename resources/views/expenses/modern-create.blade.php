@@ -53,13 +53,12 @@
                                 <option value="">-- اختر عهدة --</option>
                                 @foreach($custodies as $custody)
                                     @php
-                                        $actualSpent = $custody->getTotalSpent() - $custody->returned;
-                                        $remaining = $custody->amount - $actualSpent;
+                                        $remaining = $custody->getRemainingBalance();
                                     @endphp
                                     <option value="{{ $custody->id }}"
                                             data-remaining="{{ $remaining }}"
                                             {{ old('custody_id') == $custody->id ? 'selected' : '' }}>
-                                        العهدة #{{ $custody->id }} - الوكيل: {{ $custody->agent->name }} (المتبقي: {{ number_format($remaining, 2) }} ر.س)
+                                        العهدة #{{ $custody->id }} - الوكيل: {{ $custody->agent->name }} (المتبقي: {{ number_format($remaining, 2) }} ج.م)
                                     </option>
                                 @endforeach
                             </select>
@@ -67,9 +66,24 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="form-text text-muted" id="custody-info" style="display: none; margin-top: 0.5rem;">
-                                المبلغ المتاح للصرف: <strong id="remaining-amount">0</strong> ر.س
+                                المبلغ المتاح للصرف: <strong id="remaining-amount">0</strong> ج.م
                             </small>
                         </div>
+
+                        <!-- Treasury Balance Display (shown when treasury source is selected) -->
+                        @if($canSpendFromTreasury && $treasury)
+                        <div class="mb-3" id="treasury-balance-field" style="display: none;">
+                            <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); border: 1px solid rgba(79, 172, 254, 0.3);">
+                                <h6 class="mb-2">
+                                    <i class="fas fa-vault"></i> رصيد الخزينة
+                                </h6>
+                                <div style="font-size: 1.5rem; font-weight: 700; color: #4facfe;">
+                                    {{ number_format($treasury->balance, 2) }} ج.م
+                                </div>
+                                <small class="text-muted">الرصيد المتاح للصرف المباشر</small>
+                            </div>
+                        </div>
+                        @endif
 
                         <!-- Category Selection -->
                         <div class="mb-3">
@@ -79,7 +93,10 @@
                             <select name="expense_category_id" id="category_select" class="form-select @error('expense_category_id') is-invalid @enderror" required onchange="loadExpenseItems()">
                                 <option value="">-- اختر فئة --</option>
                                 @foreach($categories as $category)
-                                    <option value="{{ $category->id }}" data-items="{{ json_encode($category->items->map(fn($item) => ['id' => $item->id, 'name' => $item->name, 'default_amount' => $item->default_amount])) }}" {{ old('expense_category_id') == $category->id ? 'selected' : '' }}>
+                                    <option value="{{ $category->id }}"
+                                            data-code="{{ $category->code }}"
+                                            data-items="{{ json_encode($category->items->map(fn($item) => ['id' => $item->id, 'name' => $item->name, 'default_amount' => $item->default_amount])) }}"
+                                            {{ old('expense_category_id') == $category->id ? 'selected' : '' }}>
                                         {{ $category->name }}
                                     </option>
                                 @endforeach
@@ -127,7 +144,7 @@
 
                         <div class="mb-3">
                             <label class="form-label"><strong>
-                                <i class="fas fa-coins"></i> المبلغ (ر.س)
+                                <i class="fas fa-coins"></i> المبلغ (ج.م)
                             </strong></label>
                             <input type="number" name="amount" class="form-control @error('amount') is-invalid @enderror" step="0.01" value="{{ old('amount') }}" required placeholder="أدخل المبلغ">
                             @error('amount')
@@ -183,11 +200,13 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
     // Get all categories data
     const categoriesData = {
         @foreach($categories as $category)
             {{ $category->id }}: {
+                code: '{{ $category->code }}',
                 items: @json($category->items->map(fn($item) => ['id' => $item->id, 'name' => $item->name, 'default_amount' => $item->default_amount]))
             },
         @endforeach
@@ -196,42 +215,86 @@
     function toggleSourceFields() {
         const source = document.querySelector('input[name="source"]:checked').value;
         const custodyField = document.getElementById('custody-field');
+        const treasuryBalanceField = document.getElementById('treasury-balance-field');
+        const balanceWarning = document.getElementById('balance-warning');
 
         if (source === 'treasury') {
+            // Hide custody field
             custodyField.style.display = 'none';
             document.querySelector('select[name="custody_id"]').removeAttribute('required');
-            document.getElementById('balance-warning').innerHTML = '';
+
+            // Show treasury balance
+            if (treasuryBalanceField) {
+                treasuryBalanceField.style.display = 'block';
+            }
+
+            // Display treasury balance info
+            balanceWarning.innerHTML = '<i class="fas fa-info-circle"></i> الرصيد المتاح: <strong>{{ $treasury ? number_format($treasury->balance, 2) : '0.00' }} ج.م</strong>';
         } else {
+            // Show custody field
             custodyField.style.display = 'block';
             document.querySelector('select[name="custody_id"]').setAttribute('required', 'required');
+
+            // Hide treasury balance
+            if (treasuryBalanceField) {
+                treasuryBalanceField.style.display = 'none';
+            }
+
             updateCustodyInfo();
         }
     }
 
     function loadExpenseItems() {
-        const categoryId = document.getElementById('category_select').value;
+        const categorySelect = document.getElementById('category_select');
+        const categoryId = categorySelect.value;
         const itemSelect = document.getElementById('item_select');
+        const itemFieldContainer = itemSelect.closest('.mb-3'); // Get parent container
         const defaultAmountInfo = document.getElementById('default-amount-info');
+        const descriptionField = document.querySelector('textarea[name="description"]');
+        const descriptionLabel = descriptionField.closest('.mb-3').querySelector('label strong');
 
         // Clear previous items
         itemSelect.innerHTML = '<option value="">-- اختر بند --</option>';
         defaultAmountInfo.innerHTML = '';
 
         if (categoryId && categoriesData[categoryId]) {
-            const items = categoriesData[categoryId].items;
-            items.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.name;
-                option.setAttribute('data-default-amount', item.default_amount || '');
-                if (item.id == {{ old('expense_item_id') }}) {
-                    option.selected = true;
-                }
-                itemSelect.appendChild(option);
-            });
+            const selectedOption = categorySelect.selectedOptions[0];
+            const categoryCode = selectedOption.getAttribute('data-code');
 
-            // Load default amount if item was selected
-            setDefaultAmount();
+            // Check if this is "Other Expenses" category
+            if (categoryCode === 'OTHER') {
+                // Hide item selection field
+                itemFieldContainer.style.display = 'none';
+                itemSelect.removeAttribute('required');
+
+                // Make description required
+                descriptionField.setAttribute('required', 'required');
+                descriptionLabel.innerHTML = 'الوصف <span class="text-danger">*</span>';
+            } else {
+                // Show item selection field
+                itemFieldContainer.style.display = 'block';
+                itemSelect.setAttribute('required', 'required');
+
+                // Description remains required
+                descriptionField.setAttribute('required', 'required');
+
+                // Load items
+                const items = categoriesData[categoryId].items;
+                const selectedItemId = {{ old('expense_item_id') ?? 'null' }};
+                items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.name;
+                    option.setAttribute('data-default-amount', item.default_amount || '');
+                    if (selectedItemId && item.id == selectedItemId) {
+                        option.selected = true;
+                    }
+                    itemSelect.appendChild(option);
+                });
+
+                // Load default amount if item was selected
+                setDefaultAmount();
+            }
         }
     }
 
@@ -244,7 +307,7 @@
         if (selectedOption && selectedOption.value) {
             const defaultAmount = selectedOption.getAttribute('data-default-amount');
             if (defaultAmount && defaultAmount !== '') {
-                defaultAmountInfo.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${parseFloat(defaultAmount).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ر.س</strong>`;
+                defaultAmountInfo.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${parseFloat(defaultAmount).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ج.م</strong>`;
                 if (!amountInput.value) {
                     amountInput.value = defaultAmount;
                 }
@@ -260,7 +323,7 @@
 
         if (selectedOption && selectedOption.value) {
             const remaining = selectedOption.getAttribute('data-remaining');
-            balanceWarning.innerHTML = `<i class="fas fa-info-circle"></i> الرصيد المتبقي: <strong>${parseFloat(remaining).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ر.س</strong>`;
+            balanceWarning.innerHTML = `<i class="fas fa-info-circle"></i> الرصيد المتبقي: <strong>${parseFloat(remaining).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ج.م</strong>`;
         } else {
             balanceWarning.innerHTML = '';
         }
@@ -272,4 +335,5 @@
         updateCustodyInfo();
     });
 </script>
+@endpush
 @endsection

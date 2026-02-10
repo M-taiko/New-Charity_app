@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\SocialCase;
 use App\Models\SocialCaseDocument;
+use App\Models\FamilyMember;
 use App\Models\Notification;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SocialCaseController extends Controller
 {
@@ -47,45 +49,62 @@ class SocialCaseController extends Controller
             'requested_amount' => 'nullable|numeric|min:0',
             'attachments' => 'nullable|array',
             'attachments.*' => 'file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png,gif,xlsx,xls',
+            'family_members' => 'nullable|array',
+            'family_members.*.name' => 'required|string|max:255',
+            'family_members.*.relationship' => 'required|string|max:100',
+            'family_members.*.gender' => 'required|in:male,female',
+            'family_members.*.phone' => 'nullable|string|max:20',
         ]);
 
-        $case = SocialCase::create(array_merge(
-            [
-                'researcher_id' => $request->researcher_id,
-                'status' => 'pending',
-            ],
-            $request->only([
-                'name', 'national_id', 'phone', 'description', 'assistance_type', 'assistance_other',
-                'address', 'city', 'district', 'birth_date', 'gender', 'marital_status',
-                'family_members_count', 'monthly_income', 'monthly_expenses',
-                'health_conditions', 'has_disability', 'disability_description',
-                'special_needs', 'requested_amount'
-            ])
-        ));
+        DB::transaction(function() use ($request) {
+            $case = SocialCase::create(array_merge(
+                [
+                    'researcher_id' => $request->researcher_id,
+                    'status' => 'pending',
+                ],
+                $request->only([
+                    'name', 'national_id', 'phone', 'description', 'assistance_type', 'assistance_other',
+                    'address', 'city', 'district', 'birth_date', 'gender', 'marital_status',
+                    'family_members_count', 'monthly_income', 'monthly_expenses',
+                    'health_conditions', 'has_disability', 'disability_description',
+                    'special_needs', 'requested_amount'
+                ])
+            ));
 
-        // Handle file uploads
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $fileName = $file->getClientOriginalName();
-                $filePath = $file->store('social-cases/' . $case->id, 'public');
-
-                SocialCaseDocument::create([
-                    'social_case_id' => $case->id,
-                    'name' => $fileName,
-                    'file_path' => $filePath,
-                    'file_type' => $file->getClientOriginalExtension(),
-                ]);
+            // Create family members if provided
+            if ($request->has('family_members') && is_array($request->family_members)) {
+                foreach ($request->family_members as $member) {
+                    if (!empty($member['name'])) {
+                        $case->familyMembers()->create($member);
+                    }
+                }
             }
-        }
 
-        // Notify managers for review
-        $this->notifyManagers($case);
+            // Handle file uploads
+            if ($request->hasFile('attachments')) {
+                foreach ($request->file('attachments') as $file) {
+                    $fileName = $file->getClientOriginalName();
+                    $filePath = $file->store('social-cases/' . $case->id, 'public');
+
+                    SocialCaseDocument::create([
+                        'social_case_id' => $case->id,
+                        'name' => $fileName,
+                        'file_path' => $filePath,
+                        'file_type' => $file->getClientOriginalExtension(),
+                    ]);
+                }
+            }
+
+            // Notify managers for review
+            $this->notifyManagers($case);
+        });
 
         return redirect()->route('social_cases.index')->with('success', 'تم إنشاء الحالة الاجتماعية بنجاح');
     }
 
     public function show(SocialCase $socialCase)
     {
+        $socialCase->load('familyMembers');
         return view('social-cases.modern-show', compact('socialCase'));
     }
 
@@ -120,15 +139,34 @@ class SocialCaseController extends Controller
             'disability_description' => 'nullable|string',
             'special_needs' => 'nullable|string',
             'requested_amount' => 'nullable|numeric|min:0',
+            'family_members' => 'nullable|array',
+            'family_members.*.name' => 'required|string|max:255',
+            'family_members.*.relationship' => 'required|string|max:100',
+            'family_members.*.gender' => 'required|in:male,female',
+            'family_members.*.phone' => 'nullable|string|max:20',
         ]);
 
-        $socialCase->update($request->only([
-            'name', 'national_id', 'phone', 'description', 'assistance_type', 'researcher_id',
-            'address', 'city', 'district', 'birth_date', 'gender', 'marital_status',
-            'family_members_count', 'monthly_income', 'monthly_expenses',
-            'health_conditions', 'has_disability', 'disability_description',
-            'special_needs', 'requested_amount'
-        ]));
+        DB::transaction(function() use ($request, $socialCase) {
+            $socialCase->update($request->only([
+                'name', 'national_id', 'phone', 'description', 'assistance_type', 'researcher_id',
+                'address', 'city', 'district', 'birth_date', 'gender', 'marital_status',
+                'family_members_count', 'monthly_income', 'monthly_expenses',
+                'health_conditions', 'has_disability', 'disability_description',
+                'special_needs', 'requested_amount'
+            ]));
+
+            // Delete old family members
+            $socialCase->familyMembers()->delete();
+
+            // Create new family members if provided
+            if ($request->has('family_members') && is_array($request->family_members)) {
+                foreach ($request->family_members as $member) {
+                    if (!empty($member['name'])) {
+                        $socialCase->familyMembers()->create($member);
+                    }
+                }
+            }
+        });
 
         return redirect()->route('social_cases.index')->with('success', 'تم تحديث الحالة الاجتماعية');
     }
@@ -177,11 +215,12 @@ class SocialCaseController extends Controller
 
     public function tableData()
     {
-        $cases = SocialCase::with(['researcher'])->get();
+        $cases = SocialCase::with(['researcher', 'familyMembers'])->get();
 
         return DataTables::of($cases)
             ->addColumn('researcher_name', fn($row) => $row->researcher->name)
             ->addColumn('status_label', fn($row) => $this->getStatusLabel($row->status))
+            ->addColumn('family_count', fn($row) => $row->familyMembers->count())
             ->addColumn('is_active', fn($row) => $row->is_active)
             ->rawColumns(['status_label'])
             ->toJson();
@@ -202,8 +241,8 @@ class SocialCaseController extends Controller
     {
         $user = auth()->user();
 
-        // Get researcher's cases
-        $cases = SocialCase::where('researcher_id', $user->id)->get();
+        // Get researcher's cases with family members loaded
+        $cases = SocialCase::where('researcher_id', $user->id)->with('familyMembers')->get();
 
         $totalCases = $cases->count();
         $pendingCases = $cases->where('status', 'pending')->count();
@@ -217,6 +256,14 @@ class SocialCaseController extends Controller
             'approvedCases',
             'rejectedCases'
         ));
+    }
+
+    public function getFamilyMembers(SocialCase $socialCase)
+    {
+        $socialCase->load('familyMembers');
+        return response()->json([
+            'family_members' => $socialCase->familyMembers,
+        ]);
     }
 
     private function notifyManagers($case)

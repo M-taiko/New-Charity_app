@@ -17,7 +17,7 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-body">
-                    <h5>رصيد الخزينة: <strong class="text-success">{{ number_format($treasury->balance ?? 0, 2) }} ر.س</strong></h5>
+                    <h5>رصيد الخزينة: <strong class="text-success">{{ number_format($treasury->balance ?? 0, 2) }} ج.م</strong></h5>
                 </div>
             </div>
         </div>

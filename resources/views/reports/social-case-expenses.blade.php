@@ -77,7 +77,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <p class="text-muted small mb-1">إجمالي المصروفات</p>
-                            <h4 class="mb-0" style="color: #667eea;">{{ number_format($totalAmount, 2) }} ر.س</h4>
+                            <h4 class="mb-0" style="color: #667eea;">{{ number_format($totalAmount, 2) }} ج.م</h4>
                         </div>
                         <div style="font-size: 2.5rem; color: #667eea; opacity: 0.2;">
                             <i class="fas fa-coins"></i>
@@ -110,7 +110,7 @@
                         <div>
                             <p class="text-muted small mb-1">متوسط المصروف</p>
                             <h4 class="mb-0" style="color: #10b981;">
-                                {{ $expenseCount > 0 ? number_format($totalAmount / $expenseCount, 2) : '0.00' }} ر.س
+                                {{ $expenseCount > 0 ? number_format($totalAmount / $expenseCount, 2) : '0.00' }} ج.م
                             </h4>
                         </div>
                         <div style="font-size: 2.5rem; color: #10b981; opacity: 0.2;">
@@ -149,7 +149,7 @@
                                         <tr>
                                             <td><strong>{{ $categoryName }}</strong></td>
                                             <td>{{ $data['count'] }}</td>
-                                            <td>{{ number_format($data['amount'], 2) }} ر.س</td>
+                                            <td>{{ number_format($data['amount'], 2) }} ج.م</td>
                                             <td>{{ $data['percentage'] }}%</td>
                                             <td>
                                                 <div class="progress" style="height: 20px;">
@@ -223,7 +223,7 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <strong style="color: #667eea;">{{ number_format($expense->amount, 2) }} ر.س</strong>
+                                                <strong style="color: #667eea;">{{ number_format($expense->amount, 2) }} ج.م</strong>
                                             </td>
                                             <td>{{ $expense->user->name }}</td>
                                             <td>

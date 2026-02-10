@@ -96,8 +96,8 @@
                                 </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label"><strong>عدد أفراد الأسرة</strong></label>
-                                    <input type="number" name="family_members_count" class="form-control @error('family_members_count') is-invalid @enderror"
-                                           value="{{ old('family_members_count', $socialCase->family_members_count ?? '') }}" min="1">
+                                    <input type="number" id="family_members_count" name="family_members_count" class="form-control @error('family_members_count') is-invalid @enderror"
+                                           value="{{ old('family_members_count', $socialCase->family_members_count ?? '') }}" min="0" max="20" onchange="updateFamilyMembersFields()" oninput="updateFamilyMembersFields()">
                                     @error('family_members_count')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
@@ -140,6 +140,16 @@
                             </div>
                         </div>
 
+                        <!-- Section 2.5: Family Members Details -->
+                        <div class="mb-4" id="family-members-section" style="display: none;">
+                            <h6 style="color: #4facfe; font-weight: 700; border-bottom: 2px solid #4facfe; padding-bottom: 10px; margin-bottom: 20px;">
+                                <i class="fas fa-users"></i> بيانات أفراد العائلة
+                            </h6>
+                            <div id="family-members-container">
+                                <!-- Dynamic fields will be inserted here -->
+                            </div>
+                        </div>
+
                         <!-- Section 3: Financial Information -->
                         <div class="mb-4">
                             <h6 style="color: #4facfe; font-weight: 700; border-bottom: 2px solid #4facfe; padding-bottom: 10px; margin-bottom: 20px;">
@@ -148,23 +158,26 @@
 
                             <div class="row">
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label"><strong>الدخل الشهري (ر.س)</strong></label>
-                                    <input type="number" name="monthly_income" class="form-control @error('monthly_income') is-invalid @enderror"
-                                           value="{{ old('monthly_income', $socialCase->monthly_income ?? '') }}" step="0.01" min="0">
+                                    <label class="form-label"><strong>الدخل الشهري (ج.م)</strong></label>
+                                    <input type="number" id="monthly_income" name="monthly_income" class="form-control @error('monthly_income') is-invalid @enderror"
+                                           value="{{ old('monthly_income', $socialCase->monthly_income ?? '') }}" step="0.01" min="0" onchange="checkExpenseWarning()" oninput="checkExpenseWarning()">
                                     @error('monthly_income')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label"><strong>المصروفات الشهرية (ر.س)</strong></label>
-                                    <input type="number" name="monthly_expenses" class="form-control @error('monthly_expenses') is-invalid @enderror"
-                                           value="{{ old('monthly_expenses', $socialCase->monthly_expenses ?? '') }}" step="0.01" min="0">
+                                    <label class="form-label"><strong>المصروفات الشهرية (ج.م)</strong></label>
+                                    <input type="number" id="monthly_expenses" name="monthly_expenses" class="form-control @error('monthly_expenses') is-invalid @enderror"
+                                           value="{{ old('monthly_expenses', $socialCase->monthly_expenses ?? '') }}" step="0.01" min="0" onchange="checkExpenseWarning()" oninput="checkExpenseWarning()">
                                     @error('monthly_expenses')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <div id="expense-warning" style="display: none;" class="alert alert-danger mt-2 mb-0">
+                                        <i class="fas fa-exclamation-triangle"></i> تحذير: المصروفات أعلى من الدخل!
+                                    </div>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label"><strong>المبلغ المطلوب (ر.س)</strong></label>
+                                    <label class="form-label"><strong>المبلغ المطلوب (ج.م)</strong></label>
                                     <input type="number" name="requested_amount" class="form-control @error('requested_amount') is-invalid @enderror"
                                            value="{{ old('requested_amount', $socialCase->requested_amount ?? '') }}" step="0.01" min="0">
                                     @error('requested_amount')
@@ -285,6 +298,9 @@
 </div>
 
 <script>
+    // Existing family members data (if editing)
+    const existingFamilyMembers = @json(isset($socialCase) && $socialCase->familyMembers ? $socialCase->familyMembers->toArray() : []);
+
     function toggleDisabilityField() {
         const hasDisability = document.querySelector('select[name="has_disability"]').value;
         const disabilityField = document.getElementById('disability-desc-field');
@@ -297,10 +313,116 @@
         otherField.style.display = assistanceType == 'other' ? 'block' : 'none';
     }
 
+    // Update family members fields dynamically
+    function updateFamilyMembersFields() {
+        const count = parseInt(document.getElementById('family_members_count').value) || 0;
+        const container = document.getElementById('family-members-container');
+        const section = document.getElementById('family-members-section');
+
+        // Clear existing fields
+        container.innerHTML = '';
+
+        if (count === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'block';
+
+        // Add fields for each family member
+        for (let i = 0; i < count; i++) {
+            const memberDiv = document.createElement('div');
+            memberDiv.className = 'card mb-3';
+            memberDiv.style.background = 'rgba(79, 172, 254, 0.05)';
+            memberDiv.style.border = '1px solid rgba(79, 172, 254, 0.2)';
+
+            // Get existing member data if available
+            const existingMember = existingFamilyMembers[i] || {};
+            const memberName = existingMember.name || '';
+            const memberRelationship = existingMember.relationship || '';
+            const memberGender = existingMember.gender || '';
+            const memberPhone = existingMember.phone || '';
+
+            memberDiv.innerHTML = `
+                <div class="card-body">
+                    <h6 class="mb-3" style="color: #4facfe;">
+                        <i class="fas fa-user"></i> الفرد رقم ${i + 1}
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">الاسم</label>
+                            <input type="text" name="family_members[${i}][name]"
+                                   class="form-control"
+                                   placeholder="اسم الفرد"
+                                   value="${memberName}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">صلة القرابة</label>
+                            <select name="family_members[${i}][relationship]"
+                                    class="form-select">
+                                <option value="">-- اختر --</option>
+                                <option value="زوج" ${memberRelationship === 'زوج' ? 'selected' : ''}>زوج</option>
+                                <option value="زوجة" ${memberRelationship === 'زوجة' ? 'selected' : ''}>زوجة</option>
+                                <option value="ابن" ${memberRelationship === 'ابن' ? 'selected' : ''}>ابن</option>
+                                <option value="ابنة" ${memberRelationship === 'ابنة' ? 'selected' : ''}>ابنة</option>
+                                <option value="أب" ${memberRelationship === 'أب' ? 'selected' : ''}>أب</option>
+                                <option value="أم" ${memberRelationship === 'أم' ? 'selected' : ''}>أم</option>
+                                <option value="أخ" ${memberRelationship === 'أخ' ? 'selected' : ''}>أخ</option>
+                                <option value="أخت" ${memberRelationship === 'أخت' ? 'selected' : ''}>أخت</option>
+                                <option value="جد" ${memberRelationship === 'جد' ? 'selected' : ''}>جد</option>
+                                <option value="جدة" ${memberRelationship === 'جدة' ? 'selected' : ''}>جدة</option>
+                                <option value="عم" ${memberRelationship === 'عم' ? 'selected' : ''}>عم</option>
+                                <option value="عمة" ${memberRelationship === 'عمة' ? 'selected' : ''}>عمة</option>
+                                <option value="خال" ${memberRelationship === 'خال' ? 'selected' : ''}>خال</option>
+                                <option value="خالة" ${memberRelationship === 'خالة' ? 'selected' : ''}>خالة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">النوع</label>
+                            <select name="family_members[${i}][gender]"
+                                    class="form-select">
+                                <option value="">-- اختر --</option>
+                                <option value="male" ${memberGender === 'male' ? 'selected' : ''}>ذكر</option>
+                                <option value="female" ${memberGender === 'female' ? 'selected' : ''}>أنثى</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">رقم الهاتف</label>
+                            <input type="text" name="family_members[${i}][phone]"
+                                   class="form-control"
+                                   placeholder="اختياري"
+                                   value="${memberPhone}">
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            container.appendChild(memberDiv);
+        }
+    }
+
+    // Check expense warning
+    function checkExpenseWarning() {
+        const income = parseFloat(document.getElementById('monthly_income').value) || 0;
+        const expenses = parseFloat(document.getElementById('monthly_expenses').value) || 0;
+        const warning = document.getElementById('expense-warning');
+        const expensesField = document.getElementById('monthly_expenses');
+
+        if (expenses > income && income > 0) {
+            warning.style.display = 'block';
+            expensesField.classList.add('border-danger');
+        } else {
+            warning.style.display = 'none';
+            expensesField.classList.remove('border-danger');
+        }
+    }
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         toggleDisabilityField();
         toggleOtherAssistance();
+        updateFamilyMembersFields();
+        checkExpenseWarning();
     });
 </script>
 

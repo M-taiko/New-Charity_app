@@ -7,6 +7,7 @@ use App\Models\Custody;
 use App\Models\Expense;
 use App\Models\TreasuryTransaction;
 use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class TreasuryService
@@ -29,7 +30,7 @@ class TreasuryService
             $this->notifyUser(
                 $agentId,
                 'تم إرسال عهدة',
-                "تم إرسال عهدة بقيمة {$amount} في انتظار الموافقة",
+                "تم إرسال عهدة بقيمة {$amount} ج.م في انتظار الموافقة",
                 'info',
                 $custody->id,
                 'custody'
@@ -42,13 +43,18 @@ class TreasuryService
     public function acceptCustody($custody)
     {
         return DB::transaction(function () use ($custody) {
+            // Check if treasury has sufficient balance
+            $treasury = $custody->treasury;
+            if ($treasury->balance < $custody->amount) {
+                throw new \Exception('رصيد الخزينة غير كافي. الرصيد المتاح: ' . number_format($treasury->balance, 2) . ' ج.م، والمطلوب: ' . number_format($custody->amount, 2) . ' ج.م');
+            }
+
             $custody->update([
                 'status' => 'accepted',
                 'accepted_at' => now(),
             ]);
 
             // Deduct from treasury
-            $treasury = $custody->treasury;
             $treasury->decrement('balance', $custody->amount);
 
             // Create transaction record
@@ -66,7 +72,7 @@ class TreasuryService
             $this->notifyUser(
                 $custody->accountant_id,
                 'تم قبول العهدة',
-                "تم قبول العهدة من قبل المندوب {$custody->agent->name}",
+                "تم قبول عهدة بقيمة {$custody->amount} ج.م من قبل المندوب {$custody->agent->name}",
                 'info',
                 $custody->id,
                 'custody'
@@ -136,7 +142,7 @@ class TreasuryService
             if ($amount > 1000) {
                 $this->notifyManagers(
                     'مصروف كبير',
-                    "عملية صرف بقيمة {$amount} من العهدة",
+                    "عملية صرف بقيمة {$amount} ج.م من العهدة",
                     'warning',
                     $expense->id,
                     'expense'
@@ -158,7 +164,7 @@ class TreasuryService
             $this->notifyUser(
                 $custody->accountant_id,
                 'طلب رد عهدة',
-                "المندوب {$custody->agent->name} يطلب إرجاع {$returnedAmount} ر.س من العهدة",
+                "المندوب {$custody->agent->name} يطلب إرجاع {$returnedAmount} ج.م من العهدة",
                 'info',
                 $custody->id,
                 'custody'
@@ -205,7 +211,7 @@ class TreasuryService
             $this->notifyUser(
                 $custody->agent_id,
                 'تم قبول الرد',
-                "تم قبول رد المبلغ {$returnedAmount} ر.س من العهدة",
+                "تم قبول رد المبلغ {$returnedAmount} ج.م من العهدة",
                 'success',
                 $custody->id,
                 'custody'
@@ -308,16 +314,29 @@ class TreasuryService
                 'transaction_date' => now(),
             ]);
 
-            // Notify if large expense
-            if ($amount > 1000) {
-                $this->notifyManagers(
-                    'مصروف كبير',
-                    "عملية صرف بقيمة {$amount} من العهدة",
-                    'warning',
-                    $expense->id,
-                    'expense'
-                );
-            }
+            // Get category and item names for notification
+            $category = $expense->category;
+            $categoryName = $category->name ?? 'غير محدد';
+            $itemName = $expense->item ? $expense->item->name : 'غير محدد';
+            $message = "مصروف جديد: {$categoryName} - {$itemName} بقيمة {$amount} ج.م";
+
+            // Notify accountants
+            $this->notifyAccountants(
+                'مصروف جديد',
+                $message,
+                'info',
+                $expense->id,
+                'expense'
+            );
+
+            // Notify managers
+            $this->notifyManagers(
+                'مصروف جديد',
+                $message,
+                'info',
+                $expense->id,
+                'expense'
+            );
 
             return $expense;
         });
@@ -369,7 +388,16 @@ class TreasuryService
             // Notify managers about direct treasury spending
             $this->notifyManagers(
                 'صرف مباشر من الخزينة',
-                "تم صرف {$amount} ر.س مباشرة من الخزينة من قبل {$expense->user->name}",
+                "تم صرف {$amount} ج.م مباشرة من الخزينة من قبل {$expense->user->name}",
+                'warning',
+                $expense->id,
+                'expense'
+            );
+
+            // Notify accountants about direct treasury spending
+            $this->notifyAccountants(
+                'صرف مباشر من الخزينة',
+                "تم صرف {$amount} ج.م مباشرة من الخزينة من قبل {$expense->user->name}",
                 'warning',
                 $expense->id,
                 'expense'
@@ -393,10 +421,19 @@ class TreasuryService
 
     private function notifyManagers($title, $message, $type, $relatedId, $relatedType)
     {
-        $managers = \App\Models\User::role('مدير')->get();
+        $managers = User::role('مدير')->get();
 
         foreach ($managers as $manager) {
             $this->notifyUser($manager->id, $title, $message, $type, $relatedId, $relatedType);
+        }
+    }
+
+    private function notifyAccountants($title, $message, $type, $relatedId, $relatedType)
+    {
+        $accountants = User::role('محاسب')->get();
+
+        foreach ($accountants as $accountant) {
+            $this->notifyUser($accountant->id, $title, $message, $type, $relatedId, $relatedType);
         }
     }
 }

@@ -65,7 +65,7 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <p class="text-muted small mb-1">إجمالي المصروفات</p>
-                            <h4 class="mb-0" style="color: #667eea;">{{ number_format($totalAmount, 2) }} ر.س</h4>
+                            <h4 class="mb-0" style="color: #667eea;">{{ number_format($totalAmount, 2) }} ج.م</h4>
                         </div>
                         <div style="font-size: 2.5rem; color: #667eea; opacity: 0.2;">
                             <i class="fas fa-coins"></i>
@@ -114,7 +114,7 @@
                         <div>
                             <p class="text-muted small mb-1">متوسط البند</p>
                             <h4 class="mb-0" style="color: #f59e0b;">
-                                {{ $totalExpenses > 0 ? number_format($totalAmount / $totalExpenses, 2) : '0.00' }} ر.س
+                                {{ $totalExpenses > 0 ? number_format($totalAmount / $totalExpenses, 2) : '0.00' }} ج.م
                             </h4>
                         </div>
                         <div style="font-size: 2.5rem; color: #f59e0b; opacity: 0.2;">
@@ -167,10 +167,10 @@
                                                 <span class="badge bg-info">{{ $data['total_count'] }}</span>
                                             </td>
                                             <td>
-                                                <strong style="color: #667eea;">{{ number_format($data['total_amount'], 2) }} ر.س</strong>
+                                                <strong style="color: #667eea;">{{ number_format($data['total_amount'], 2) }} ج.م</strong>
                                             </td>
                                             <td>
-                                                {{ number_format($data['average_amount'], 2) }} ر.س
+                                                {{ number_format($data['average_amount'], 2) }} ج.م
                                             </td>
                                             <td>
                                                 <div class="d-flex align-items-center gap-2">

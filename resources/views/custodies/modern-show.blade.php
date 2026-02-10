@@ -36,7 +36,7 @@
 
                     <div class="mb-3">
                         <label class="form-label"><strong>المبلغ:</strong></label>
-                        <p class="text-primary" style="font-size: 1.2rem; font-weight: bold;">{{ number_format($custody->amount, 2) }} ر.س</p>
+                        <p class="text-primary" style="font-size: 1.2rem; font-weight: bold;">{{ number_format($custody->amount, 2) }} ج.م</p>
                     </div>
 
                     <div class="mb-3">
@@ -57,19 +57,19 @@
                         <div class="col-md-4">
                             <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-left: 4px solid #667eea; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                                 <p style="margin: 0; font-size: 0.85rem; color: #666;">إجمالي المصروفات</p>
-                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #667eea;">{{ number_format($totalSpent, 2) }} ر.س</h3>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #667eea;">{{ number_format($totalSpent, 2) }} ج.م</h3>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(251, 140, 0, 0.1)); border-left: 4px solid #ff9800; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                                 <p style="margin: 0; font-size: 0.85rem; color: #666;">المبالغ المردودة</p>
-                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #ff9800;">{{ number_format($custody->returned, 2) }} ر.س</h3>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #ff9800;">{{ number_format($custody->returned, 2) }} ج.م</h3>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1)); border-left: 4px solid #4caf50; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                                 <p style="margin: 0; font-size: 0.85rem; color: #666;">المبلغ المتبقي</p>
-                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #4caf50;">{{ number_format($remaining, 2) }} ر.س</h3>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #4caf50;">{{ number_format($remaining, 2) }} ج.م</h3>
                             </div>
                         </div>
                     </div>
@@ -203,19 +203,19 @@
                             <!-- Total Custody -->
                             <div class="mb-3" style="padding-bottom: 1rem; border-bottom: 1px solid rgba(245, 124, 0, 0.2);">
                                 <p style="margin: 0; color: #666; font-size: 0.8rem;">إجمالي العهدة</p>
-                                <h4 style="margin: 0.5rem 0 0; color: #f57c00; font-weight: 700;">{{ number_format($custody->amount, 2) }} ر.س</h4>
+                                <h4 style="margin: 0.5rem 0 0; color: #f57c00; font-weight: 700;">{{ number_format($custody->amount, 2) }} ج.م</h4>
                             </div>
 
                             <!-- Total Expenses -->
                             <div class="mb-3" style="padding-bottom: 1rem; border-bottom: 1px solid rgba(245, 124, 0, 0.2);">
                                 <p style="margin: 0; color: #666; font-size: 0.8rem;">إجمالي المصروفات</p>
-                                <h4 style="margin: 0.5rem 0 0; color: #e53935; font-weight: 700;">{{ number_format($custody->getTotalSpent(), 2) }} ر.س</h4>
+                                <h4 style="margin: 0.5rem 0 0; color: #e53935; font-weight: 700;">{{ number_format($custody->getTotalSpent(), 2) }} ج.م</h4>
                             </div>
 
                             <!-- Remaining Balance -->
                             <div class="mb-3" style="padding-bottom: 1rem; border-bottom: 1px solid rgba(245, 124, 0, 0.2);">
                                 <p style="margin: 0; color: #666; font-size: 0.8rem;">المبلغ المتبقي</p>
-                                <h4 style="margin: 0.5rem 0 0; color: #43a047; font-weight: 700;">{{ number_format($custody->getRemainingBalance(), 2) }} ر.س</h4>
+                                <h4 style="margin: 0.5rem 0 0; color: #43a047; font-weight: 700;">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</h4>
                             </div>
 
                             <!-- Spending Percentage -->
@@ -254,7 +254,7 @@
                         <i class="fas fa-info-circle"></i> هل تريد قبول هذه العهدة؟
                     </div>
                     <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
-                    <p><strong>المبلغ:</strong> {{ number_format($custody->amount, 2) }} ر.س</p>
+                    <p><strong>المبلغ:</strong> {{ number_format($custody->amount, 2) }} ج.م</p>
                     <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
                         <i class="fas fa-arrow-left"></i> عند القبول، سيتم:
                     </p>
@@ -290,7 +290,7 @@
                         <i class="fas fa-exclamation-triangle"></i> هل تريد رفض هذه العهدة؟
                     </div>
                     <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
-                    <p><strong>المبلغ:</strong> {{ number_format($custody->amount, 2) }} ر.س</p>
+                    <p><strong>المبلغ:</strong> {{ number_format($custody->amount, 2) }} ج.م</p>
                     <div class="mb-3">
                         <label class="form-label"><strong>سبب الرفض</strong></label>
                         <textarea name="reason" class="form-control" rows="3" required placeholder="أدخل سبب الرفض..."></textarea>
@@ -325,21 +325,21 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <p><strong>إجمالي العهدة:</strong><br>
-                            <span style="color: #667eea; font-weight: bold;">{{ number_format($custody->amount, 2) }} ر.س</span></p>
+                            <span style="color: #667eea; font-weight: bold;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
                         </div>
                         <div class="col-md-6">
                             <p><strong>تم صرفه:</strong><br>
-                            <span style="color: #e53935; font-weight: bold;">{{ number_format($custody->getTotalSpent(), 2) }} ر.س</span></p>
+                            <span style="color: #e53935; font-weight: bold;">{{ number_format($custody->getTotalSpent(), 2) }} ج.م</span></p>
                         </div>
                     </div>
                     <div class="mb-3">
                         <p><strong>المتبقي من العهدة:</strong><br>
-                        <span style="color: #4caf50; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->getRemainingBalance(), 2) }} ر.س</span></p>
+                        <span style="color: #4caf50; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</span></p>
                     </div>
                     <div class="mb-3">
                         <label class="form-label"><strong>المبلغ المراد رده</strong></label>
                         <input type="number" name="returned_amount" class="form-control" step="0.01" min="0.01" max="{{ $custody->getRemainingBalance() }}" required placeholder="أدخل المبلغ...">
-                        <small class="text-muted">يجب ألا يتجاوز {{ number_format($custody->getRemainingBalance(), 2) }} ر.س</small>
+                        <small class="text-muted">يجب ألا يتجاوز {{ number_format($custody->getRemainingBalance(), 2) }} ج.م</small>
                     </div>
                     <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
                         <i class="fas fa-arrow-left"></i> عند الرد، سيتم:
@@ -379,18 +379,18 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <p><strong>إجمالي العهدة:</strong><br>
-                            <span style="color: #667eea; font-weight: bold;">{{ number_format($custody->amount, 2) }} ر.س</span></p>
+                            <span style="color: #667eea; font-weight: bold;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
                         </div>
                         <div class="col-md-6">
                             <p><strong>المبلغ المعلق:</strong><br>
-                            <span style="color: #ffa726; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->pending_return, 2) }} ر.س</span></p>
+                            <span style="color: #ffa726; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->pending_return, 2) }} ج.م</span></p>
                         </div>
                     </div>
                     <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
                         <i class="fas fa-arrow-right"></i> عند الموافقة، سيتم:
                     </p>
                     <ul style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
-                        <li>إضافة {{ number_format($custody->pending_return, 2) }} ر.س إلى رصيد الخزينة</li>
+                        <li>إضافة {{ number_format($custody->pending_return, 2) }} ج.م إلى رصيد الخزينة</li>
                         <li>تحديث حالة العهدة</li>
                         <li>إرسال إشعار للمندوب بقبول الرد</li>
                         <li>تسجيل العملية في السجل</li>

@@ -45,7 +45,7 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label"><strong>المبلغ (ر.س)</strong></label>
+                                <label class="form-label"><strong>المبلغ (ج.م)</strong></label>
                                 <input type="number" name="amount" class="form-control @error('amount') is-invalid @enderror" step="0.01" value="{{ old('amount') }}" required>
                                 @error('amount')
                                     <div class="invalid-feedback">{{ $message }}</div>

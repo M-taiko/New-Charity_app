@@ -49,6 +49,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/social-cases/{socialCase}/reject', [SocialCaseController::class, 'reject'])->name('social_cases.reject');
     Route::post('/social-cases/{socialCase}/toggle-active', [SocialCaseController::class, 'toggleActive'])->name('social_cases.toggleActive');
     Route::get('/my-cases', [SocialCaseController::class, 'researcherCases'])->name('social_cases.researcher');
+    Route::get('/api/social-cases/{socialCase}/family-members', [SocialCaseController::class, 'getFamilyMembers'])->name('api.social-cases.family-members');
 
     Route::resource('users', UserController::class);
     Route::post('/users/{user}/assign-roles', [UserController::class, 'assignRoles'])->name('users.assignRoles');

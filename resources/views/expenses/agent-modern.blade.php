@@ -20,7 +20,7 @@
                 <div class="stat-icon"><i class="fas fa-calculator"></i></div>
                 <div class="stat-label">إجمالي المصروفات</div>
                 <div class="stat-number" style="color: var(--primary);">{{ number_format($totalExpenses, 2) }}</div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
@@ -92,7 +92,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: #e53935;">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ر.س';
+                        return '<strong style="color: #e53935;">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
                     }
                 },
                 {

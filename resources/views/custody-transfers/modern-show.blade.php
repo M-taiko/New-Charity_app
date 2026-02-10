@@ -54,7 +54,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-4">
                             <p class="text-muted small mb-1">المبلغ</p>
-                            <h6 class="mb-0" style="color: #10b981;">{{ number_format($custodyTransfer->amount, 2) }} ر.س</h6>
+                            <h6 class="mb-0" style="color: #10b981;">{{ number_format($custodyTransfer->amount, 2) }} ج.م</h6>
                         </div>
                         <div class="col-md-6 mb-4">
                             <p class="text-muted small mb-1">الحالة</p>
@@ -75,7 +75,7 @@
                             <p class="text-muted small mb-1">العهدة</p>
                             <h6 class="mb-0">عهدة #{{ $custodyTransfer->custody->id }}</h6>
                             <small class="text-muted">
-                                المبلغ: {{ number_format($custodyTransfer->custody->amount, 2) }} ر.س
+                                المبلغ: {{ number_format($custodyTransfer->custody->amount, 2) }} ج.م
                             </small>
                         </div>
                         <div class="col-md-6 mb-4">

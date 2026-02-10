@@ -18,7 +18,7 @@
                                 <option value="">اختر العهدة</option>
                                 @foreach($custodies as $custody)
                                     <option value="{{ $custody->id }}">
-                                        {{ $custody->agent->name }} - {{ number_format($custody->getRemainingBalance(), 2) }} ر.س
+                                        {{ $custody->agent->name }} - {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
                                     </option>
                                 @endforeach
                             </select>
@@ -44,7 +44,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">المبلغ (ر.س) <span class="text-danger">*</span></label>
+                            <label class="form-label">المبلغ (ج.م) <span class="text-danger">*</span></label>
                             <input type="number" step="0.01" name="amount" class="form-control" required value="{{ old('amount') }}">
                         </div>
 

@@ -78,9 +78,25 @@
                     </div>
                     @endif
 
+                    @if($socialCase->monthly_expenses && $socialCase->monthly_income && $socialCase->monthly_expenses > $socialCase->monthly_income)
+                    <div class="alert alert-danger mb-3" style="border-right: 4px solid #dc3545;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle fa-2x me-3" style="color: #dc3545;"></i>
+                            <div>
+                                <h6 class="mb-1"><strong>تحذير مهم للمدير</strong></h6>
+                                <p class="mb-0">
+                                    المصروفات الشهرية ({{ number_format($socialCase->monthly_expenses, 2) }} ج.م)
+                                    أعلى من الدخل الشهري ({{ number_format($socialCase->monthly_income, 2) }} ج.م)
+                                    بمبلغ <strong>{{ number_format($socialCase->monthly_expenses - $socialCase->monthly_income, 2) }} ج.م</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
                     @if($socialCase->getTotalSpent() > 0)
                     <div class="mt-3 mb-3 alert alert-info" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); border: 1px solid rgba(79, 172, 254, 0.3);">
-                        <strong>المبلغ المصروف:</strong> {{ number_format($socialCase->getTotalSpent(), 2) }} ر.س
+                        <strong>المبلغ المصروف:</strong> {{ number_format($socialCase->getTotalSpent(), 2) }} ج.م
                     </div>
                     @endif
 
@@ -118,12 +134,54 @@
                                             @endif
                                         </td>
                                         <td>
-                                            <strong style="color: #4caf50;">{{ number_format($expense->amount, 2) }} ر.س</strong>
+                                            <strong style="color: #4caf50;">{{ number_format($expense->amount, 2) }} ج.م</strong>
                                         </td>
                                         <td>{{ $expense->created_at->format('Y-m-d') }}</td>
                                         <td>
                                             <small>{{ Str::limit($expense->description, 30) }}</small>
                                         </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($socialCase->familyMembers && $socialCase->familyMembers->count() > 0)
+                    <hr>
+
+                    <div class="mt-4">
+                        <h6 style="margin-bottom: 1rem;">
+                            <i class="fas fa-users"></i> أفراد العائلة ({{ $socialCase->familyMembers->count() }})
+                        </h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>الاسم</th>
+                                        <th>صلة القرابة</th>
+                                        <th>النوع</th>
+                                        <th>رقم الهاتف</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($socialCase->familyMembers as $index => $member)
+                                    <tr>
+                                        <td>{{ $index + 1 }}</td>
+                                        <td><strong>{{ $member->name }}</strong></td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ $member->relationship }}</span>
+                                        </td>
+                                        <td>
+                                            @if($member->gender === 'male')
+                                                <i class="fas fa-male text-primary"></i> ذكر
+                                            @else
+                                                <i class="fas fa-female text-danger"></i> أنثى
+                                            @endif
+                                        </td>
+                                        <td>{{ $member->phone ?? '-' }}</td>
                                     </tr>
                                     @endforeach
                                 </tbody>
@@ -252,7 +310,7 @@
                         <div class="mb-2">
                             <strong>إجمالي المصروف:</strong><br>
                             <span style="color: #4caf50; font-size: 1.2rem; font-weight: bold;">
-                                {{ number_format($socialCase->getTotalSpent(), 2) }} ر.س
+                                {{ number_format($socialCase->getTotalSpent(), 2) }} ج.م
                             </span>
                         </div>
                         <div>

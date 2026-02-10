@@ -16,7 +16,9 @@
       "Bash(npm run build:*)",
       "Bash(php artisan route:list:*)",
       "Bash(php artisan migrate:*)",
-      "Bash(php artisan db:seed:*)"
+      "Bash(php artisan db:seed:*)",
+      "Bash(php artisan tinker:*)",
+      "Bash(php artisan db:show:*)"
     ]
   }
 }

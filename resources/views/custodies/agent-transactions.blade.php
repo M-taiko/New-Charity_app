@@ -31,7 +31,7 @@
                 <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
                 <div class="stat-label">إجمالي العهد المستلمة</div>
                 <div class="stat-number" style="color: var(--success);">{{ number_format($totalReceived, 2) }}</div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
@@ -39,7 +39,7 @@
                 <div class="stat-icon"><i class="fas fa-receipt"></i></div>
                 <div class="stat-label">إجمالي المصروفات</div>
                 <div class="stat-number" style="color: var(--danger);">{{ number_format($totalSpent, 2) }}</div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
@@ -47,7 +47,7 @@
                 <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
                 <div class="stat-label">إجمالي المبالغ المردودة</div>
                 <div class="stat-number" style="color: var(--warning);">{{ number_format($totalReturned, 2) }}</div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
     </div>
@@ -121,7 +121,7 @@
                                         <tr>
                                             <td>{{ $custody->created_at->toDateString() }}</td>
                                             <td>
-                                                <strong style="color: var(--success);">{{ number_format($custody->amount, 2) }} ر.س</strong>
+                                                <strong style="color: var(--success);">{{ number_format($custody->amount, 2) }} ج.م</strong>
                                             </td>
                                             <td>
                                                 @switch($custody->status)
@@ -224,7 +224,7 @@
                     data: 'amount',
                     render: function(data, type, row) {
                         let color = row.type === 'custody_out' ? 'var(--success)' : row.type === 'expense' ? 'var(--danger)' : 'var(--warning)';
-                        return `<strong style="color: ${color};">${parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ر.س</strong>`;
+                        return `<strong style="color: ${color};">${parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ج.م</strong>`;
                     }
                 },
                 { data: 'description' },
@@ -267,7 +267,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ر.س';
+                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
                     }
                 },
                 { data: 'description' },
@@ -301,7 +301,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--warning);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ر.س';
+                        return '<strong style="color: var(--warning);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
                     }
                 },
                 {

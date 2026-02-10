@@ -101,7 +101,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar') + ' ر.س</strong>';
+                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>';
                     }
                 },
                 {

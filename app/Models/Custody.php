@@ -62,7 +62,7 @@ class Custody extends Model
 
     public function getRemainingBalance()
     {
-        return $this->amount - $this->spent - $this->returned;
+        return $this->amount - $this->spent - $this->returned - $this->pending_return;
     }
 
     public function getTotalSpent()

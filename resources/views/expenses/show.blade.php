@@ -23,7 +23,7 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label"><strong>المبلغ:</strong></label>
-                            <p class="text-danger">{{ number_format($expense->amount, 2) }} ر.س</p>
+                            <p class="text-danger">{{ number_format($expense->amount, 2) }} ج.م</p>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><strong>التاريخ:</strong></label>

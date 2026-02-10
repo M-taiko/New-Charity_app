@@ -47,7 +47,7 @@ class CustodyTransferService
             $this->notifyUser(
                 $toAgentId,
                 'طلب تحويل عهدة',
-                "المندوب {$custody->agent->name} يطلب تحويل {$amount} ر.س من العهدة",
+                "المندوب {$custody->agent->name} يطلب تحويل {$amount} ج.م من العهدة",
                 'info',
                 $transfer->id,
                 'custody_transfer'
@@ -57,7 +57,7 @@ class CustodyTransferService
             $this->notifyUser(
                 $custody->accountant_id,
                 'طلب تحويل عهدة',
-                "تم طلب تحويل عهدة بقيمة {$amount} ر.س بين المندوبين",
+                "تم طلب تحويل عهدة بقيمة {$amount} ج.م بين المندوبين",
                 'info',
                 $transfer->id,
                 'custody_transfer'
@@ -66,7 +66,7 @@ class CustodyTransferService
             // Notify managers
             $this->notifyManagers(
                 'طلب تحويل عهدة',
-                "تم طلب تحويل عهدة بقيمة {$amount} ر.س",
+                "تم طلب تحويل عهدة بقيمة {$amount} ج.م",
                 'info',
                 $transfer->id,
                 'custody_transfer'
@@ -134,7 +134,7 @@ class CustodyTransferService
             $this->notifyUser(
                 $transfer->from_agent_id,
                 'تم قبول التحويل',
-                "تم قبول تحويل {$transfer->amount} ر.س إلى المندوب {$transfer->toAgent->name}",
+                "تم قبول تحويل {$transfer->amount} ج.م إلى المندوب {$transfer->toAgent->name}",
                 'success',
                 $transfer->id,
                 'custody_transfer'
@@ -144,7 +144,7 @@ class CustodyTransferService
             $this->notifyUser(
                 $custody->accountant_id,
                 'تم قبول التحويل',
-                "تم قبول تحويل عهدة بقيمة {$transfer->amount} ر.س",
+                "تم قبول تحويل عهدة بقيمة {$transfer->amount} ج.م",
                 'success',
                 $transfer->id,
                 'custody_transfer'
@@ -153,7 +153,7 @@ class CustodyTransferService
             // Notify managers
             $this->notifyManagers(
                 'تم قبول التحويل',
-                "تم قبول تحويل عهدة بقيمة {$transfer->amount} ر.س",
+                "تم قبول تحويل عهدة بقيمة {$transfer->amount} ج.م",
                 'success',
                 $transfer->id,
                 'custody_transfer'
@@ -196,7 +196,7 @@ class CustodyTransferService
             $this->notifyUser(
                 $transfer->custody->accountant_id,
                 'تم رفض التحويل',
-                "تم رفض تحويل عهدة بقيمة {$transfer->amount} ر.س",
+                "تم رفض تحويل عهدة بقيمة {$transfer->amount} ج.م",
                 'error',
                 $transfer->id,
                 'custody_transfer'

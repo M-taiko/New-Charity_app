@@ -30,7 +30,7 @@
                     <div style="font-size: 3rem; font-weight: 700; color: var(--success); margin-bottom: 0.5rem;">
                         {{ number_format($treasury->balance ?? 0, 0) }}
                     </div>
-                    <div style="color: #6b7280;">ريال سعودي (ر.س)</div>
+                    <div style="color: #6b7280;">جنية مصري (ج.م)</div>
                 </div>
             </div>
         </div>
@@ -101,7 +101,7 @@
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label fw-bold">المبلغ (ر.س)</label>
+                        <label class="form-label fw-bold">المبلغ (ج.م)</label>
                         <input type="number" step="0.01" name="amount" class="form-control form-control-lg" placeholder="أدخل المبلغ" required>
                     </div>
                     <div class="mb-3">
@@ -162,7 +162,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--primary);">' + parseFloat(data).toLocaleString('ar') + ' ر.س</strong>';
+                        return '<strong style="color: var(--primary);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>';
                     }
                 },
                 { data: 'user.name', defaultContent: '-' },

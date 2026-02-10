@@ -70,6 +70,11 @@ class SocialCase extends Model
         return $this->hasMany(SocialCaseDocument::class);
     }
 
+    public function familyMembers(): HasMany
+    {
+        return $this->hasMany(FamilyMember::class);
+    }
+
     public function expenses(): HasMany
     {
         return $this->hasMany(Expense::class);

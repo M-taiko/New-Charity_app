@@ -26,18 +26,18 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label"><strong>الرصيد الحالي:</strong></label>
-                            <p class="text-success" style="font-size: 1.5rem; font-weight: bold;">{{ number_format($treasury->balance, 2) }} ر.س</p>
+                            <p class="text-success" style="font-size: 1.5rem; font-weight: bold;">{{ number_format($treasury->balance, 2) }} ج.م</p>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><strong>إجمالي الدخل:</strong></label>
-                            <p class="text-primary" style="font-size: 1.2rem; font-weight: bold;">{{ number_format($treasury->total_income, 2) }} ر.س</p>
+                            <p class="text-primary" style="font-size: 1.2rem; font-weight: bold;">{{ number_format($treasury->total_income, 2) }} ج.م</p>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label"><strong>إجمالي المصروفات:</strong></label>
-                            <p class="text-danger" style="font-size: 1.2rem; font-weight: bold;">{{ number_format($treasury->total_expenses, 2) }} ر.س</p>
+                            <p class="text-danger" style="font-size: 1.2rem; font-weight: bold;">{{ number_format($treasury->total_expenses, 2) }} ج.م</p>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><strong>آخر تحديث:</strong></label>

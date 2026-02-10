@@ -49,9 +49,9 @@
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">المبلغ المرجع (ر.س)</label>
+                        <label class="form-label">المبلغ المرجع (ج.م)</label>
                         <input type="number" step="0.01" name="returned_amount" class="form-control" max="{{ $row->getRemainingBalance() }}" required>
-                        <small class="text-muted">الحد الأقصى: {{ number_format($row->getRemainingBalance(), 2) }} ر.س</small>
+                        <small class="text-muted">الحد الأقصى: {{ number_format($row->getRemainingBalance(), 2) }} ج.م</small>
                     </div>
                 </div>
                 <div class="modal-footer">

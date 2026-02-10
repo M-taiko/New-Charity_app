@@ -7,6 +7,7 @@ use App\Models\Custody;
 use App\Models\SocialCase;
 use App\Models\ExpenseCategory;
 use App\Models\ExpenseItem;
+use App\Models\Treasury;
 use App\Services\TreasuryService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
@@ -24,14 +25,23 @@ class ExpenseController extends Controller
     public function create()
     {
         $this->authorize('spend_money');
-        $custodies = Custody::where('status', 'accepted')->get();
+        // Filter custodies: only active with available balance
+        $custodies = Custody::where('status', 'accepted')->get()->filter(function($custody) {
+            return $custody->getRemainingBalance() > 0;
+        });
         $cases = SocialCase::where('status', 'approved')->get();
         $categories = ExpenseCategory::active()->with('items')->ordered()->get();
 
         // Check if current user is accountant (محاسب) - can spend from treasury
         $canSpendFromTreasury = auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير');
 
-        return view('expenses.modern-create', compact('custodies', 'cases', 'categories', 'canSpendFromTreasury'));
+        // Get treasury balance for display when spending from treasury
+        $treasury = null;
+        if ($canSpendFromTreasury) {
+            $treasury = Treasury::first();
+        }
+
+        return view('expenses.modern-create', compact('custodies', 'cases', 'categories', 'canSpendFromTreasury', 'treasury'));
     }
 
     public function store(Request $request)
@@ -45,13 +55,31 @@ class ExpenseController extends Controller
             // Direct treasury spending (for accountants)
             $this->authorize('direct_spend_from_treasury');
 
-            $request->validate([
-                'amount' => 'required|numeric|min:1',
+            // Get treasury balance
+            $treasury = Treasury::first();
+            $treasuryBalance = $treasury ? $treasury->balance : 0;
+
+            // Validate category to determine if item is required
+            $category = ExpenseCategory::find($request->expense_category_id);
+            $isOtherExpense = $category && $category->code === 'OTHER';
+
+            $rules = [
+                'amount' => 'required|numeric|min:1|max:' . $treasuryBalance,
                 'expense_category_id' => 'required|exists:expense_categories,id',
-                'expense_item_id' => 'required|exists:expense_items,id',
                 'description' => 'required|string|max:500',
                 'location' => 'nullable|string',
                 'social_case_id' => 'nullable|exists:social_cases,id',
+            ];
+
+            // Item is required only for non-"OTHER" categories
+            if (!$isOtherExpense) {
+                $rules['expense_item_id'] = 'required|exists:expense_items,id';
+            } else {
+                $rules['expense_item_id'] = 'nullable|exists:expense_items,id';
+            }
+
+            $request->validate($rules, [
+                'amount.max' => 'المبلغ المدخل يتجاوز رصيد الخزينة. الحد الأقصى: ' . number_format($treasuryBalance, 2) . ' ج.م',
             ]);
 
             $this->service->recordDirectExpenseFromTreasury(
@@ -65,14 +93,31 @@ class ExpenseController extends Controller
             );
         } else {
             // Custody spending
-            $request->validate([
+            $custody = Custody::findOrFail($request->custody_id);
+            $remainingBalance = $custody->getRemainingBalance();
+
+            // Validate category to determine if item is required
+            $category = ExpenseCategory::find($request->expense_category_id);
+            $isOtherExpense = $category && $category->code === 'OTHER';
+
+            $rules = [
                 'custody_id' => 'required|exists:custodies,id',
-                'amount' => 'required|numeric|min:1',
+                'amount' => 'required|numeric|min:1|max:' . $remainingBalance,
                 'expense_category_id' => 'required|exists:expense_categories,id',
-                'expense_item_id' => 'required|exists:expense_items,id',
                 'description' => 'required|string|max:500',
                 'location' => 'nullable|string',
                 'social_case_id' => 'nullable|exists:social_cases,id',
+            ];
+
+            // Item is required only for non-"OTHER" categories
+            if (!$isOtherExpense) {
+                $rules['expense_item_id'] = 'required|exists:expense_items,id';
+            } else {
+                $rules['expense_item_id'] = 'nullable|exists:expense_items,id';
+            }
+
+            $request->validate($rules, [
+                'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح. الحد الأقصى: ' . number_format($remainingBalance, 2) . ' ج.م',
             ]);
 
             $this->service->recordExpenseWithItems(

@@ -42,7 +42,7 @@
                                 <option value="">-- اختر عهدة --</option>
                                 @foreach ($custodies as $custody)
                                     <option value="{{ $custody->id }}" data-remaining="{{ $custody->remaining_balance }}">
-                                        عهدة #{{ $custody->id }} - الرصيد المتبقي: {{ $custody->remaining_balance }} ر.س
+                                        عهدة #{{ $custody->id }} - الرصيد المتبقي: {{ $custody->remaining_balance }} ج.م
                                     </option>
                                 @endforeach
                             </select>
@@ -154,7 +154,7 @@
 
         if (selectedOption && selectedOption.value) {
             const remaining = selectedOption.getAttribute('data-remaining');
-            remainingInfo.innerHTML = `<i class="fas fa-info-circle"></i> الرصيد المتبقي: <strong>${remaining} ر.س</strong>`;
+            remainingInfo.innerHTML = `<i class="fas fa-info-circle"></i> الرصيد المتبقي: <strong>${remaining} ج.م</strong>`;
         } else {
             remainingInfo.innerHTML = `<i class="fas fa-info-circle"></i> اختر عهدة أولاً`;
         }

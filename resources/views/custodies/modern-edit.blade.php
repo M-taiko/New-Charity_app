@@ -28,7 +28,7 @@
                         @method('PUT')
 
                         <div class="mb-3">
-                            <label class="form-label"><strong>المبلغ (ر.س)</strong></label>
+                            <label class="form-label"><strong>المبلغ (ج.م)</strong></label>
                             <input type="number" name="amount" class="form-control @error('amount') is-invalid @enderror" step="0.01" value="{{ old('amount', $custody->amount) }}" required>
                             @error('amount')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -78,10 +78,10 @@
                             @endswitch
                         </div>
                         <div class="mb-2">
-                            <strong>المبلغ المصروف:</strong> {{ number_format($custody->getTotalSpent(), 2) }} ر.س
+                            <strong>المبلغ المصروف:</strong> {{ number_format($custody->getTotalSpent(), 2) }} ج.م
                         </div>
                         <div class="mb-2">
-                            <strong>المبلغ المتبقي:</strong> {{ number_format($custody->getRemainingBalance(), 2) }} ر.س
+                            <strong>المبلغ المتبقي:</strong> {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
                         </div>
                     </div>
                 </div>

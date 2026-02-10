@@ -59,28 +59,28 @@
                                             <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                                                 <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">إجمالي العهدة</p>
                                                 <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->amount, 0) }}</h3>
-                                                <small style="opacity: 0.8;">ر.س</small>
+                                                <small style="opacity: 0.8;">ج.م</small>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                                                 <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">تم صرفه</p>
                                                 <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodySpent, 0) }}</h3>
-                                                <small style="opacity: 0.8;">ر.س ({{ $custodyPercent }}%)</small>
+                                                <small style="opacity: 0.8;">ج.م ({{ $custodyPercent }}%)</small>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                                                 <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">تم رده</p>
                                                 <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->returned, 0) }}</h3>
-                                                <small style="opacity: 0.8;">ر.س ({{ $returnedPercent }}%)</small>
+                                                <small style="opacity: 0.8;">ج.م ({{ $returnedPercent }}%)</small>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                                                 <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">المتبقي</p>
                                                 <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodyRemaining, 0) }}</h3>
-                                                <small style="opacity: 0.8;">ر.س</small>
+                                                <small style="opacity: 0.8;">ج.م</small>
                                             </div>
                                         </div>
                                     </div>
@@ -138,7 +138,7 @@
                     <div class="stat-number" style="color: var(--success);">
                         {{ number_format($totalReceived, 0) }}
                     </div>
-                    <small style="color: #6b7280;">ر.س</small>
+                    <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
 
@@ -152,7 +152,7 @@
                     <div class="stat-number" style="color: var(--danger);">
                         {{ number_format($totalSpent, 0) }}
                     </div>
-                    <small style="color: #6b7280;">ر.س</small>
+                    <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
 
@@ -166,7 +166,7 @@
                     <div class="stat-number" style="color: var(--info);">
                         {{ number_format($totalRemaining, 0) }}
                     </div>
-                    <small style="color: #6b7280;">ر.س</small>
+                    <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
 
@@ -180,7 +180,7 @@
                     <div class="stat-number" style="color: var(--warning);">
                         {{ number_format($totalReturned, 0) }}
                     </div>
-                    <small style="color: #6b7280;">ر.س</small>
+                    <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
         </div>
@@ -197,7 +197,7 @@
                     <div class="stat-number" style="color: var(--success);">
                         {{ number_format($treasury->balance ?? 0, 0) }}
                     </div>
-                    <small style="color: #6b7280;">ر.س</small>
+                    <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
 
@@ -278,19 +278,19 @@
                                         @endphp
                                         <tr>
                                             <td><a href="{{ route('custodies.show', $custody->id) }}" style="text-decoration: none; color: var(--primary); font-weight: 600;">عهدة #{{ $custody->id }}</a></td>
-                                            <td><strong>{{ number_format($custody->amount, 0) }}</strong> ر.س</td>
+                                            <td><strong>{{ number_format($custody->amount, 0) }}</strong> ج.م</td>
                                             <td>
                                                 <div style="min-width: 150px;">
                                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                                         <small style="color: #666;">{{ $spendingPercent }}%</small>
-                                                        <small style="color: #999;">{{ number_format($totalSpent, 0) }} ر.س</small>
+                                                        <small style="color: #999;">{{ number_format($totalSpent, 0) }} ج.م</small>
                                                     </div>
                                                     <div class="progress" style="height: 6px;">
                                                         <div class="progress-bar" style="width: {{ $spendingPercent }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td><span style="color: #4caf50; font-weight: 600;">{{ number_format($remaining, 0) }}</span> ر.س</td>
+                                            <td><span style="color: #4caf50; font-weight: 600;">{{ number_format($remaining, 0) }}</span> ج.م</td>
                                             <td>
                                                 @if($remaining <= 0 && $custody->status === 'accepted')
                                                     <span class="badge bg-dark">عهدة مستوفاة</span>
@@ -401,7 +401,7 @@
                                                         @break
                                                 @endswitch
                                             </td>
-                                            <td class="fw-bold">{{ number_format($transaction->amount, 0) }} ر.س</td>
+                                            <td class="fw-bold">{{ number_format($transaction->amount, 0) }} ج.م</td>
                                             <td>{{ $transaction->created_at->format('Y-m-d') }}</td>
                                             <td>
                                                 <small class="badge bg-light text-dark">

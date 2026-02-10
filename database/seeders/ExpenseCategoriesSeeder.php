@@ -74,5 +74,15 @@ class ExpenseCategoriesSeeder extends Seeder
                 'order' => $item['order'],
             ]);
         }
+
+        // Category 3: مصروفات أخرى (Other Expenses)
+        ExpenseCategory::create([
+            'name' => 'مصروفات أخرى',
+            'code' => 'OTHER',
+            'description' => 'مصروفات عامة متنوعة بدون تصنيف محدد',
+            'is_active' => true,
+            'order' => 3,
+        ]);
+        // لا بنود لهذه الفئة - المستخدم يدخل الوصف مباشرة
     }
 }

@@ -24,7 +24,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">المبلغ (ر.س) <span class="text-danger">*</span></label>
+                            <label class="form-label">المبلغ (ج.م) <span class="text-danger">*</span></label>
                             <input type="number" step="0.01" name="amount" class="form-control" required value="{{ old('amount') }}">
                             @error('amount') <div class="text-danger">{{ $message }}</div> @enderror
                         </div>
@@ -36,7 +36,7 @@
 
                         <div class="mb-3">
                             <p class="alert alert-info">
-                                رصيد الخزينة الحالي: <strong>{{ number_format($treasury->balance, 2) }} ر.س</strong>
+                                رصيد الخزينة الحالي: <strong>{{ number_format($treasury->balance, 2) }} ج.م</strong>
                             </p>
                         </div>
 
