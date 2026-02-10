@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class TreasuryService
 {
-    public function createCustody($treasuryId, $agentId, $accountantId, $amount, $notes = null)
+    public function createCustody($treasuryId, $agentId, $accountantId, $amount, $notes = null, $isAgentRequest = false)
     {
-        return DB::transaction(function () use ($treasuryId, $agentId, $accountantId, $amount, $notes) {
+        return DB::transaction(function () use ($treasuryId, $agentId, $accountantId, $amount, $notes, $isAgentRequest) {
             $custody = Custody::create([
                 'treasury_id' => $treasuryId,
                 'agent_id' => $agentId,
@@ -26,15 +26,35 @@ class TreasuryService
                 'notes' => $notes,
             ]);
 
-            // Create notification for agent
-            $this->notifyUser(
-                $agentId,
-                'تم إرسال عهدة',
-                "تم إرسال عهدة بقيمة {$amount} ج.م في انتظار الموافقة",
-                'info',
-                $custody->id,
-                'custody'
-            );
+            // Notifications based on request type
+            if ($isAgentRequest) {
+                // Agent request: notify managers and accountants for approval
+                $agent = User::find($agentId);
+                $this->notifyManagers(
+                    'طلب عهدة جديد',
+                    "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م",
+                    'warning',
+                    $custody->id,
+                    'custody'
+                );
+                $this->notifyAccountants(
+                    'طلب عهدة جديد',
+                    "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م",
+                    'warning',
+                    $custody->id,
+                    'custody'
+                );
+            } else {
+                // Manager/Accountant created: notify agent that custody was assigned
+                $this->notifyUser(
+                    $agentId,
+                    'تم تخصيص عهدة',
+                    "تم تخصيص عهدة بقيمة {$amount} ج.م في انتظار الموافقة",
+                    'info',
+                    $custody->id,
+                    'custody'
+                );
+            }
 
             return $custody;
         });
@@ -68,12 +88,12 @@ class TreasuryService
                 'transaction_date' => now(),
             ]);
 
-            // Notify accountant
+            // Notify agent that custody was approved and transferred
             $this->notifyUser(
-                $custody->accountant_id,
-                'تم قبول العهدة',
-                "تم قبول عهدة بقيمة {$custody->amount} ج.م من قبل المندوب {$custody->agent->name}",
-                'info',
+                $custody->agent_id,
+                'تم الموافقة على العهدة',
+                "تم الموافقة على عهدتك بقيمة {$custody->amount} ج.م وتم صرفها في حسابك",
+                'success',
                 $custody->id,
                 'custody'
             );

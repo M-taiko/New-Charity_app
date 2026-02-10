@@ -67,10 +67,11 @@ class CustodyController extends Controller
             $agentId,
             auth()->id(),
             $request->amount,
-            $request->notes
+            $request->notes,
+            $isAgentRequest = $isAgent
         );
 
-        $message = $isAgent ? 'تم إرسال طلب العهدة للمحاسب' : 'تم إنشاء العهدة بنجاح';
+        $message = $isAgent ? 'تم إرسال طلب العهدة للمحاسب للموافقة' : 'تم إنشاء العهدة بنجاح';
         return redirect()->route($isAgent ? 'agent.transactions' : 'custodies.index')->with('success', $message);
     }
 
