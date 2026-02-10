@@ -18,7 +18,9 @@
       "Bash(php artisan migrate:*)",
       "Bash(php artisan db:seed:*)",
       "Bash(php artisan tinker:*)",
-      "Bash(php artisan db:show:*)"
+      "Bash(php artisan db:show:*)",
+      "Bash(php artisan make:migration:*)",
+      "Bash(php -r:*)"
     ]
   }
 }

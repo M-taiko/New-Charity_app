@@ -19,6 +19,7 @@ class TreasuryService
                 'treasury_id' => $treasuryId,
                 'agent_id' => $agentId,
                 'accountant_id' => $accountantId,
+                'initiated_by' => $isAgentRequest ? 'agent' : 'accountant',
                 'amount' => $amount,
                 'spent' => 0,
                 'returned' => 0,
@@ -48,9 +49,9 @@ class TreasuryService
                 // Manager/Accountant created: notify agent that custody was assigned
                 $this->notifyUser(
                     $agentId,
-                    'تم تخصيص عهدة',
-                    "تم تخصيص عهدة بقيمة {$amount} ج.م في انتظار الموافقة",
-                    'info',
+                    'عهدة جديدة تتطلب موافقتك',
+                    "تم تخصيص عهدة لك بقيمة {$amount} ج.م. يرجى قبول أو رفض العهدة",
+                    'warning',
                     $custody->id,
                     'custody'
                 );
@@ -63,6 +64,11 @@ class TreasuryService
     public function acceptCustody($custody)
     {
         return DB::transaction(function () use ($custody) {
+            // Ensure this is only for agent-initiated requests
+            if ($custody->initiated_by !== 'agent') {
+                throw new \Exception('هذه العملية متاحة فقط لطلبات العهد من المندوب');
+            }
+
             // Check if treasury has sufficient balance
             $treasury = $custody->treasury;
             if ($treasury->balance < $custody->amount) {
@@ -146,6 +152,11 @@ class TreasuryService
     public function rejectCustody($custody, $reason = null)
     {
         return DB::transaction(function () use ($custody, $reason) {
+            // Ensure this is only for agent-initiated requests
+            if ($custody->initiated_by !== 'agent') {
+                throw new \Exception('هذه العملية متاحة فقط لطلبات العهد من المندوب');
+            }
+
             $custody->update([
                 'status' => 'rejected',
                 'notes' => $reason,
@@ -156,6 +167,108 @@ class TreasuryService
                 $custody->agent_id,
                 'تم رفض العهدة',
                 "تم رفض العهدة. السبب: {$reason}",
+                'error',
+                $custody->id,
+                'custody'
+            );
+
+            return $custody;
+        });
+    }
+
+    public function agentAcceptCustody($custody)
+    {
+        return DB::transaction(function () use ($custody) {
+            // Validation
+            if ($custody->initiated_by !== 'accountant') {
+                throw new \Exception('هذه العملية متاحة فقط للعهد المرسلة من المحاسب');
+            }
+            if ($custody->status !== 'pending') {
+                throw new \Exception('العهدة يجب أن تكون في حالة انتظار');
+            }
+            if ($custody->agent_id !== auth()->id()) {
+                throw new \Exception('غير مصرح لك بقبول هذه العهدة');
+            }
+
+            // Check treasury balance
+            $treasury = $custody->treasury;
+            if ($treasury->balance < $custody->amount) {
+                throw new \Exception(
+                    $this->insufficientBalanceError($treasury->balance, $custody->amount, 'قبول العهدة')
+                );
+            }
+
+            // Deduct from treasury immediately
+            $treasury->decrement('balance', $custody->amount);
+
+            // Update custody
+            $custody->update([
+                'status' => 'active',
+                'accepted_at' => now(),
+                'received_at' => now(),
+            ]);
+
+            // Create transaction record
+            TreasuryTransaction::create([
+                'treasury_id' => $custody->treasury_id,
+                'type' => 'custody_out',
+                'amount' => $custody->amount,
+                'description' => "صرف عهدة للمندوب {$custody->agent->name} (قبول مباشر)",
+                'user_id' => $custody->agent_id,
+                'custody_id' => $custody->id,
+                'transaction_date' => now(),
+            ]);
+
+            // Notify accountants and managers
+            $this->notifyAccountants(
+                'تم قبول العهدة',
+                "المندوب {$custody->agent->name} قبل العهدة بقيمة {$custody->amount} ج.م وتم صرف الفلوس",
+                'success',
+                $custody->id,
+                'custody'
+            );
+            $this->notifyManagers(
+                'تم قبول العهدة',
+                "المندوب {$custody->agent->name} قبل العهدة بقيمة {$custody->amount} ج.م وتم صرف الفلوس",
+                'success',
+                $custody->id,
+                'custody'
+            );
+
+            return $custody;
+        });
+    }
+
+    public function agentRejectCustody($custody, $reason = null)
+    {
+        return DB::transaction(function () use ($custody, $reason) {
+            // Validation
+            if ($custody->initiated_by !== 'accountant') {
+                throw new \Exception('هذه العملية متاحة فقط للعهد المرسلة من المحاسب');
+            }
+            if ($custody->status !== 'pending') {
+                throw new \Exception('العهدة يجب أن تكون في حالة انتظار');
+            }
+            if ($custody->agent_id !== auth()->id()) {
+                throw new \Exception('غير مصرح لك برفض هذه العهدة');
+            }
+
+            $custody->update([
+                'status' => 'rejected',
+                'notes' => $reason ? "رفض من المندوب: {$reason}" : "رفض من المندوب",
+            ]);
+
+            // Notify accountants and managers
+            $this->notifyAccountants(
+                'رفض العهدة من المندوب',
+                "المندوب {$custody->agent->name} رفض العهدة بقيمة {$custody->amount} ج.م. السبب: " . ($reason ?? 'غير محدد'),
+                'error',
+                $custody->id,
+                'custody'
+            );
+            $this->notifyManagers(
+                'رفض العهدة من المندوب',
+                "المندوب {$custody->agent->name} رفض العهدة بقيمة {$custody->amount} ج.م. السبب: " . ($reason ?? 'غير محدد'),
                 'error',
                 $custody->id,
                 'custody'

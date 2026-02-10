@@ -16,6 +16,7 @@ class Custody extends Model
         'treasury_id',
         'agent_id',
         'accountant_id',
+        'initiated_by',
         'amount',
         'spent',
         'returned',
@@ -70,5 +71,35 @@ class Custody extends Model
     public function getTotalSpent()
     {
         return $this->spent;
+    }
+
+    public function isAgentInitiated(): bool
+    {
+        return $this->initiated_by === 'agent';
+    }
+
+    public function isAccountantInitiated(): bool
+    {
+        return $this->initiated_by === 'accountant';
+    }
+
+    public function agentCanRespond(): bool
+    {
+        return $this->isAccountantInitiated()
+            && $this->status === 'pending'
+            && $this->agent_id === auth()->id();
+    }
+
+    public function accountantCanApprove(): bool
+    {
+        return $this->isAgentInitiated()
+            && $this->status === 'pending';
+    }
+
+    public function needsAgentConfirmation(): bool
+    {
+        return $this->isAgentInitiated()
+            && $this->status === 'accepted'
+            && $this->agent_id === auth()->id();
     }
 }

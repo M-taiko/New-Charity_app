@@ -102,8 +102,13 @@ class CustodyController extends Controller
     public function accept(Custody $custody)
     {
         $this->authorize('approve_custody');
-        $this->service->acceptCustody($custody);
-        return back()->with('success', 'تم الموافقة على العهدة');
+
+        try {
+            $this->service->acceptCustody($custody);
+            return back()->with('success', 'تم الموافقة على العهدة');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function receive(Custody $custody)
@@ -113,15 +118,48 @@ class CustodyController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        $this->service->receiveCustody($custody);
-        return back()->with('success', 'تم استقبال العهدة وصرف الفلوس');
+        try {
+            $this->service->receiveCustody($custody);
+            return back()->with('success', 'تم استقبال العهدة وصرف الفلوس');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function reject(Custody $custody, Request $request)
     {
         $this->authorize('approve_custody');
-        $this->service->rejectCustody($custody, $request->reason);
-        return back()->with('success', 'تم رفض العهدة');
+
+        try {
+            $this->service->rejectCustody($custody, $request->reason);
+            return back()->with('success', 'تم رفض العهدة');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function agentAccept(Custody $custody)
+    {
+        try {
+            $this->service->agentAcceptCustody($custody);
+            return back()->with('success', 'تم قبول العهدة وصرف الفلوس بنجاح');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function agentReject(Custody $custody, Request $request)
+    {
+        $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $this->service->agentRejectCustody($custody, $request->reason);
+            return back()->with('success', 'تم رفض العهدة');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function return(Custody $custody, Request $request)
