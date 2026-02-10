@@ -309,4 +309,33 @@ class CustodyController extends Controller
             ->addColumn('custody', fn($row) => $row->custody)
             ->toJson();
     }
+
+    public function myCustodies()
+    {
+        $user = auth()->user();
+
+        // Check if user is agent (مندوب)
+        if (!$user->hasRole('مندوب')) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Get agent's custodies with related data
+        $custodies = Custody::where('agent_id', $user->id)
+            ->with(['treasury', 'accountant', 'transactions', 'expenses'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Calculate statistics
+        $stats = [
+            'total_custodies' => $custodies->count(),
+            'active_custodies' => $custodies->whereIn('status', ['accepted', 'active'])->count(),
+            'pending_custodies' => $custodies->where('status', 'pending')->count(),
+            'total_amount' => $custodies->sum('amount'),
+            'total_spent' => $custodies->sum('spent'),
+            'total_returned' => $custodies->sum('returned'),
+            'total_remaining' => $custodies->sum(fn($c) => $c->getRemainingBalance()),
+        ];
+
+        return view('custodies.my-custodies', compact('custodies', 'stats'));
+    }
 }

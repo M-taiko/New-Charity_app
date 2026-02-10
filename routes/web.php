@@ -36,6 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agent/transactions', [CustodyController::class, 'agentTransactions'])->name('agent.transactions');
     Route::get('/api/agent/transactions', [CustodyController::class, 'agentTransactionsData'])->name('api.agent.transactions');
     Route::get('/api/agent/returned', [CustodyController::class, 'agentReturnedData'])->name('api.agent.returned');
+    Route::get('/agent/my-custodies', [CustodyController::class, 'myCustodies'])->name('agent.my-custodies');
 
     Route::resource('expenses', ExpenseController::class);
     Route::get('/my-expenses', [ExpenseController::class, 'agentExpenses'])->name('expenses.agent');

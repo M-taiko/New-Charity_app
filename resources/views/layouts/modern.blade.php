@@ -758,6 +758,12 @@
 
                 @role('مندوب')
                 <li>
+                    <a href="{{ route('agent.my-custodies') }}" class="@if(Route::current()->getName() == 'agent.my-custodies') active @endif">
+                        <i class="fas fa-hand-holding-usd"></i>
+                        <span>عهداتي</span>
+                    </a>
+                </li>
+                <li>
                     <a href="{{ route('expenses.agent') }}" class="@if(Route::current()->getName() == 'expenses.agent') active @endif">
                         <i class="fas fa-wallet"></i>
                         <span>مصروفاتي</span>
