@@ -132,12 +132,14 @@
                                     <i class="fas fa-times-circle"></i> رفض العهدة
                                 </button>
                             @endif
-                            @if($custody->status === 'accepted' && $custody->getRemainingBalance() > 0)
+                        @endcan
+                        @role('مندوب')
+                            @if(auth()->user()->id === $custody->agent_id && $custody->status === 'accepted' && $custody->getRemainingBalance() > 0)
                                 <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#returnModal">
                                     <i class="fas fa-undo"></i> رد العهدة
                                 </button>
                             @endif
-                        @endcan
+                        @endrole
 
                         @can('approve_custody')
                             @if($custody->status === 'pending_return' && $custody->pending_return > 0)

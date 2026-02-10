@@ -126,7 +126,10 @@ class CustodyController extends Controller
 
     public function return(Custody $custody, Request $request)
     {
-        $this->authorize('receive_custody');
+        // Only the agent who owns this custody can request to return it
+        if ($custody->agent_id !== auth()->id()) {
+            abort(403, 'Unauthorized');
+        }
 
         $remainingBalance = $custody->getRemainingBalance();
 
