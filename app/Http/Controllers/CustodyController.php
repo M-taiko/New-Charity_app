@@ -30,6 +30,26 @@ class CustodyController extends Controller
             $this->authorize('create_custody');
         }
 
+        $treasury = Treasury::first();
+
+        if (!$treasury) {
+            return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+        }
+
+        // If creating custody for an agent (separate blade file)
+        if ($forType === 'agent') {
+            // Get all users except hidden ones
+            $users = User::where(function($query) {
+                    $query->where('hidden', false)
+                          ->orWhereNull('hidden');
+                })
+                ->orderBy('name')
+                ->get();
+
+            return view('custodies.create-for-agent', compact('users', 'treasury'));
+        }
+
+        // For agent requests or personal requests (original blade file)
         // Get all users except hidden ones
         $agents = User::where(function($query) {
                 $query->where('hidden', false)
@@ -37,12 +57,6 @@ class CustodyController extends Controller
             })
             ->orderBy('name')
             ->get();
-
-        $treasury = Treasury::first();
-
-        if (!$treasury) {
-            return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
-        }
 
         // Determine if this is for self (accountant/manager requesting for themselves)
         $isForSelf = $forType === 'self';

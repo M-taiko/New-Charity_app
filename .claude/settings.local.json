@@ -20,7 +20,8 @@
       "Bash(php artisan tinker:*)",
       "Bash(php artisan db:show:*)",
       "Bash(php artisan make:migration:*)",
-      "Bash(php -r:*)"
+      "Bash(php -r:*)",
+      "Bash(php artisan view:clear:*)"
     ]
   }
 }
