@@ -11,20 +11,19 @@ class ExpenseItemController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(function ($request, $next) {
-            $this->authorize('manage_expense_items');
-            return $next($request);
-        });
+        // Authorization is checked in each method
     }
 
     public function index()
     {
+        $this->authorize('manage_expense_items');
         $categories = ExpenseCategory::active()->ordered()->get();
         return view('expense-items.index', compact('categories'));
     }
 
     public function data(Request $request)
     {
+        $this->authorize('manage_expense_items');
         $query = ExpenseItem::with('category')->orderBy('expense_category_id')->orderBy('order');
 
         if ($request->has('category_id') && $request->category_id) {
@@ -56,12 +55,14 @@ class ExpenseItemController extends Controller
 
     public function create()
     {
+        $this->authorize('manage_expense_items');
         $categories = ExpenseCategory::active()->ordered()->get();
         return view('expense-items.form', compact('categories'));
     }
 
     public function store(Request $request)
     {
+        $this->authorize('manage_expense_items');
         $request->validate([
             'expense_category_id' => 'required|exists:expense_categories,id',
             'name' => 'required|string|max:255',
@@ -77,12 +78,14 @@ class ExpenseItemController extends Controller
 
     public function edit(ExpenseItem $expenseItem)
     {
+        $this->authorize('manage_expense_items');
         $categories = ExpenseCategory::active()->ordered()->get();
         return view('expense-items.form', compact('expenseItem', 'categories'));
     }
 
     public function update(Request $request, ExpenseItem $expenseItem)
     {
+        $this->authorize('manage_expense_items');
         $request->validate([
             'expense_category_id' => 'required|exists:expense_categories,id',
             'name' => 'required|string|max:255',
@@ -99,12 +102,14 @@ class ExpenseItemController extends Controller
 
     public function destroy(ExpenseItem $expenseItem)
     {
+        $this->authorize('manage_expense_items');
         $expenseItem->delete();
         return redirect()->route('expense-items.index')->with('success', 'تم حذف البند بنجاح');
     }
 
     public function toggleStatus(ExpenseItem $expenseItem)
     {
+        $this->authorize('manage_expense_items');
         $expenseItem->update(['is_active' => !$expenseItem->is_active]);
         return back()->with('success', 'تم تحديث حالة البند بنجاح');
     }
