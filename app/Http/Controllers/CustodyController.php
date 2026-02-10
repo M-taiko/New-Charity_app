@@ -36,9 +36,9 @@ class CustodyController extends Controller
             return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
         }
 
-        // If creating custody for an agent (separate blade file)
+        // Route to appropriate view based on request type
         if ($forType === 'agent') {
-            // Get all users except hidden ones
+            // Creating custody for a user (accountant/manager creates for someone else)
             $users = User::where(function($query) {
                     $query->where('hidden', false)
                           ->orWhereNull('hidden');
@@ -46,22 +46,14 @@ class CustodyController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            return view('custodies.create-for-agent', compact('users', 'treasury'));
+            return view('custodies.create-for-user', compact('users', 'treasury'));
+        } elseif ($forType === 'self') {
+            // Personal request (accountant/manager requests for themselves)
+            return view('custodies.personal-request', compact('treasury'));
+        } else {
+            // Agent request (agent requests custody for themselves)
+            return view('custodies.agent-request', compact('treasury'));
         }
-
-        // For agent requests or personal requests (original blade file)
-        // Get all users except hidden ones
-        $agents = User::where(function($query) {
-                $query->where('hidden', false)
-                      ->orWhereNull('hidden');
-            })
-            ->orderBy('name')
-            ->get();
-
-        // Determine if this is for self (accountant/manager requesting for themselves)
-        $isForSelf = $forType === 'self';
-
-        return view('custodies.modern-create', compact('agents', 'treasury', 'isAgent', 'isForSelf'));
     }
 
     public function store(Request $request)
