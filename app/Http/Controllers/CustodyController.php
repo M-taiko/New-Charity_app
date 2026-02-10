@@ -47,17 +47,34 @@ class CustodyController extends Controller
             $this->authorize('create_custody');
         }
 
-        $request->validate([
-            'agent_id' => $isAgent ? 'nullable' : 'required|exists:users,id',
-            'amount' => 'required|numeric|min:1',
-            'issued_date' => 'required|date',
-            'notes' => 'nullable|string',
-        ]);
-
         $treasury = Treasury::first();
         if (!$treasury) {
             return back()->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
         }
+
+        // Build validation rules with conditional treasury balance check for agents
+        $validationRules = [
+            'agent_id' => $isAgent ? 'nullable' : 'required|exists:users,id',
+            'amount' => [
+                'required',
+                'numeric',
+                'min:1',
+            ],
+            'issued_date' => 'required|date',
+            'notes' => 'nullable|string',
+        ];
+
+        // Add max amount rule for agents requesting custody
+        if ($isAgent) {
+            $validationRules['amount'][] = 'max:' . $treasury->balance;
+        }
+
+        $request->validate(
+            $validationRules,
+            [
+                'amount.max' => 'المبلغ المطلوب (' . $request->amount . ' ج.م) يتجاوز الرصيد المتاح في الخزينة (' . number_format($treasury->balance, 2) . ' ج.م)',
+            ]
+        );
 
         // If agent, use their own ID; otherwise use the selected agent_id
         $agentId = $isAgent ? auth()->id() : $request->agent_id;
