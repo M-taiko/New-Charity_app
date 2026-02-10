@@ -19,12 +19,13 @@ class CustodyController extends Controller
         return view('custodies.modern');
     }
 
-    public function create()
+    public function create(Request $request)
     {
         $isAgent = auth()->user()->hasRole('مندوب');
+        $forType = $request->query('for'); // 'self' or 'agent'
 
         // Agents can request custody for themselves
-        // Accountants and managers can create custody for agents
+        // Accountants and managers can create custody for agents or request for themselves
         if (!$isAgent) {
             $this->authorize('create_custody');
         }
@@ -36,14 +37,18 @@ class CustodyController extends Controller
             return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
         }
 
-        return view('custodies.modern-create', compact('agents', 'treasury', 'isAgent'));
+        // Determine if this is for self (accountant/manager requesting for themselves)
+        $isForSelf = $forType === 'self';
+
+        return view('custodies.modern-create', compact('agents', 'treasury', 'isAgent', 'isForSelf'));
     }
 
     public function store(Request $request)
     {
         $isAgent = auth()->user()->hasRole('مندوب');
+        $isForSelf = $request->has('for_self'); // Accountant/Manager requesting for themselves
 
-        if (!$isAgent) {
+        if (!$isAgent && !$isForSelf) {
             $this->authorize('create_custody');
         }
 
@@ -54,7 +59,7 @@ class CustodyController extends Controller
 
         // Build validation rules with conditional treasury balance check for agents
         $validationRules = [
-            'agent_id' => $isAgent ? 'nullable' : 'required|exists:users,id',
+            'agent_id' => ($isAgent || $isForSelf) ? 'nullable' : 'required|exists:users,id',
             'amount' => [
                 'required',
                 'numeric',
@@ -76,8 +81,10 @@ class CustodyController extends Controller
             ]
         );
 
-        // If agent, use their own ID; otherwise use the selected agent_id
-        $agentId = $isAgent ? auth()->id() : $request->agent_id;
+        // Determine agent ID:
+        // - If agent or for_self, use current user ID
+        // - Otherwise use the selected agent_id
+        $agentId = ($isAgent || $isForSelf) ? auth()->id() : $request->agent_id;
 
         $this->service->createCustody(
             $treasury->id,

@@ -10,14 +10,20 @@
                         <i class="fas fa-hand-holding-heart"></i>
                         @if($isAgent)
                             طلب عهدة جديدة
+                        @elseif(isset($isForSelf) && $isForSelf)
+                            طلب عهدة شخصية
                         @else
-                            إضافة عهدة جديدة
+                            إضافة عهدة لمندوب
                         @endif
                     </h1>
                     @if($isAgent)
-                    <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.95rem;">
-                        سيتم إرسال الطلب إلى المحاسب للموافقة عليه
-                    </p>
+                        <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.95rem;">
+                            سيتم إرسال الطلب إلى المحاسب للموافقة عليه
+                        </p>
+                    @elseif(isset($isForSelf) && $isForSelf)
+                        <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.95rem;">
+                            طلب عهدة لنفسك - سيتم إرسال الطلب للمدير للموافقة عليه
+                        </p>
                     @endif
                 </div>
             </div>
@@ -36,12 +42,17 @@
                     <form action="{{ route('custodies.store') }}" method="POST">
                         @csrf
 
-                        @if(!$isAgent)
+                        <!-- Hidden field to indicate if this is for self -->
+                        @if(isset($isForSelf) && $isForSelf)
+                            <input type="hidden" name="for_self" value="1">
+                        @endif
+
+                        @if(!$isAgent && !(isset($isForSelf) && $isForSelf))
                         <div class="row mb-3">
                             <div class="col-md-12">
-                                <label class="form-label"><strong>اختر الوكيل</strong></label>
+                                <label class="form-label"><strong>اختر المندوب</strong></label>
                                 <select name="agent_id" class="form-select @error('agent_id') is-invalid @enderror" required>
-                                    <option value="">-- اختر وكيلاً --</option>
+                                    <option value="">-- اختر مندوباً --</option>
                                     @foreach($agents as $agent)
                                         <option value="{{ $agent->id }}" {{ old('agent_id') == $agent->id ? 'selected' : '' }}>
                                             {{ $agent->name }} ({{ $agent->phone ?? 'بدون رقم' }})

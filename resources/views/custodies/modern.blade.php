@@ -16,9 +16,20 @@
                 </div>
                 <div class="d-flex gap-2" style="flex-wrap: wrap;">
                     @can('create_custody')
-                    <a href="{{ route('custodies.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus-circle"></i> إنشاء عهدة جديدة
-                    </a>
+                        @if(auth()->user()->hasAnyRole(['محاسب', 'مدير']))
+                            <!-- Button for accountants/managers to request custody for themselves -->
+                            <a href="{{ route('custodies.create', ['for' => 'self']) }}" class="btn btn-success">
+                                <i class="fas fa-user-plus"></i> طلب عهدة شخصية
+                            </a>
+                            <!-- Button for accountants/managers to create custody for an agent -->
+                            <a href="{{ route('custodies.create', ['for' => 'agent']) }}" class="btn btn-primary">
+                                <i class="fas fa-users"></i> إنشاء عهدة لمندوب
+                            </a>
+                        @else
+                            <a href="{{ route('custodies.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle"></i> إنشاء عهدة جديدة
+                            </a>
+                        @endif
                     @endcan
                     @role('مندوب')
                     <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
