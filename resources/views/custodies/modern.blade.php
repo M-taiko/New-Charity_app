@@ -17,13 +17,17 @@
                 <div class="d-flex gap-2" style="flex-wrap: wrap;">
                     @can('create_custody')
                         @if(auth()->user()->hasAnyRole(['محاسب', 'مدير']))
+                            <!-- View all custodies for accountants/managers -->
+                            <a href="{{ route('accountant.all-custodies') }}" class="btn btn-info">
+                                <i class="fas fa-list-alt"></i> جميع العهدات
+                            </a>
                             <!-- Button for accountants/managers to request custody for themselves -->
                             <a href="{{ route('custodies.create', ['for' => 'self']) }}" class="btn btn-success">
                                 <i class="fas fa-user-plus"></i> طلب عهدة شخصية
                             </a>
                             <!-- Button for accountants/managers to create custody for an agent -->
                             <a href="{{ route('custodies.create', ['for' => 'agent']) }}" class="btn btn-primary">
-                                <i class="fas fa-users"></i> إنشاء عهدة لمندوب
+                                <i class="fas fa-users"></i> إنشاء عهدة لمستخدم
                             </a>
                         @else
                             <a href="{{ route('custodies.create') }}" class="btn btn-primary">
@@ -32,9 +36,16 @@
                         @endif
                     @endcan
                     @role('مندوب')
-                    <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
-                        <i class="fas fa-exchange-alt"></i> تحويل عهدتي
-                    </a>
+                        <!-- My custodies for agents -->
+                        <a href="{{ route('agent.my-custodies') }}" class="btn btn-info">
+                            <i class="fas fa-wallet"></i> عهداتي
+                        </a>
+                        <a href="{{ route('custodies.create') }}" class="btn btn-success">
+                            <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
+                        </a>
+                        <a href="{{ route('custody-transfers.create') }}" class="btn btn-warning">
+                            <i class="fas fa-exchange-alt"></i> تحويل عهدة
+                        </a>
                     @endrole
                 </div>
             </div>
