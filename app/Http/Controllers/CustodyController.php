@@ -21,7 +21,14 @@ class CustodyController extends Controller
 
     public function create()
     {
-        $this->authorize('create_custody');
+        $isAgent = auth()->user()->hasRole('مندوب');
+
+        // Agents can request custody for themselves
+        // Accountants and managers can create custody for agents
+        if (!$isAgent) {
+            $this->authorize('create_custody');
+        }
+
         $agents = User::role('مندوب')->get();
         $treasury = Treasury::first();
 
@@ -29,15 +36,21 @@ class CustodyController extends Controller
             return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
         }
 
-        return view('custodies.modern-create', compact('agents', 'treasury'));
+        return view('custodies.modern-create', compact('agents', 'treasury', 'isAgent'));
     }
 
     public function store(Request $request)
     {
-        $this->authorize('create_custody');
+        $isAgent = auth()->user()->hasRole('مندوب');
+
+        if (!$isAgent) {
+            $this->authorize('create_custody');
+        }
+
         $request->validate([
-            'agent_id' => 'required|exists:users,id',
+            'agent_id' => $isAgent ? 'nullable' : 'required|exists:users,id',
             'amount' => 'required|numeric|min:1',
+            'issued_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
 
@@ -46,15 +59,19 @@ class CustodyController extends Controller
             return back()->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
         }
 
+        // If agent, use their own ID; otherwise use the selected agent_id
+        $agentId = $isAgent ? auth()->id() : $request->agent_id;
+
         $this->service->createCustody(
             $treasury->id,
-            $request->agent_id,
+            $agentId,
             auth()->id(),
             $request->amount,
             $request->notes
         );
 
-        return redirect()->route('custodies.index')->with('success', 'تم إنشاء العهدة بنجاح');
+        $message = $isAgent ? 'تم إرسال طلب العهدة للمحاسب' : 'تم إنشاء العهدة بنجاح';
+        return redirect()->route($isAgent ? 'agent.transactions' : 'custodies.index')->with('success', $message);
     }
 
     public function show(Custody $custody)

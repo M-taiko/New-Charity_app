@@ -7,8 +7,18 @@
             <div style="display: flex; align-items: center; justify-content: space-between;">
                 <div>
                     <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
-                        <i class="fas fa-hand-holding-heart"></i> إضافة عهدة جديدة
+                        <i class="fas fa-hand-holding-heart"></i>
+                        @if($isAgent)
+                            طلب عهدة جديدة
+                        @else
+                            إضافة عهدة جديدة
+                        @endif
                     </h1>
+                    @if($isAgent)
+                    <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.95rem;">
+                        سيتم إرسال الطلب إلى المحاسب للموافقة عليه
+                    </p>
+                    @endif
                 </div>
             </div>
         </div>
@@ -26,6 +36,7 @@
                     <form action="{{ route('custodies.store') }}" method="POST">
                         @csrf
 
+                        @if(!$isAgent)
                         <div class="row mb-3">
                             <div class="col-md-12">
                                 <label class="form-label"><strong>اختر الوكيل</strong></label>
@@ -42,6 +53,7 @@
                                 @enderror
                             </div>
                         </div>
+                        @endif
 
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -70,9 +82,13 @@
 
                         <div class="d-flex gap-2" style="margin-top: 2rem;">
                             <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
-                                <i class="fas fa-save"></i> حفظ العهدة
+                                @if($isAgent)
+                                    <i class="fas fa-paper-plane"></i> إرسال الطلب
+                                @else
+                                    <i class="fas fa-save"></i> حفظ العهدة
+                                @endif
                             </button>
-                            <a href="{{ route('custodies.index') }}" class="btn btn-secondary">
+                            <a href="{{ $isAgent ? route('agent.transactions') : route('custodies.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-times"></i> إلغاء
                             </a>
                         </div>
