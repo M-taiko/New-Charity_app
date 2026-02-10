@@ -66,7 +66,11 @@ class TreasuryService
             // Check if treasury has sufficient balance
             $treasury = $custody->treasury;
             if ($treasury->balance < $custody->amount) {
-                throw new \Exception('رصيد الخزينة غير كافي. الرصيد المتاح: ' . number_format($treasury->balance, 2) . ' ج.م، والمطلوب: ' . number_format($custody->amount, 2) . ' ج.م');
+                $agentName = $custody->agent->name ?? 'غير محدد';
+                throw new \Exception(
+                    "❌ لا يمكن الموافقة على عهدة المندوب {$agentName}\n\n" .
+                    $this->insufficientBalanceError($treasury->balance, $custody->amount, 'الموافقة على العهدة')
+                );
             }
 
             $custody->update([
@@ -96,6 +100,14 @@ class TreasuryService
             }
 
             $treasury = $custody->treasury;
+
+            // Check if treasury has sufficient balance
+            if ($treasury->balance < $custody->amount) {
+                throw new \Exception(
+                    "❌ لا يمكن صرف العهدة للمندوب\n\n" .
+                    $this->insufficientBalanceError($treasury->balance, $custody->amount, 'صرف العهدة')
+                );
+            }
 
             // Deduct from treasury
             $treasury->decrement('balance', $custody->amount);
@@ -401,7 +413,10 @@ class TreasuryService
             }
 
             if ($treasury->balance < $amount) {
-                throw new \Exception('رصيد الخزينة غير كافي');
+                throw new \Exception(
+                    "❌ لا يمكن تنفيذ هذا المصروف من الخزينة\n\n" .
+                    $this->insufficientBalanceError($treasury->balance, $amount, 'صرف المصروف من الخزينة')
+                );
             }
 
             // Create expense with treasury source and null custody_id
@@ -454,6 +469,19 @@ class TreasuryService
 
             return $expense;
         });
+    }
+
+    /**
+     * Build insufficient balance error message
+     */
+    private function insufficientBalanceError($availableBalance, $requiredAmount, $operationType = 'العملية')
+    {
+        $deficit = $requiredAmount - $availableBalance;
+        return "{$operationType}: رصيد الخزينة غير كافي\n\n" .
+               '💰 الرصيد المتاح: ' . number_format($availableBalance, 2) . ' ج.م' . "\n" .
+               '💸 المبلغ المطلوب: ' . number_format($requiredAmount, 2) . ' ج.م' . "\n" .
+               '❌ النقص: ' . number_format($deficit, 2) . ' ج.م' . "\n\n" .
+               '⚠️ يرجى إضافة أموال للخزينة قبل تنفيذ هذه العملية';
     }
 
     private function notifyUser($userId, $title, $message, $type, $relatedId, $relatedType)
