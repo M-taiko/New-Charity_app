@@ -738,6 +738,15 @@
                 </li>
                 @endcan
 
+                @can('approve_custody')
+                <li>
+                    <a href="{{ route('accountant.all-custodies') }}" class="@if(Route::current()->getName() == 'accountant.all-custodies') active @endif">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>متابعة العهدات</span>
+                    </a>
+                </li>
+                @endcan
+
                 @can('spend_money')
                 <li>
                     <a href="{{ route('expenses.index') }}" class="@if(Route::current()->getName() == 'expenses.index') active @endif">

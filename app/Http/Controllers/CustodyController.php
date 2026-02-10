@@ -338,4 +338,36 @@ class CustodyController extends Controller
 
         return view('custodies.my-custodies', compact('custodies', 'stats'));
     }
+
+    public function allCustodies()
+    {
+        // Check if user is accountant or manager
+        if (!auth()->user()->can('approve_custody')) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Get all custodies with related data
+        $custodies = Custody::with(['agent', 'treasury', 'accountant', 'transactions', 'expenses'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Calculate statistics
+        $stats = [
+            'total_custodies' => $custodies->count(),
+            'active_custodies' => $custodies->whereIn('status', ['accepted', 'active'])->count(),
+            'pending_custodies' => $custodies->where('status', 'pending')->count(),
+            'rejected_custodies' => $custodies->where('status', 'rejected')->count(),
+            'closed_custodies' => $custodies->where('status', 'closed')->count(),
+            'total_amount' => $custodies->sum('amount'),
+            'total_spent' => $custodies->sum('spent'),
+            'total_returned' => $custodies->sum('returned'),
+            'total_remaining' => $custodies->sum(fn($c) => $c->getRemainingBalance()),
+            'pending_returns' => $custodies->sum('pending_return'),
+        ];
+
+        // Get agents list for filtering
+        $agents = User::role('مندوب')->orderBy('name')->get();
+
+        return view('custodies.all-custodies', compact('custodies', 'stats', 'agents'));
+    }
 }
