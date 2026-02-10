@@ -747,6 +747,15 @@
                 </li>
                 @endcan
 
+                @can('manage_expense_items')
+                <li>
+                    <a href="{{ route('expense-items.index') }}" class="@if(Route::current()->getName() == 'expense-items.index') active @endif">
+                        <i class="fas fa-list"></i>
+                        <span>إدارة البنود</span>
+                    </a>
+                </li>
+                @endcan
+
                 @role('مندوب')
                 <li>
                     <a href="{{ route('expenses.agent') }}" class="@if(Route::current()->getName() == 'expenses.agent') active @endif">

@@ -6,6 +6,7 @@ use App\Http\Controllers\TreasuryController;
 use App\Http\Controllers\CustodyController;
 use App\Http\Controllers\CustodyTransferController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ExpenseItemController;
 use App\Http\Controllers\SocialCaseController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SettingsController;
@@ -36,6 +37,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('expenses', ExpenseController::class);
     Route::get('/my-expenses', [ExpenseController::class, 'agentExpenses'])->name('expenses.agent');
     Route::get('/api/agent-expenses', [ExpenseController::class, 'agentExpensesData'])->name('api.agent-expenses.data');
+
+    // Expense Items Management
+    Route::resource('expense-items', ExpenseItemController::class);
+    Route::get('/api/expense-items', [ExpenseItemController::class, 'data'])->name('expense-items.data');
+    Route::post('/expense-items/{expenseItem}/toggle-status', [ExpenseItemController::class, 'toggleStatus'])->name('expense-items.toggle-status');
 
     // Custody Transfers
     Route::resource('custody-transfers', CustodyTransferController::class)->only(['index', 'create', 'store', 'show']);
