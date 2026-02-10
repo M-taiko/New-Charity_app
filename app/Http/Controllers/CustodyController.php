@@ -30,7 +30,12 @@ class CustodyController extends Controller
             $this->authorize('create_custody');
         }
 
-        $agents = User::role('مندوب')->get();
+        // Get all users except hidden ones
+        $agents = User::where('hidden', false)
+            ->orWhereNull('hidden')
+            ->orderBy('name')
+            ->get();
+
         $treasury = Treasury::first();
 
         if (!$treasury) {
