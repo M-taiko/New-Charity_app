@@ -21,7 +21,9 @@
       "Bash(php artisan db:show:*)",
       "Bash(php artisan make:migration:*)",
       "Bash(php -r:*)",
-      "Bash(php artisan view:clear:*)"
+      "Bash(php artisan view:clear:*)",
+      "Bash(php artisan config:clear:*)",
+      "Bash(php artisan cache:clear:*)"
     ]
   }
 }
