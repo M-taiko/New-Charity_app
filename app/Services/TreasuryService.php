@@ -334,12 +334,19 @@ class TreasuryService
             $custody->increment('pending_return', $returnedAmount);
             // Status remains as 'accepted' - it's just marked as pending return internally
 
-            // Send notification to accountant
-            $this->notifyUser(
-                $custody->accountant_id,
+            // Send notification to accountants and managers
+            $this->notifyAccountants(
                 'طلب رد عهدة',
                 "المندوب {$custody->agent->name} يطلب إرجاع {$returnedAmount} ج.م من العهدة",
-                'info',
+                'warning',
+                $custody->id,
+                'custody'
+            );
+
+            $this->notifyManagers(
+                'طلب رد عهدة',
+                "المندوب {$custody->agent->name} يطلب إرجاع {$returnedAmount} ج.م من العهدة",
+                'warning',
                 $custody->id,
                 'custody'
             );
@@ -375,17 +382,37 @@ class TreasuryService
             ]);
 
             // Update status
-            if ($custody->returned >= $custody->amount) {
+            $isClosed = $custody->returned >= $custody->amount;
+            if ($isClosed) {
                 $custody->update(['status' => 'closed']);
             } else {
-                $custody->update(['status' => 'accepted']);
+                $custody->update(['status' => 'partially_returned']);
             }
 
             // Notify agent
+            $statusMessage = $isClosed ? 'وتم إغلاق العهدة' : 'والعهدة مازالت نشطة';
             $this->notifyUser(
                 $custody->agent_id,
                 'تم قبول الرد',
-                "تم قبول رد المبلغ {$returnedAmount} ج.م من العهدة",
+                "تم قبول رد المبلغ {$returnedAmount} ج.م من العهدة {$statusMessage}",
+                'success',
+                $custody->id,
+                'custody'
+            );
+
+            // Notify accountants
+            $this->notifyAccountants(
+                'تم قبول رد العهدة',
+                "تم قبول رد المبلغ {$returnedAmount} ج.م من المندوب {$custody->agent->name} وإضافته للخزينة",
+                'success',
+                $custody->id,
+                'custody'
+            );
+
+            // Notify managers
+            $this->notifyManagers(
+                'تم قبول رد العهدة',
+                "تم قبول رد المبلغ {$returnedAmount} ج.م من المندوب {$custody->agent->name} وإضافته للخزينة",
                 'success',
                 $custody->id,
                 'custody'
