@@ -25,10 +25,15 @@ class ExpenseController extends Controller
     public function create()
     {
         $this->authorize('spend_money');
-        // Filter custodies: only active with available balance
-        $custodies = Custody::where('status', 'accepted')->get()->filter(function($custody) {
-            return $custody->getRemainingBalance() > 0;
-        });
+
+        // Get custodies for current user only (agent_id) that are active/accepted with available balance
+        $custodies = Custody::where('agent_id', auth()->id())
+            ->whereIn('status', ['accepted', 'active'])
+            ->get()
+            ->filter(function($custody) {
+                return $custody->getRemainingBalance() > 0;
+            });
+
         $cases = SocialCase::where('status', 'approved')->get();
         $categories = ExpenseCategory::active()->with('items')->ordered()->get();
 
