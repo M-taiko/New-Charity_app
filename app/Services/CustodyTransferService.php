@@ -23,9 +23,9 @@ class CustodyTransferService
                 throw new \Exception('هذه العهدة لا تخص هذا المندوب');
             }
 
-            // Verify custody is in accepted status
-            if ($custody->status !== 'accepted') {
-                throw new \Exception('العهدة يجب أن تكون في حالة مقبولة');
+            // Verify custody is in accepted or active status
+            if (!in_array($custody->status, ['accepted', 'active'])) {
+                throw new \Exception('العهدة يجب أن تكون في حالة مقبولة أو نشطة');
             }
 
             // Check remaining balance

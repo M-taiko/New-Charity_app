@@ -19,6 +19,18 @@
                     </h5>
                 </div>
                 <div class="card-body">
+                    @if (session('success'))
+                        <div class="alert alert-success" role="alert">
+                            <i class="fas fa-check-circle"></i> {{ session('success') }}
+                        </div>
+                    @endif
+
+                    @if (session('error'))
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-circle"></i> {{ session('error') }}
+                        </div>
+                    @endif
+
                     @if ($errors->any())
                         <div class="alert alert-danger" role="alert">
                             <strong>خطأ:</strong>
