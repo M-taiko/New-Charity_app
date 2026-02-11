@@ -114,6 +114,11 @@ class CustodyTransferService
             // Deduct from sender's custody
             $custody->increment('spent', $transfer->amount);
 
+            // Close custody if balance reaches zero
+            if ($custody->fresh()->getRemainingBalance() <= 0) {
+                $custody->update(['status' => 'closed']);
+            }
+
             // Check if receiving agent has an existing active custody for the same treasury
             $toAgentCustody = Custody::where('treasury_id', $custody->treasury_id)
                 ->where('agent_id', $transfer->to_agent_id)

@@ -506,6 +506,11 @@ class TreasuryService
             // Update custody spent
             $custody->increment('spent', $amount);
 
+            // Close custody if balance reaches zero
+            if ($custody->fresh()->getRemainingBalance() <= 0) {
+                $custody->update(['status' => 'closed']);
+            }
+
             // Create transaction with category and item tracking
             TreasuryTransaction::create([
                 'treasury_id' => $custody->treasury_id,
