@@ -83,6 +83,11 @@
                                 <i class="fas fa-arrow-up"></i> مبالغ مردودة
                             </button>
                         </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="transfers-tab" data-bs-toggle="tab" data-bs-target="#transfers-transactions" type="button" role="tab">
+                                <i class="fas fa-exchange-alt"></i> تحويلات
+                            </button>
+                        </li>
                     </ul>
 
                     <div class="tab-content">
@@ -182,6 +187,25 @@
                                             <th>المبلغ المردود</th>
                                             <th>العهدة</th>
                                             <th>الوصف</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Transfers Tab -->
+                        <div class="tab-pane fade" id="transfers-transactions" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="transfersTable">
+                                    <thead>
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>النوع</th>
+                                            <th>من</th>
+                                            <th>إلى</th>
+                                            <th>المبلغ</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
                                         </tr>
                                     </thead>
                                 </table>
@@ -311,6 +335,69 @@
                     }
                 },
                 { data: 'description' }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            },
+            order: [[0, 'desc']]
+        });
+
+        // Transfers Table
+        $('#transfersTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: '{{ route("api.agent.transfers") }}',
+            columns: [
+                {
+                    data: 'created_at',
+                    render: function(data) {
+                        return new Date(data).toLocaleDateString('ar-SA');
+                    }
+                },
+                {
+                    data: 'transfer_type',
+                    render: function(data) {
+                        return data === 'sent' ? '<span class="badge bg-danger">مرسل</span>' : '<span class="badge bg-success">مستقبل</span>';
+                    }
+                },
+                {
+                    data: 'from_agent_name',
+                    render: function(data) {
+                        return data || '-';
+                    }
+                },
+                {
+                    data: 'to_agent_name',
+                    render: function(data) {
+                        return data || '-';
+                    }
+                },
+                {
+                    data: 'amount',
+                    render: function(data, type, row) {
+                        let color = row.transfer_type === 'sent' ? 'var(--danger)' : 'var(--success)';
+                        return '<strong style="color: ' + color + ';">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
+                    }
+                },
+                {
+                    data: 'status',
+                    render: function(data) {
+                        let statusBadge = {
+                            'pending': '<span class="badge bg-warning">قيد الانتظار</span>',
+                            'approved': '<span class="badge bg-success">تم القبول</span>',
+                            'rejected': '<span class="badge bg-danger">مرفوض</span>'
+                        };
+                        return statusBadge[data] || data;
+                    }
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return `<a href="/custody-transfers/${data}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>`;
+                    }
+                }
             ],
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'

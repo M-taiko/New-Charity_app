@@ -205,6 +205,32 @@ class CustodyTransferController extends Controller
     }
 
     /**
+     * Get DataTable data for agent transfers (both sent and received)
+     */
+    public function agentTransfersData()
+    {
+        $user = auth()->user();
+
+        // Get all transfers where user is sender or receiver
+        $transfers = CustodyTransfer::with(['fromAgent', 'toAgent', 'custody'])
+            ->where(function($query) use ($user) {
+                $query->where('from_agent_id', $user->id)
+                      ->orWhere('to_agent_id', $user->id);
+            })
+            ->get();
+
+        return DataTables::of($transfers)
+            ->addColumn('from_agent_name', fn($row) => $row->fromAgent->name)
+            ->addColumn('to_agent_name', fn($row) => $row->toAgent->name)
+            ->addColumn('transfer_type', function($row) use ($user) {
+                return $row->from_agent_id === $user->id ? 'sent' : 'received';
+            })
+            ->addColumn('status_badge', fn($row) => $this->getStatusBadge($row->status))
+            ->rawColumns(['status_badge'])
+            ->toJson();
+    }
+
+    /**
      * Get status badge HTML
      */
     private function getStatusBadge($status)

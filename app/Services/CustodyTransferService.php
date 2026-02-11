@@ -104,27 +104,64 @@ class CustodyTransferService
             // Deduct from sender's custody
             $custody->increment('spent', $transfer->amount);
 
-            // Check if receiving agent has an existing custody for the same treasury
+            // Check if receiving agent has an existing active custody for the same treasury
             $toAgentCustody = Custody::where('treasury_id', $custody->treasury_id)
                 ->where('agent_id', $transfer->to_agent_id)
-                ->where('status', 'accepted')
+                ->whereIn('status', ['accepted', 'active'])
                 ->first();
 
             if ($toAgentCustody) {
-                // Add to existing custody (reduce the amount he owes, essentially increasing received amount)
-                $toAgentCustody->decrement('spent', $transfer->amount);
+                // Add to existing custody (increase their available balance)
+                $toAgentCustody->increment('amount', $transfer->amount);
+
+                // Create incoming transaction for receiver's custody
+                TreasuryTransaction::create([
+                    'treasury_id' => $custody->treasury_id,
+                    'type' => 'custody_out', // استلام من تحويل
+                    'amount' => $transfer->amount,
+                    'description' => "تحويل عهدة من المندوب {$transfer->fromAgent->name}",
+                    'user_id' => $transfer->to_agent_id,
+                    'custody_id' => $toAgentCustody->id,
+                    'custody_transfer_id' => $transfer->id,
+                    'transaction_date' => now(),
+                ]);
             } else {
-                // Create new custody for receiving agent (optional - can be implemented based on requirements)
-                // For now, we'll just deduct from the sender's balance
+                // Create new custody for receiving agent
+                $newCustody = Custody::create([
+                    'treasury_id' => $custody->treasury_id,
+                    'agent_id' => $transfer->to_agent_id,
+                    'accountant_id' => $custody->accountant_id,
+                    'initiated_by' => 'accountant',
+                    'amount' => $transfer->amount,
+                    'spent' => 0,
+                    'returned' => 0,
+                    'pending_return' => 0,
+                    'status' => 'active',
+                    'notes' => "عهدة من تحويل - المندوب المرسل: {$transfer->fromAgent->name}",
+                    'accepted_at' => now(),
+                    'received_at' => now(),
+                ]);
+
+                // Create incoming transaction for new custody
+                TreasuryTransaction::create([
+                    'treasury_id' => $custody->treasury_id,
+                    'type' => 'custody_out', // استلام من تحويل
+                    'amount' => $transfer->amount,
+                    'description' => "تحويل عهدة من المندوب {$transfer->fromAgent->name}",
+                    'user_id' => $transfer->to_agent_id,
+                    'custody_id' => $newCustody->id,
+                    'custody_transfer_id' => $transfer->id,
+                    'transaction_date' => now(),
+                ]);
             }
 
             // Create outgoing transaction for sender's custody
             TreasuryTransaction::create([
                 'treasury_id' => $custody->treasury_id,
-                'type' => 'custody_out',
+                'type' => 'expense', // خروج من التحويل
                 'amount' => $transfer->amount,
                 'description' => "تحويل عهدة إلى المندوب {$transfer->toAgent->name}",
-                'user_id' => $approverId,
+                'user_id' => $transfer->from_agent_id,
                 'custody_id' => $custody->id,
                 'custody_transfer_id' => $transfer->id,
                 'transaction_date' => now(),

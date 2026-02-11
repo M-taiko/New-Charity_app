@@ -54,6 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/custody-transfers/{custodyTransfer}/reject', [CustodyTransferController::class, 'reject'])->name('custody-transfers.reject');
     Route::get('/api/custody-transfers/sent', [CustodyTransferController::class, 'sentTransfersData'])->name('api.custody-transfers.sent');
     Route::get('/api/custody-transfers/received', [CustodyTransferController::class, 'receivedTransfersData'])->name('api.custody-transfers.received');
+    Route::get('/api/agent/transfers', [CustodyTransferController::class, 'agentTransfersData'])->name('api.agent.transfers');
 
     Route::resource('social-cases', SocialCaseController::class)->names('social_cases');
     Route::post('/social-cases/{socialCase}/approve', [SocialCaseController::class, 'approve'])->name('social_cases.approve');
