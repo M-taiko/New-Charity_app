@@ -43,33 +43,43 @@ class CustodyTransferService
                 'notes' => $notes,
             ]);
 
+            // Collect all users to notify (avoiding duplicates)
+            $notifiedUsers = [];
+
             // Notify receiving agent
-            $this->notifyUser(
-                $toAgentId,
-                'طلب تحويل عهدة',
-                "المندوب {$custody->agent->name} يطلب تحويل {$amount} ج.م من العهدة",
-                'info',
-                $transfer->id,
-                'custody_transfer'
-            );
+            if (!in_array($toAgentId, $notifiedUsers)) {
+                $this->notifyUser(
+                    $toAgentId,
+                    'طلب تحويل عهدة',
+                    "المندوب {$custody->agent->name} يطلب تحويل {$amount} ج.م من العهدة",
+                    'info',
+                    $transfer->id,
+                    'custody_transfer'
+                );
+                $notifiedUsers[] = $toAgentId;
+            }
 
             // Notify accountant
-            $this->notifyUser(
-                $custody->accountant_id,
-                'طلب تحويل عهدة',
-                "تم طلب تحويل عهدة بقيمة {$amount} ج.م بين المندوبين",
-                'info',
-                $transfer->id,
-                'custody_transfer'
-            );
+            if (!in_array($custody->accountant_id, $notifiedUsers)) {
+                $this->notifyUser(
+                    $custody->accountant_id,
+                    'طلب تحويل عهدة',
+                    "تم طلب تحويل عهدة بقيمة {$amount} ج.م بين المندوبين",
+                    'info',
+                    $transfer->id,
+                    'custody_transfer'
+                );
+                $notifiedUsers[] = $custody->accountant_id;
+            }
 
-            // Notify managers
+            // Notify managers (excluding already notified users)
             $this->notifyManagers(
                 'طلب تحويل عهدة',
                 "تم طلب تحويل عهدة بقيمة {$amount} ج.م",
                 'info',
                 $transfer->id,
-                'custody_transfer'
+                'custody_transfer',
+                $notifiedUsers
             );
 
             return $transfer;
@@ -167,33 +177,43 @@ class CustodyTransferService
                 'transaction_date' => now(),
             ]);
 
+            // Collect all users to notify (avoiding duplicates)
+            $notifiedUsers = [];
+
             // Notify sender
-            $this->notifyUser(
-                $transfer->from_agent_id,
-                'تم قبول التحويل',
-                "تم قبول تحويل {$transfer->amount} ج.م إلى المندوب {$transfer->toAgent->name}",
-                'success',
-                $transfer->id,
-                'custody_transfer'
-            );
+            if (!in_array($transfer->from_agent_id, $notifiedUsers)) {
+                $this->notifyUser(
+                    $transfer->from_agent_id,
+                    'تم قبول التحويل',
+                    "تم قبول تحويل {$transfer->amount} ج.م إلى المندوب {$transfer->toAgent->name}",
+                    'success',
+                    $transfer->id,
+                    'custody_transfer'
+                );
+                $notifiedUsers[] = $transfer->from_agent_id;
+            }
 
             // Notify accountant
-            $this->notifyUser(
-                $custody->accountant_id,
-                'تم قبول التحويل',
-                "تم قبول تحويل عهدة بقيمة {$transfer->amount} ج.م",
-                'success',
-                $transfer->id,
-                'custody_transfer'
-            );
+            if (!in_array($custody->accountant_id, $notifiedUsers)) {
+                $this->notifyUser(
+                    $custody->accountant_id,
+                    'تم قبول التحويل',
+                    "تم قبول تحويل عهدة بقيمة {$transfer->amount} ج.م",
+                    'success',
+                    $transfer->id,
+                    'custody_transfer'
+                );
+                $notifiedUsers[] = $custody->accountant_id;
+            }
 
-            // Notify managers
+            // Notify managers (excluding already notified users)
             $this->notifyManagers(
                 'تم قبول التحويل',
                 "تم قبول تحويل عهدة بقيمة {$transfer->amount} ج.م",
                 'success',
                 $transfer->id,
-                'custody_transfer'
+                'custody_transfer',
+                $notifiedUsers
             );
 
             return $transfer;
@@ -219,25 +239,34 @@ class CustodyTransferService
                 'approved_by' => $rejecterId,
             ]);
 
+            // Collect all users to notify (avoiding duplicates)
+            $notifiedUsers = [];
+
             // Notify sender
-            $this->notifyUser(
-                $transfer->from_agent_id,
-                'تم رفض التحويل',
-                "تم رفض طلب تحويل العهدة. السبب: {$rejectionReason}",
-                'error',
-                $transfer->id,
-                'custody_transfer'
-            );
+            if (!in_array($transfer->from_agent_id, $notifiedUsers)) {
+                $this->notifyUser(
+                    $transfer->from_agent_id,
+                    'تم رفض التحويل',
+                    "تم رفض طلب تحويل العهدة. السبب: {$rejectionReason}",
+                    'error',
+                    $transfer->id,
+                    'custody_transfer'
+                );
+                $notifiedUsers[] = $transfer->from_agent_id;
+            }
 
             // Notify accountant
-            $this->notifyUser(
-                $transfer->custody->accountant_id,
-                'تم رفض التحويل',
-                "تم رفض تحويل عهدة بقيمة {$transfer->amount} ج.م",
-                'error',
-                $transfer->id,
-                'custody_transfer'
-            );
+            if (!in_array($transfer->custody->accountant_id, $notifiedUsers)) {
+                $this->notifyUser(
+                    $transfer->custody->accountant_id,
+                    'تم رفض التحويل',
+                    "تم رفض تحويل عهدة بقيمة {$transfer->amount} ج.م",
+                    'error',
+                    $transfer->id,
+                    'custody_transfer'
+                );
+                $notifiedUsers[] = $transfer->custody->accountant_id;
+            }
 
             return $transfer;
         });
@@ -255,12 +284,15 @@ class CustodyTransferService
         ]);
     }
 
-    private function notifyManagers($title, $message, $type, $relatedId, $relatedType)
+    private function notifyManagers($title, $message, $type, $relatedId, $relatedType, $excludeUserIds = [])
     {
         $managers = \App\Models\User::role('مدير')->get();
 
         foreach ($managers as $manager) {
-            $this->notifyUser($manager->id, $title, $message, $type, $relatedId, $relatedType);
+            // Skip if user already notified
+            if (!in_array($manager->id, $excludeUserIds)) {
+                $this->notifyUser($manager->id, $title, $message, $type, $relatedId, $relatedType);
+            }
         }
     }
 }
