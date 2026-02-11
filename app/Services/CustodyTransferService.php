@@ -121,7 +121,7 @@ class CustodyTransferService
             // Create outgoing transaction for sender's custody
             TreasuryTransaction::create([
                 'treasury_id' => $custody->treasury_id,
-                'type' => 'custody_transfer_out',
+                'type' => 'custody_out',
                 'amount' => $transfer->amount,
                 'description' => "تحويل عهدة إلى المندوب {$transfer->toAgent->name}",
                 'user_id' => $approverId,
