@@ -400,22 +400,27 @@ class TreasuryService
                 'custody'
             );
 
-            // Notify accountants
+            // Don't notify the approver about their own action
+            $excludedUsers = [auth()->id()];
+
+            // Notify accountants (excluding the approver)
             $this->notifyAccountants(
                 'تم قبول رد العهدة',
                 "تم قبول رد المبلغ {$returnedAmount} ج.م من المندوب {$custody->agent->name} وإضافته للخزينة",
                 'success',
                 $custody->id,
-                'custody'
+                'custody',
+                $excludedUsers
             );
 
-            // Notify managers
+            // Notify managers (excluding the approver)
             $this->notifyManagers(
                 'تم قبول رد العهدة',
                 "تم قبول رد المبلغ {$returnedAmount} ج.م من المندوب {$custody->agent->name} وإضافته للخزينة",
                 'success',
                 $custody->id,
-                'custody'
+                'custody',
+                $excludedUsers
             );
 
             return $custody;
