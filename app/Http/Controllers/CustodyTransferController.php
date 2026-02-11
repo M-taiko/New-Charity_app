@@ -42,15 +42,19 @@ class CustodyTransferController extends Controller
 
         $user = auth()->user();
 
-        // Get custodies for current agent that are in accepted status
+        // Get custodies for current agent that are active/accepted with remaining balance > 0
         $custodies = Custody::where('agent_id', $user->id)
-            ->where('status', 'accepted')
+            ->whereIn('status', ['accepted', 'active'])
             ->with('agent', 'treasury')
             ->get()
+            ->filter(function ($custody) {
+                return $custody->getRemainingBalance() > 0;
+            })
             ->map(function ($custody) {
                 $custody->remaining_balance = $custody->getRemainingBalance();
                 return $custody;
-            });
+            })
+            ->values(); // Re-index after filter
 
         // Get other agents
         $agents = \App\Models\User::whereHas('roles', function ($q) {
