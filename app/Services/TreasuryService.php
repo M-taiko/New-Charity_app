@@ -521,22 +521,27 @@ class TreasuryService
             $itemName = $expense->item ? $expense->item->name : 'غير محدد';
             $message = "مصروف جديد: {$categoryName} - {$itemName} بقيمة {$amount} ج.م";
 
-            // Notify accountants
+            // Don't notify the user who created the expense about their own action
+            $excludedUsers = [$userId];
+
+            // Notify accountants (excluding the creator)
             $this->notifyAccountants(
                 'مصروف جديد',
                 $message,
                 'info',
                 $expense->id,
-                'expense'
+                'expense',
+                $excludedUsers
             );
 
-            // Notify managers
+            // Notify managers (excluding the creator and already notified accountants)
             $this->notifyManagers(
                 'مصروف جديد',
                 $message,
                 'info',
                 $expense->id,
-                'expense'
+                'expense',
+                $excludedUsers
             );
 
             return $expense;
@@ -589,22 +594,27 @@ class TreasuryService
                 'transaction_date' => now(),
             ]);
 
-            // Notify managers about direct treasury spending
+            // Don't notify the user who created the expense about their own action
+            $excludedUsers = [$userId];
+
+            // Notify managers about direct treasury spending (excluding the creator)
             $this->notifyManagers(
                 'صرف مباشر من الخزينة',
                 "تم صرف {$amount} ج.م مباشرة من الخزينة من قبل {$expense->user->name}",
                 'warning',
                 $expense->id,
-                'expense'
+                'expense',
+                $excludedUsers
             );
 
-            // Notify accountants about direct treasury spending
+            // Notify accountants about direct treasury spending (excluding the creator)
             $this->notifyAccountants(
                 'صرف مباشر من الخزينة',
                 "تم صرف {$amount} ج.م مباشرة من الخزينة من قبل {$expense->user->name}",
                 'warning',
                 $expense->id,
-                'expense'
+                'expense',
+                $excludedUsers
             );
 
             return $expense;
@@ -636,21 +646,27 @@ class TreasuryService
         ]);
     }
 
-    private function notifyManagers($title, $message, $type, $relatedId, $relatedType)
+    private function notifyManagers($title, $message, $type, $relatedId, $relatedType, $excludeUserIds = [])
     {
         $managers = User::role('مدير')->get();
 
         foreach ($managers as $manager) {
-            $this->notifyUser($manager->id, $title, $message, $type, $relatedId, $relatedType);
+            // Skip if user already notified or excluded
+            if (!in_array($manager->id, $excludeUserIds)) {
+                $this->notifyUser($manager->id, $title, $message, $type, $relatedId, $relatedType);
+            }
         }
     }
 
-    private function notifyAccountants($title, $message, $type, $relatedId, $relatedType)
+    private function notifyAccountants($title, $message, $type, $relatedId, $relatedType, $excludeUserIds = [])
     {
         $accountants = User::role('محاسب')->get();
 
         foreach ($accountants as $accountant) {
-            $this->notifyUser($accountant->id, $title, $message, $type, $relatedId, $relatedType);
+            // Skip if user already notified or excluded
+            if (!in_array($accountant->id, $excludeUserIds)) {
+                $this->notifyUser($accountant->id, $title, $message, $type, $relatedId, $relatedType);
+            }
         }
     }
 }
