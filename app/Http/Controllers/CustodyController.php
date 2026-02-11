@@ -93,9 +93,18 @@ class CustodyController extends Controller
         );
 
         // Determine agent ID:
-        // - If agent or for_self, use current user ID
-        // - Otherwise use the selected agent_id
-        $agentId = ($isAgent || $isForSelf) ? auth()->id() : $request->agent_id;
+        // - If agent_id is provided in request (creating for another user), use it
+        // - If for_self is checked (accountant/manager creating for themselves), use current user ID
+        // - Otherwise (agent requesting custody), use current user ID
+        if ($request->filled('agent_id') && $request->agent_id != auth()->id()) {
+            // Creating custody for another agent
+            $agentId = $request->agent_id;
+            $isAgentRequest = false; // Accountant creating for agent, not agent request
+        } else {
+            // Creating custody for self (either agent request or accountant for_self)
+            $agentId = auth()->id();
+            $isAgentRequest = $isAgent; // True if agent requesting, false if accountant for self
+        }
 
         $this->service->createCustody(
             $treasury->id,
@@ -103,11 +112,11 @@ class CustodyController extends Controller
             auth()->id(),
             $request->amount,
             $request->notes,
-            $isAgentRequest = $isAgent
+            $isAgentRequest
         );
 
-        $message = $isAgent ? 'تم إرسال طلب العهدة للمحاسب للموافقة' : 'تم إنشاء العهدة بنجاح';
-        return redirect()->route($isAgent ? 'agent.transactions' : 'custodies.index')->with('success', $message);
+        $message = $isAgentRequest ? 'تم إرسال طلب العهدة للمحاسب للموافقة' : 'تم إنشاء العهدة بنجاح';
+        return redirect()->route($isAgentRequest ? 'agent.transactions' : 'custodies.index')->with('success', $message);
     }
 
     public function show(Custody $custody)
