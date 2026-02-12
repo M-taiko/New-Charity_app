@@ -31,19 +31,23 @@ class TreasuryService
             if ($isAgentRequest) {
                 // Agent request: notify managers and accountants for approval
                 $agent = User::find($agentId);
+                $notifiedUsers = [];
+
                 $this->notifyManagers(
                     'طلب عهدة جديد',
                     "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م",
                     'warning',
                     $custody->id,
-                    'custody'
+                    'custody',
+                    $notifiedUsers
                 );
                 $this->notifyAccountants(
                     'طلب عهدة جديد',
                     "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م",
                     'warning',
                     $custody->id,
-                    'custody'
+                    'custody',
+                    $notifiedUsers
                 );
             } else {
                 // Manager/Accountant created: notify agent that custody was assigned
@@ -219,20 +223,23 @@ class TreasuryService
                 'transaction_date' => now(),
             ]);
 
-            // Notify accountants and managers
+            // Notify accountants and managers (avoiding duplicates)
+            $notifiedUsers = [];
             $this->notifyAccountants(
                 'تم قبول العهدة',
                 "المندوب {$custody->agent->name} قبل العهدة بقيمة {$custody->amount} ج.م وتم صرف الفلوس",
                 'success',
                 $custody->id,
-                'custody'
+                'custody',
+                $notifiedUsers
             );
             $this->notifyManagers(
                 'تم قبول العهدة',
                 "المندوب {$custody->agent->name} قبل العهدة بقيمة {$custody->amount} ج.م وتم صرف الفلوس",
                 'success',
                 $custody->id,
-                'custody'
+                'custody',
+                $notifiedUsers
             );
 
             return $custody;
@@ -258,20 +265,23 @@ class TreasuryService
                 'notes' => $reason ? "رفض من المندوب: {$reason}" : "رفض من المندوب",
             ]);
 
-            // Notify accountants and managers
+            // Notify accountants and managers (avoiding duplicates)
+            $notifiedUsers = [];
             $this->notifyAccountants(
                 'رفض العهدة من المندوب',
                 "المندوب {$custody->agent->name} رفض العهدة بقيمة {$custody->amount} ج.م. السبب: " . ($reason ?? 'غير محدد'),
                 'error',
                 $custody->id,
-                'custody'
+                'custody',
+                $notifiedUsers
             );
             $this->notifyManagers(
                 'رفض العهدة من المندوب',
                 "المندوب {$custody->agent->name} رفض العهدة بقيمة {$custody->amount} ج.م. السبب: " . ($reason ?? 'غير محدد'),
                 'error',
                 $custody->id,
-                'custody'
+                'custody',
+                $notifiedUsers
             );
 
             return $custody;
@@ -334,13 +344,15 @@ class TreasuryService
             $custody->increment('pending_return', $returnedAmount);
             // Status remains as 'accepted' - it's just marked as pending return internally
 
-            // Send notification to accountants and managers
+            // Send notification to accountants and managers (avoiding duplicates)
+            $notifiedUsers = [];
             $this->notifyAccountants(
                 'طلب رد عهدة',
                 "المندوب {$custody->agent->name} يطلب إرجاع {$returnedAmount} ج.م من العهدة",
                 'warning',
                 $custody->id,
-                'custody'
+                'custody',
+                $notifiedUsers
             );
 
             $this->notifyManagers(
@@ -348,7 +360,8 @@ class TreasuryService
                 "المندوب {$custody->agent->name} يطلب إرجاع {$returnedAmount} ج.م من العهدة",
                 'warning',
                 $custody->id,
-                'custody'
+                'custody',
+                $notifiedUsers
             );
 
             return $custody;
@@ -656,7 +669,7 @@ class TreasuryService
         ]);
     }
 
-    private function notifyManagers($title, $message, $type, $relatedId, $relatedType, $excludeUserIds = [])
+    private function notifyManagers($title, $message, $type, $relatedId, $relatedType, &$excludeUserIds = [])
     {
         $managers = User::role('مدير')->get();
 
@@ -664,11 +677,12 @@ class TreasuryService
             // Skip if user already notified or excluded
             if (!in_array($manager->id, $excludeUserIds)) {
                 $this->notifyUser($manager->id, $title, $message, $type, $relatedId, $relatedType);
+                $excludeUserIds[] = $manager->id; // Track notified user
             }
         }
     }
 
-    private function notifyAccountants($title, $message, $type, $relatedId, $relatedType, $excludeUserIds = [])
+    private function notifyAccountants($title, $message, $type, $relatedId, $relatedType, &$excludeUserIds = [])
     {
         $accountants = User::role('محاسب')->get();
 
@@ -676,6 +690,7 @@ class TreasuryService
             // Skip if user already notified or excluded
             if (!in_array($accountant->id, $excludeUserIds)) {
                 $this->notifyUser($accountant->id, $title, $message, $type, $relatedId, $relatedType);
+                $excludeUserIds[] = $accountant->id; // Track notified user
             }
         }
     }
