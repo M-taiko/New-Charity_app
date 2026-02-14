@@ -85,10 +85,15 @@ class CustodyController extends Controller
             $validationRules['amount'][] = 'max:' . $treasury->balance;
         }
 
+        // Customize error message based on user role
+        $amountMaxError = $isAgent
+            ? 'المبلغ المطلوب يتجاوز الرصيد المتاح في الخزينة. يرجى تقليل المبلغ والمحاولة مرة أخرى.'
+            : 'المبلغ المدخل يتجاوز رصيد الخزينة. الحد الأقصى: ' . number_format($treasury->balance, 2) . ' ج.م';
+
         $request->validate(
             $validationRules,
             [
-                'amount.max' => 'المبلغ المطلوب (' . $request->amount . ' ج.م) يتجاوز الرصيد المتاح في الخزينة (' . number_format($treasury->balance, 2) . ' ج.م)',
+                'amount.max' => $amountMaxError,
             ]
         );
 
