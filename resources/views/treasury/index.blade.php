@@ -69,6 +69,7 @@
                             <option value="">اختر المصدر</option>
                             <option value="company">شركة</option>
                             <option value="external">خارجي</option>
+                            <option value="returnings">استردادات</option>
                         </select>
                     </div>
                     <div class="mb-3">

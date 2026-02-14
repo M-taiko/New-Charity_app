@@ -110,6 +110,7 @@
                             <option value="">اختر المصدر</option>
                             <option value="company">شركة</option>
                             <option value="external">مصدر خارجي</option>
+                            <option value="returnings">استردادات</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -153,7 +154,8 @@
                     render: function(data) {
                         const sources = {
                             'company': 'شركة',
-                            'external': 'خارجي'
+                            'external': 'خارجي',
+                            'returnings': 'استردادات',
                         };
                         return `<span class="badge bg-light text-dark">${sources[data] || '-'}</span>`;
                     }

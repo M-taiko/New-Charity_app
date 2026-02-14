@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('treasury_id');
             $table->enum('type', ['donation', 'expense', 'custody_out', 'custody_return']);
-            $table->enum('source', ['company', 'external'])->nullable();
+            $table->enum('source', ['company', 'external' , 'returnings'])->nullable();
             $table->decimal('amount', 15, 2);
             $table->text('description')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();

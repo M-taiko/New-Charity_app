@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Expense extends Model
 {
@@ -53,5 +54,15 @@ class Expense extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(ExpenseItem::class, 'expense_item_id');
+    }
+
+    /**
+     * Multiple custodies that contributed to this expense
+     */
+    public function custodies(): BelongsToMany
+    {
+        return $this->belongsToMany(Custody::class, 'expense_custody')
+            ->withPivot('amount')
+            ->withTimestamps();
     }
 }

@@ -97,17 +97,28 @@ class ExpenseController extends Controller
                 $request->social_case_id
             );
         } else {
-            // Custody spending
-            $custody = Custody::findOrFail($request->custody_id);
-            $remainingBalance = $custody->getRemainingBalance();
+            // Custody spending - can use multiple custodies automatically
+
+            // Get all active custodies for the user
+            $availableCustodies = Custody::where('agent_id', auth()->id())
+                ->whereIn('status', ['accepted', 'active'])
+                ->get()
+                ->filter(function($custody) {
+                    return $custody->getRemainingBalance() > 0;
+                });
+
+            // Calculate total available balance
+            $totalAvailableBalance = $availableCustodies->sum(function($custody) {
+                return $custody->getRemainingBalance();
+            });
 
             // Validate category to determine if item is required
             $category = ExpenseCategory::find($request->expense_category_id);
             $isOtherExpense = $category && $category->code === 'OTHER';
 
             $rules = [
-                'custody_id' => 'required|exists:custodies,id',
-                'amount' => 'required|numeric|min:1|max:' . $remainingBalance,
+                'custody_id' => 'nullable|exists:custodies,id', // Optional, for backward compatibility
+                'amount' => 'required|numeric|min:1|max:' . $totalAvailableBalance,
                 'expense_category_id' => 'required|exists:expense_categories,id',
                 'description' => 'required|string|max:500',
                 'location' => 'nullable|string',
@@ -122,11 +133,14 @@ class ExpenseController extends Controller
             }
 
             $request->validate($rules, [
-                'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح. الحد الأقصى: ' . number_format($remainingBalance, 2) . ' ج.م',
+                'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح في جميع عهدك. الحد الأقصى: ' . number_format($totalAvailableBalance, 2) . ' ج.م',
             ]);
 
+            // Use first custody ID for backward compatibility, or first available
+            $custodyId = $request->custody_id ?? $availableCustodies->first()->id;
+
             $this->service->recordExpenseWithItems(
-                $request->custody_id,
+                $custodyId,
                 auth()->id(),
                 $request->amount,
                 $request->expense_category_id,
