@@ -24,6 +24,7 @@ class Expense extends Model
         'expense_date',
         'notes',
         'source',
+        'attachment',
     ];
 
     protected $casts = [
