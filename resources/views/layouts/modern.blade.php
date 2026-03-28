@@ -747,14 +747,14 @@
                 </li>
                 @endcan
 
-                @can('spend_money')
+                @hasanyrole('محاسب|مدير')
                 <li>
                     <a href="{{ route('expenses.index') }}" class="@if(Route::current()->getName() == 'expenses.index') active @endif">
                         <i class="fas fa-receipt"></i>
                         <span>المصروفات</span>
                     </a>
                 </li>
-                @endcan
+                @endhasanyrole
 
                 @can('manage_expense_items')
                 <li>
