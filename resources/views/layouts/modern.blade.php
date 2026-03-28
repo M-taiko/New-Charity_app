@@ -732,7 +732,7 @@
                 @can('manage_treasury')
                 <li>
                     <a href="{{ route('custodies.index') }}" class="@if(Route::current()->getName() == 'custodies.index') active @endif">
-                        <i class="fas fa-hand-handshake"></i>
+                        <i class="fas fa-hand-handshake fa-hand-holding-hand fa"></i>
                         <span>العهد</span>
                     </a>
                 </li>

@@ -20,14 +20,13 @@ class ExpenseController extends Controller
     {
         $user = auth()->user();
 
-        // المندوب يُوجَّه لصفحة مصروفاته الخاصة
-        if ($user->hasRole('مندوب')) {
-            return redirect()->route('expenses.agent');
+        // المدير والمحاسب يرون كل المصروفات
+        if ($user->can('view_all_expenses')) {
+            return view('expenses.modern');
         }
 
-        $this->authorize('view_all_expenses');
-
-        return view('expenses.modern');
+        // المندوب يُوجَّه لصفحة مصروفاته الخاصة
+        return redirect()->route('expenses.agent');
     }
 
     public function create()
