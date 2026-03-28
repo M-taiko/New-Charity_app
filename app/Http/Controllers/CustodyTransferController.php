@@ -77,7 +77,7 @@ class CustodyTransferController extends Controller
         $request->validate([
             'custody_id' => 'required|exists:custodies,id',
             'to_agent_id' => 'required|exists:users,id',
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:0.01|max:1000000',
             'notes' => 'nullable|string|max:500',
         ]);
 

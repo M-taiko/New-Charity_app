@@ -74,13 +74,14 @@ class CustodyController extends Controller
             'amount' => [
                 'required',
                 'numeric',
-                'min:1',
+                'min:0.01',
+                'max:1000000', // Reasonable maximum
             ],
             'issued_date' => 'required|date',
             'notes' => 'nullable|string',
         ];
 
-        // Add max amount rule for agents requesting custody
+        // Add max amount rule for agents requesting custody (don't exceed treasury balance)
         if ($isAgent) {
             $validationRules['amount'][] = 'max:' . $treasury->balance;
         }
@@ -139,7 +140,7 @@ class CustodyController extends Controller
     {
         $this->authorize('manage_treasury');
         $request->validate([
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:0.01|max:1000000',
             'notes' => 'nullable|string',
         ]);
 
@@ -221,7 +222,7 @@ class CustodyController extends Controller
         $remainingBalance = $custody->getRemainingBalance();
 
         $request->validate([
-            'returned_amount' => 'required|numeric|min:1|max:' . $remainingBalance,
+            'returned_amount' => 'required|numeric|min:0.01|max:' . $remainingBalance,
         ]);
 
         $this->service->requestReturnCustody($custody, $request->returned_amount);
@@ -358,14 +359,18 @@ class CustodyController extends Controller
             ->get();
 
         // Calculate statistics
+        // For financial calculations, exclude rejected and pending custodies
+        $acceptedCustodies = $custodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']);
+
         $stats = [
             'total_custodies' => $custodies->count(),
             'active_custodies' => $custodies->whereIn('status', ['accepted', 'active'])->count(),
             'pending_custodies' => $custodies->where('status', 'pending')->count(),
-            'total_amount' => $custodies->sum('amount'),
-            'total_spent' => $custodies->sum('spent'),
-            'total_returned' => $custodies->sum('returned'),
-            'total_remaining' => $custodies->sum(fn($c) => $c->getRemainingBalance()),
+            // Financial stats only for accepted custodies (exclude rejected and pending)
+            'total_amount' => $acceptedCustodies->sum('amount'),
+            'total_spent' => $acceptedCustodies->sum('spent'),
+            'total_returned' => $acceptedCustodies->sum('returned'),
+            'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
         ];
 
         return view('custodies.my-custodies', compact('custodies', 'stats'));
@@ -384,17 +389,21 @@ class CustodyController extends Controller
             ->get();
 
         // Calculate statistics
+        // For financial calculations, exclude rejected and pending custodies
+        $acceptedCustodies = $custodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']);
+
         $stats = [
             'total_custodies' => $custodies->count(),
             'active_custodies' => $custodies->whereIn('status', ['accepted', 'active'])->count(),
             'pending_custodies' => $custodies->where('status', 'pending')->count(),
             'rejected_custodies' => $custodies->where('status', 'rejected')->count(),
             'closed_custodies' => $custodies->where('status', 'closed')->count(),
-            'total_amount' => $custodies->sum('amount'),
-            'total_spent' => $custodies->sum('spent'),
-            'total_returned' => $custodies->sum('returned'),
-            'total_remaining' => $custodies->sum(fn($c) => $c->getRemainingBalance()),
-            'pending_returns' => $custodies->sum('pending_return'),
+            // Financial stats only for accepted custodies (exclude rejected and pending)
+            'total_amount' => $acceptedCustodies->sum('amount'),
+            'total_spent' => $acceptedCustodies->sum('spent'),
+            'total_returned' => $acceptedCustodies->sum('returned'),
+            'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
+            'pending_returns' => $acceptedCustodies->sum('pending_return'),
         ];
 
         // Get agents list for filtering

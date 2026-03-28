@@ -815,6 +815,12 @@
                         <span>إحصائيات الباحثين</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('reports.agents-balance') }}" class="@if(Route::current()->getName() == 'reports.agents-balance') active @endif">
+                        <i class="fas fa-wallet"></i>
+                        <span>رصيد المندوبين</span>
+                    </a>
+                </li>
                 @endcan
 
                 @can('manage_users')

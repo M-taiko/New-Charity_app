@@ -109,7 +109,9 @@ class TreasuryService
                 throw new \Exception('العهدة يجب أن تكون في حالة مقبولة قبل الاستقبال');
             }
 
-            $treasury = $custody->treasury;
+            // Lock the custody and treasury for update to prevent race conditions
+            $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            $treasury = Treasury::where('id', $custody->treasury_id)->lockForUpdate()->first();
 
             // Check if treasury has sufficient balance
             if ($treasury->balance < $custody->amount) {
@@ -183,6 +185,10 @@ class TreasuryService
     public function agentAcceptCustody($custody)
     {
         return DB::transaction(function () use ($custody) {
+            // Lock the custody and treasury for update
+            $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            $treasury = Treasury::where('id', $custody->treasury_id)->lockForUpdate()->first();
+
             // Validation
             if ($custody->initiated_by !== 'accountant') {
                 throw new \Exception('هذه العملية متاحة فقط للعهد المرسلة من المحاسب');
@@ -195,7 +201,6 @@ class TreasuryService
             }
 
             // Check treasury balance
-            $treasury = $custody->treasury;
             if ($treasury->balance < $custody->amount) {
                 throw new \Exception(
                     $this->insufficientBalanceError($treasury->balance, $custody->amount, 'قبول العهدة')
@@ -371,6 +376,10 @@ class TreasuryService
     public function approveCustodyReturn($custody)
     {
         return DB::transaction(function () use ($custody) {
+            // Lock the custody and treasury for update
+            $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            $treasury = Treasury::where('id', $custody->treasury_id)->lockForUpdate()->first();
+
             $returnedAmount = $custody->pending_return;
 
             // Move from pending to confirmed returned
@@ -380,7 +389,6 @@ class TreasuryService
             ]);
 
             // Add to treasury
-            $treasury = $custody->treasury;
             $treasury->increment('balance', $returnedAmount);
 
             // Create transaction
@@ -443,10 +451,13 @@ class TreasuryService
     public function returnCustody($custody, $returnedAmount)
     {
         return DB::transaction(function () use ($custody, $returnedAmount) {
+            // Lock the custody and treasury for update
+            $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            $treasury = Treasury::where('id', $custody->treasury_id)->lockForUpdate()->first();
+
             $custody->increment('returned', $returnedAmount);
 
             // Add to treasury
-            $treasury = $custody->treasury;
             $treasury->increment('balance', $returnedAmount);
 
             // Create transaction
@@ -463,6 +474,17 @@ class TreasuryService
             // Update status if fully returned
             if ($custody->returned >= $custody->amount) {
                 $custody->update(['status' => 'closed']);
+
+                // Create closure transaction (administrative record)
+                TreasuryTransaction::create([
+                    'treasury_id' => $custody->treasury_id,
+                    'type' => 'custody_close',
+                    'amount' => 0,
+                    'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (تم رد المبلغ بالكامل)",
+                    'user_id' => auth()->id(),
+                    'custody_id' => $custody->id,
+                    'transaction_date' => now(),
+                ]);
             } elseif ($custody->returned > 0) {
                 $custody->update(['status' => 'partially_returned']);
             }
@@ -494,9 +516,9 @@ class TreasuryService
         });
     }
 
-    public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null)
+    public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general')
     {
-        return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId) {
+        return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type) {
             // Get all active custodies for the user sorted by oldest first
             $availableCustodies = Custody::where('agent_id', $userId)
                 ->whereIn('status', ['accepted', 'active'])
@@ -522,11 +544,13 @@ class TreasuryService
                 'social_case_id' => $socialCaseId,
                 'expense_category_id' => $categoryId,
                 'expense_item_id' => $itemId,
+                'type' => $type,
                 'amount' => $amount,
                 'description' => $description,
                 'location' => $location,
                 'source' => 'custody',
                 'expense_date' => now(),
+                'attachment' => $attachment,
             ]);
 
             // Distribute the expense across custodies
@@ -537,6 +561,9 @@ class TreasuryService
                 if ($remainingAmount <= 0) {
                     break;
                 }
+
+                // Lock the custody for update to prevent race conditions
+                $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
 
                 $custodyBalance = $custody->getRemainingBalance();
                 $amountFromThisCustody = min($remainingAmount, $custodyBalance);
@@ -569,6 +596,17 @@ class TreasuryService
                 // Close custody if balance reaches zero
                 if ($custody->fresh()->getRemainingBalance() <= 0) {
                     $custody->update(['status' => 'closed']);
+
+                    // Create closure transaction (administrative record)
+                    TreasuryTransaction::create([
+                        'treasury_id' => $custody->treasury_id,
+                        'type' => 'custody_close',
+                        'amount' => 0,
+                        'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (رصيد صفر)",
+                        'user_id' => $userId,
+                        'custody_id' => $custody->id,
+                        'transaction_date' => now(),
+                    ]);
                 }
 
                 $remainingAmount -= $amountFromThisCustody;
@@ -607,10 +645,11 @@ class TreasuryService
         });
     }
 
-    public function recordDirectExpenseFromTreasury($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null)
+    public function recordDirectExpenseFromTreasury($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general')
     {
-        return DB::transaction(function () use ($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId) {
-            $treasury = Treasury::first();
+        return DB::transaction(function () use ($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type) {
+            // Lock the treasury for update to prevent race conditions
+            $treasury = Treasury::where('id', Treasury::first()->id)->lockForUpdate()->first();
 
             if (!$treasury) {
                 throw new \Exception('لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
@@ -630,11 +669,13 @@ class TreasuryService
                 'social_case_id' => $socialCaseId,
                 'expense_category_id' => $categoryId,
                 'expense_item_id' => $itemId,
+                'type' => $type,
                 'amount' => $amount,
                 'description' => $description,
                 'location' => $location,
                 'source' => 'treasury',
                 'expense_date' => now(),
+                'attachment' => $attachment,
             ]);
 
             // Deduct from treasury

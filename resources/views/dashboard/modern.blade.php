@@ -25,8 +25,13 @@
     @if(auth()->user()->hasRole('مندوب'))
         <!-- Agent Statistics -->
         @php
-            $agentCustodies = \App\Models\Custody::where('agent_id', auth()->id())->get();
-            $activeCustody = $agentCustodies->where('status', 'accepted')->first();
+            // فلترة العهد النشطة فقط (بدون closed)
+            $agentCustodies = \App\Models\Custody::where('agent_id', auth()->id())
+                ->whereIn('status', ['accepted', 'active', 'partially_returned'])
+                ->get();
+            $activeCustody = $agentCustodies->where('status', 'accepted')->first()
+                ?? $agentCustodies->where('status', 'active')->first()
+                ?? $agentCustodies->where('status', 'partially_returned')->first();
             $totalReceived = $agentCustodies->sum('amount');
             $totalSpent = $agentCustodies->sum('spent');
             $totalReturned = $agentCustodies->sum('returned');

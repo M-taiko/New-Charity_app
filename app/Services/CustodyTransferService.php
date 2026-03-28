@@ -97,8 +97,11 @@ class CustodyTransferService
                 throw new \Exception('فقط المندوب المستقبل يمكنه الموافقة على التحويل');
             }
 
-            // Re-verify balance one more time
-            if ($transfer->custody->getRemainingBalance() < $transfer->amount) {
+            // Lock the custody for update to prevent race conditions
+            $custody = Custody::where('id', $transfer->custody_id)->lockForUpdate()->first();
+
+            // Re-verify balance one more time with fresh data
+            if ($custody->getRemainingBalance() < $transfer->amount) {
                 throw new \Exception('الرصيد المتبقي غير كافي');
             }
 
@@ -109,10 +112,8 @@ class CustodyTransferService
                 'approved_by' => $approverId,
             ]);
 
-            $custody = $transfer->custody;
-
-            // Deduct from sender's custody
-            $custody->increment('spent', $transfer->amount);
+            // Deduct from sender's custody using transferred_out (not spent!)
+            $custody->increment('transferred_out', $transfer->amount);
 
             // Close custody if balance reaches zero
             if ($custody->fresh()->getRemainingBalance() <= 0) {
@@ -126,13 +127,16 @@ class CustodyTransferService
                 ->first();
 
             if ($toAgentCustody) {
-                // Add to existing custody (increase their available balance)
-                $toAgentCustody->increment('amount', $transfer->amount);
+                // Lock the receiving custody for update
+                $toAgentCustody = Custody::where('id', $toAgentCustody->id)->lockForUpdate()->first();
+
+                // Add to existing custody (increase their transferred_in)
+                $toAgentCustody->increment('transferred_in', $transfer->amount);
 
                 // Create incoming transaction for receiver's custody
                 TreasuryTransaction::create([
                     'treasury_id' => $custody->treasury_id,
-                    'type' => 'custody_out', // استلام من تحويل
+                    'type' => 'custody_transfer_in', // استلام من تحويل
                     'amount' => $transfer->amount,
                     'description' => "تحويل عهدة من المندوب {$transfer->fromAgent->name}",
                     'user_id' => $transfer->to_agent_id,
@@ -149,6 +153,8 @@ class CustodyTransferService
                     'initiated_by' => 'accountant',
                     'amount' => $transfer->amount,
                     'spent' => 0,
+                    'transferred_out' => 0,
+                    'transferred_in' => 0,
                     'returned' => 0,
                     'pending_return' => 0,
                     'status' => 'active',
@@ -160,7 +166,7 @@ class CustodyTransferService
                 // Create incoming transaction for new custody
                 TreasuryTransaction::create([
                     'treasury_id' => $custody->treasury_id,
-                    'type' => 'custody_out', // استلام من تحويل
+                    'type' => 'custody_transfer_in', // استلام من تحويل
                     'amount' => $transfer->amount,
                     'description' => "تحويل عهدة من المندوب {$transfer->fromAgent->name}",
                     'user_id' => $transfer->to_agent_id,
@@ -173,7 +179,7 @@ class CustodyTransferService
             // Create outgoing transaction for sender's custody
             TreasuryTransaction::create([
                 'treasury_id' => $custody->treasury_id,
-                'type' => 'expense', // خروج من التحويل
+                'type' => 'custody_transfer_out', // تحويل من العهدة
                 'amount' => $transfer->amount,
                 'description' => "تحويل عهدة إلى المندوب {$transfer->toAgent->name}",
                 'user_id' => $transfer->from_agent_id,

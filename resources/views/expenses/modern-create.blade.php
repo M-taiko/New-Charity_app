@@ -23,7 +23,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('expenses.store') }}" method="POST">
+                    <form action="{{ route('expenses.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
                         <!-- Source Selection (for accountants only) -->
@@ -120,11 +120,28 @@
                             <small class="text-muted d-block mt-2" id="default-amount-info"></small>
                         </div>
 
+                        <!-- Expense Type Selection -->
+                        <div class="mb-3">
+                            <label class="form-label"><strong><i class="fas fa-tag"></i> نوع المصروف</strong></label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" name="expense_type" id="type_social_case" value="social_case" class="btn-check" {{ old('expense_type') == 'social_case' ? 'checked' : '' }} onchange="toggleExpenseType()">
+                                <label class="btn btn-outline-primary" for="type_social_case">
+                                    <i class="fas fa-users"></i> حالة اجتماعية
+                                </label>
+
+                                <input type="radio" name="expense_type" id="type_general" value="general" class="btn-check" {{ old('expense_type', 'general') == 'general' ? 'checked' : '' }} onchange="toggleExpenseType()">
+                                <label class="btn btn-outline-primary" for="type_general">
+                                    <i class="fas fa-receipt"></i> مصروفات أخرى
+                                </label>
+                            </div>
+                        </div>
+
                         <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label"><strong>الحالة الاجتماعية (اختياري)</strong></label>
-                                <select name="social_case_id" class="form-select @error('social_case_id') is-invalid @enderror">
-                                    <option value="">-- لا توجد حالة --</option>
+                            <!-- Social Case Selection (shown only for social_case type) -->
+                            <div class="col-md-6" id="social-case-field" style="display: none;">
+                                <label class="form-label"><strong>الحالة الاجتماعية</strong></label>
+                                <select name="social_case_id" id="social_case_select" class="form-select @error('social_case_id') is-invalid @enderror">
+                                    <option value="">-- اختر حالة --</option>
                                     @foreach($cases as $case)
                                         <option value="{{ $case->id }}" {{ old('social_case_id') == $case->id ? 'selected' : '' }}>{{ $case->name }}</option>
                                     @endforeach
@@ -133,6 +150,7 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
+
                             <div class="col-md-6">
                                 <label class="form-label"><strong>تاريخ المصروف</strong></label>
                                 <input type="date" name="expense_date" class="form-control @error('expense_date') is-invalid @enderror" value="{{ old('expense_date', date('Y-m-d')) }}" required>
@@ -167,6 +185,44 @@
                             @error('location')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                        </div>
+
+                        <!-- File Attachment (Optional) -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <strong><i class="fas fa-paperclip"></i> إرفاق ملف (اختياري)</strong>
+                            </label>
+                            <div class="input-group">
+                                <input type="file"
+                                       name="attachment"
+                                       id="attachmentInput"
+                                       class="form-control @error('attachment') is-invalid @enderror"
+                                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                                       onchange="updateFileLabel()">
+                                <label class="input-group-text" for="attachmentInput" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; border: none;">
+                                    <i class="fas fa-upload"></i> اختر ملف
+                                </label>
+                                @error('attachment')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <small class="text-muted d-block mt-2">
+                                <i class="fas fa-info-circle"></i> الملفات المسموحة: PDF, JPG, PNG, DOC, DOCX (حد أقصى: 2MB)
+                            </small>
+                            <div id="filePreview" style="display: none; margin-top: 1rem;">
+                                <div class="alert alert-success" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(69, 160, 73, 0.1)); border: 1px solid rgba(76, 175, 80, 0.3);">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <i class="fas fa-file-alt" style="color: #4caf50; font-size: 1.5rem;"></i>
+                                            <span id="fileName" style="margin-right: 0.5rem; font-weight: 600;"></span>
+                                            <small class="text-muted d-block" id="fileSize"></small>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="clearFileInput()">
+                                            <i class="fas fa-times"></i> إزالة
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex gap-2" style="margin-top: 2rem;">
@@ -329,11 +385,62 @@
         }
     }
 
+    // Toggle expense type (social case or general)
+    function toggleExpenseType() {
+        const expenseType = document.querySelector('input[name="expense_type"]:checked').value;
+        const socialCaseField = document.getElementById('social-case-field');
+        const socialCaseSelect = document.getElementById('social_case_select');
+
+        if (expenseType === 'social_case') {
+            socialCaseField.style.display = 'block';
+            socialCaseSelect.setAttribute('required', 'required');
+        } else {
+            socialCaseField.style.display = 'none';
+            socialCaseSelect.removeAttribute('required');
+            socialCaseSelect.value = ''; // Clear selection
+        }
+    }
+
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
         loadExpenseItems();
         updateCustodyInfo();
+        toggleExpenseType(); // Set initial state
     });
+
+    // File upload functions
+    function updateFileLabel() {
+        const input = document.getElementById('attachmentInput');
+        const filePreview = document.getElementById('filePreview');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+
+            // Check file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert('حجم الملف يجب أن يكون أقل من 2 ميجابايت');
+                clearFileInput();
+                return;
+            }
+
+            fileName.textContent = file.name;
+            fileSize.textContent = `الحجم: ${sizeInMB} ميجابايت`;
+            filePreview.style.display = 'block';
+        } else {
+            filePreview.style.display = 'none';
+        }
+    }
+
+    function clearFileInput() {
+        const input = document.getElementById('attachmentInput');
+        const filePreview = document.getElementById('filePreview');
+
+        input.value = '';
+        filePreview.style.display = 'none';
+    }
 </script>
 @endpush
 @endsection

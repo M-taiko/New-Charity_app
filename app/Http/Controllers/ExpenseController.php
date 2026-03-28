@@ -18,6 +18,12 @@ class ExpenseController extends Controller
 
     public function index()
     {
+        // المندوب يُوجَّه لصفحة مصروفاته الخاصة
+        if (auth()->user()->hasRole('مندوب')) {
+            return redirect()->route('expenses.agent');
+        }
+
+        // فقط المحاسب والمدير يرون جدول جميع المصروفات
         $this->authorize('spend_money');
         return view('expenses.modern');
     }
@@ -69,12 +75,19 @@ class ExpenseController extends Controller
             $isOtherExpense = $category && $category->code === 'OTHER';
 
             $rules = [
-                'amount' => 'required|numeric|min:1|max:' . $treasuryBalance,
+                'amount' => 'required|numeric|min:0.01|max:' . min($treasuryBalance, 1000000),
                 'expense_category_id' => 'required|exists:expense_categories,id',
+                'expense_type' => 'required|in:social_case,general',
                 'description' => 'required|string|max:500',
                 'location' => 'nullable|string',
                 'social_case_id' => 'nullable|exists:social_cases,id',
+                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
             ];
+
+            // If expense type is social_case, social_case_id is required
+            if ($request->expense_type === 'social_case') {
+                $rules['social_case_id'] = 'required|exists:social_cases,id';
+            }
 
             // Item is required only for non-"OTHER" categories
             if (!$isOtherExpense) {
@@ -85,7 +98,15 @@ class ExpenseController extends Controller
 
             $request->validate($rules, [
                 'amount.max' => 'المبلغ المدخل يتجاوز رصيد الخزينة. الحد الأقصى: ' . number_format($treasuryBalance, 2) . ' ج.م',
+                'attachment.max' => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
+                'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
             ]);
+
+            // Handle file upload
+            $attachmentPath = null;
+            if ($request->hasFile('attachment')) {
+                $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+            }
 
             $this->service->recordDirectExpenseFromTreasury(
                 auth()->id(),
@@ -94,7 +115,9 @@ class ExpenseController extends Controller
                 $request->expense_item_id,
                 $request->description,
                 $request->location,
-                $request->social_case_id
+                $request->social_case_id,
+                $attachmentPath,
+                $request->expense_type
             );
         } else {
             // Custody spending - can use multiple custodies automatically
@@ -118,12 +141,19 @@ class ExpenseController extends Controller
 
             $rules = [
                 'custody_id' => 'nullable|exists:custodies,id', // Optional, for backward compatibility
-                'amount' => 'required|numeric|min:1|max:' . $totalAvailableBalance,
+                'amount' => 'required|numeric|min:0.01|max:' . min($totalAvailableBalance, 1000000),
                 'expense_category_id' => 'required|exists:expense_categories,id',
+                'expense_type' => 'required|in:social_case,general',
                 'description' => 'required|string|max:500',
                 'location' => 'nullable|string',
                 'social_case_id' => 'nullable|exists:social_cases,id',
+                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
             ];
+
+            // If expense type is social_case, social_case_id is required
+            if ($request->expense_type === 'social_case') {
+                $rules['social_case_id'] = 'required|exists:social_cases,id';
+            }
 
             // Item is required only for non-"OTHER" categories
             if (!$isOtherExpense) {
@@ -134,7 +164,15 @@ class ExpenseController extends Controller
 
             $request->validate($rules, [
                 'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح في جميع عهدك. الحد الأقصى: ' . number_format($totalAvailableBalance, 2) . ' ج.م',
+                'attachment.max' => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
+                'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
             ]);
+
+            // Handle file upload
+            $attachmentPath = null;
+            if ($request->hasFile('attachment')) {
+                $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+            }
 
             // Use first custody ID for backward compatibility, or first available
             $custodyId = $request->custody_id ?? $availableCustodies->first()->id;
@@ -147,7 +185,9 @@ class ExpenseController extends Controller
                 $request->expense_item_id,
                 $request->description,
                 $request->location,
-                $request->social_case_id
+                $request->social_case_id,
+                $attachmentPath,
+                $request->expense_type
             );
         }
 
@@ -185,6 +225,17 @@ class ExpenseController extends Controller
     public function tableData()
     {
         $this->authorize('spend_money');
+
+        $user = auth()->user();
+
+        // Only managers and accountants can see all expenses
+        // Agents should use their own page at /my-expenses
+        if ($user->hasRole('مندوب')) {
+            // Redirect agents to their own expenses page
+            abort(403, 'يرجى استخدام صفحة مصروفاتي لعرض مصروفاتك');
+        }
+
+        // Get all expenses for managers and accountants
         $expenses = Expense::with(['user', 'custody', 'socialCase'])->get();
 
         return DataTables::of($expenses)
@@ -215,5 +266,45 @@ class ExpenseController extends Controller
             ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
             ->addColumn('type_label', fn($row) => $row->type === 'social_case' ? 'حالة اجتماعية' : 'مصروف عام')
             ->toJson();
+    }
+
+    public function downloadAttachment(Expense $expense)
+    {
+        $this->authorize('spend_money');
+
+        if (!$expense->attachment) {
+            abort(404, 'لا يوجد مرفق لهذا المصروف');
+        }
+
+        $filePath = storage_path('app/public/' . $expense->attachment);
+
+        if (!file_exists($filePath)) {
+            abort(404, 'الملف غير موجود');
+        }
+
+        return response()->download($filePath);
+    }
+
+    public function destroy(Expense $expense)
+    {
+        $this->authorize('spend_money');
+
+        // Check authorization: only the creator, accountants, and managers can delete
+        $user = auth()->user();
+        $isCreator = $expense->user_id === $user->id;
+        $isAccountantOrManager = $user->hasRole('محاسب') || $user->hasRole('مدير');
+
+        if (!$isCreator && !$isAccountantOrManager) {
+            abort(403, 'غير مصرح لك بحذف هذا المصروف');
+        }
+
+        try {
+            $expense->delete();
+            return redirect()->route('expenses.index')
+                ->with('success', 'تم حذف المصروف بنجاح');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'حدث خطأ أثناء حذف المصروف: ' . $e->getMessage());
+        }
     }
 }

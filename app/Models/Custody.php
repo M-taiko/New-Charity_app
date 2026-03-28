@@ -19,6 +19,8 @@ class Custody extends Model
         'initiated_by',
         'amount',
         'spent',
+        'transferred_out',
+        'transferred_in',
         'returned',
         'pending_return',
         'status',
@@ -31,6 +33,8 @@ class Custody extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'spent' => 'decimal:2',
+        'transferred_out' => 'decimal:2',
+        'transferred_in' => 'decimal:2',
         'returned' => 'decimal:2',
         'pending_return' => 'decimal:2',
         'accepted_at' => 'datetime',
@@ -65,7 +69,13 @@ class Custody extends Model
 
     public function getRemainingBalance()
     {
-        return $this->amount - $this->spent - $this->returned - $this->pending_return;
+        // الرصيد = المبلغ الأصلي + المبالغ المستقبلة - المصروفات - المحولات - المرتجعات - المعلقة
+        return $this->amount
+            + $this->transferred_in
+            - $this->spent
+            - $this->transferred_out
+            - $this->returned
+            - $this->pending_return;
     }
 
     public function getTotalSpent()

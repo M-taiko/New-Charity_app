@@ -360,7 +360,7 @@
                             <div class="timeline-content">
                                 <div class="d-flex justify-content-between">
                                     <h6>إنشاء العهدة</h6>
-                                    <small class="text-muted">{{ $custody->created_at->format('Y-m-d H:i') }}</small>
+                                    <small class="text-muted">{{ $custody->created_at->format('Y-m-d') }}</small>
                                 </div>
                                 <p class="mb-0">تم إنشاء عهدة للمندوب {{ $custody->agent->name }} بقيمة {{ number_format($custody->amount, 2) }} ج.م</p>
                             </div>
@@ -386,7 +386,7 @@
                                             <i class="fas fa-exchange-alt text-info"></i> {{ $transaction->type }}
                                         @endif
                                     </h6>
-                                    <small class="text-muted">{{ $transaction->transaction_date->format('Y-m-d H:i') }}</small>
+                                    <small class="text-muted">{{ $transaction->transaction_date->format('Y-m-d') }}</small>
                                 </div>
                                 <p class="mb-0">{{ $transaction->description }}</p>
                                 <strong>المبلغ: {{ number_format($transaction->amount, 2) }} ج.م</strong>
@@ -399,9 +399,19 @@
                         <div class="timeline-item">
                             <div class="timeline-marker bg-warning"></div>
                             <div class="timeline-content">
-                                <div class="d-flex justify-content-between">
-                                    <h6><i class="fas fa-shopping-cart text-warning"></i> مصروف</h6>
-                                    <small class="text-muted">{{ $expense->created_at->format('Y-m-d H:i') }}</small>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6><i class="fas fa-shopping-cart text-warning"></i> مصروف</h6>
+                                        <small class="text-muted">{{ $expense->expense_date->format('Y-m-d') }}</small>
+                                    </div>
+                                    @if($expense->attachment)
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            onclick="viewExpenseAttachment({{ $expense->id }}, '{{ $expense->attachment }}')"
+                                            style="font-size: 0.75rem;">
+                                        <i class="fas fa-paperclip"></i> عرض المرفق
+                                    </button>
+                                    @endif
                                 </div>
                                 <p class="mb-1">{{ $expense->category->name ?? 'غير محدد' }} - {{ $expense->description }}</p>
                                 <strong>المبلغ: {{ number_format($expense->amount, 2) }} ج.م</strong>
@@ -503,5 +513,73 @@ document.addEventListener('DOMContentLoaded', function() {
     agentFilter.addEventListener('change', filterTable);
     statusFilter.addEventListener('change', filterTable);
 });
+
+// View expense attachment in modal
+function viewExpenseAttachment(expenseId, attachment) {
+    const extension = attachment.split('.').pop().toLowerCase();
+    const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(extension);
+    const isPdf = extension === 'pdf';
+    const attachmentUrl = `/storage/app/public/${attachment}`;
+    const downloadUrl = `/expenses/${expenseId}/download-attachment`;
+
+    let modalContent = '';
+
+    if (isImage) {
+        modalContent = `
+            <img src="${attachmentUrl}" alt="Expense Attachment" class="img-fluid" style="max-height: 500px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        `;
+    } else if (isPdf) {
+        modalContent = `
+            <div style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(240, 147, 251, 0.1)); padding: 3rem; border-radius: 12px; text-align: center;">
+                <i class="fas fa-file-pdf" style="font-size: 5rem; color: #f5576c; margin-bottom: 1rem;"></i>
+                <h5 style="margin-bottom: 1rem;">ملف PDF</h5>
+                <p class="text-muted" style="margin-bottom: 1.5rem;">${attachment.split('/').pop()}</p>
+                <a href="${downloadUrl}" class="btn btn-primary" target="_blank" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                    <i class="fas fa-download"></i> تحميل الملف
+                </a>
+            </div>
+        `;
+    } else {
+        modalContent = `
+            <div style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(240, 147, 251, 0.1)); padding: 3rem; border-radius: 12px; text-align: center;">
+                <i class="fas fa-file-alt" style="font-size: 5rem; color: #667eea; margin-bottom: 1rem;"></i>
+                <h5 style="margin-bottom: 1rem;">مستند</h5>
+                <p class="text-muted" style="margin-bottom: 1.5rem;">${attachment.split('/').pop()}</p>
+                <a href="${downloadUrl}" class="btn btn-primary" target="_blank" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                    <i class="fas fa-download"></i> تحميل الملف
+                </a>
+            </div>
+        `;
+    }
+
+    document.getElementById('expenseAttachmentModalContent').innerHTML = modalContent;
+    document.getElementById('expenseAttachmentDownloadBtn').href = downloadUrl;
+
+    var attachmentModal = new bootstrap.Modal(document.getElementById('expenseAttachmentModal'));
+    attachmentModal.show();
+}
 </script>
+
+<!-- Expense Attachment Modal -->
+<div class="modal fade" id="expenseAttachmentModal" tabindex="-1" aria-labelledby="expenseAttachmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                <h5 class="modal-title" id="expenseAttachmentModalLabel" style="color: white;">
+                    <i class="fas fa-paperclip"></i> مرفق المصروف
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center" style="padding: 2rem;" id="expenseAttachmentModalContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <a href="#" id="expenseAttachmentDownloadBtn" class="btn btn-success" target="_blank">
+                    <i class="fas fa-download"></i> تحميل
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection

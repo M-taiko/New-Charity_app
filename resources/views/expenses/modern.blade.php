@@ -87,6 +87,8 @@
                                     <th>الحالة</th>
                                     <th>المبلغ</th>
                                     <th>التاريخ</th>
+                                    <th>المرفق</th>
+                                    <th>الإجراءات</th>
                                 </tr>
                             </thead>
                         </table>
@@ -119,6 +121,29 @@
                     render: function(data) {
                         return new Date(data).toLocaleDateString('ar');
                     }
+                },
+                {
+                    data: 'attachment',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data, type, row) {
+                        if (data) {
+                            return `<button type="button" class="btn btn-sm btn-primary" onclick="viewAttachment(${row.id}, '${data}')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                <i class="fas fa-paperclip"></i> عرض
+                            </button>`;
+                        }
+                        return '<span class="text-muted">-</span>';
+                    }
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return `<a href="/expenses/${data}" class="btn btn-sm btn-info">
+                            <i class="fas fa-eye"></i> عرض
+                        </a>`;
+                    }
                 }
             ],
             language: {
@@ -126,6 +151,74 @@
             }
         });
     });
+
+    // View attachment in modal
+    function viewAttachment(expenseId, attachment) {
+        const extension = attachment.split('.').pop().toLowerCase();
+        const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(extension);
+        const isPdf = extension === 'pdf';
+        const attachmentUrl = `/storage/app/public/${attachment}`;
+        const downloadUrl = `/expenses/${expenseId}/download-attachment`;
+
+        let modalContent = '';
+
+        if (isImage) {
+            modalContent = `
+                <img src="${attachmentUrl}" alt="Expense Attachment" class="img-fluid" style="max-height: 500px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            `;
+        } else if (isPdf) {
+            modalContent = `
+                <div style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(240, 147, 251, 0.1)); padding: 3rem; border-radius: 12px;">
+                    <i class="fas fa-file-pdf" style="font-size: 5rem; color: #f5576c; margin-bottom: 1rem;"></i>
+                    <h5 style="margin-bottom: 1rem;">ملف PDF</h5>
+                    <p class="text-muted" style="margin-bottom: 1.5rem;">${attachment.split('/').pop()}</p>
+                    <a href="${downloadUrl}" class="btn btn-primary" target="_blank" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                        <i class="fas fa-download"></i> تحميل الملف
+                    </a>
+                </div>
+            `;
+        } else {
+            modalContent = `
+                <div style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(240, 147, 251, 0.1)); padding: 3rem; border-radius: 12px;">
+                    <i class="fas fa-file-alt" style="font-size: 5rem; color: #667eea; margin-bottom: 1rem;"></i>
+                    <h5 style="margin-bottom: 1rem;">مستند</h5>
+                    <p class="text-muted" style="margin-bottom: 1.5rem;">${attachment.split('/').pop()}</p>
+                    <a href="${downloadUrl}" class="btn btn-primary" target="_blank" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                        <i class="fas fa-download"></i> تحميل الملف
+                    </a>
+                </div>
+            `;
+        }
+
+        document.getElementById('attachmentModalContent').innerHTML = modalContent;
+        document.getElementById('attachmentDownloadBtn').href = downloadUrl;
+
+        var attachmentModal = new bootstrap.Modal(document.getElementById('attachmentModal'));
+        attachmentModal.show();
+    }
 </script>
 @endpush
+
+<!-- Attachment Modal -->
+<div class="modal fade" id="attachmentModal" tabindex="-1" aria-labelledby="attachmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                <h5 class="modal-title" id="attachmentModalLabel" style="color: white;">
+                    <i class="fas fa-paperclip"></i> مرفق المصروف
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center" style="padding: 2rem;" id="attachmentModalContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <a href="#" id="attachmentDownloadBtn" class="btn btn-success" target="_blank">
+                    <i class="fas fa-download"></i> تحميل
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection

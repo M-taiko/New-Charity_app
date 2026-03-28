@@ -22,7 +22,10 @@ class AuthenticatedSessionController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
-            return redirect()->intended('/dashboard');
+
+            // Redirect to last visited page or dashboard
+            $lastPage = session('last_page_url', '/dashboard');
+            return redirect()->to($lastPage);
         }
 
         return back()->withErrors([

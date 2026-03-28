@@ -267,7 +267,7 @@
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             },
-            order: [[0, 'desc']]
+            order: [[0, 'asc']]
         });
 
         // Expenses Table
@@ -307,7 +307,7 @@
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             },
-            order: [[0, 'desc']]
+            order: [[0, 'asc']]
         });
 
         // Returned Amounts Table
@@ -339,7 +339,7 @@
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             },
-            order: [[0, 'desc']]
+            order: [[0, 'asc']]
         });
 
         // Transfers Table
@@ -402,7 +402,7 @@
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             },
-            order: [[0, 'desc']]
+            order: [[0, 'asc']]
         });
     });
 </script>

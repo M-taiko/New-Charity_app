@@ -25,11 +25,13 @@ class Expense extends Model
         'notes',
         'source',
         'attachment',
+        'approval_status',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'expense_date' => 'datetime',
+        'approval_status' => 'string',
     ];
 
     public function custody(): BelongsTo
@@ -65,5 +67,60 @@ class Expense extends Model
         return $this->belongsToMany(Custody::class, 'expense_custody')
             ->withPivot('amount')
             ->withTimestamps();
+    }
+
+    /**
+     * طلبات التعديل على هذا المصروف
+     */
+    public function editRequests(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(ExpenseEditRequest::class);
+    }
+
+    /**
+     * Helper Methods
+     */
+
+    /**
+     * هل المصروف معتمد؟
+     */
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'approved';
+    }
+
+    /**
+     * هل هناك طلب تعديل معلق؟
+     */
+    public function hasPendingEdit(): bool
+    {
+        return $this->editRequests()
+            ->where('status', 'pending')
+            ->exists();
+    }
+
+    /**
+     * هل يقدر المستخدم تعديل هذا المصروف؟
+     */
+    public function canBeEditedBy(\App\Models\User $user): bool
+    {
+        // إذا كان المصروف معتمداً، فقط المدير يقدر يعدل
+        if ($this->isApproved()) {
+            return $user->hasRole('مدير');
+        }
+
+        // إذا كان هناك طلب تعديل معلق، لا أحد يقدر يعدل
+        if ($this->hasPendingEdit()) {
+            return false;
+        }
+
+        // المندوب يقدر يطلب تعديل
+        // المحاسب والمدير يقدرون يعدلوا مباشرة
+        if ($user->hasRole('مندوب')) {
+            // المندوب صاحب المصروف فقط
+            return $this->user_id === $user->id;
+        }
+
+        return $user->hasRole('محاسب') || $user->hasRole('مدير');
     }
 }

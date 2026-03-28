@@ -13,6 +13,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ExpenseEditRequestController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -42,6 +43,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('expenses', ExpenseController::class);
     Route::get('/my-expenses', [ExpenseController::class, 'agentExpenses'])->name('expenses.agent');
     Route::get('/api/agent-expenses', [ExpenseController::class, 'agentExpensesData'])->name('api.agent-expenses.data');
+    Route::get('/expenses/{expense}/download-attachment', [ExpenseController::class, 'downloadAttachment'])->name('expenses.download-attachment');
+
+    // طلبات تعديل المصروفات
+    Route::get('/expenses/{expense}/edit-request', [ExpenseEditRequestController::class, 'create'])->name('expense-edit-requests.create');
+    Route::post('/expenses/{expense}/edit-request', [ExpenseEditRequestController::class, 'store'])->name('expense-edit-requests.store');
+    Route::get('/expense-edit-requests', [ExpenseEditRequestController::class, 'index'])->name('expense-edit-requests.index');
+    Route::get('/api/expense-edit-requests', [ExpenseEditRequestController::class, 'index'])->name('api.expense-edit-requests.data');
+    Route::get('/expense-edit-requests/{editRequest}', [ExpenseEditRequestController::class, 'show'])->name('expense-edit-requests.show');
+    Route::post('/expense-edit-requests/{editRequest}/approve', [ExpenseEditRequestController::class, 'approve'])->name('expense-edit-requests.approve');
+    Route::post('/expense-edit-requests/{editRequest}/reject', [ExpenseEditRequestController::class, 'reject'])->name('expense-edit-requests.reject');
 
     // Expense Items Management
     Route::resource('expense-items', ExpenseItemController::class);
@@ -76,7 +87,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports', [ReportController::class, 'dashboard'])->name('reports.dashboard');
     Route::get('/analytics/researchers', [ReportController::class, 'researcherStats'])->name('analytics.researcher');
     Route::get('/reports/social-case-expenses', [ReportController::class, 'socialCaseExpensesReport'])->name('reports.social-case-expenses');
+    Route::get('/reports/agents-balance', [ReportController::class, 'agentsBalanceReport'])->name('reports.agents-balance');
     Route::get('/reports/expense-items', [ReportController::class, 'expenseItemsReport'])->name('reports.expense-items');
+    Route::get('/reports/reconciliation', [ReportController::class, 'reconciliation'])->name('reports.reconciliation');
 
     // DataTables APIs
     Route::get('/api/treasury-transactions', [TreasuryController::class, 'transactionsData'])->name('api.treasury.transactions');
