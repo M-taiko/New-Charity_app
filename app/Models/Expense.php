@@ -94,9 +94,14 @@ class Expense extends Model
      */
     public function hasPendingEdit(): bool
     {
-        return $this->editRequests()
-            ->where('status', 'pending')
-            ->exists();
+        try {
+            return $this->editRequests()
+                ->where('status', 'pending')
+                ->exists();
+        } catch (\Exception $e) {
+            // إذا لم يكن الجدول موجود بعد
+            return false;
+        }
     }
 
     /**
