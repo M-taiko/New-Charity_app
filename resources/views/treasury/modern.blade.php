@@ -166,7 +166,7 @@
                     render: function(data) {
                         return '<strong style="color: var(--primary);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>';
                     }
-                },
+                }, 
                 { data: 'user.name', defaultContent: '-' },
                 {
                     data: 'created_at',
