@@ -319,16 +319,7 @@ class ExpenseController extends Controller
 
     public function tableData()
     {
-        $this->authorize('spend_money');
-
-        $user = auth()->user();
-
-        // Only managers and accountants can see all expenses
-        // Agents should use their own page at /my-expenses
-        if ($user->hasRole('مندوب')) {
-            // Redirect agents to their own expenses page
-            abort(403, 'يرجى استخدام صفحة مصروفاتي لعرض مصروفاتك');
-        }
+        $this->authorize('view_all_expenses');
 
         // Get all expenses for managers and accountants
         $expenses = Expense::with(['user', 'custody', 'socialCase'])->get();
