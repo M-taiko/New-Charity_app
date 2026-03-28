@@ -102,6 +102,7 @@
                                             <th><i class="fas fa-phone"></i> الهاتف</th>
                                             <th><i class="fas fa-hands-helping"></i> نوع المساعدة</th>
                                             <th><i class="fas fa-signal"></i> الحالة</th>
+                                            <th><i class="fas fa-users"></i> الأقارب</th>
                                             <th><i class="fas fa-calendar"></i> التاريخ</th>
                                             <th><i class="fas fa-cog"></i> الإجراءات</th>
                                         </tr>
@@ -133,6 +134,15 @@
                                                             @break
                                                     @endswitch
                                                 </td>
+                                                <td>
+                                                    @if($case->familyMembers && $case->familyMembers->count() > 0)
+                                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#familyModal{{ $case->id }}" title="عرض الأقارب">
+                                                            <i class="fas fa-users"></i> ({{ $case->familyMembers->count() }})
+                                                        </button>
+                                                    @else
+                                                        <span class="text-muted">-</span>
+                                                    @endif
+                                                </td>
                                                 <td>{{ $case->created_at->format('Y-m-d') }}</td>
                                                 <td>
                                                     <div class="btn-group btn-group-sm" role="group">
@@ -147,7 +157,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="7" class="text-center py-5">
+                                                <td colspan="8" class="text-center py-5">
                                                     <div class="empty-state">
                                                         <div class="empty-state-icon">
                                                             <i class="fas fa-inbox"></i>
@@ -237,7 +247,7 @@
                                                 <td>{{ $case->phone ?? '-' }}</td>
                                                 <td>{{ $case->assistance_type }}</td>
                                                 <td>
-                                                    <strong style="color: #4caf50;">{{ number_format($case->getTotalSpent(), 2) }} ر.س</strong>
+                                                    <strong style="color: #4caf50;">{{ number_format($case->getTotalSpent(), 2) }} ج.م</strong>
                                                 </td>
                                                 <td>
                                                     <div class="btn-group btn-group-sm" role="group">
@@ -316,4 +326,60 @@
         </div>
     </div>
 </div>
+
+<!-- Family Members Modals -->
+@foreach($cases as $case)
+    @if($case->familyMembers && $case->familyMembers->count() > 0)
+    <div class="modal fade" id="familyModal{{ $case->id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none;">
+                    <h5 class="modal-title" style="color: white;">
+                        <i class="fas fa-users"></i> أفراد عائلة: {{ $case->name }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>الاسم</th>
+                                    <th>صلة القرابة</th>
+                                    <th>النوع</th>
+                                    <th>رقم الهاتف</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($case->familyMembers as $index => $member)
+                                <tr>
+                                    <td>{{ $index + 1 }}</td>
+                                    <td><strong>{{ $member->name }}</strong></td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ $member->relationship }}</span>
+                                    </td>
+                                    <td>
+                                        @if($member->gender === 'male')
+                                            <i class="fas fa-male text-primary"></i> ذكر
+                                        @else
+                                            <i class="fas fa-female text-danger"></i> أنثى
+                                        @endif
+                                    </td>
+                                    <td>{{ $member->phone ?? '-' }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+@endforeach
+
 @endsection

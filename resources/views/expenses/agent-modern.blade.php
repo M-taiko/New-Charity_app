@@ -4,11 +4,22 @@
 <div class="container-fluid">
     <div class="row mb-4" data-aos="fade-down">
         <div class="col-12">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
                 <div>
                     <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
                         <i class="fas fa-receipt"></i> مصروفاتي
                     </h1>
+                </div>
+                <div class="d-flex gap-2" style="flex-wrap: wrap;">
+                    <a href="{{ route('expenses.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle"></i> مصروف جديد
+                    </a>
+                    <a href="{{ route('custodies.create') }}" class="btn btn-success">
+                        <i class="fas fa-hand-holding-usd"></i> طلب عهدة جديدة
+                    </a>
+                    <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
+                        <i class="fas fa-exchange-alt"></i> تحويل عهدتي
+                    </a>
                 </div>
             </div>
         </div>
@@ -20,7 +31,7 @@
                 <div class="stat-icon"><i class="fas fa-calculator"></i></div>
                 <div class="stat-label">إجمالي المصروفات</div>
                 <div class="stat-number" style="color: var(--primary);">{{ number_format($totalExpenses, 2) }}</div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
@@ -92,7 +103,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: #e53935;">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ر.س';
+                        return '<strong style="color: #e53935;">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
                     }
                 },
                 {

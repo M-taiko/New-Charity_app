@@ -19,42 +19,110 @@ class CustodyController extends Controller
         return view('custodies.modern');
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $this->authorize('create_custody');
-        $agents = User::role('مندوب')->get();
+        $isAgent = auth()->user()->hasRole('مندوب');
+        $forType = $request->query('for'); // 'self' or 'agent'
+
+        // Agents can request custody for themselves
+        // Accountants and managers can create custody for agents or request for themselves
+        if (!$isAgent) {
+            $this->authorize('create_custody');
+        }
+
         $treasury = Treasury::first();
 
         if (!$treasury) {
             return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
         }
 
-        return view('custodies.modern-create', compact('agents', 'treasury'));
+        // Route to appropriate view based on request type
+        if ($forType === 'agent') {
+            // Creating custody for a user (accountant/manager creates for someone else)
+            // Exclude specific email and hidden users
+            $users = User::where('email', '!=', 'donia.a5ra2019@gmail.com')
+                ->orderBy('name')
+                ->get();
+
+            return view('custodies.create-for-user', compact('users', 'treasury'));
+        } elseif ($forType === 'self') {
+            // Personal request (accountant/manager requests for themselves)
+            return view('custodies.personal-request', compact('treasury'));
+        } else {
+            // Agent request (agent requests custody for themselves)
+            return view('custodies.agent-request', compact('treasury'));
+        }
     }
 
     public function store(Request $request)
     {
-        $this->authorize('create_custody');
-        $request->validate([
-            'agent_id' => 'required|exists:users,id',
-            'amount' => 'required|numeric|min:1',
-            'notes' => 'nullable|string',
-        ]);
+        $isAgent = auth()->user()->hasRole('مندوب');
+        $isForSelf = $request->has('for_self'); // Accountant/Manager requesting for themselves
+
+        if (!$isAgent && !$isForSelf) {
+            $this->authorize('create_custody');
+        }
 
         $treasury = Treasury::first();
         if (!$treasury) {
             return back()->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
         }
 
-        $this->service->createCustody(
-            $treasury->id,
-            $request->agent_id,
-            auth()->id(),
-            $request->amount,
-            $request->notes
+        // Build validation rules with conditional treasury balance check for agents
+        $validationRules = [
+            'agent_id' => ($isAgent || $isForSelf) ? 'nullable' : 'required|exists:users,id',
+            'amount' => [
+                'required',
+                'numeric',
+                'min:0.01',
+                'max:1000000', // Reasonable maximum
+            ],
+            'issued_date' => 'required|date',
+            'notes' => 'nullable|string',
+        ];
+
+        // Add max amount rule for agents requesting custody (don't exceed treasury balance)
+        if ($isAgent) {
+            $validationRules['amount'][] = 'max:' . $treasury->balance;
+        }
+
+        // Customize error message based on user role
+        $amountMaxError = $isAgent
+            ? 'المبلغ المطلوب يتجاوز الرصيد المتاح في الخزينة. يرجى تقليل المبلغ والمحاولة مرة أخرى.'
+            : 'المبلغ المدخل يتجاوز رصيد الخزينة. الحد الأقصى: ' . number_format($treasury->balance, 2) . ' ج.م';
+
+        $request->validate(
+            $validationRules,
+            [
+                'amount.max' => $amountMaxError,
+            ]
         );
 
-        return redirect()->route('custodies.index')->with('success', 'تم إنشاء العهدة بنجاح');
+        // Determine agent ID:
+        // - If agent_id is provided in request (creating for another user), use it
+        // - If for_self is checked (accountant/manager creating for themselves), use current user ID
+        // - Otherwise (agent requesting custody), use current user ID
+        if ($request->filled('agent_id') && $request->agent_id != auth()->id()) {
+            // Creating custody for another agent
+            $agentId = $request->agent_id;
+            $isAgentRequest = false; // Accountant creating for agent, not agent request
+        } else {
+            // Creating custody for self (either agent request or accountant for_self)
+            $agentId = auth()->id();
+            $isAgentRequest = $isAgent; // True if agent requesting, false if accountant for self
+        }
+
+        $this->service->createCustody(
+            $treasury->id,
+            $agentId,
+            auth()->id(),
+            $request->amount,
+            $request->notes,
+            $isAgentRequest
+        );
+
+        $message = $isAgentRequest ? 'تم إرسال طلب العهدة للمحاسب للموافقة' : 'تم إنشاء العهدة بنجاح';
+        return redirect()->route($isAgentRequest ? 'agent.transactions' : 'custodies.index')->with('success', $message);
     }
 
     public function show(Custody $custody)
@@ -72,7 +140,7 @@ class CustodyController extends Controller
     {
         $this->authorize('manage_treasury');
         $request->validate([
-            'amount' => 'required|numeric|min:1',
+            'amount' => 'required|numeric|min:0.01|max:1000000',
             'notes' => 'nullable|string',
         ]);
 
@@ -83,26 +151,78 @@ class CustodyController extends Controller
 
     public function accept(Custody $custody)
     {
-        $this->authorize('receive_custody');
-        $this->service->acceptCustody($custody);
-        return back()->with('success', 'تم قبول العهدة');
+        $this->authorize('approve_custody');
+
+        try {
+            $this->service->acceptCustody($custody);
+            return back()->with('success', 'تم الموافقة على العهدة');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function receive(Custody $custody)
+    {
+        // Only the agent who owns the custody can receive it
+        if ($custody->agent_id !== auth()->id()) {
+            abort(403, 'Unauthorized');
+        }
+
+        try {
+            $this->service->receiveCustody($custody);
+            return back()->with('success', 'تم استقبال العهدة وصرف الفلوس');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function reject(Custody $custody, Request $request)
     {
         $this->authorize('approve_custody');
-        $this->service->rejectCustody($custody, $request->reason);
-        return back()->with('success', 'تم رفض العهدة');
+
+        try {
+            $this->service->rejectCustody($custody, $request->reason);
+            return back()->with('success', 'تم رفض العهدة');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function agentAccept(Custody $custody)
+    {
+        try {
+            $this->service->agentAcceptCustody($custody);
+            return back()->with('success', 'تم قبول العهدة وصرف الفلوس بنجاح');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function agentReject(Custody $custody, Request $request)
+    {
+        $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $this->service->agentRejectCustody($custody, $request->reason);
+            return back()->with('success', 'تم رفض العهدة');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function return(Custody $custody, Request $request)
     {
-        $this->authorize('receive_custody');
+        // Only the agent who owns this custody can request to return it
+        if ($custody->agent_id !== auth()->id()) {
+            abort(403, 'Unauthorized');
+        }
 
         $remainingBalance = $custody->getRemainingBalance();
 
         $request->validate([
-            'returned_amount' => 'required|numeric|min:1|max:' . $remainingBalance,
+            'returned_amount' => 'required|numeric|min:0.01|max:' . $remainingBalance,
         ]);
 
         $this->service->requestReturnCustody($custody, $request->returned_amount);
@@ -221,5 +341,74 @@ class CustodyController extends Controller
             ->addColumn('custody_id', fn($row) => $row->custody_id)
             ->addColumn('custody', fn($row) => $row->custody)
             ->toJson();
+    }
+
+    public function myCustodies()
+    {
+        $user = auth()->user();
+
+        // Check if user is agent (مندوب)
+        if (!$user->hasRole('مندوب')) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Get agent's custodies with related data
+        $custodies = Custody::where('agent_id', $user->id)
+            ->with(['treasury', 'accountant', 'transactions', 'expenses'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Calculate statistics
+        // For financial calculations, exclude rejected and pending custodies
+        $acceptedCustodies = $custodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']);
+
+        $stats = [
+            'total_custodies' => $custodies->count(),
+            'active_custodies' => $custodies->whereIn('status', ['accepted', 'active'])->count(),
+            'pending_custodies' => $custodies->where('status', 'pending')->count(),
+            // Financial stats only for accepted custodies (exclude rejected and pending)
+            'total_amount' => $acceptedCustodies->sum('amount'),
+            'total_spent' => $acceptedCustodies->sum('spent'),
+            'total_returned' => $acceptedCustodies->sum('returned'),
+            'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
+        ];
+
+        return view('custodies.my-custodies', compact('custodies', 'stats'));
+    }
+
+    public function allCustodies()
+    {
+        // Check if user is accountant or manager
+        if (!auth()->user()->can('approve_custody')) {
+            abort(403, 'Unauthorized');
+        }
+
+        // Get all custodies with related data
+        $custodies = Custody::with(['agent', 'treasury', 'accountant', 'transactions', 'expenses'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Calculate statistics
+        // For financial calculations, exclude rejected and pending custodies
+        $acceptedCustodies = $custodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']);
+
+        $stats = [
+            'total_custodies' => $custodies->count(),
+            'active_custodies' => $custodies->whereIn('status', ['accepted', 'active'])->count(),
+            'pending_custodies' => $custodies->where('status', 'pending')->count(),
+            'rejected_custodies' => $custodies->where('status', 'rejected')->count(),
+            'closed_custodies' => $custodies->where('status', 'closed')->count(),
+            // Financial stats only for accepted custodies (exclude rejected and pending)
+            'total_amount' => $acceptedCustodies->sum('amount'),
+            'total_spent' => $acceptedCustodies->sum('spent'),
+            'total_returned' => $acceptedCustodies->sum('returned'),
+            'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
+            'pending_returns' => $acceptedCustodies->sum('pending_return'),
+        ];
+
+        // Get agents list for filtering
+        $agents = User::role('مندوب')->orderBy('name')->get();
+
+        return view('custodies.all-custodies', compact('custodies', 'stats', 'agents'));
     }
 }

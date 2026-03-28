@@ -127,7 +127,7 @@
                             @endswitch
                         </div>
                         <div class="mb-2">
-                            <strong>المبلغ المصروف:</strong> {{ number_format($socialCase->getTotalSpent(), 2) }} ر.س
+                            <strong>المبلغ المصروف:</strong> {{ number_format($socialCase->getTotalSpent(), 2) }} ج.م
                         </div>
                     </div>
                 </div>

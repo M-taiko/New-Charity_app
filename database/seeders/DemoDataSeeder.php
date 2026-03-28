@@ -23,13 +23,13 @@ class DemoDataSeeder extends Seeder
         $admin = User::firstOrCreate(
             ['email' => 'donia.a5ra2019@gmail.com'],
             [
-                'name' => 'المدير',
+                'name' => 'محمد طارق',
                 'password' => bcrypt('123456789'),
-                'phone' => '0501234567',
+                'phone' => '01099446903',
                 'is_active' => true,
                 'is_hidden' => true,
             ]
         );
-        $admin->assignRole('مدير');
+        $admin->assignRole('مدير','محاسب', 'مندوب' ,'باحث اجتماعي');
     }
 }

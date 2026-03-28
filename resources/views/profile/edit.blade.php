@@ -25,7 +25,7 @@
                     <div class="mb-4">
                         <div style="width: 150px; height: 150px; margin: 0 auto; border-radius: 50%; overflow: hidden; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
                             @if($user->profile_picture)
-                                <img src="{{ asset('storage/' . $user->profile_picture) }}" alt="صورة {{ $user->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="{{ '/storage/app/public/' . $user->profile_picture }}" alt="صورة {{ $user->name }}" style="width: 100%; height: 100%; object-fit: cover;">
                             @else
                                 <div style="color: white; font-size: 3rem;">
                                     <i class="fas fa-user"></i>

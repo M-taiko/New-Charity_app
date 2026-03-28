@@ -66,7 +66,7 @@
 
                     @if($socialCase->getTotalSpent() > 0)
                     <div class="mt-3 alert alert-info">
-                        <strong>المبلغ المصروف:</strong> {{ number_format($socialCase->getTotalSpent(), 2) }} ر.س
+                        <strong>المبلغ المصروف:</strong> {{ number_format($socialCase->getTotalSpent(), 2) }} ج.م
                     </div>
                     @endif
 

@@ -56,7 +56,7 @@
                 <div class="stat-number" style="color: var(--warning);">
                     {{ number_format($totalSpent, 0) }}
                 </div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
     </div>
@@ -112,7 +112,7 @@
                                             <span class="badge bg-warning">{{ $pendingResearcher }}</span>
                                         </td>
                                         <td>
-                                            <strong style="color: #4caf50;">{{ number_format($totalSpentResearcher, 2) }} ر.س</strong>
+                                            <strong style="color: #4caf50;">{{ number_format($totalSpentResearcher, 2) }} ج.م</strong>
                                         </td>
                                         <td>
                                             <div style="display: flex; align-items: center; gap: 0.5rem;">

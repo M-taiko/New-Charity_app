@@ -472,7 +472,7 @@
 
         @media (max-width: 576px) {
             .main-content {
-                margin-top: 70px;
+                margin-top: 129px;
             }
 
             .stat-number {
@@ -606,7 +606,7 @@
                 @endphp
 
                 @if($logo)
-                    <img src="{{ asset('storage/' . $logo) }}" alt="{{ $orgName }}" style="max-height: 40px; object-fit: contain;">
+                    <img src="{{ '/storage/app/public/' . $logo }}" alt="{{ $orgName }}" style="max-height: 40px; object-fit: contain;">
                 @else
                     <i class="fas fa-hand-holding-heart"></i>
                 @endif
@@ -640,26 +640,17 @@
                         @endphp
 
                         @forelse($notifications as $notification)
-                            @php
-                                $url = '#';
-                                if ($notification->related_type === 'social_case' && $notification->related_id) {
-                                    $url = route('social_cases.show', $notification->related_id);
-                                } elseif ($notification->related_type === 'custody' && $notification->related_id) {
-                                    $url = route('custodies.show', $notification->related_id);
-                                } elseif ($notification->related_type === 'expense' && $notification->related_id) {
-                                    $url = route('expenses.show', $notification->related_id);
-                                }
-                            @endphp
-                            <a href="{{ $url }}" style="text-decoration: none; color: inherit; display: block;" onclick="markNotificationAsRead(event, {{ $notification->id }})">
-                                <div class="notification-item {{ !$notification->is_read ? 'unread' : '' }}" style="cursor: pointer; transition: all 0.3s ease;">
+                            <form action="{{ route('notifications.read', $notification->id) }}" method="POST" style="margin: 0;">
+                                @csrf
+                                <button type="submit" class="notification-item {{ !$notification->is_read ? 'unread' : '' }}" style="width: 100%; text-align: right; border: none; background: none; padding: 1rem; cursor: pointer; transition: all 0.3s ease; display: block;">
                                     <div class="notification-item-title">{{ $notification->title }}</div>
                                     <div class="notification-item-text">{{ $notification->message }}</div>
                                     <div class="notification-item-time">
                                         <i class="fas fa-clock"></i>
                                         {{ $notification->created_at->diffForHumans() }}
                                     </div>
-                                </div>
-                            </a>
+                                </button>
+                            </form>
                         @empty
                             <div style="padding: 2rem; text-align: center; color: #6b7280;">
                                 <i class="fas fa-inbox" style="font-size: 2rem; margin-bottom: 1rem; opacity: 0.5;"></i>
@@ -674,7 +665,7 @@
                     <div class="d-flex align-items-center gap-2" data-bs-toggle="dropdown" style="cursor: pointer;">
                         <div class="user-avatar" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; overflow: hidden;">
                             @if(auth()->user()->profile_picture)
-                                <img src="{{ asset('storage/' . auth()->user()->profile_picture) }}" alt="{{ auth()->user()->name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                                <img src="{{ '/storage/app/public/' . auth()->user()->profile_picture }}" alt="{{ auth()->user()->name }}" style="width: 100%; height: 100%; object-fit: cover;">
                             @else
                                 <span style="font-size: 1.5rem;">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
                             @endif
@@ -714,7 +705,7 @@
 
             @if($logo)
                 <div style="text-align: center; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <img src="{{ asset('storage/' . $logo) }}" alt="شعار المؤسسة" style="max-height: 60px; object-fit: contain; filter: brightness(1.2);">
+                    <img src="{{ '/storage/app/public/' . $logo }}" alt="شعار المؤسسة" style="max-height: 60px; object-fit: contain; filter: brightness(1.2);">
                 </div>
             @endif
 
@@ -747,6 +738,15 @@
                 </li>
                 @endcan
 
+                @can('approve_custody')
+                <li>
+                    <a href="{{ route('accountant.all-custodies') }}" class="@if(Route::current()->getName() == 'accountant.all-custodies') active @endif">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span>متابعة العهدات</span>
+                    </a>
+                </li>
+                @endcan
+
                 @can('spend_money')
                 <li>
                     <a href="{{ route('expenses.index') }}" class="@if(Route::current()->getName() == 'expenses.index') active @endif">
@@ -756,7 +756,22 @@
                 </li>
                 @endcan
 
+                @can('manage_expense_items')
+                <li>
+                    <a href="{{ route('expense-items.index') }}" class="@if(Route::current()->getName() == 'expense-items.index') active @endif">
+                        <i class="fas fa-list"></i>
+                        <span>إدارة البنود</span>
+                    </a>
+                </li>
+                @endcan
+
                 @role('مندوب')
+                <li>
+                    <a href="{{ route('agent.my-custodies') }}" class="@if(Route::current()->getName() == 'agent.my-custodies') active @endif">
+                        <i class="fas fa-hand-holding-usd"></i>
+                        <span>عهداتي</span>
+                    </a>
+                </li>
                 <li>
                     <a href="{{ route('expenses.agent') }}" class="@if(Route::current()->getName() == 'expenses.agent') active @endif">
                         <i class="fas fa-wallet"></i>
@@ -798,6 +813,12 @@
                     <a href="{{ route('analytics.researcher') }}" class="@if(Route::current()->getName() == 'analytics.researcher') active @endif">
                         <i class="fas fa-chart-line"></i>
                         <span>إحصائيات الباحثين</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('reports.agents-balance') }}" class="@if(Route::current()->getName() == 'reports.agents-balance') active @endif">
+                        <i class="fas fa-wallet"></i>
+                        <span>رصيد المندوبين</span>
                     </a>
                 </li>
                 @endcan
@@ -915,23 +936,6 @@
                 bsAlert.close();
             }, 5000);
         });
-
-        // Mark Notification as Read
-        function markNotificationAsRead(event, notificationId) {
-            // Don't prevent the navigation
-            // Just mark the notification as read in the background
-            fetch(`/api/notifications/${notificationId}/read`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
-            }).catch(error => {
-                // Silently fail - still allow navigation
-                console.log('Notification marked as read');
-            });
-        }
     </script>
 
     @stack('scripts')

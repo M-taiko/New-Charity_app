@@ -28,7 +28,7 @@
                 <div class="stat-number" style="color: var(--success);">
                     {{ number_format(\App\Models\Treasury::first()?->balance ?? 0, 0) }}
                 </div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
 
@@ -40,7 +40,7 @@
                 <div class="stat-number" style="color: var(--danger);">
                     {{ number_format(\App\Models\Expense::sum('amount'), 0) }}
                 </div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
 
@@ -85,7 +85,7 @@
                                 <h4 style="margin: 0.5rem 0 0 0; color: #667eea;">
                                     {{ number_format(\App\Models\Custody::sum('amount'), 0) }}
                                 </h4>
-                                <small style="color: #999;">ر.س</small>
+                                <small style="color: #999;">ج.م</small>
                             </div>
                         </div>
                         <div class="col-6">
@@ -94,7 +94,7 @@
                                 <h4 style="margin: 0.5rem 0 0 0; color: #f57c00;">
                                     {{ number_format(\App\Models\Custody::sum('spent'), 0) }}
                                 </h4>
-                                <small style="color: #999;">ر.س</small>
+                                <small style="color: #999;">ج.م</small>
                             </div>
                         </div>
                     </div>
@@ -103,7 +103,7 @@
                         <h4 style="margin: 0.5rem 0 0 0; color: #4caf50;">
                             {{ number_format(\App\Models\Custody::sum('returned'), 0) }}
                         </h4>
-                        <small style="color: #999;">ر.س</small>
+                        <small style="color: #999;">ج.م</small>
                     </div>
                     <div style="margin-top: 1rem;">
                         <a href="{{ route('custodies.index') }}" class="btn btn-sm btn-outline-primary">
@@ -146,7 +146,7 @@
                         <h4 style="margin: 0.5rem 0 0 0; color: #2196f3;">
                             {{ number_format(\App\Models\Expense::where('type', 'social_case')->sum('amount'), 0) }}
                         </h4>
-                        <small style="color: #999;">ر.س</small>
+                        <small style="color: #999;">ج.م</small>
                     </div>
                     <div style="margin-top: 1rem;">
                         <a href="{{ route('social_cases.index') }}" class="btn btn-sm btn-outline-primary">
@@ -175,7 +175,7 @@
                                 <h4 style="margin: 0; color: #f5576c;">
                                     {{ number_format(\App\Models\Expense::whereDate('created_at', \Carbon\Carbon::today())->sum('amount'), 0) }}
                                 </h4>
-                                <small style="color: #999;">ر.س</small>
+                                <small style="color: #999;">ج.م</small>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
@@ -184,7 +184,7 @@
                                 <h4 style="margin: 0; color: #f5576c;">
                                     {{ number_format(\App\Models\Expense::whereMonth('created_at', \Carbon\Carbon::now()->month)->sum('amount'), 0) }}
                                 </h4>
-                                <small style="color: #999;">ر.س</small>
+                                <small style="color: #999;">ج.م</small>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
@@ -193,7 +193,7 @@
                                 <h4 style="margin: 0; color: #f5576c;">
                                     {{ number_format(\App\Models\Expense::whereYear('created_at', \Carbon\Carbon::now()->year)->sum('amount'), 0) }}
                                 </h4>
-                                <small style="color: #999;">ر.س</small>
+                                <small style="color: #999;">ج.م</small>
                             </div>
                         </div>
                         <div class="col-6 col-md-3">
@@ -202,7 +202,7 @@
                                 <h4 style="margin: 0; color: #f5576c;">
                                     {{ number_format(\App\Models\Expense::sum('amount'), 0) }}
                                 </h4>
-                                <small style="color: #999;">ر.س</small>
+                                <small style="color: #999;">ج.م</small>
                             </div>
                         </div>
                     </div>

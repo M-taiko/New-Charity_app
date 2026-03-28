@@ -31,7 +31,7 @@
                 <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
                 <div class="stat-label">إجمالي العهد المستلمة</div>
                 <div class="stat-number" style="color: var(--success);">{{ number_format($totalReceived, 2) }}</div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
@@ -39,7 +39,7 @@
                 <div class="stat-icon"><i class="fas fa-receipt"></i></div>
                 <div class="stat-label">إجمالي المصروفات</div>
                 <div class="stat-number" style="color: var(--danger);">{{ number_format($totalSpent, 2) }}</div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
@@ -47,7 +47,7 @@
                 <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
                 <div class="stat-label">إجمالي المبالغ المردودة</div>
                 <div class="stat-number" style="color: var(--warning);">{{ number_format($totalReturned, 2) }}</div>
-                <small style="color: #6b7280;">ر.س</small>
+                <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
     </div>
@@ -81,6 +81,11 @@
                         <li class="nav-item">
                             <button class="nav-link" id="returned-tab" data-bs-toggle="tab" data-bs-target="#returned-transactions" type="button" role="tab">
                                 <i class="fas fa-arrow-up"></i> مبالغ مردودة
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="transfers-tab" data-bs-toggle="tab" data-bs-target="#transfers-transactions" type="button" role="tab">
+                                <i class="fas fa-exchange-alt"></i> تحويلات
                             </button>
                         </li>
                     </ul>
@@ -121,7 +126,7 @@
                                         <tr>
                                             <td>{{ $custody->created_at->toDateString() }}</td>
                                             <td>
-                                                <strong style="color: var(--success);">{{ number_format($custody->amount, 2) }} ر.س</strong>
+                                                <strong style="color: var(--success);">{{ number_format($custody->amount, 2) }} ج.م</strong>
                                             </td>
                                             <td>
                                                 @switch($custody->status)
@@ -187,6 +192,25 @@
                                 </table>
                             </div>
                         </div>
+
+                        <!-- Transfers Tab -->
+                        <div class="tab-pane fade" id="transfers-transactions" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="transfersTable">
+                                    <thead>
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>النوع</th>
+                                            <th>من</th>
+                                            <th>إلى</th>
+                                            <th>المبلغ</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -224,7 +248,7 @@
                     data: 'amount',
                     render: function(data, type, row) {
                         let color = row.type === 'custody_out' ? 'var(--success)' : row.type === 'expense' ? 'var(--danger)' : 'var(--warning)';
-                        return `<strong style="color: ${color};">${parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ر.س</strong>`;
+                        return `<strong style="color: ${color};">${parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ج.م</strong>`;
                     }
                 },
                 { data: 'description' },
@@ -243,7 +267,7 @@
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             },
-            order: [[0, 'desc']]
+            order: [[0, 'asc']]
         });
 
         // Expenses Table
@@ -267,7 +291,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ر.س';
+                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
                     }
                 },
                 { data: 'description' },
@@ -283,7 +307,7 @@
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             },
-            order: [[0, 'desc']]
+            order: [[0, 'asc']]
         });
 
         // Returned Amounts Table
@@ -301,7 +325,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--warning);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ر.س';
+                        return '<strong style="color: var(--warning);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
                     }
                 },
                 {
@@ -315,7 +339,70 @@
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             },
-            order: [[0, 'desc']]
+            order: [[0, 'asc']]
+        });
+
+        // Transfers Table
+        $('#transfersTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: '{{ route("api.agent.transfers") }}',
+            columns: [
+                {
+                    data: 'created_at',
+                    render: function(data) {
+                        return new Date(data).toLocaleDateString('ar-SA');
+                    }
+                },
+                {
+                    data: 'transfer_type',
+                    render: function(data) {
+                        return data === 'sent' ? '<span class="badge bg-danger">مرسل</span>' : '<span class="badge bg-success">مستقبل</span>';
+                    }
+                },
+                {
+                    data: 'from_agent_name',
+                    render: function(data) {
+                        return data || '-';
+                    }
+                },
+                {
+                    data: 'to_agent_name',
+                    render: function(data) {
+                        return data || '-';
+                    }
+                },
+                {
+                    data: 'amount',
+                    render: function(data, type, row) {
+                        let color = row.transfer_type === 'sent' ? 'var(--danger)' : 'var(--success)';
+                        return '<strong style="color: ' + color + ';">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
+                    }
+                },
+                {
+                    data: 'status',
+                    render: function(data) {
+                        let statusBadge = {
+                            'pending': '<span class="badge bg-warning">قيد الانتظار</span>',
+                            'approved': '<span class="badge bg-success">تم القبول</span>',
+                            'rejected': '<span class="badge bg-danger">مرفوض</span>'
+                        };
+                        return statusBadge[data] || data;
+                    }
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return `<a href="/custody-transfers/${data}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>`;
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            },
+            order: [[0, 'asc']]
         });
     });
 </script>

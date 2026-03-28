@@ -6,31 +6,39 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\HasStatusScopes;
 
 class Custody extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasStatusScopes;
 
     protected $fillable = [
         'treasury_id',
         'agent_id',
         'accountant_id',
+        'initiated_by',
         'amount',
         'spent',
+        'transferred_out',
+        'transferred_in',
         'returned',
         'pending_return',
         'status',
         'notes',
         'accepted_at',
+        'received_at',
         'returned_at',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'spent' => 'decimal:2',
+        'transferred_out' => 'decimal:2',
+        'transferred_in' => 'decimal:2',
         'returned' => 'decimal:2',
         'pending_return' => 'decimal:2',
         'accepted_at' => 'datetime',
+        'received_at' => 'datetime',
         'returned_at' => 'datetime',
     ];
 
@@ -61,11 +69,47 @@ class Custody extends Model
 
     public function getRemainingBalance()
     {
-        return $this->amount - $this->spent - $this->returned;
+        // الرصيد = المبلغ الأصلي + المبالغ المستقبلة - المصروفات - المحولات - المرتجعات - المعلقة
+        return $this->amount
+            + $this->transferred_in
+            - $this->spent
+            - $this->transferred_out
+            - $this->returned
+            - $this->pending_return;
     }
 
     public function getTotalSpent()
     {
         return $this->spent;
+    }
+
+    public function isAgentInitiated(): bool
+    {
+        return $this->initiated_by === 'agent';
+    }
+
+    public function isAccountantInitiated(): bool
+    {
+        return $this->initiated_by === 'accountant';
+    }
+
+    public function agentCanRespond(): bool
+    {
+        return $this->isAccountantInitiated()
+            && $this->status === 'pending'
+            && $this->agent_id === auth()->id();
+    }
+
+    public function accountantCanApprove(): bool
+    {
+        return $this->isAgentInitiated()
+            && $this->status === 'pending';
+    }
+
+    public function needsAgentConfirmation(): bool
+    {
+        return $this->isAgentInitiated()
+            && $this->status === 'accepted'
+            && $this->agent_id === auth()->id();
     }
 }

@@ -30,7 +30,7 @@ class TreasuryController extends Controller
         $request->validate([
             'amount' => 'required|numeric|min:0',
             'description' => 'required|string',
-            'source' => 'required|in:company,external',
+            'source' => 'required|in:company,external,returnings',
         ]);
 
         $this->service->addDonation(

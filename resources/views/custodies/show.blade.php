@@ -23,7 +23,7 @@
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label"><strong>المبلغ الكلي:</strong></label>
-                            <p class="text-primary">{{ number_format($custody->amount, 2) }} ر.س</p>
+                            <p class="text-primary">{{ number_format($custody->amount, 2) }} ج.م</p>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><strong>الحالة:</strong></label>
@@ -52,15 +52,15 @@
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label class="form-label"><strong>المصروف:</strong></label>
-                            <p class="text-danger">{{ number_format($custody->spent, 2) }} ر.س</p>
+                            <p class="text-danger">{{ number_format($custody->spent, 2) }} ج.م</p>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label"><strong>المرجع:</strong></label>
-                            <p>{{ number_format($custody->returned, 2) }} ر.س</p>
+                            <p>{{ number_format($custody->returned, 2) }} ج.م</p>
                         </div>
                         <div class="col-md-4">
                             <label class="form-label"><strong>المتبقي:</strong></label>
-                            <p class="text-success">{{ number_format($custody->getRemainingBalance(), 2) }} ر.س</p>
+                            <p class="text-success">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</p>
                         </div>
                     </div>
 
@@ -116,9 +116,9 @@
                             @csrf
                             <div class="modal-body">
                                 <div class="mb-3">
-                                    <label class="form-label">المبلغ المرجع (ر.س)</label>
+                                    <label class="form-label">المبلغ المرجع (ج.م)</label>
                                     <input type="number" step="0.01" name="returned_amount" class="form-control" max="{{ $custody->getRemainingBalance() }}" required>
-                                    <small class="text-muted">الحد الأقصى: {{ number_format($custody->getRemainingBalance(), 2) }} ر.س</small>
+                                    <small class="text-muted">الحد الأقصى: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م</small>
                                 </div>
                             </div>
                             <div class="modal-footer">

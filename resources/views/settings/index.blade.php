@@ -28,7 +28,7 @@
                             <div class="logo-preview-container" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; border-radius: 12px; text-align: center; min-height: 250px; display: flex; align-items: center; justify-content: center;">
                                 @if($settings['logo'])
                                     <div style="position: relative; width: 100%;">
-                                        <img id="logoPreview" src="{{ asset('storage/' . $settings['logo']) }}" alt="شعار المؤسسة" style="max-height: 200px; max-width: 100%; object-fit: contain;">
+                                        <img id="logoPreview" src="{{ '/storage/app/public/' . $settings['logo'] }}" alt="شعار المؤسسة" style="max-height: 200px; max-width: 100%; object-fit: contain;">
                                         <small class="text-white mt-2 d-block">الشعار الحالي</small>
                                     </div>
                                 @else

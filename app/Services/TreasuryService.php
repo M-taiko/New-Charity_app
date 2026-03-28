@@ -7,17 +7,19 @@ use App\Models\Custody;
 use App\Models\Expense;
 use App\Models\TreasuryTransaction;
 use App\Models\Notification;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class TreasuryService
 {
-    public function createCustody($treasuryId, $agentId, $accountantId, $amount, $notes = null)
+    public function createCustody($treasuryId, $agentId, $accountantId, $amount, $notes = null, $isAgentRequest = false)
     {
-        return DB::transaction(function () use ($treasuryId, $agentId, $accountantId, $amount, $notes) {
+        return DB::transaction(function () use ($treasuryId, $agentId, $accountantId, $amount, $notes, $isAgentRequest) {
             $custody = Custody::create([
                 'treasury_id' => $treasuryId,
                 'agent_id' => $agentId,
                 'accountant_id' => $accountantId,
+                'initiated_by' => $isAgentRequest ? 'agent' : 'accountant',
                 'amount' => $amount,
                 'spent' => 0,
                 'returned' => 0,
@@ -25,11 +27,72 @@ class TreasuryService
                 'notes' => $notes,
             ]);
 
-            // Create notification for agent
+            // Notifications based on request type
+            if ($isAgentRequest) {
+                // Agent request: notify managers and accountants for approval
+                $agent = User::find($agentId);
+                $notifiedUsers = [];
+
+                $this->notifyManagers(
+                    'طلب عهدة جديد',
+                    "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م",
+                    'warning',
+                    $custody->id,
+                    'custody',
+                    $notifiedUsers
+                );
+                $this->notifyAccountants(
+                    'طلب عهدة جديد',
+                    "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م",
+                    'warning',
+                    $custody->id,
+                    'custody',
+                    $notifiedUsers
+                );
+            } else {
+                // Manager/Accountant created: notify agent that custody was assigned
+                $this->notifyUser(
+                    $agentId,
+                    'عهدة جديدة تتطلب موافقتك',
+                    "تم تخصيص عهدة لك بقيمة {$amount} ج.م. يرجى قبول أو رفض العهدة",
+                    'warning',
+                    $custody->id,
+                    'custody'
+                );
+            }
+
+            return $custody;
+        });
+    }
+
+    public function acceptCustody($custody)
+    {
+        return DB::transaction(function () use ($custody) {
+            // Ensure this is only for agent-initiated requests
+            if ($custody->initiated_by !== 'agent') {
+                throw new \Exception('هذه العملية متاحة فقط لطلبات العهد من المندوب');
+            }
+
+            // Check if treasury has sufficient balance
+            $treasury = $custody->treasury;
+            if ($treasury->balance < $custody->amount) {
+                $agentName = $custody->agent->name ?? 'غير محدد';
+                throw new \Exception(
+                    "❌ لا يمكن الموافقة على عهدة المندوب {$agentName}\n\n" .
+                    $this->insufficientBalanceError($treasury->balance, $custody->amount, 'الموافقة على العهدة')
+                );
+            }
+
+            $custody->update([
+                'status' => 'accepted',
+                'accepted_at' => now(),
+            ]);
+
+            // Notify agent to acknowledge receipt
             $this->notifyUser(
-                $agentId,
-                'تم إرسال عهدة',
-                "تم إرسال عهدة بقيمة {$amount} في انتظار الموافقة",
+                $custody->agent_id,
+                'تمت الموافقة على عهدتك',
+                "تم الموافقة على عهدتك بقيمة {$custody->amount} ج.م. يرجى تأكيد الاستقبال لصرف الفلوس",
                 'info',
                 $custody->id,
                 'custody'
@@ -39,17 +102,33 @@ class TreasuryService
         });
     }
 
-    public function acceptCustody($custody)
+    public function receiveCustody($custody)
     {
         return DB::transaction(function () use ($custody) {
-            $custody->update([
-                'status' => 'accepted',
-                'accepted_at' => now(),
-            ]);
+            if ($custody->status !== 'accepted') {
+                throw new \Exception('العهدة يجب أن تكون في حالة مقبولة قبل الاستقبال');
+            }
+
+            // Lock the custody and treasury for update to prevent race conditions
+            $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            $treasury = Treasury::where('id', $custody->treasury_id)->lockForUpdate()->first();
+
+            // Check if treasury has sufficient balance
+            if ($treasury->balance < $custody->amount) {
+                throw new \Exception(
+                    "❌ لا يمكن صرف العهدة للمندوب\n\n" .
+                    $this->insufficientBalanceError($treasury->balance, $custody->amount, 'صرف العهدة')
+                );
+            }
 
             // Deduct from treasury
-            $treasury = $custody->treasury;
             $treasury->decrement('balance', $custody->amount);
+
+            // Update status and received timestamp
+            $custody->update([
+                'status' => 'active',
+                'received_at' => now(),
+            ]);
 
             // Create transaction record
             TreasuryTransaction::create([
@@ -57,17 +136,17 @@ class TreasuryService
                 'type' => 'custody_out',
                 'amount' => $custody->amount,
                 'description' => "صرف عهدة للمندوب {$custody->agent->name}",
-                'user_id' => auth()->id(),
+                'user_id' => $custody->agent_id,
                 'custody_id' => $custody->id,
                 'transaction_date' => now(),
             ]);
 
-            // Notify accountant
+            // Notify agent that funds were transferred
             $this->notifyUser(
-                $custody->accountant_id,
-                'تم قبول العهدة',
-                "تم قبول العهدة من قبل المندوب {$custody->agent->name}",
-                'info',
+                $custody->agent_id,
+                'تم صرف العهدة',
+                "تم صرف عهدتك بقيمة {$custody->amount} ج.م. يمكنك الآن استخدام المبلغ",
+                'success',
                 $custody->id,
                 'custody'
             );
@@ -79,6 +158,11 @@ class TreasuryService
     public function rejectCustody($custody, $reason = null)
     {
         return DB::transaction(function () use ($custody, $reason) {
+            // Ensure this is only for agent-initiated requests
+            if ($custody->initiated_by !== 'agent') {
+                throw new \Exception('هذه العملية متاحة فقط لطلبات العهد من المندوب');
+            }
+
             $custody->update([
                 'status' => 'rejected',
                 'notes' => $reason,
@@ -92,6 +176,117 @@ class TreasuryService
                 'error',
                 $custody->id,
                 'custody'
+            );
+
+            return $custody;
+        });
+    }
+
+    public function agentAcceptCustody($custody)
+    {
+        return DB::transaction(function () use ($custody) {
+            // Lock the custody and treasury for update
+            $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            $treasury = Treasury::where('id', $custody->treasury_id)->lockForUpdate()->first();
+
+            // Validation
+            if ($custody->initiated_by !== 'accountant') {
+                throw new \Exception('هذه العملية متاحة فقط للعهد المرسلة من المحاسب');
+            }
+            if ($custody->status !== 'pending') {
+                throw new \Exception('العهدة يجب أن تكون في حالة انتظار');
+            }
+            if ($custody->agent_id !== auth()->id()) {
+                throw new \Exception('غير مصرح لك بقبول هذه العهدة');
+            }
+
+            // Check treasury balance
+            if ($treasury->balance < $custody->amount) {
+                throw new \Exception(
+                    $this->insufficientBalanceError($treasury->balance, $custody->amount, 'قبول العهدة')
+                );
+            }
+
+            // Deduct from treasury immediately
+            $treasury->decrement('balance', $custody->amount);
+
+            // Update custody
+            $custody->update([
+                'status' => 'active',
+                'accepted_at' => now(),
+                'received_at' => now(),
+            ]);
+
+            // Create transaction record
+            TreasuryTransaction::create([
+                'treasury_id' => $custody->treasury_id,
+                'type' => 'custody_out',
+                'amount' => $custody->amount,
+                'description' => "صرف عهدة للمندوب {$custody->agent->name} (قبول مباشر)",
+                'user_id' => $custody->agent_id,
+                'custody_id' => $custody->id,
+                'transaction_date' => now(),
+            ]);
+
+            // Notify accountants and managers (avoiding duplicates)
+            $notifiedUsers = [];
+            $this->notifyAccountants(
+                'تم قبول العهدة',
+                "المندوب {$custody->agent->name} قبل العهدة بقيمة {$custody->amount} ج.م وتم صرف الفلوس",
+                'success',
+                $custody->id,
+                'custody',
+                $notifiedUsers
+            );
+            $this->notifyManagers(
+                'تم قبول العهدة',
+                "المندوب {$custody->agent->name} قبل العهدة بقيمة {$custody->amount} ج.م وتم صرف الفلوس",
+                'success',
+                $custody->id,
+                'custody',
+                $notifiedUsers
+            );
+
+            return $custody;
+        });
+    }
+
+    public function agentRejectCustody($custody, $reason = null)
+    {
+        return DB::transaction(function () use ($custody, $reason) {
+            // Validation
+            if ($custody->initiated_by !== 'accountant') {
+                throw new \Exception('هذه العملية متاحة فقط للعهد المرسلة من المحاسب');
+            }
+            if ($custody->status !== 'pending') {
+                throw new \Exception('العهدة يجب أن تكون في حالة انتظار');
+            }
+            if ($custody->agent_id !== auth()->id()) {
+                throw new \Exception('غير مصرح لك برفض هذه العهدة');
+            }
+
+            $custody->update([
+                'status' => 'rejected',
+                'notes' => $reason ? "رفض من المندوب: {$reason}" : "رفض من المندوب",
+            ]);
+
+            // Notify accountants and managers (avoiding duplicates)
+            $notifiedUsers = [];
+            $this->notifyAccountants(
+                'رفض العهدة من المندوب',
+                "المندوب {$custody->agent->name} رفض العهدة بقيمة {$custody->amount} ج.م. السبب: " . ($reason ?? 'غير محدد'),
+                'error',
+                $custody->id,
+                'custody',
+                $notifiedUsers
+            );
+            $this->notifyManagers(
+                'رفض العهدة من المندوب',
+                "المندوب {$custody->agent->name} رفض العهدة بقيمة {$custody->amount} ج.م. السبب: " . ($reason ?? 'غير محدد'),
+                'error',
+                $custody->id,
+                'custody',
+                $notifiedUsers
             );
 
             return $custody;
@@ -136,7 +331,7 @@ class TreasuryService
             if ($amount > 1000) {
                 $this->notifyManagers(
                     'مصروف كبير',
-                    "عملية صرف بقيمة {$amount} من العهدة",
+                    "عملية صرف بقيمة {$amount} ج.م من العهدة",
                     'warning',
                     $expense->id,
                     'expense'
@@ -152,16 +347,26 @@ class TreasuryService
         return DB::transaction(function () use ($custody, $returnedAmount) {
             // Store as pending return
             $custody->increment('pending_return', $returnedAmount);
-            $custody->update(['status' => 'pending_return']);
+            // Status remains as 'accepted' - it's just marked as pending return internally
 
-            // Send notification to accountant
-            $this->notifyUser(
-                $custody->accountant_id,
+            // Send notification to accountants and managers (avoiding duplicates)
+            $notifiedUsers = [];
+            $this->notifyAccountants(
                 'طلب رد عهدة',
-                "المندوب {$custody->agent->name} يطلب إرجاع {$returnedAmount} ر.س من العهدة",
-                'info',
+                "المندوب {$custody->agent->name} يطلب إرجاع {$returnedAmount} ج.م من العهدة",
+                'warning',
                 $custody->id,
-                'custody'
+                'custody',
+                $notifiedUsers
+            );
+
+            $this->notifyManagers(
+                'طلب رد عهدة',
+                "المندوب {$custody->agent->name} يطلب إرجاع {$returnedAmount} ج.م من العهدة",
+                'warning',
+                $custody->id,
+                'custody',
+                $notifiedUsers
             );
 
             return $custody;
@@ -171,6 +376,10 @@ class TreasuryService
     public function approveCustodyReturn($custody)
     {
         return DB::transaction(function () use ($custody) {
+            // Lock the custody and treasury for update
+            $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            $treasury = Treasury::where('id', $custody->treasury_id)->lockForUpdate()->first();
+
             $returnedAmount = $custody->pending_return;
 
             // Move from pending to confirmed returned
@@ -180,7 +389,6 @@ class TreasuryService
             ]);
 
             // Add to treasury
-            $treasury = $custody->treasury;
             $treasury->increment('balance', $returnedAmount);
 
             // Create transaction
@@ -195,20 +403,45 @@ class TreasuryService
             ]);
 
             // Update status
-            if ($custody->returned >= $custody->amount) {
+            $isClosed = $custody->returned >= $custody->amount;
+            if ($isClosed) {
                 $custody->update(['status' => 'closed']);
             } else {
-                $custody->update(['status' => 'accepted']);
+                $custody->update(['status' => 'partially_returned']);
             }
 
             // Notify agent
+            $statusMessage = $isClosed ? 'وتم إغلاق العهدة' : 'والعهدة مازالت نشطة';
             $this->notifyUser(
                 $custody->agent_id,
                 'تم قبول الرد',
-                "تم قبول رد المبلغ {$returnedAmount} ر.س من العهدة",
+                "تم قبول رد المبلغ {$returnedAmount} ج.م من العهدة {$statusMessage}",
                 'success',
                 $custody->id,
                 'custody'
+            );
+
+            // Don't notify the approver about their own action
+            $excludedUsers = [auth()->id()];
+
+            // Notify accountants (excluding the approver)
+            $this->notifyAccountants(
+                'تم قبول رد العهدة',
+                "تم قبول رد المبلغ {$returnedAmount} ج.م من المندوب {$custody->agent->name} وإضافته للخزينة",
+                'success',
+                $custody->id,
+                'custody',
+                $excludedUsers
+            );
+
+            // Notify managers (excluding the approver)
+            $this->notifyManagers(
+                'تم قبول رد العهدة',
+                "تم قبول رد المبلغ {$returnedAmount} ج.م من المندوب {$custody->agent->name} وإضافته للخزينة",
+                'success',
+                $custody->id,
+                'custody',
+                $excludedUsers
             );
 
             return $custody;
@@ -218,10 +451,13 @@ class TreasuryService
     public function returnCustody($custody, $returnedAmount)
     {
         return DB::transaction(function () use ($custody, $returnedAmount) {
+            // Lock the custody and treasury for update
+            $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            $treasury = Treasury::where('id', $custody->treasury_id)->lockForUpdate()->first();
+
             $custody->increment('returned', $returnedAmount);
 
             // Add to treasury
-            $treasury = $custody->treasury;
             $treasury->increment('balance', $returnedAmount);
 
             // Create transaction
@@ -238,6 +474,17 @@ class TreasuryService
             // Update status if fully returned
             if ($custody->returned >= $custody->amount) {
                 $custody->update(['status' => 'closed']);
+
+                // Create closure transaction (administrative record)
+                TreasuryTransaction::create([
+                    'treasury_id' => $custody->treasury_id,
+                    'type' => 'custody_close',
+                    'amount' => 0,
+                    'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (تم رد المبلغ بالكامل)",
+                    'user_id' => auth()->id(),
+                    'custody_id' => $custody->id,
+                    'transaction_date' => now(),
+                ]);
             } elseif ($custody->returned > 0) {
                 $custody->update(['status' => 'partially_returned']);
             }
@@ -269,6 +516,224 @@ class TreasuryService
         });
     }
 
+    public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general')
+    {
+        return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type) {
+            // Get all active custodies for the user sorted by oldest first
+            $availableCustodies = Custody::where('agent_id', $userId)
+                ->whereIn('status', ['accepted', 'active'])
+                ->orderBy('created_at', 'asc')
+                ->get()
+                ->filter(function($custody) {
+                    return $custody->getRemainingBalance() > 0;
+                });
+
+            // Calculate total available balance
+            $totalAvailable = $availableCustodies->sum(function($custody) {
+                return $custody->getRemainingBalance();
+            });
+
+            if ($totalAvailable < $amount) {
+                throw new \Exception('الرصيد المتاح في جميع العهد (' . number_format($totalAvailable, 2) . ' ج.م) غير كافي للمبلغ المطلوب (' . number_format($amount, 2) . ' ج.م)');
+            }
+
+            // Create the expense record
+            $expense = Expense::create([
+                'custody_id' => $custodyId, // Keep for backward compatibility (will be the first custody used)
+                'user_id' => $userId,
+                'social_case_id' => $socialCaseId,
+                'expense_category_id' => $categoryId,
+                'expense_item_id' => $itemId,
+                'type' => $type,
+                'amount' => $amount,
+                'description' => $description,
+                'location' => $location,
+                'source' => 'custody',
+                'expense_date' => now(),
+                'attachment' => $attachment,
+            ]);
+
+            // Distribute the expense across custodies
+            $remainingAmount = $amount;
+            $treasuryId = null;
+
+            foreach ($availableCustodies as $custody) {
+                if ($remainingAmount <= 0) {
+                    break;
+                }
+
+                // Lock the custody for update to prevent race conditions
+                $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+
+                $custodyBalance = $custody->getRemainingBalance();
+                $amountFromThisCustody = min($remainingAmount, $custodyBalance);
+
+                // Store treasury ID (all custodies should have the same treasury)
+                if (!$treasuryId) {
+                    $treasuryId = $custody->treasury_id;
+                }
+
+                // Update custody spent
+                $custody->increment('spent', $amountFromThisCustody);
+
+                // Create pivot record
+                $expense->custodies()->attach($custody->id, ['amount' => $amountFromThisCustody]);
+
+                // Create transaction
+                TreasuryTransaction::create([
+                    'treasury_id' => $custody->treasury_id,
+                    'type' => 'expense',
+                    'amount' => $amountFromThisCustody,
+                    'description' => $description . ' (من عهدة #' . $custody->id . ')',
+                    'user_id' => $userId,
+                    'custody_id' => $custody->id,
+                    'expense_id' => $expense->id,
+                    'expense_category_id' => $categoryId,
+                    'expense_item_id' => $itemId,
+                    'transaction_date' => now(),
+                ]);
+
+                // Close custody if balance reaches zero
+                if ($custody->fresh()->getRemainingBalance() <= 0) {
+                    $custody->update(['status' => 'closed']);
+
+                    // Create closure transaction (administrative record)
+                    TreasuryTransaction::create([
+                        'treasury_id' => $custody->treasury_id,
+                        'type' => 'custody_close',
+                        'amount' => 0,
+                        'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (رصيد صفر)",
+                        'user_id' => $userId,
+                        'custody_id' => $custody->id,
+                        'transaction_date' => now(),
+                    ]);
+                }
+
+                $remainingAmount -= $amountFromThisCustody;
+            }
+
+            // Get category and item names for notification
+            $category = $expense->category;
+            $categoryName = $category->name ?? 'غير محدد';
+            $itemName = $expense->item ? $expense->item->name : 'غير محدد';
+            $message = "مصروف جديد: {$categoryName} - {$itemName} بقيمة {$amount} ج.م";
+
+            // Don't notify the user who created the expense about their own action
+            $excludedUsers = [$userId];
+
+            // Notify accountants (excluding the creator)
+            $this->notifyAccountants(
+                'مصروف جديد',
+                $message,
+                'info',
+                $expense->id,
+                'expense',
+                $excludedUsers
+            );
+
+            // Notify managers (excluding the creator and already notified accountants)
+            $this->notifyManagers(
+                'مصروف جديد',
+                $message,
+                'info',
+                $expense->id,
+                'expense',
+                $excludedUsers
+            );
+
+            return $expense;
+        });
+    }
+
+    public function recordDirectExpenseFromTreasury($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general')
+    {
+        return DB::transaction(function () use ($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type) {
+            // Lock the treasury for update to prevent race conditions
+            $treasury = Treasury::where('id', Treasury::first()->id)->lockForUpdate()->first();
+
+            if (!$treasury) {
+                throw new \Exception('لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+            }
+
+            if ($treasury->balance < $amount) {
+                throw new \Exception(
+                    "❌ لا يمكن تنفيذ هذا المصروف من الخزينة\n\n" .
+                    $this->insufficientBalanceError($treasury->balance, $amount, 'صرف المصروف من الخزينة')
+                );
+            }
+
+            // Create expense with treasury source and null custody_id
+            $expense = Expense::create([
+                'custody_id' => null,
+                'user_id' => $userId,
+                'social_case_id' => $socialCaseId,
+                'expense_category_id' => $categoryId,
+                'expense_item_id' => $itemId,
+                'type' => $type,
+                'amount' => $amount,
+                'description' => $description,
+                'location' => $location,
+                'source' => 'treasury',
+                'expense_date' => now(),
+                'attachment' => $attachment,
+            ]);
+
+            // Deduct from treasury
+            $treasury->decrement('balance', $amount);
+
+            // Create transaction
+            TreasuryTransaction::create([
+                'treasury_id' => $treasury->id,
+                'type' => 'expense',
+                'amount' => $amount,
+                'description' => $description,
+                'user_id' => $userId,
+                'expense_id' => $expense->id,
+                'expense_category_id' => $categoryId,
+                'expense_item_id' => $itemId,
+                'transaction_date' => now(),
+            ]);
+
+            // Don't notify the user who created the expense about their own action
+            $excludedUsers = [$userId];
+
+            // Notify managers about direct treasury spending (excluding the creator)
+            $this->notifyManagers(
+                'صرف مباشر من الخزينة',
+                "تم صرف {$amount} ج.م مباشرة من الخزينة من قبل {$expense->user->name}",
+                'warning',
+                $expense->id,
+                'expense',
+                $excludedUsers
+            );
+
+            // Notify accountants about direct treasury spending (excluding the creator)
+            $this->notifyAccountants(
+                'صرف مباشر من الخزينة',
+                "تم صرف {$amount} ج.م مباشرة من الخزينة من قبل {$expense->user->name}",
+                'warning',
+                $expense->id,
+                'expense',
+                $excludedUsers
+            );
+
+            return $expense;
+        });
+    }
+
+    /**
+     * Build insufficient balance error message
+     */
+    private function insufficientBalanceError($availableBalance, $requiredAmount, $operationType = 'العملية')
+    {
+        $deficit = $requiredAmount - $availableBalance;
+        return "{$operationType}: رصيد الخزينة غير كافي\n\n" .
+               '💰 الرصيد المتاح: ' . number_format($availableBalance, 2) . ' ج.م' . "\n" .
+               '💸 المبلغ المطلوب: ' . number_format($requiredAmount, 2) . ' ج.م' . "\n" .
+               '❌ النقص: ' . number_format($deficit, 2) . ' ج.م' . "\n\n" .
+               '⚠️ يرجى إضافة أموال للخزينة قبل تنفيذ هذه العملية';
+    }
+
     private function notifyUser($userId, $title, $message, $type, $relatedId, $relatedType)
     {
         Notification::create([
@@ -281,12 +746,29 @@ class TreasuryService
         ]);
     }
 
-    private function notifyManagers($title, $message, $type, $relatedId, $relatedType)
+    private function notifyManagers($title, $message, $type, $relatedId, $relatedType, &$excludeUserIds = [])
     {
-        $managers = \App\Models\User::role('مدير')->get();
+        $managers = User::role('مدير')->get();
 
         foreach ($managers as $manager) {
-            $this->notifyUser($manager->id, $title, $message, $type, $relatedId, $relatedType);
+            // Skip if user already notified or excluded
+            if (!in_array($manager->id, $excludeUserIds)) {
+                $this->notifyUser($manager->id, $title, $message, $type, $relatedId, $relatedType);
+                $excludeUserIds[] = $manager->id; // Track notified user
+            }
+        }
+    }
+
+    private function notifyAccountants($title, $message, $type, $relatedId, $relatedType, &$excludeUserIds = [])
+    {
+        $accountants = User::role('محاسب')->get();
+
+        foreach ($accountants as $accountant) {
+            // Skip if user already notified or excluded
+            if (!in_array($accountant->id, $excludeUserIds)) {
+                $this->notifyUser($accountant->id, $title, $message, $type, $relatedId, $relatedType);
+                $excludeUserIds[] = $accountant->id; // Track notified user
+            }
         }
     }
 }
