@@ -18,13 +18,18 @@ class ExpenseController extends Controller
 
     public function index()
     {
+        $user = auth()->user();
+
         // المندوب يُوجَّه لصفحة مصروفاته الخاصة
-        if (auth()->user()->hasRole('مندوب')) {
+        if ($user->hasRole('مندوب')) {
             return redirect()->route('expenses.agent');
         }
 
         // فقط المحاسب والمدير يرون جدول جميع المصروفات
-        $this->authorize('spend_money');
+        if (!$user->hasRole('محاسب') && !$user->hasRole('مدير')) {
+            abort(403, 'غير مصرح لك بعرض هذه الصفحة');
+        }
+
         return view('expenses.modern');
     }
 
