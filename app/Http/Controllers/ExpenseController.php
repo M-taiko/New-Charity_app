@@ -25,10 +25,7 @@ class ExpenseController extends Controller
             return redirect()->route('expenses.agent');
         }
 
-        // فقط المحاسب والمدير يرون جدول جميع المصروفات
-        if (!$user->hasRole('محاسب') && !$user->hasRole('مدير')) {
-            abort(403, 'غير مصرح لك بعرض هذه الصفحة');
-        }
+        $this->authorize('view_all_expenses');
 
         return view('expenses.modern');
     }

@@ -36,5 +36,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage_expense_items', function ($user) {
             return $user->hasRole('محاسب') || $user->hasRole('مدير');
         });
+
+        Gate::define('view_all_expenses', function ($user) {
+            return $user->hasRole('محاسب') || $user->hasRole('مدير');
+        });
     }
 }
