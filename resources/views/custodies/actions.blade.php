@@ -6,7 +6,7 @@
             <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('هل تريد قبول هذه العهدة؟')">قبول</button>
         </form>
         <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal{{ $row->id }}">رفض</button>
-    @elseif($row->status == 'accepted')
+    @elseif($row->status == 'accepted' && $row->agent_id === auth()->id())
         <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#returnModal{{ $row->id }}">إرجاع</button>
     @endif
 </div>
@@ -36,7 +36,7 @@
         </div>
     </div>
 </div>
-@elseif($row->status == 'accepted')
+@elseif($row->status == 'accepted' && $row->agent_id === auth()->id())
 <!-- Return Modal -->
 <div class="modal fade" id="returnModal{{ $row->id }}" tabindex="-1">
     <div class="modal-dialog">
