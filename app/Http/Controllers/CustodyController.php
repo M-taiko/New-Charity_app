@@ -248,8 +248,8 @@ class CustodyController extends Controller
 
         return DataTables::of($custodies)
             ->addColumn('agent_name', fn($row) => $row->agent->name)
-            ->addColumn('spent_percent', fn($row) => round(($row->spent / $row->amount) * 100) . '%')
-            ->addColumn('remaining', fn($row) => number_format($row->getRemainingBalance(), 2))
+            ->addColumn('spent_percent', fn($row) => $row->amount > 0 ? round(($row->spent / $row->amount) * 100) . '%' : '0%')
+            ->addColumn('remaining', fn($row) => $row->getRemainingBalance())
             ->addColumn('status_label', fn($row) => $this->getStatusLabel($row->status))
             ->addColumn('actions', fn($row) => view('custodies.actions', compact('row'))->render())
             ->rawColumns(['status_label', 'actions'])
