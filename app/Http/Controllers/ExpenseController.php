@@ -199,6 +199,99 @@ class ExpenseController extends Controller
         return view('expenses.modern-show', compact('expense'));
     }
 
+    public function edit(Expense $expense)
+    {
+        $user = auth()->user();
+
+        // فقط المحاسب والمدير يقدروا يعدلوا مباشرة
+        if (!$user->hasRole('محاسب') && !$user->hasRole('مدير')) {
+            abort(403, 'المندوبون يجب أن يستخدموا نظام طلبات التعديل');
+        }
+
+        // إذا كان المصروف معتمداً، فقط المدير يقدر يعدل
+        if ($expense->isApproved() && !$user->hasRole('مدير')) {
+            abort(403, 'المصروفات المعتمدة لا يمكن تعديلها إلا من قِبَل المدير');
+        }
+
+        $cases = SocialCase::where('status', 'approved')->get();
+        $categories = ExpenseCategory::active()->with('items')->ordered()->get();
+
+        return view('expenses.modern-edit', compact('expense', 'cases', 'categories'));
+    }
+
+    public function update(Request $request, Expense $expense)
+    {
+        $user = auth()->user();
+
+        // فقط المحاسب والمدير يقدروا يعدلوا مباشرة
+        if (!$user->hasRole('محاسب') && !$user->hasRole('مدير')) {
+            abort(403, 'غير مصرح لك بهذا الإجراء');
+        }
+
+        // إذا كان المصروف معتمداً، فقط المدير يقدر يعدل
+        if ($expense->isApproved() && !$user->hasRole('مدير')) {
+            abort(403, 'المصروفات المعتمدة لا يمكن تعديلها إلا من قِبَل المدير');
+        }
+
+        $category = ExpenseCategory::find($request->expense_category_id);
+        $isOtherExpense = $category && $category->code === 'OTHER';
+
+        $rules = [
+            'expense_category_id' => 'required|exists:expense_categories,id',
+            'expense_type'        => 'required|in:social_case,general',
+            'amount'              => 'required|numeric|min:0.01|max:1000000',
+            'description'         => 'required|string|max:500',
+            'location'            => 'nullable|string|max:255',
+            'social_case_id'      => 'nullable|exists:social_cases,id',
+            'expense_date'        => 'required|date',
+            'attachment'          => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+        ];
+
+        if ($request->expense_type === 'social_case') {
+            $rules['social_case_id'] = 'required|exists:social_cases,id';
+        }
+
+        $rules['expense_item_id'] = $isOtherExpense
+            ? 'nullable|exists:expense_items,id'
+            : 'required|exists:expense_items,id';
+
+        $request->validate($rules, [
+            'attachment.max'   => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
+            'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
+        ]);
+
+        // تحديث custody.spent إذا تغير المبلغ
+        $oldAmount = (float) $expense->amount;
+        $newAmount = (float) $request->amount;
+
+        if ($expense->custody_id && $oldAmount !== $newAmount) {
+            $custody = Custody::findOrFail($expense->custody_id);
+            $diff = $newAmount - $oldAmount;
+            $custody->increment('spent', $diff);
+        }
+
+        // رفع المرفق الجديد إذا وُجد
+        $attachmentPath = $expense->attachment;
+        if ($request->hasFile('attachment')) {
+            $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+        }
+
+        $expense->update([
+            'expense_category_id' => $request->expense_category_id,
+            'expense_item_id'     => $request->expense_item_id,
+            'type'                => $request->expense_type,
+            'amount'              => $newAmount,
+            'description'         => $request->description,
+            'location'            => $request->location,
+            'social_case_id'      => $request->expense_type === 'social_case' ? $request->social_case_id : null,
+            'expense_date'        => $request->expense_date,
+            'attachment'          => $attachmentPath,
+        ]);
+
+        return redirect()->route('expenses.show', $expense)
+            ->with('success', 'تم تعديل المصروف بنجاح');
+    }
+
     public function agentExpenses()
     {
         $user = auth()->user();
