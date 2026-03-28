@@ -196,57 +196,200 @@
             </div>
         </div>
     @else
-        <!-- Admin/Accountant Statistics -->
-        <div class="row g-4 mb-4">
-            <!-- Treasury Balance -->
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
-                <div class="stat-card success">
-                    <div class="stat-icon">
-                        <i class="fas fa-wallet"></i>
-                    </div>
-                    <div class="stat-label">رصيد الخزينة</div>
-                    <div class="stat-number" style="color: var(--success);">
-                        {{ number_format($treasury->balance ?? 0, 0) }}
-                    </div>
-                    <small style="color: #6b7280;">ج.م</small>
-                </div>
-            </div>
-
-            <!-- Active Custodies -->
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
-                <div class="stat-card info">
-                    <div class="stat-icon">
-                        <i class="fas fa-hand-holding-heart"></i>
-                    </div>
-                    <div class="stat-label">العهد النشطة</div>
-                    <div class="stat-number" style="color: var(--info);">{{ $activeCustodies }}</div>
-                </div>
-            </div>
-
-            <!-- Pending Cases -->
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
-                <div class="stat-card warning">
-                    <div class="stat-icon">
-                        <i class="fas fa-hourglass"></i>
-                    </div>
-                    <div class="stat-label">الحالات المعلقة</div>
-                    <div class="stat-number" style="color: var(--warning);">{{ $pendingCases }}</div>
-                </div>
-            </div>
-
-            <!-- Today Expenses -->
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
-                <div class="stat-card danger">
-                    <div class="stat-icon">
-                        <i class="fas fa-money-bill"></i>
-                    </div>
-                    <div class="stat-label">مصروفات اليوم</div>
-                    <div class="stat-number" style="color: var(--danger);">
-                        {{ number_format($todayExpenses, 0) }}
+        <!-- Year Filter -->
+        <div class="row mb-3" data-aos="fade-down">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body py-3">
+                        <form method="GET" action="{{ route('dashboard') }}" class="d-flex align-items-center gap-3 flex-wrap">
+                            <label class="fw-bold mb-0"><i class="fas fa-calendar-alt" style="color: var(--primary);"></i> فلترة بالسنة:</label>
+                            <select name="year" class="form-select" style="width: auto;" onchange="this.form.submit()">
+                                @foreach($availableYears as $y)
+                                    <option value="{{ $y }}" {{ $y == $selectedYear ? 'selected' : '' }}>{{ $y }}</option>
+                                @endforeach
+                            </select>
+                            <span class="text-muted small">البيانات المعروضة خاصة بسنة {{ $selectedYear }}</span>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Admin/Accountant Statistics -->
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
+                <div class="stat-card success">
+                    <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="stat-label">رصيد الخزينة</div>
+                    <div class="stat-number" style="color: var(--success);">{{ number_format($treasury->balance ?? 0, 0) }}</div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="stat-card info">
+                    <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                    <div class="stat-label">عهدات {{ $selectedYear }}</div>
+                    <div class="stat-number" style="color: var(--info);">{{ number_format($yearStats['total_custodies_amount'] ?? 0, 0) }}</div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="stat-card danger">
+                    <div class="stat-icon"><i class="fas fa-money-bill"></i></div>
+                    <div class="stat-label">مصروفات {{ $selectedYear }}</div>
+                    <div class="stat-number" style="color: var(--danger);">{{ number_format($yearStats['total_expenses'] ?? 0, 0) }}</div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="stat-card warning">
+                    <div class="stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="stat-label">حالات معتمدة {{ $selectedYear }}</div>
+                    <div class="stat-number" style="color: var(--warning);">{{ $yearStats['approved_cases'] ?? 0 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agents Performance -->
+        @if(count($agentsStats) > 0)
+        <div class="row mb-4" data-aos="fade-up">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                        <h5 style="margin: 0; color: white;">
+                            <i class="fas fa-star"></i> تقييم المناديب - {{ $selectedYear }}
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>المندوب</th>
+                                        <th>العهدات</th>
+                                        <th>إجمالي مستلم</th>
+                                        <th>مصروف</th>
+                                        <th>مرجع</th>
+                                        <th>متبقي</th>
+                                        <th>عدد المصروفات</th>
+                                        <th>توثيق بمرفقات</th>
+                                        <th>التقييم</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($agentsStats as $stat)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 34px; height: 34px; font-size: 0.8rem; flex-shrink: 0;">
+                                                    {{ mb_substr($stat['agent']->name, 0, 2) }}
+                                                </div>
+                                                <span class="fw-semibold">{{ $stat['agent']->name }}</span>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge bg-secondary">{{ $stat['custody_count'] }}</span></td>
+                                        <td><strong>{{ number_format($stat['total_received'], 0) }}</strong> ج.م</td>
+                                        <td><span style="color: var(--danger);">{{ number_format($stat['total_spent'], 0) }}</span> ج.م</td>
+                                        <td><span style="color: var(--success);">{{ number_format($stat['total_returned'], 0) }}</span> ج.م</td>
+                                        <td>
+                                            @php $remaining = $stat['remaining']; @endphp
+                                            <span style="color: {{ $remaining > 0 ? 'var(--warning)' : 'var(--success)' }};">
+                                                {{ number_format($remaining, 0) }}
+                                            </span> ج.م
+                                        </td>
+                                        <td><span class="badge bg-info">{{ $stat['expense_count'] }}</span></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1" style="height: 8px; min-width: 60px;">
+                                                    <div class="progress-bar {{ $stat['doc_rate'] >= 70 ? 'bg-success' : ($stat['doc_rate'] >= 40 ? 'bg-warning' : 'bg-danger') }}"
+                                                         style="width: {{ $stat['doc_rate'] }}%;"></div>
+                                                </div>
+                                                <small>{{ $stat['doc_rate'] }}%</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @include('dashboard.partials.stars', ['rating' => $stat['rating']])
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        <i class="fas fa-info-circle"></i>
+                        التقييم يعتمد على: نسبة توثيق المصروفات (40%) + توازن المبالغ (40%) + النشاط (20%)
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <!-- Researchers Performance -->
+        @if(count($researchersStats) > 0)
+        <div class="row mb-4" data-aos="fade-up">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none;">
+                        <h5 style="margin: 0; color: white;">
+                            <i class="fas fa-user-check"></i> تقييم الباحثين الاجتماعيين - {{ $selectedYear }}
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>الباحث</th>
+                                        <th>إجمالي الحالات</th>
+                                        <th>معتمدة</th>
+                                        <th>معلقة</th>
+                                        <th>مرفوضة</th>
+                                        <th>معدل القبول</th>
+                                        <th>التقييم</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($researchersStats as $stat)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 34px; height: 34px; font-size: 0.8rem; flex-shrink: 0; background: linear-gradient(135deg, #11998e, #38ef7d);">
+                                                    {{ mb_substr($stat['researcher']->name, 0, 2) }}
+                                                </div>
+                                                <span class="fw-semibold">{{ $stat['researcher']->name }}</span>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge bg-secondary">{{ $stat['total_cases'] }}</span></td>
+                                        <td><span class="badge bg-success">{{ $stat['approved'] }}</span></td>
+                                        <td><span class="badge bg-warning text-dark">{{ $stat['pending'] }}</span></td>
+                                        <td><span class="badge bg-danger">{{ $stat['rejected'] }}</span></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1" style="height: 8px; min-width: 60px;">
+                                                    <div class="progress-bar {{ $stat['approval_rate'] >= 70 ? 'bg-success' : ($stat['approval_rate'] >= 40 ? 'bg-warning' : 'bg-danger') }}"
+                                                         style="width: {{ $stat['approval_rate'] }}%;"></div>
+                                                </div>
+                                                <small>{{ $stat['approval_rate'] }}%</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @include('dashboard.partials.stars', ['rating' => $stat['rating']])
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        <i class="fas fa-info-circle"></i>
+                        التقييم يعتمد على: معدل القبول (60%) + انخفاض الرفض (20%) + النشاط (20%)
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
     @endif
 
     <!-- Charts and Content Row -->
