@@ -787,6 +787,13 @@
                 @endrole
 
                 <li>
+                    <a href="{{ route('tasks.index') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'tasks')) active @endif">
+                        <i class="fas fa-tasks"></i>
+                        <span>المهام</span>
+                    </a>
+                </li>
+
+                <li>
                     <a href="{{ route('social_cases.index') }}" class="@if(Route::current()->getName() == 'social_cases.index') active @endif">
                         <i class="fas fa-people-group"></i>
                         <span>الحالات الاجتماعية</span>

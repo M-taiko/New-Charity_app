@@ -51,6 +51,10 @@ class NotificationController extends Controller
             return route('custody-transfers.show', $notification->related_id);
         }
 
+        if ($notification->related_type === 'task' && $notification->related_id) {
+            return route('tasks.show', $notification->related_id);
+        }
+
         // Default: redirect back to previous page
         return url()->previous();
     }

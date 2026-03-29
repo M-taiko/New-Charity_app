@@ -14,6 +14,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ExpenseEditRequestController;
+use App\Http\Controllers\TaskController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -97,6 +98,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/expenses', [ExpenseController::class, 'tableData'])->name('api.expenses.data');
     Route::get('/api/social-cases', [SocialCaseController::class, 'tableData'])->name('api.social_cases.data');
     Route::get('/api/users', [UserController::class, 'tableData'])->name('api.users.data');
+
+    // Tasks
+    Route::resource('tasks', TaskController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
+    Route::post('/tasks/{task}/comment', [TaskController::class, 'addComment'])->name('tasks.comment');
+    Route::post('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.status');
 
     // Notification Routes (converted from API to traditional form submissions)
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
