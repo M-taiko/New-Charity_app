@@ -91,6 +91,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::post('/profile/name', [ProfileController::class, 'updateName'])->name('profile.update-name');
     Route::post('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.update-password');
     Route::post('/profile/picture', [ProfileController::class, 'updateProfilePicture'])->name('profile.update-picture');
 

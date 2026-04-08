@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $settings->organization_name ?? 'نظام إدارة الجمعيات الخيرية' }}</title>
+    <title>{{ $settings->organization_name ?? 'جمعية أبي ذر الغفاري' }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -393,7 +393,7 @@
             @else
                 <div class="icon-wrap"><i class="fas fa-hand-holding-heart"></i></div>
             @endif
-            <span>{{ $settings->organization_name ?? 'نظام الجمعيات' }}</span>
+            <span>{{ $settings->organization_name ?? 'جمعية أبي ذر الغفاري' }}</span>
         </a>
 
         <ul class="nav-links" id="navLinks">
@@ -661,7 +661,7 @@
         <div class="footer-brand">
             <div class="brand-name">
                 <div class="icon-wrap"><i class="fas fa-hand-holding-heart"></i></div>
-                {{ $settings->organization_name ?? 'نظام إدارة الجمعيات' }}
+                {{ $settings->organization_name ?? 'جمعية أبي ذر الغفاري' }}
             </div>
             <p>منصة متكاملة وآمنة لإدارة الجمعيات الخيرية. نؤمن بالشفافية المالية والعمل المؤسسي المنظم.</p>
         </div>
@@ -685,7 +685,7 @@
         </div>
     </div>
     <div class="footer-bottom">
-        <span>&copy; {{ date('Y') }} {{ $settings->organization_name ?? 'نظام إدارة الجمعيات' }}. جميع الحقوق محفوظة.</span>
+        <span>&copy; {{ date('Y') }} {{ $settings->organization_name ?? 'جمعية أبي ذر الغفاري' }}. جميع الحقوق محفوظة.</span>
         <span>تطوير <a href="https://masarsoft.io" target="_blank">masarsoft.io</a></span>
     </div>
 </footer>

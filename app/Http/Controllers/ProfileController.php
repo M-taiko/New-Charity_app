@@ -13,6 +13,22 @@ class ProfileController extends Controller
         return view('profile.edit', compact('user'));
     }
 
+    public function updateName(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+        ], [
+            'name.required' => 'الاسم مطلوب',
+            'name.max' => 'الاسم يجب ألا يتجاوز 255 حرف',
+        ]);
+
+        auth()->user()->update([
+            'name' => $request->name,
+        ]);
+
+        return back()->with('success', 'تم تحديث الاسم بنجاح');
+    }
+
     public function updatePassword(Request $request)
     {
         $request->validate([

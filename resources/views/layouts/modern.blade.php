@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>نظام إدارة المؤسسة الخيرية</title>
+    <title>{{ \App\Models\Setting::get('organization_name', 'جمعية أبي ذر الغفاري') }}</title>
 
     <!-- Bootstrap 5 RTL -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
@@ -719,7 +719,7 @@
             <a class="navbar-brand" href="{{ route('dashboard') }}" style="display: flex; align-items: center; gap: 0.75rem;">
                 @php
                     $logo = \App\Models\Setting::get('organization_logo');
-                    $orgName = \App\Models\Setting::get('organization_name', 'منصة الخير');
+                    $orgName = \App\Models\Setting::get('organization_name', 'جمعية أبي ذر الغفاري');
                 @endphp
 
                 @if($logo)

@@ -69,44 +69,54 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label fw-600">الاسم</label>
-                            <div class="input-group">
-                                <span class="input-group-text" style="background: #f8f9ff; border-right: none;">
-                                    <i class="fas fa-user"></i>
-                                </span>
-                                <input type="text" class="form-control" value="{{ $user->name }}" disabled style="border-left: none;">
+                    <form action="{{ route('profile.update-name') }}" method="POST" class="mb-4">
+                        @csrf
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-600">الاسم</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #f8f9ff; border-right: none;">
+                                        <i class="fas fa-user"></i>
+                                    </span>
+                                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ $user->name }}" required style="border-left: none;">
+                                </div>
+                                @error('name')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-600">البريد الإلكتروني</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #f8f9ff; border-right: none;">
+                                        <i class="fas fa-envelope"></i>
+                                    </span>
+                                    <input type="email" class="form-control" value="{{ $user->email }}" disabled style="border-left: none; color: #999;">
+                                </div>
+                                <small class="text-muted d-block mt-1">البريد الإلكتروني لا يمكن تعديله</small>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-600">الهاتف</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #f8f9ff; border-right: none;">
+                                        <i class="fas fa-phone"></i>
+                                    </span>
+                                    <input type="text" class="form-control" value="{{ $user->phone ?? 'غير محدد' }}" disabled style="border-left: none; color: #999;">
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label fw-600">الدور</label>
+                                <div class="input-group">
+                                    <span class="input-group-text" style="background: #f8f9ff; border-right: none;">
+                                        <i class="fas fa-shield-alt"></i>
+                                    </span>
+                                    <input type="text" class="form-control" value="{{ $user->getRoleNames()->first() ?? 'لا يوجد' }}" disabled style="border-left: none; color: #999;">
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label fw-600">البريد الإلكتروني</label>
-                            <div class="input-group">
-                                <span class="input-group-text" style="background: #f8f9ff; border-right: none;">
-                                    <i class="fas fa-envelope"></i>
-                                </span>
-                                <input type="email" class="form-control" value="{{ $user->email }}" disabled style="border-left: none;">
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label fw-600">الهاتف</label>
-                            <div class="input-group">
-                                <span class="input-group-text" style="background: #f8f9ff; border-right: none;">
-                                    <i class="fas fa-phone"></i>
-                                </span>
-                                <input type="text" class="form-control" value="{{ $user->phone ?? 'غير محدد' }}" disabled style="border-left: none;">
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <label class="form-label fw-600">الدور</label>
-                            <div class="input-group">
-                                <span class="input-group-text" style="background: #f8f9ff; border-right: none;">
-                                    <i class="fas fa-shield-alt"></i>
-                                </span>
-                                <input type="text" class="form-control" value="{{ $user->getRoleNames()->first() ?? 'لا يوجد' }}" disabled style="border-left: none;">
-                            </div>
-                        </div>
-                    </div>
+                        <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 10px 25px; font-weight: 600;">
+                            <i class="fas fa-save"></i> حفظ الاسم
+                        </button>
+                    </form>
                 </div>
             </div>
 
