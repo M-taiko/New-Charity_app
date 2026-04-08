@@ -493,6 +493,43 @@ class TreasuryService
         });
     }
 
+    /**
+     * تبرع خارجي أو استرداد مصروف يُضاف مباشرة لرصيد عهدة المندوب
+     */
+    public function addExternalDonationToCustody($custody, $amount, $description, $type = 'external_donation')
+    {
+        return DB::transaction(function () use ($custody, $amount, $description, $type) {
+            $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+
+            // زيادة مبلغ العهدة مباشرة
+            $custody->increment('amount', $amount);
+
+            $typeLabel = $type === 'expense_refund' ? 'استرداد مصروف' : 'تبرع خارجي';
+
+            TreasuryTransaction::create([
+                'treasury_id'      => $custody->treasury_id,
+                'type'             => $type,
+                'amount'           => $amount,
+                'description'      => "{$typeLabel} لعهدة المندوب {$custody->agent->name}: {$description}",
+                'user_id'          => auth()->id(),
+                'custody_id'       => $custody->id,
+                'transaction_date' => now(),
+            ]);
+
+            // إشعار المندوب
+            $this->notifyUser(
+                $custody->agent_id,
+                "تم إضافة {$typeLabel} لعهدتك",
+                "تم إضافة مبلغ " . number_format($amount, 2) . " ج.م لعهدتك. {$description}",
+                'success',
+                $custody->id,
+                'custody'
+            );
+
+            return $custody;
+        });
+    }
+
     public function addDonation($amount, $source, $description, $userId)
     {
         return DB::transaction(function () use ($amount, $source, $description, $userId) {
@@ -516,9 +553,9 @@ class TreasuryService
         });
     }
 
-    public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general')
+    public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null)
     {
-        return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type) {
+        return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type, $lineItems) {
             // Get all active custodies for the user sorted by oldest first
             $availableCustodies = Custody::where('agent_id', $userId)
                 ->whereIn('status', ['accepted', 'active'])
@@ -551,6 +588,7 @@ class TreasuryService
                 'source' => 'custody',
                 'expense_date' => now(),
                 'attachment' => $attachment,
+                'line_items' => $lineItems,
             ]);
 
             // Distribute the expense across custodies
@@ -645,9 +683,9 @@ class TreasuryService
         });
     }
 
-    public function recordDirectExpenseFromTreasury($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general')
+    public function recordDirectExpenseFromTreasury($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null)
     {
-        return DB::transaction(function () use ($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type) {
+        return DB::transaction(function () use ($userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type, $lineItems) {
             // Lock the treasury for update to prevent race conditions
             $treasury = Treasury::where('id', Treasury::first()->id)->lockForUpdate()->first();
 
@@ -676,6 +714,7 @@ class TreasuryService
                 'source' => 'treasury',
                 'expense_date' => now(),
                 'attachment' => $attachment,
+                'line_items' => $lineItems,
             ]);
 
             // Deduct from treasury

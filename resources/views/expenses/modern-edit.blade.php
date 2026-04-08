@@ -40,39 +40,39 @@
                         @csrf
                         @method('PUT')
 
-                        <!-- Category Selection -->
+                        <!-- 4-Level Cascading Category / Item -->
                         <div class="mb-3">
-                            <label class="form-label"><strong>
-                                <i class="fas fa-list"></i> فئة المصروف
-                            </strong></label>
-                            <select name="expense_category_id" id="category_select" class="form-select @error('expense_category_id') is-invalid @enderror" required onchange="loadExpenseItems()">
-                                <option value="">-- اختر فئة --</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}"
-                                            data-code="{{ $category->code }}"
-                                            data-items="{{ json_encode($category->items->map(fn($item) => ['id' => $item->id, 'name' => $item->name, 'default_amount' => $item->default_amount])) }}"
-                                            {{ old('expense_category_id', $expense->expense_category_id) == $category->id ? 'selected' : '' }}>
-                                        {{ $category->name }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <label class="form-label fw-bold"><i class="fas fa-sitemap"></i> التوجيه المحاسبي</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <select id="cat_level1" class="form-select" onchange="catLoadChildren(1, this.value)">
+                                        <option value="">م1: اختر النوع الرئيسي</option>
+                                        @foreach($categoryRoots as $root)
+                                            <option value="{{ $root->id }}">{{ $root->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <select id="cat_level2" class="form-select" onchange="catLoadChildren(2, this.value)" disabled>
+                                        <option value="">م2: اختر القائمة الفرعية</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <select id="cat_level3" class="form-select" onchange="catSetLevel3(this.value)" disabled>
+                                        <option value="">م3: اختر البيان (اختياري)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <select id="cat_item" name="expense_item_id" class="form-select" onchange="setDefaultAmount()" disabled>
+                                        <option value="">م4: اختر التوجيه النهائي</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <input type="hidden" name="expense_category_id" id="final_category_id">
+                            <small class="text-muted d-block mt-1" id="default-amount-info"></small>
                             @error('expense_category_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
+                                <div class="text-danger small">{{ $message }}</div>
                             @enderror
-                        </div>
-
-                        <!-- Item Selection -->
-                        <div class="mb-3" id="item-field">
-                            <label class="form-label"><strong>
-                                <i class="fas fa-tag"></i> البند
-                            </strong></label>
-                            <select name="expense_item_id" id="item_select" class="form-select @error('expense_item_id') is-invalid @enderror">
-                                <option value="">-- اختر بند --</option>
-                            </select>
-                            @error('expense_item_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="text-muted d-block mt-2" id="default-amount-info"></small>
                         </div>
 
                         <!-- Expense Type -->
@@ -244,47 +244,102 @@
 
 @push('scripts')
 <script>
-    const categoriesData = {
-        @foreach($categories as $category)
-            {{ $category->id }}: {
-                code: '{{ $category->code }}',
-                items: @json($category->items->map(fn($item) => ['id' => $item->id, 'name' => $item->name, 'default_amount' => $item->default_amount]))
-            },
-        @endforeach
-    };
+    // Pre-load current expense's hierarchy path for edit mode
+    const currentExpenseItemId   = {{ $expense->expense_item_id ?? 'null' }};
+    const currentExpenseCatId    = {{ $expense->expense_category_id ?? 'null' }};
 
-    const currentItemId = {{ $expense->expense_item_id ?? 'null' }};
+    async function catLoadChildren(fromLevel, parentId) {
+        const sel2 = document.getElementById('cat_level2');
+        const sel3 = document.getElementById('cat_level3');
+        const selItem = document.getElementById('cat_item');
+        const hiddenCat = document.getElementById('final_category_id');
 
-    function loadExpenseItems() {
-        const categorySelect = document.getElementById('category_select');
-        const categoryId = categorySelect.value;
-        const itemSelect = document.getElementById('item_select');
-        const itemField = document.getElementById('item-field');
+        // Reset downstream selects
+        if (fromLevel <= 1) { resetSelect(sel2, 'م2: اختر القائمة الفرعية'); sel2.disabled = !parentId; }
+        if (fromLevel <= 2) { resetSelect(sel3, 'م3: اختر البيان (اختياري)'); sel3.disabled = true; }
+        resetSelect(selItem, 'م4: اختر التوجيه النهائي'); selItem.disabled = true;
+        hiddenCat.value = '';
 
-        itemSelect.innerHTML = '<option value="">-- اختر بند --</option>';
+        if (!parentId) return;
 
-        if (categoryId && categoriesData[categoryId]) {
-            const categoryCode = categoriesData[categoryId].code;
+        const targetSel = fromLevel === 1 ? sel2 : sel3;
+        try {
+            const res = await fetch(`/api/expense-categories/${parentId}/children`);
+            const data = await res.json();
 
-            if (categoryCode === 'OTHER') {
-                itemField.style.display = 'none';
-                itemSelect.removeAttribute('required');
-            } else {
-                itemField.style.display = 'block';
-                itemSelect.setAttribute('required', 'required');
-
-                const items = categoriesData[categoryId].items;
-                items.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.id;
-                    option.textContent = item.name;
-                    option.setAttribute('data-default-amount', item.default_amount || '');
-                    if (currentItemId && item.id == currentItemId) {
-                        option.selected = true;
-                    }
-                    itemSelect.appendChild(option);
-                });
+            if (data.length === 0) {
+                // No level-3 children → load items directly
+                if (fromLevel === 2) {
+                    hiddenCat.value = parentId;
+                    await loadItemsFor(parentId);
+                }
+                return;
             }
+
+            data.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = cat.name;
+                targetSel.appendChild(opt);
+            });
+            targetSel.disabled = false;
+
+            // If level 2 loaded: set category hidden + try loading items
+            if (fromLevel === 2) {
+                hiddenCat.value = parentId;
+                await loadItemsFor(parentId);
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    async function catSetLevel3(catId) {
+        const selItem = document.getElementById('cat_item');
+        const hiddenCat = document.getElementById('final_category_id');
+        resetSelect(selItem, 'م4: اختر التوجيه النهائي');
+        selItem.disabled = true;
+        hiddenCat.value = catId || document.getElementById('cat_level2').value || '';
+        if (catId) {
+            await loadItemsFor(catId);
+        } else {
+            // Fallback to level-2's items
+            const l2 = document.getElementById('cat_level2').value;
+            if (l2) await loadItemsFor(l2);
+        }
+    }
+
+    async function loadItemsFor(categoryId) {
+        const selItem = document.getElementById('cat_item');
+        resetSelect(selItem, 'م4: اختر التوجيه النهائي');
+        try {
+            const res = await fetch(`/api/expense-categories/${categoryId}/items`);
+            const items = await res.json();
+            items.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.name;
+                opt.dataset.defaultAmount = item.default_amount || '';
+                if (item.id == currentExpenseItemId) opt.selected = true;
+                selItem.appendChild(opt);
+            });
+            selItem.disabled = items.length === 0;
+            if (currentExpenseItemId) setDefaultAmount();
+        } catch(e) { console.error(e); }
+    }
+
+    function resetSelect(sel, placeholder) {
+        sel.innerHTML = `<option value="">${placeholder}</option>`;
+    }
+
+    function setDefaultAmount() {
+        const selItem = document.getElementById('cat_item');
+        const opt = selItem.selectedOptions[0];
+        const info = document.getElementById('default-amount-info');
+        const amountInput = document.querySelector('input[name="amount"]');
+        if (opt && opt.value && opt.dataset.defaultAmount) {
+            const def = parseFloat(opt.dataset.defaultAmount);
+            info.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${def.toLocaleString('ar-SA', {minimumFractionDigits:2})} ج.م</strong>`;
+        } else {
+            info.innerHTML = '';
         }
     }
 
@@ -292,7 +347,6 @@
         const expenseType = document.querySelector('input[name="expense_type"]:checked').value;
         const socialCaseField = document.getElementById('social-case-field');
         const socialCaseSelect = document.getElementById('social_case_select');
-
         if (expenseType === 'social_case') {
             socialCaseField.style.display = 'block';
             socialCaseSelect.setAttribute('required', 'required');
@@ -308,7 +362,6 @@
         const filePreview = document.getElementById('filePreview');
         const fileName = document.getElementById('fileName');
         const fileSize = document.getElementById('fileSize');
-
         if (input.files && input.files[0]) {
             const file = input.files[0];
             if (file.size > 2 * 1024 * 1024) {
@@ -318,16 +371,52 @@
                 return;
             }
             fileName.textContent = file.name;
-            fileSize.textContent = `الحجم: ${(file.size / (1024 * 1024)).toFixed(2)} ميجابايت`;
+            fileSize.textContent = `الحجم: ${(file.size / (1024*1024)).toFixed(2)} ميجابايت`;
             filePreview.style.display = 'block';
         } else {
             filePreview.style.display = 'none';
         }
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
-        loadExpenseItems();
+    // On page load: restore the current expense's hierarchy
+    document.addEventListener('DOMContentLoaded', async function() {
         toggleExpenseType();
+
+        // If the expense has an item, we need to reconstruct the path
+        // We'll call a helper API that returns the item's ancestor category IDs
+        if (currentExpenseItemId && currentExpenseCatId) {
+            try {
+                // Walk up: get the category chain for currentExpenseCatId
+                const res = await fetch(`/api/expense-categories/${currentExpenseCatId}/ancestors`);
+                const ancestors = await res.json(); // [level1_id, level2_id, level3_id?]
+
+                const sel1 = document.getElementById('cat_level1');
+                const sel2 = document.getElementById('cat_level2');
+                const sel3 = document.getElementById('cat_level3');
+
+                if (ancestors[0]) {
+                    sel1.value = ancestors[0];
+                    await catLoadChildren(1, ancestors[0]);
+                }
+                if (ancestors[1]) {
+                    sel2.value = ancestors[1];
+                    await catLoadChildren(2, ancestors[1]);
+                }
+                if (ancestors[2]) {
+                    sel3.value = ancestors[2];
+                    await catSetLevel3(ancestors[2]);
+                }
+
+                document.getElementById('final_category_id').value = currentExpenseCatId;
+
+                // Select the item
+                const selItem = document.getElementById('cat_item');
+                selItem.value = currentExpenseItemId;
+                setDefaultAmount();
+            } catch(e) {
+                console.error('Could not restore hierarchy', e);
+            }
+        }
     });
 </script>
 @endpush

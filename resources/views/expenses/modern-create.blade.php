@@ -85,40 +85,49 @@
                         </div>
                         @endif
 
-                        <!-- Category Selection -->
-                        <div class="mb-3">
-                            <label class="form-label"><strong>
-                                <i class="fas fa-list"></i> فئة المصروف
-                            </strong></label>
-                            <select name="expense_category_id" id="category_select" class="form-select @error('expense_category_id') is-invalid @enderror" required onchange="loadExpenseItems()">
-                                <option value="">-- اختر فئة --</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}"
-                                            data-code="{{ $category->code }}"
-                                            data-items="{{ json_encode($category->items->map(fn($item) => ['id' => $item->id, 'name' => $item->name, 'default_amount' => $item->default_amount])) }}"
-                                            {{ old('expense_category_id') == $category->id ? 'selected' : '' }}>
-                                        {{ $category->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('expense_category_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                        <!-- Cascading 4-Level Category Selection -->
+                        <div class="mb-2">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-sitemap"></i> التوجيه المحاسبي
+                            </label>
+                            <small class="text-muted d-block mb-2">اختر المستوى الأول ثم تحديد التوجيه النهائي</small>
                         </div>
 
-                        <!-- Item Selection -->
-                        <div class="mb-3">
-                            <label class="form-label"><strong>
-                                <i class="fas fa-tag"></i> البند
-                            </strong></label>
-                            <select name="expense_item_id" id="item_select" class="form-select @error('expense_item_id') is-invalid @enderror" required onchange="setDefaultAmount()">
-                                <option value="">-- اختر بند --</option>
-                            </select>
-                            @error('expense_item_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="text-muted d-block mt-2" id="default-amount-info"></small>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small text-muted">المستوى الأول *</label>
+                                <select id="cat_level1" class="form-select" onchange="catLoadChildren(1, this.value)">
+                                    <option value="">-- اختر --</option>
+                                    @foreach($categoryRoots as $root)
+                                    <option value="{{ $root->id }}">{{ $root->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6" id="level2Wrap" style="display:none;">
+                                <label class="form-label small text-muted">المستوى الثاني</label>
+                                <select id="cat_level2" class="form-select" onchange="catLoadChildren(2, this.value)">
+                                    <option value="">-- اختر --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" id="level3Wrap" style="display:none;">
+                                <label class="form-label small text-muted">المستوى الثالث (اختياري)</label>
+                                <select id="cat_level3" class="form-select" onchange="catSetLevel3(this.value)">
+                                    <option value="">-- بدون --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" id="itemWrap" style="display:none;">
+                                <label class="form-label small text-muted">البند النهائي *</label>
+                                <select id="cat_item" name="expense_item_id"
+                                        class="form-select @error('expense_item_id') is-invalid @enderror"
+                                        onchange="setDefaultAmount(this)">
+                                    <option value="">-- اختر بند --</option>
+                                </select>
+                                @error('expense_item_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                <small class="text-muted mt-1 d-block" id="default-amount-info"></small>
+                            </div>
                         </div>
+                        {{-- Hidden field for expense_category_id (set by JS to the deepest selected category) --}}
+                        <input type="hidden" name="expense_category_id" id="final_category_id">
 
                         <!-- Expense Type Selection -->
                         <div class="mb-3">
@@ -173,10 +182,20 @@
 
                         <div class="mb-3">
                             <label class="form-label"><strong>الوصف</strong></label>
-                            <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3" required>{{ old('description') }}</textarea>
-                            @error('description')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                            <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="2" required>{{ old('description') }}</textarea>
+                            @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+
+                        <!-- Line Items (اختياري) -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0"><strong><i class="fas fa-list-ul"></i> تفاصيل البنود (اختياري)</strong></label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addLineItem()">
+                                    <i class="fas fa-plus"></i> إضافة بند
+                                </button>
+                            </div>
+                            <div id="lineItemsContainer"></div>
+                            <input type="hidden" name="line_items" id="lineItemsData">
                         </div>
 
                         <div class="mb-3">
@@ -258,15 +277,111 @@
 
 @push('scripts')
 <script>
-    // Get all categories data
-    const categoriesData = {
-        @foreach($categories as $category)
-            {{ $category->id }}: {
-                code: '{{ $category->code }}',
-                items: @json($category->items->map(fn($item) => ['id' => $item->id, 'name' => $item->name, 'default_amount' => $item->default_amount]))
-            },
-        @endforeach
-    };
+    // ──── Cascading 4-Level Category Logic ────
+    async function catLoadChildren(fromLevel, parentId) {
+        if (!parentId) {
+            hideCatFrom(fromLevel + 1);
+            document.getElementById('final_category_id').value = '';
+            return;
+        }
+        const res = await fetch(`/api/expense-categories/${parentId}/children`);
+        const children = await res.json();
+
+        if (fromLevel === 1) {
+            const sel2 = document.getElementById('cat_level2');
+            sel2.innerHTML = '<option value="">-- اختر (اختياري) --</option>';
+            children.forEach(c => sel2.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('level2Wrap').style.display = children.length ? '' : 'none';
+            document.getElementById('level3Wrap').style.display = 'none';
+            document.getElementById('itemWrap').style.display = 'none';
+            document.getElementById('final_category_id').value = parentId;
+            loadItemsFor(parentId);
+        } else if (fromLevel === 2) {
+            const sel3 = document.getElementById('cat_level3');
+            sel3.innerHTML = '<option value="">-- بدون مستوى ثالث --</option>';
+            children.forEach(c => sel3.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+            document.getElementById('level3Wrap').style.display = children.length ? '' : 'none';
+            document.getElementById('final_category_id').value = parentId;
+            loadItemsFor(parentId);
+        }
+    }
+
+    function catSetLevel3(level3Id) {
+        const level2Id = document.getElementById('cat_level2').value;
+        const targetId = level3Id || level2Id;
+        document.getElementById('final_category_id').value = targetId || '';
+        if (targetId) loadItemsFor(targetId);
+    }
+
+    async function loadItemsFor(categoryId) {
+        const res = await fetch(`/api/expense-categories/${categoryId}/items`);
+        const items = await res.json();
+        const wrap = document.getElementById('itemWrap');
+        const sel = document.getElementById('cat_item');
+        sel.innerHTML = '<option value="">-- اختر بند --</option>';
+        if (items.length) {
+            items.forEach(i => sel.innerHTML += `<option value="${i.id}" data-default="${i.default_amount || ''}">${i.name}</option>`);
+            wrap.style.display = '';
+        } else {
+            wrap.style.display = 'none';
+        }
+    }
+
+    function hideCatFrom(level) {
+        if (level <= 2) { document.getElementById('level2Wrap').style.display = 'none'; }
+        if (level <= 3) { document.getElementById('level3Wrap').style.display = 'none'; }
+        document.getElementById('itemWrap').style.display = 'none';
+    }
+
+    function setDefaultAmount(sel) {
+        const opt = sel ? sel.selectedOptions[0] : null;
+        const info = document.getElementById('default-amount-info');
+        const amountInput = document.querySelector('input[name="amount"]');
+        if (opt && opt.dataset.default) {
+            info.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${parseFloat(opt.dataset.default).toFixed(2)} ج.م</strong>`;
+            if (!amountInput.value) amountInput.value = opt.dataset.default;
+        } else {
+            info.innerHTML = '';
+        }
+    }
+
+    // ──── Line Items Logic ────
+    let lineItemCount = 0;
+
+    function addLineItem() {
+        lineItemCount++;
+        const container = document.getElementById('lineItemsContainer');
+        const row = document.createElement('div');
+        row.className = 'd-flex gap-2 align-items-center mb-2';
+        row.id = `li_${lineItemCount}`;
+        row.innerHTML = `
+            <input type="text" class="form-control" placeholder="الوصف" data-li="desc" style="flex:3;">
+            <input type="number" class="form-control" placeholder="العدد" data-li="qty" min="1" style="flex:1;" oninput="updateLineItemsData()">
+            <input type="number" class="form-control" placeholder="سعر الوحدة" data-li="price" min="0" step="0.01" style="flex:1.5;" oninput="updateLineItemsData()">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLineItem('li_${lineItemCount}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(row);
+        row.querySelectorAll('input[data-li="desc"]').forEach(i => i.addEventListener('input', updateLineItemsData));
+    }
+
+    function removeLineItem(id) {
+        document.getElementById(id)?.remove();
+        updateLineItemsData();
+    }
+
+    function updateLineItemsData() {
+        const rows = document.querySelectorAll('#lineItemsContainer > div');
+        const items = [];
+        rows.forEach(row => {
+            const desc  = row.querySelector('[data-li="desc"]')?.value?.trim();
+            const qty   = parseFloat(row.querySelector('[data-li="qty"]')?.value) || null;
+            const price = parseFloat(row.querySelector('[data-li="price"]')?.value) || null;
+            if (desc) items.push({ description: desc, quantity: qty, unit_price: price });
+        });
+        document.getElementById('lineItemsData').value = JSON.stringify(items);
+    }
 
     function toggleSourceFields() {
         const source = document.querySelector('input[name="source"]:checked').value;
@@ -297,60 +412,6 @@
             }
 
             updateCustodyInfo();
-        }
-    }
-
-    function loadExpenseItems() {
-        const categorySelect = document.getElementById('category_select');
-        const categoryId = categorySelect.value;
-        const itemSelect = document.getElementById('item_select');
-        const itemFieldContainer = itemSelect.closest('.mb-3'); // Get parent container
-        const defaultAmountInfo = document.getElementById('default-amount-info');
-        const descriptionField = document.querySelector('textarea[name="description"]');
-        const descriptionLabel = descriptionField.closest('.mb-3').querySelector('label strong');
-
-        // Clear previous items
-        itemSelect.innerHTML = '<option value="">-- اختر بند --</option>';
-        defaultAmountInfo.innerHTML = '';
-
-        if (categoryId && categoriesData[categoryId]) {
-            const selectedOption = categorySelect.selectedOptions[0];
-            const categoryCode = selectedOption.getAttribute('data-code');
-
-            // Check if this is "Other Expenses" category
-            if (categoryCode === 'OTHER') {
-                // Hide item selection field
-                itemFieldContainer.style.display = 'none';
-                itemSelect.removeAttribute('required');
-
-                // Make description required
-                descriptionField.setAttribute('required', 'required');
-                descriptionLabel.innerHTML = 'الوصف <span class="text-danger">*</span>';
-            } else {
-                // Show item selection field
-                itemFieldContainer.style.display = 'block';
-                itemSelect.setAttribute('required', 'required');
-
-                // Description remains required
-                descriptionField.setAttribute('required', 'required');
-
-                // Load items
-                const items = categoriesData[categoryId].items;
-                const selectedItemId = {{ old('expense_item_id') ?? 'null' }};
-                items.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item.id;
-                    option.textContent = item.name;
-                    option.setAttribute('data-default-amount', item.default_amount || '');
-                    if (selectedItemId && item.id == selectedItemId) {
-                        option.selected = true;
-                    }
-                    itemSelect.appendChild(option);
-                });
-
-                // Load default amount if item was selected
-                setDefaultAmount();
-            }
         }
     }
 
@@ -403,9 +464,8 @@
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
-        loadExpenseItems();
         updateCustodyInfo();
-        toggleExpenseType(); // Set initial state
+        toggleExpenseType();
     });
 
     // File upload functions

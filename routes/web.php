@@ -15,6 +15,12 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ExpenseEditRequestController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\BroadcastController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\PurchaseRequestController;
+use App\Http\Controllers\MaintenanceRequestController;
+use App\Http\Controllers\SupplierController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -33,6 +39,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/custodies/{custody}/reject', [CustodyController::class, 'reject'])->name('custodies.reject');
     Route::post('/custodies/{custody}/return', [CustodyController::class, 'return'])->name('custodies.return');
     Route::post('/custodies/{custody}/approve-return', [CustodyController::class, 'approveReturn'])->name('custodies.approveReturn');
+    Route::post('/custodies/{custody}/direct-return', [CustodyController::class, 'directReturn'])->name('custodies.directReturn');
+    Route::post('/custodies/{custody}/external-donation', [CustodyController::class, 'addExternalDonation'])->name('custodies.external-donation');
     Route::post('/custodies/{custody}/agent-accept', [CustodyController::class, 'agentAccept'])->name('custodies.agent-accept');
     Route::post('/custodies/{custody}/agent-reject', [CustodyController::class, 'agentReject'])->name('custodies.agent-reject');
     Route::get('/agent/transactions', [CustodyController::class, 'agentTransactions'])->name('agent.transactions');
@@ -45,6 +53,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/my-expenses', [ExpenseController::class, 'agentExpenses'])->name('expenses.agent');
     Route::get('/api/agent-expenses', [ExpenseController::class, 'agentExpensesData'])->name('api.agent-expenses.data');
     Route::get('/expenses/{expense}/download-attachment', [ExpenseController::class, 'downloadAttachment'])->name('expenses.download-attachment');
+    Route::post('/expenses/{expense}/mark-reviewed', [ExpenseController::class, 'markReviewed'])->name('expenses.mark-reviewed');
 
     // طلبات تعديل المصروفات
     Route::get('/expenses/{expense}/edit-request', [ExpenseEditRequestController::class, 'create'])->name('expense-edit-requests.create');
@@ -92,6 +101,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/expense-items', [ReportController::class, 'expenseItemsReport'])->name('reports.expense-items');
     Route::get('/reports/reconciliation', [ReportController::class, 'reconciliation'])->name('reports.reconciliation');
 
+    // Expense Category Hierarchy API
+    Route::get('/api/expense-categories/roots', [ExpenseItemController::class, 'categoryRoots'])->name('api.expense-categories.roots');
+    Route::get('/api/expense-categories/{category}/children', [ExpenseItemController::class, 'categoryChildren'])->name('api.expense-categories.children');
+    Route::get('/api/expense-categories/{category}/items', [ExpenseItemController::class, 'categoryItems'])->name('api.expense-categories.items');
+    Route::get('/api/expense-categories/{category}/ancestors', [ExpenseItemController::class, 'categoryAncestors'])->name('api.expense-categories.ancestors');
+    Route::post('/expense-categories', [ExpenseItemController::class, 'storeCategory'])->name('expense-categories.store');
+    Route::delete('/expense-categories/{expenseCategory}', [ExpenseItemController::class, 'destroyCategory'])->name('expense-categories.destroy');
+
     // DataTables APIs
     Route::get('/api/treasury-transactions', [TreasuryController::class, 'transactionsData'])->name('api.treasury.transactions');
     Route::get('/api/custodies', [CustodyController::class, 'tableData'])->name('api.custodies.data');
@@ -103,8 +120,40 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('tasks', TaskController::class)->only(['index', 'create', 'store', 'show', 'destroy']);
     Route::post('/tasks/{task}/comment', [TaskController::class, 'addComment'])->name('tasks.comment');
     Route::post('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.status');
+    Route::post('/tasks/{task}/delegate', [TaskController::class, 'delegate'])->name('tasks.delegate');
 
-    // Notification Routes (converted from API to traditional form submissions)
+    // ── Procurement ──────────────────────────────────────────────────────────
+    Route::resource('purchase-requests', PurchaseRequestController::class)->except(['edit', 'update']);
+    Route::post('/purchase-requests/{purchaseRequest}/approve',  [PurchaseRequestController::class, 'approve'])->name('purchase-requests.approve');
+    Route::post('/purchase-requests/{purchaseRequest}/reject',   [PurchaseRequestController::class, 'reject'])->name('purchase-requests.reject');
+    Route::post('/purchase-requests/{purchaseRequest}/purchased',[PurchaseRequestController::class, 'markPurchased'])->name('purchase-requests.purchased');
+
+    Route::resource('maintenance-requests', MaintenanceRequestController::class)->except(['edit', 'update']);
+    Route::post('/maintenance-requests/{maintenanceRequest}/assign',  [MaintenanceRequestController::class, 'assign'])->name('maintenance-requests.assign');
+    Route::post('/maintenance-requests/{maintenanceRequest}/resolve', [MaintenanceRequestController::class, 'resolve'])->name('maintenance-requests.resolve');
+    Route::post('/maintenance-requests/{maintenanceRequest}/reject',  [MaintenanceRequestController::class, 'reject'])->name('maintenance-requests.reject');
+
+    Route::resource('suppliers', SupplierController::class)->only(['index', 'store', 'update', 'destroy']);
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Group Chat
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::post('/chat', [ChatController::class, 'store'])->name('chat.store');
+    Route::get('/api/chat/poll', [ChatController::class, 'poll'])->name('api.chat.poll');
+    Route::delete('/chat/{chatMessage}', [ChatController::class, 'destroy'])->name('chat.destroy');
+
+    // Activity Log
+    Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+
+    // Broadcasts (urgent messages)
+    Route::get('/broadcasts', [BroadcastController::class, 'index'])->name('broadcasts.index');
+    Route::post('/broadcasts', [BroadcastController::class, 'store'])->name('broadcasts.store');
+    Route::post('/broadcasts/{broadcast}/deactivate', [BroadcastController::class, 'deactivate'])->name('broadcasts.deactivate');
+    Route::post('/broadcasts/dismiss', [BroadcastController::class, 'dismiss'])->name('broadcasts.dismiss');
+
+    // Notification Routes
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 });
 

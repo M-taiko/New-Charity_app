@@ -38,7 +38,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Gate::define('view_all_expenses', function ($user) {
-            return $user->hasRole('محاسب') || $user->hasRole('مدير');
+            return $user->hasRole('محاسب') || $user->hasRole('مدير') || $user->hasRole('مشرف');
+        });
+
+        Gate::define('view_all_records', function ($user) {
+            return $user->hasRole('محاسب') || $user->hasRole('مدير') || $user->hasRole('مشرف');
         });
     }
 }

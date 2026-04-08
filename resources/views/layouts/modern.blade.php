@@ -198,8 +198,29 @@
         }
 
         .notification-item.unread {
-            background-color: var(--primary-light);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.04) 100%);
             border-right: 4px solid var(--primary);
+        }
+
+        .notification-item.unread .notification-item-title {
+            color: var(--primary);
+        }
+
+        .notification-item.unread::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border-radius: 50%;
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .notification-item {
+            position: relative;
         }
 
         .notification-item-title {
@@ -217,6 +238,11 @@
         .notification-item-time {
             font-size: 0.75rem;
             color: #9ca3af;
+        }
+
+        .notification-bell.has-unread i {
+            color: #fbbf24;
+            filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.7));
         }
 
         /* Cards */
@@ -587,9 +613,100 @@
          .modal-backdrop {
         display: none !important;
         }
+
+        /* ─── Print Styles ─── */
+        @media print {
+            .sidebar, .topbar, .notification-bell, .user-menu,
+            .btn, button, form, .no-print,
+            [data-aos], .alert-dismissible .btn-close,
+            nav, .navbar { display: none !important; }
+
+            .main-content { margin: 0 !important; padding: 0 !important; }
+            .container-fluid { padding: 0 !important; }
+            body { background: white !important; color: black !important; font-size: 12pt; }
+            .card { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
+            .card-header { background: #f5f5f5 !important; color: black !important; }
+            table { font-size: 10pt !important; }
+            .badge { border: 1px solid #ccc !important; color: black !important; background: none !important; }
+            h1, h2, h3, h4, h5 { color: black !important; }
+            .stat-number, .stat-label { color: black !important; }
+            a { color: black !important; text-decoration: none !important; }
+            .print-only { display: block !important; }
+            @page { margin: 1.5cm; }
+        }
+        .print-only { display: none; }
     </style>
 </head>
 <body>
+
+    {{-- Urgent Broadcast Overlay --}}
+    @php
+        $activeBroadcast = \App\Models\Broadcast::activeNow();
+        $dismissedBroadcasts = session('dismissed_broadcasts', []);
+        $showBroadcast = $activeBroadcast && !in_array($activeBroadcast->id, $dismissedBroadcasts);
+    @endphp
+    @if($showBroadcast)
+    <div id="broadcastOverlay" style="
+        position: fixed; inset: 0; z-index: 99999;
+        background: rgba(0,0,0,0.75);
+        display: flex; align-items: center; justify-content: center;
+        padding: 1rem;
+        backdrop-filter: blur(4px);
+    ">
+        <div style="
+            background: white; border-radius: 16px; max-width: 560px; width: 100%;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+            border-top: 6px solid {{ $activeBroadcast->level === 'danger' ? '#ef4444' : ($activeBroadcast->level === 'warning' ? '#f59e0b' : '#3b82f6') }};
+            animation: broadcastIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+        ">
+            <div style="padding: 2rem;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                    <div style="
+                        width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+                        background: {{ $activeBroadcast->level === 'danger' ? '#fee2e2' : ($activeBroadcast->level === 'warning' ? '#fef3c7' : '#dbeafe') }};
+                        display: flex; align-items: center; justify-content: center;
+                        font-size: 1.5rem;
+                        color: {{ $activeBroadcast->level === 'danger' ? '#ef4444' : ($activeBroadcast->level === 'warning' ? '#d97706' : '#3b82f6') }};
+                    ">
+                        <i class="fas {{ $activeBroadcast->level === 'danger' ? 'fa-exclamation-circle' : ($activeBroadcast->level === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle') }}"></i>
+                    </div>
+                    <div>
+                        <div style="font-size: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+                            color: {{ $activeBroadcast->level === 'danger' ? '#ef4444' : ($activeBroadcast->level === 'warning' ? '#d97706' : '#3b82f6') }};">
+                            رسالة عاجلة
+                        </div>
+                        <h5 style="margin: 0; font-weight: 700;">{{ $activeBroadcast->title }}</h5>
+                    </div>
+                </div>
+                <p style="font-size: .95rem; line-height: 1.7; color: #374151; margin-bottom: 1.5rem; white-space: pre-line;">{{ $activeBroadcast->message }}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: .8rem; color: #9ca3af;">
+                    <span><i class="fas fa-user"></i> {{ $activeBroadcast->creator->name }}</span>
+                    <span><i class="fas fa-clock"></i> {{ $activeBroadcast->created_at->diffForHumans() }}</span>
+                </div>
+            </div>
+            <div style="padding: 1rem 2rem 1.5rem; border-top: 1px solid #f3f4f6; display: flex; gap: .75rem;">
+                <button onclick="dismissBroadcast()" class="btn btn-primary" style="flex: 1;">
+                    <i class="fas fa-check"></i> فهمت — إغلاق
+                </button>
+                @can('manage_settings')
+                <form action="{{ route('broadcasts.deactivate', $activeBroadcast) }}" method="POST">
+                    @csrf
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fas fa-stop"></i> إيقاف للجميع
+                    </button>
+                </form>
+                @endcan
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes broadcastIn {
+            from { transform: scale(0.8) translateY(-30px); opacity: 0; }
+            to   { transform: scale(1) translateY(0); opacity: 1; }
+        }
+    </style>
+    @endif
+
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
         <div class="container-fluid px-4">
@@ -616,12 +733,12 @@
             <!-- Right Side Items -->
             <div class="ms-auto d-flex align-items-center gap-3">
                 <!-- Notifications -->
-                <div class="notification-bell" onclick="toggleNotifications()">
+                @php
+                    $unreadCount = \App\Models\Notification::where('user_id', auth()->id())
+                        ->where('is_read', false)->count();
+                @endphp
+                <div class="notification-bell {{ $unreadCount > 0 ? 'has-unread' : '' }}" onclick="toggleNotifications()">
                     <i class="fas fa-bell"></i>
-                    @php
-                        $unreadCount = \App\Models\Notification::where('user_id', auth()->id())
-                            ->where('is_read', false)->count();
-                    @endphp
                     @if($unreadCount > 0)
                         <span class="notification-badge">{{ $unreadCount }}</span>
                     @endif
@@ -657,6 +774,11 @@
                                 <p style="margin: 0;">لا توجد إخطارات</p>
                             </div>
                         @endforelse
+                        <div style="padding:.75rem 1rem;border-top:1px solid var(--border);text-align:center;">
+                            <a href="{{ route('notifications.index') }}" style="font-size:.82rem;color:#6366f1;text-decoration:none;font-weight:600;">
+                                <i class="fas fa-list"></i> عرض كل الإشعارات
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -738,6 +860,17 @@
                 </li>
                 @endcan
 
+                @can('view_all_records')
+                @cannot('manage_treasury')
+                <li>
+                    <a href="{{ route('accountant.all-custodies') }}" class="@if(Route::current()->getName() == 'accountant.all-custodies') active @endif">
+                        <i class="fas fa-hand-holding-usd"></i>
+                        <span>العهدات</span>
+                    </a>
+                </li>
+                @endcannot
+                @endcan
+
                 @can('approve_custody')
                 <li>
                     <a href="{{ route('accountant.all-custodies') }}" class="@if(Route::current()->getName() == 'accountant.all-custodies') active @endif">
@@ -794,6 +927,40 @@
                 </li>
 
                 <li>
+                    <a href="{{ route('chat.index') }}" class="@if(Route::current()->getName() == 'chat.index') active @endif">
+                        <i class="fas fa-comments"></i>
+                        <span>المحادثة الجماعية</span>
+                    </a>
+                </li>
+
+                {{-- Procurement Section --}}
+                <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
+                        المشتريات والصيانة
+                    </span>
+                </li>
+                <li>
+                    <a href="{{ route('purchase-requests.index') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'purchase-requests')) active @endif">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>طلبات الشراء</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('maintenance-requests.index') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'maintenance-requests')) active @endif">
+                        <i class="fas fa-tools"></i>
+                        <span>طلبات الصيانة</span>
+                    </a>
+                </li>
+                @can('manage_treasury')
+                <li>
+                    <a href="{{ route('suppliers.index') }}" class="@if(Route::current()->getName() == 'suppliers.index') active @endif">
+                        <i class="fas fa-truck"></i>
+                        <span>الموردون</span>
+                    </a>
+                </li>
+                @endcan
+
+                <li>
                     <a href="{{ route('social_cases.index') }}" class="@if(Route::current()->getName() == 'social_cases.index') active @endif">
                         <i class="fas fa-people-group"></i>
                         <span>الحالات الاجتماعية</span>
@@ -809,13 +976,16 @@
                 </li>
                 @endcan
 
-                @can('manage_treasury')
+                @can('view_reports')
                 <li>
                     <a href="{{ route('reports.dashboard') }}" class="@if(Route::current()->getName() == 'reports.dashboard') active @endif">
                         <i class="fas fa-chart-bar"></i>
                         <span>التقارير</span>
                     </a>
                 </li>
+                @endcan
+
+                @can('manage_treasury')
                 <li>
                     <a href="{{ route('analytics.researcher') }}" class="@if(Route::current()->getName() == 'analytics.researcher') active @endif">
                         <i class="fas fa-chart-line"></i>
@@ -830,6 +1000,15 @@
                 </li>
                 @endcan
 
+                @can('view_all_records')
+                <li>
+                    <a href="{{ route('activity-logs.index') }}" class="@if(Route::current()->getName() == 'activity-logs.index') active @endif">
+                        <i class="fas fa-history"></i>
+                        <span>سجل النشاط</span>
+                    </a>
+                </li>
+                @endcan
+
                 @can('manage_users')
                 <li style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ route('users.index') }}" class="@if(Route::current()->getName() == 'users.index') active @endif">
@@ -840,6 +1019,12 @@
                 @endcan
 
                 @can('manage_settings')
+                <li>
+                    <a href="{{ route('broadcasts.index') }}" class="@if(Route::current()->getName() == 'broadcasts.index') active @endif">
+                        <i class="fas fa-bullhorn"></i>
+                        <span>رسائل عاجلة</span>
+                    </a>
+                </li>
                 <li>
                     <a href="{{ route('settings.index') }}" class="@if(Route::current()->getName() == 'settings.index') active @endif">
                         <i class="fas fa-sliders"></i>
@@ -931,10 +1116,29 @@
         document.addEventListener('click', function(event) {
             const dropdown = document.getElementById('notificationDropdown');
             const bell = document.querySelector('.notification-bell');
-            if (!bell.contains(event.target)) {
+            if (bell && !bell.contains(event.target)) {
                 dropdown.classList.remove('show');
             }
         });
+
+        // Dismiss broadcast overlay (session-based)
+        function dismissBroadcast() {
+            fetch('{{ route("broadcasts.dismiss") }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                }
+            }).then(() => {
+                const overlay = document.getElementById('broadcastOverlay');
+                if (overlay) {
+                    overlay.style.transition = 'opacity 0.3s ease';
+                    overlay.style.opacity = '0';
+                    setTimeout(() => overlay.remove(), 300);
+                }
+            });
+        }
 
         // Auto-hide alerts
         document.querySelectorAll('.alert').forEach(alert => {

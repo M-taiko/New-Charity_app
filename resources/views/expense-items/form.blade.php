@@ -4,137 +4,165 @@
 <div class="container-fluid">
     <div class="row mb-4" data-aos="fade-down">
         <div class="col-12">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
-                        <i class="fas fa-plus-circle"></i> {{ isset($expenseItem) ? 'تعديل البند' : 'إضافة بند جديد' }}
-                    </h1>
-                </div>
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <h1 style="margin:0; font-size:2rem; font-weight:700;">
+                    <i class="fas fa-tag"></i> {{ isset($expenseItem) ? 'تعديل البند' : 'إضافة بند جديد' }}
+                </h1>
+                <a href="{{ route('expense-items.index') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-right"></i> رجوع
+                </a>
             </div>
         </div>
     </div>
 
-    <div class="row" data-aos="fade-up">
-        <div class="col-lg-8">
+    <div class="row justify-content-center" data-aos="fade-up">
+        <div class="col-12 col-lg-7">
             <div class="card">
-                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
-                    <h5 style="margin: 0; color: white;">
-                        <i class="fas fa-edit"></i> بيانات البند
-                    </h5>
+                <div class="card-header">
+                    <h6 style="margin:0;">تفاصيل البند (التوجيه النهائي)</h6>
                 </div>
                 <div class="card-body">
-                    <form action="{{ isset($expenseItem) ? route('expense-items.update', $expenseItem) : route('expense-items.store') }}" method="POST">
-                        @csrf
-                        @if(isset($expenseItem))
-                            @method('PUT')
-                        @endif
+                    @if($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+                    </div>
+                    @endif
 
+                    <form action="{{ isset($expenseItem) ? route('expense-items.update', $expenseItem->id) : route('expense-items.store') }}"
+                          method="POST">
+                        @csrf
+                        @if(isset($expenseItem)) @method('PUT') @endif
+
+                        {{-- Cascading Category Selection --}}
                         <div class="mb-3">
-                            <label class="form-label"><strong>الفئة <span class="text-danger">*</span></strong></label>
-                            <select name="expense_category_id" class="form-select @error('expense_category_id') is-invalid @enderror" required>
-                                <option value="">-- اختر فئة --</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}"
-                                            {{ (isset($expenseItem) && $expenseItem->expense_category_id == $category->id) || old('expense_category_id') == $category->id ? 'selected' : '' }}>
-                                        {{ $category->name }}
-                                    </option>
+                            <label class="form-label fw-bold">المستوى الأول <span class="text-danger">*</span></label>
+                            <select id="level1" class="form-select" onchange="loadLevel(2, this.value)">
+                                <option value="">-- اختر --</option>
+                                @foreach($roots as $r)
+                                <option value="{{ $r->id }}" {{ isset($expenseItem) && $expenseItem->category->getAncestorAtLevel(1)?->id == $r->id ? 'selected' : '' }}>
+                                    {{ $r->name }}
+                                </option>
                                 @endforeach
                             </select>
-                            @error('expense_category_id')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
                         </div>
 
+                        <div class="mb-3" id="level2Wrap" style="{{ isset($expenseItem) ? '' : 'display:none;' }}">
+                            <label class="form-label fw-bold">المستوى الثاني</label>
+                            <select id="level2" class="form-select" onchange="loadLevel(3, this.value)">
+                                <option value="">-- اختر --</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3" id="level3Wrap" style="{{ isset($expenseItem) ? '' : 'display:none;' }}">
+                            <label class="form-label fw-bold">المستوى الثالث <span class="text-muted">(اختياري)</span></label>
+                            <select id="level3" class="form-select" onchange="setParent(this.value, document.getElementById('level2').value)">
+                                <option value="">-- بدون مستوى ثالث --</option>
+                            </select>
+                        </div>
+
+                        <input type="hidden" name="expense_category_id" id="finalCategoryId"
+                               value="{{ isset($expenseItem) ? $expenseItem->expense_category_id : '' }}">
+
+                        <hr>
                         <div class="mb-3">
-                            <label class="form-label"><strong>اسم البند <span class="text-danger">*</span></strong></label>
+                            <label class="form-label fw-bold">اسم البند <span class="text-danger">*</span></label>
                             <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
-                                   value="{{ isset($expenseItem) ? $expenseItem->name : old('name') }}" required>
-                            @error('name')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
+                                   value="{{ old('name', $expenseItem->name ?? '') }}" required>
+                            @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-
                         <div class="mb-3">
-                            <label class="form-label"><strong>الكود <span class="text-danger">*</span></strong></label>
+                            <label class="form-label fw-bold">الكود <span class="text-danger">*</span></label>
                             <input type="text" name="code" class="form-control @error('code') is-invalid @enderror"
-                                   value="{{ isset($expenseItem) ? $expenseItem->code : old('code') }}" required
-                                   placeholder="مثال: ZAKAH_001">
-                            @error('code')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                            <small class="text-muted">كود فريد يميز البند</small>
+                                   value="{{ old('code', $expenseItem->code ?? '') }}" required
+                                   style="direction:ltr; text-transform:uppercase;" placeholder="WEDDING">
+                            @error('code')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
-
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label"><strong>المبلغ الافتراضي (اختياري)</strong></label>
-                                    <div class="input-group">
-                                        <input type="number" name="default_amount" class="form-control @error('default_amount') is-invalid @enderror"
-                                               value="{{ isset($expenseItem) ? $expenseItem->default_amount : old('default_amount') }}"
-                                               step="0.01" min="0" placeholder="0.00">
-                                        <span class="input-group-text">ج.م</span>
-                                    </div>
-                                    @error('default_amount')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                    <small class="text-muted">هذا المبلغ سيظهر عند اختيار البند</small>
-                                </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col">
+                                <label class="form-label fw-bold">المبلغ الافتراضي</label>
+                                <input type="number" name="default_amount" class="form-control"
+                                       value="{{ old('default_amount', $expenseItem->default_amount ?? '') }}"
+                                       step="0.01" min="0">
                             </div>
-
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label"><strong>الترتيب <span class="text-danger">*</span></strong></label>
-                                    <input type="number" name="order" class="form-control @error('order') is-invalid @enderror"
-                                           value="{{ isset($expenseItem) ? $expenseItem->order : old('order', 1) }}" required min="1">
-                                    @error('order')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                            <div class="col">
+                                <label class="form-label fw-bold">الترتيب</label>
+                                <input type="number" name="order" class="form-control"
+                                       value="{{ old('order', $expenseItem->order ?? 1) }}" min="1" required>
                             </div>
                         </div>
-
                         @if(isset($expenseItem))
                         <div class="mb-3">
-                            <div class="form-check">
-                                <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
-                                       {{ $expenseItem->is_active ? 'checked' : '' }}>
-                                <label class="form-check-label" for="is_active">
-                                    البند نشط ومتاح للاستخدام
-                                </label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="is_active" id="isActive"
+                                       value="1" {{ $expenseItem->is_active ? 'checked' : '' }}>
+                                <label class="form-check-label" for="isActive">نشط</label>
                             </div>
                         </div>
                         @endif
 
-                        <div class="d-flex gap-2" style="margin-top: 2rem;">
-                            <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
-                                <i class="fas fa-save"></i> {{ isset($expenseItem) ? 'تحديث البند' : 'إضافة البند' }}
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a href="{{ route('expense-items.index') }}" class="btn btn-secondary">إلغاء</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> {{ isset($expenseItem) ? 'تحديث' : 'حفظ' }}
                             </button>
-                            <a href="{{ route('expense-items.index') }}" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> إلغاء
-                            </a>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-
-        <div class="col-lg-4">
-            <div class="card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border: 1px solid rgba(102, 126, 234, 0.3);">
-                <div class="card-body">
-                    <h6 class="card-title mb-3">
-                        <i class="fas fa-info-circle" style="color: #667eea;"></i> معلومات مهمة
-                    </h6>
-                    <ul style="font-size: 0.9rem; line-height: 1.8;">
-                        <li>تأكد من إدخال كود فريد للبند</li>
-                        <li>المبلغ الافتراضي يظهر عند اختيار البند</li>
-                        <li>الترتيب يحدد موضع البند في القائمة المنسدلة</li>
-                        <li>يمكن تعديل البيانات لاحقاً</li>
-                        <li>الحذف سيزيل البند من جميع المصروفات</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+const rootsUrl   = '{{ route("api.expense-categories.roots") }}';
+const childrenUrl = (id) => `/api/expense-categories/${id}/children`;
+
+async function loadLevel(targetLevel, parentId) {
+    if (!parentId) {
+        hideFrom(targetLevel);
+        return;
+    }
+
+    const res = await fetch(childrenUrl(parentId));
+    const data = await res.json();
+
+    if (targetLevel === 2) {
+        const sel = document.getElementById('level2');
+        sel.innerHTML = '<option value="">-- اختر (اختياري) --</option>';
+        data.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+        document.getElementById('level2Wrap').style.display = data.length ? '' : 'none';
+        document.getElementById('level3Wrap').style.display = 'none';
+        // Set final category to level1 by default
+        setFinal(parentId);
+    } else if (targetLevel === 3) {
+        const sel = document.getElementById('level3');
+        sel.innerHTML = '<option value="">-- بدون مستوى ثالث --</option>';
+        data.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.name}</option>`);
+        document.getElementById('level3Wrap').style.display = data.length ? '' : 'none';
+        // Set final category to level2 by default
+        setFinal(parentId);
+    }
+}
+
+function setParent(level3Id, level2Id) {
+    setFinal(level3Id || level2Id);
+}
+
+function setFinal(id) {
+    document.getElementById('finalCategoryId').value = id;
+}
+
+function hideFrom(level) {
+    if (level <= 2) {
+        document.getElementById('level2Wrap').style.display = 'none';
+        document.getElementById('level2').innerHTML = '<option value="">-- اختر --</option>';
+    }
+    if (level <= 3) {
+        document.getElementById('level3Wrap').style.display = 'none';
+        document.getElementById('level3').innerHTML = '<option value="">-- اختر --</option>';
+    }
+}
+</script>
+@endpush
 @endsection

@@ -18,10 +18,14 @@ class DashboardController extends Controller
 
         // بيانات مشتركة
         $treasury        = Treasury::first();
-        $activeCustodies = Custody::where('status', 'accepted')->count();
+        $activeCustodies = Custody::whereIn('status', ['accepted', 'active', 'partially_returned'])->count();
         $pendingCases    = SocialCase::where('status', 'pending')->count();
         $todayExpenses   = Expense::whereDate('created_at', today())->sum('amount');
         $totalSpent      = Expense::sum('amount');
+
+        // إجمالي الأصول = رصيد الخزينة + مجموع العهد النشطة
+        $totalCustodiesAmount = Custody::whereIn('status', ['accepted', 'active', 'partially_returned'])->sum('amount');
+        $totalAssets          = ($treasury ? $treasury->balance : 0) + $totalCustodiesAmount;
 
         // للمدير/المحاسب فقط: بيانات مع فلتر السنة
         $agentsStats      = [];
@@ -124,6 +128,7 @@ class DashboardController extends Controller
 
         return view('dashboard.modern', compact(
             'treasury', 'activeCustodies', 'pendingCases', 'todayExpenses', 'totalSpent',
+            'totalCustodiesAmount', 'totalAssets',
             'agentsStats', 'researchersStats', 'yearStats', 'selectedYear', 'availableYears'
         ));
     }

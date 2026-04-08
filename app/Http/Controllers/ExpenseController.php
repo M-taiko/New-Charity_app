@@ -9,6 +9,7 @@ use App\Models\ExpenseCategory;
 use App\Models\ExpenseItem;
 use App\Models\Treasury;
 use App\Services\TreasuryService;
+use App\Services\ActivityLogService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 
@@ -42,7 +43,7 @@ class ExpenseController extends Controller
             });
 
         $cases = SocialCase::where('status', 'approved')->get();
-        $categories = ExpenseCategory::active()->with('items')->ordered()->get();
+        $categoryRoots = ExpenseCategory::roots()->active()->ordered()->get();
 
         // Check if current user is accountant (محاسب) - can spend from treasury
         $canSpendFromTreasury = auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير');
@@ -53,7 +54,7 @@ class ExpenseController extends Controller
             $treasury = Treasury::first();
         }
 
-        return view('expenses.modern-create', compact('custodies', 'cases', 'categories', 'canSpendFromTreasury', 'treasury'));
+        return view('expenses.modern-create', compact('custodies', 'cases', 'categoryRoots', 'canSpendFromTreasury', 'treasury'));
     }
 
     public function store(Request $request)
@@ -109,6 +110,10 @@ class ExpenseController extends Controller
                 $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
             }
 
+            $lineItems = $request->filled('line_items_data')
+                ? json_decode($request->line_items_data, true)
+                : null;
+
             $this->service->recordDirectExpenseFromTreasury(
                 auth()->id(),
                 $request->amount,
@@ -118,7 +123,8 @@ class ExpenseController extends Controller
                 $request->location,
                 $request->social_case_id,
                 $attachmentPath,
-                $request->expense_type
+                $request->expense_type,
+                $lineItems
             );
         } else {
             // Custody spending - can use multiple custodies automatically
@@ -178,6 +184,10 @@ class ExpenseController extends Controller
             // Use first custody ID for backward compatibility, or first available
             $custodyId = $request->custody_id ?? $availableCustodies->first()->id;
 
+            $lineItems = $request->filled('line_items_data')
+                ? json_decode($request->line_items_data, true)
+                : null;
+
             $this->service->recordExpenseWithItems(
                 $custodyId,
                 auth()->id(),
@@ -188,9 +198,12 @@ class ExpenseController extends Controller
                 $request->location,
                 $request->social_case_id,
                 $attachmentPath,
-                $request->expense_type
+                $request->expense_type,
+                $lineItems
             );
         }
+
+        ActivityLogService::log('created', 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
 
         return redirect()->route('expenses.index')->with('success', 'تم تسجيل المصروف');
     }
@@ -215,9 +228,9 @@ class ExpenseController extends Controller
         }
 
         $cases = SocialCase::where('status', 'approved')->get();
-        $categories = ExpenseCategory::active()->with('items')->ordered()->get();
+        $categoryRoots = ExpenseCategory::roots()->active()->ordered()->get();
 
-        return view('expenses.modern-edit', compact('expense', 'cases', 'categories'));
+        return view('expenses.modern-edit', compact('expense', 'cases', 'categoryRoots'));
     }
 
     public function update(Request $request, Expense $expense)
@@ -289,6 +302,8 @@ class ExpenseController extends Controller
             'attachment'          => $attachmentPath,
         ]);
 
+        ActivityLogService::updated($expense, 'تم تعديل المصروف #' . $expense->id . ' (المبلغ: ' . number_format($newAmount, 2) . ' ج.م)');
+
         return redirect()->route('expenses.show', $expense)
             ->with('success', 'تم تعديل المصروف بنجاح');
     }
@@ -316,17 +331,46 @@ class ExpenseController extends Controller
         return view('expenses.agent-modern', compact('totalExpenses', 'expenseCount', 'generalExpenseCount', 'socialCaseExpenseCount'));
     }
 
-    public function tableData()
+    public function tableData(Request $request)
     {
         $this->authorize('view_all_expenses');
 
-        // Get all expenses for managers and accountants
-        $expenses = Expense::with(['user', 'custody', 'socialCase'])->get();
+        $query = Expense::with(['user', 'custody', 'socialCase', 'category']);
 
-        return DataTables::of($expenses)
+        // Date range filter
+        if ($request->filled('date_from')) {
+            $query->whereDate('expense_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('expense_date', '<=', $request->date_to);
+        }
+
+        // Type filter
+        if ($request->filled('type_filter')) {
+            $query->where('type', $request->type_filter);
+        }
+
+        // Review status filter
+        if ($request->filled('reviewed_filter')) {
+            if ($request->reviewed_filter === 'reviewed') {
+                $query->whereNotNull('reviewed_at');
+            } else {
+                $query->whereNull('reviewed_at');
+            }
+        }
+
+        // User filter (name search)
+        if ($request->filled('user_filter')) {
+            $query->whereHas('user', fn($q) => $q->where('name', 'like', '%' . $request->user_filter . '%'));
+        }
+
+        return DataTables::of($query)
             ->addColumn('user_name', fn($row) => $row->user->name)
             ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
             ->addColumn('type_label', fn($row) => $row->type === 'social_case' ? 'حالة اجتماعية' : 'مصروف عام')
+            ->addColumn('category_name', fn($row) => $row->category->name ?? '-')
+            ->addColumn('reviewed_label', fn($row) => $row->reviewed_at ? 'مراجع' : 'غير مراجع')
+            ->filterColumn('user_name', fn($q, $k) => $q->whereHas('user', fn($q2) => $q2->where('name', 'like', "%$k%")))
             ->toJson();
     }
 
@@ -370,6 +414,33 @@ class ExpenseController extends Controller
         return response()->download($filePath);
     }
 
+    public function markReviewed(Expense $expense)
+    {
+        $user = auth()->user();
+        if (!$user->hasRole('محاسب') && !$user->hasRole('مدير')) {
+            abort(403);
+        }
+
+        $expense->update([
+            'reviewed_by' => $user->id,
+            'reviewed_at' => now(),
+        ]);
+
+        // إشعار المندوب
+        \App\Services\NotificationService::notifyUser(
+            $expense->user_id,
+            'تمت مراجعة مصروفك',
+            'قام ' . $user->name . ' بمراجعة المصروف رقم #' . $expense->id . ' وتم قفل التعديل',
+            'info',
+            $expense->id,
+            'expense'
+        );
+
+        ActivityLogService::reviewed($expense, 'تمت مراجعة المصروف #' . $expense->id . ' بواسطة ' . $user->name);
+
+        return back()->with('success', 'تمت مراجعة المصروف وتم قفل التعديل');
+    }
+
     public function destroy(Expense $expense)
     {
         $this->authorize('spend_money');
@@ -384,7 +455,10 @@ class ExpenseController extends Controller
         }
 
         try {
+            $expenseId = $expense->id;
+            $expenseAmount = $expense->amount;
             $expense->delete();
+            ActivityLogService::deleted($expense, 'تم حذف المصروف #' . $expenseId . ' (المبلغ: ' . number_format($expenseAmount, 2) . ' ج.م)');
             return redirect()->route('expenses.index')
                 ->with('success', 'تم حذف المصروف بنجاح');
         } catch (\Exception $e) {

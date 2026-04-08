@@ -26,11 +26,16 @@ class Expense extends Model
         'source',
         'attachment',
         'approval_status',
+        'reviewed_by',
+        'reviewed_at',
+        'line_items',
     ];
 
     protected $casts = [
-        'amount' => 'decimal:2',
+        'amount'       => 'decimal:2',
         'expense_date' => 'datetime',
+        'reviewed_at'  => 'datetime',
+        'line_items'   => 'array',
         'approval_status' => 'string',
     ];
 
@@ -84,6 +89,16 @@ class Expense extends Model
     /**
      * هل المصروف معتمد؟
      */
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function isReviewed(): bool
+    {
+        return $this->reviewed_at !== null;
+    }
+
     public function isApproved(): bool
     {
         return $this->approval_status === 'approved';
@@ -119,10 +134,13 @@ class Expense extends Model
             return false;
         }
 
-        // المندوب يقدر يطلب تعديل
-        // المحاسب والمدير يقدرون يعدلوا مباشرة
+        // بعد مراجعة المحاسب: لا يمكن للمندوب التعديل
+        if ($this->isReviewed() && $user->hasRole('مندوب')) {
+            return false;
+        }
+
+        // المندوب صاحب المصروف فقط
         if ($user->hasRole('مندوب')) {
-            // المندوب صاحب المصروف فقط
             return $this->user_id === $user->id;
         }
 

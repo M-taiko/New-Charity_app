@@ -142,6 +142,33 @@
                         </button>
                     </form>
                     @endif
+
+                    {{-- Delegate button: creator, assignee, or manager can re-assign --}}
+                    @if(
+                        ($user->id === $task->created_by || $user->id === $task->assigned_to || $user->hasRole('مدير') || $user->hasRole('محاسب'))
+                        && !in_array($task->status, ['completed', 'cancelled'])
+                    )
+                    <hr>
+                    <button type="button" class="btn btn-outline-warning btn-sm w-100" data-bs-toggle="collapse" data-bs-target="#delegateForm">
+                        <i class="fas fa-share"></i> تفويض إلى شخص آخر
+                    </button>
+                    <div class="collapse mt-2" id="delegateForm">
+                        <form action="{{ route('tasks.delegate', $task) }}" method="POST">
+                            @csrf
+                            <select name="assigned_to" class="form-select form-select-sm mb-2" required>
+                                <option value="">اختر المستخدم...</option>
+                                @foreach($users as $u)
+                                    @if($u->id !== $task->assigned_to)
+                                    <option value="{{ $u->id }}">{{ $u->name }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            <button type="submit" class="btn btn-warning btn-sm w-100">
+                                <i class="fas fa-paper-plane"></i> تأكيد التفويض
+                            </button>
+                        </form>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>

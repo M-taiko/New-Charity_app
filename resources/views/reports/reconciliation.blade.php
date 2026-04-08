@@ -3,10 +3,13 @@
 @section('content')
 <div class="container-fluid mt-4">
     <div class="row mb-4">
-        <div class="col-md-12">
-            <h2 class="mb-4">
+        <div class="col-md-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h2 class="mb-0">
                 <i class="fas fa-balance-scale"></i> تقرير مطابقة الخزينة
             </h2>
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-print"></i> طباعة
+            </button>
         </div>
     </div>
 

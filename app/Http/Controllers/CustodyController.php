@@ -6,6 +6,7 @@ use App\Models\Custody;
 use App\Models\Treasury;
 use App\Models\User;
 use App\Services\TreasuryService;
+use App\Services\ActivityLogService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 
@@ -122,6 +123,7 @@ class CustodyController extends Controller
         );
 
         $message = $isAgentRequest ? 'تم إرسال طلب العهدة للمحاسب للموافقة' : 'تم إنشاء العهدة بنجاح';
+        ActivityLogService::log('created', ($isAgentRequest ? 'طلب عهدة جديد' : 'إنشاء عهدة') . ' بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
         return redirect()->route($isAgentRequest ? 'agent.transactions' : 'custodies.index')->with('success', $message);
     }
 
@@ -155,6 +157,7 @@ class CustodyController extends Controller
 
         try {
             $this->service->acceptCustody($custody);
+            ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
             return back()->with('success', 'تم الموافقة على العهدة');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
@@ -182,6 +185,7 @@ class CustodyController extends Controller
 
         try {
             $this->service->rejectCustody($custody, $request->reason);
+            ActivityLogService::rejected($custody, 'تم رفض العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
             return back()->with('success', 'تم رفض العهدة');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
@@ -226,7 +230,26 @@ class CustodyController extends Controller
         ]);
 
         $this->service->requestReturnCustody($custody, $request->returned_amount);
+        ActivityLogService::returned($custody, 'طلب رد ' . number_format($request->returned_amount, 2) . ' ج.م من العهدة #' . $custody->id);
         return back()->with('success', 'تم إرسال طلب رد العهدة للمحاسب');
+    }
+
+    public function addExternalDonation(Request $request, Custody $custody)
+    {
+        $this->authorize('manage_treasury');
+
+        $request->validate([
+            'amount'      => 'required|numeric|min:0.01',
+            'description' => 'required|string|max:500',
+            'type'        => 'required|in:external_donation,expense_refund',
+        ]);
+
+        try {
+            $this->service->addExternalDonationToCustody($custody, $request->amount, $request->description, $request->type);
+            return back()->with('success', 'تم إضافة المبلغ لرصيد العهدة بنجاح');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function approveReturn(Custody $custody)
@@ -237,8 +260,31 @@ class CustodyController extends Controller
             return back()->with('error', 'لا يوجد مبلغ معلق للموافقة عليه');
         }
 
+        $pendingAmount = $custody->pending_return;
         $this->service->approveCustodyReturn($custody);
+        ActivityLogService::approved($custody, 'تم قبول رد ' . number_format($pendingAmount, 2) . ' ج.م من العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
         return back()->with('success', 'تم قبول رد العهدة والتحويل للخزينة');
+    }
+
+    public function directReturn(Request $request, Custody $custody)
+    {
+        $this->authorize('approve_custody');
+
+        $remaining = $custody->getRemainingBalance();
+
+        $request->validate([
+            'return_amount' => 'required|numeric|min:0.01|max:' . $remaining,
+        ], [
+            'return_amount.max' => 'المبلغ يتجاوز الرصيد المتاح (' . number_format($remaining, 2) . ' ج.م)',
+        ]);
+
+        try {
+            $this->service->returnCustody($custody, $request->return_amount);
+            ActivityLogService::returned($custody, 'رد مباشر ' . number_format($request->return_amount, 2) . ' ج.م من العهدة #' . $custody->id . ' للخزينة');
+            return back()->with('success', 'تم رد المبلغ للخزينة مباشرة بنجاح');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function tableData()
@@ -277,14 +323,15 @@ class CustodyController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        // Get agent's custodies
+        // Get agent's custodies (all statuses for display)
         $custodies = Custody::where('agent_id', $user->id)->get();
         $custodiesCount = $custodies->count();
 
-        // Calculate totals
-        $totalReceived = $custodies->sum('amount');
-        $totalSpent = $custodies->sum('spent');
-        $totalReturned = $custodies->sum('returned');
+        // Calculate totals only for activated custodies (exclude pending/rejected)
+        $activeCustodies = $custodies->whereIn('status', ['active', 'accepted', 'partially_returned', 'closed']);
+        $totalReceived = $activeCustodies->sum('amount');
+        $totalSpent    = $activeCustodies->sum('spent');
+        $totalReturned = $activeCustodies->sum('returned');
 
         return view('custodies.agent-transactions', compact('custodies', 'custodiesCount', 'totalReceived', 'totalSpent', 'totalReturned'));
     }
@@ -378,8 +425,9 @@ class CustodyController extends Controller
 
     public function allCustodies()
     {
-        // Check if user is accountant or manager
-        if (!auth()->user()->can('approve_custody')) {
+        // Accountants, managers, and viewers (مشرف) can see all custodies
+        $user = auth()->user();
+        if (!$user->can('approve_custody') && !$user->can('view_all_records')) {
             abort(403, 'Unauthorized');
         }
 

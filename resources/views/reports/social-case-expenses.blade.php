@@ -3,10 +3,13 @@
 @section('content')
 <div class="container-fluid">
     <div class="row mb-4" data-aos="fade-down">
-        <div class="col-12">
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
                 <i class="fas fa-chart-pie"></i> تقرير مصروفات الحالات الاجتماعية
             </h1>
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-print"></i> طباعة
+            </button>
         </div>
     </div>
 

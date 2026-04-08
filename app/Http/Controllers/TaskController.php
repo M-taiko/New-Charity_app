@@ -6,6 +6,7 @@ use App\Models\Task;
 use App\Models\TaskComment;
 use App\Models\User;
 use App\Services\NotificationService;
+use App\Services\ActivityLogService;
 use Illuminate\Http\Request;
 
 class TaskController extends Controller
@@ -14,11 +15,15 @@ class TaskController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->hasRole('مدير') || $user->hasRole('محاسب')) {
+        if ($user->hasRole('مدير') || $user->hasRole('محاسب') || $user->hasRole('مشرف')) {
             $tasks = Task::with(['creator', 'assignee'])->latest()->get();
         } else {
+            // Show tasks assigned to or created by this user
             $tasks = Task::with(['creator', 'assignee'])
-                ->where('assigned_to', $user->id)
+                ->where(function($q) use ($user) {
+                    $q->where('assigned_to', $user->id)
+                      ->orWhere('created_by', $user->id);
+                })
                 ->latest()
                 ->get();
         }
@@ -35,8 +40,7 @@ class TaskController extends Controller
 
     public function create()
     {
-        $this->authorizeManagerOrAccountant();
-
+        // Any logged-in user can create tasks
         $users = User::where('is_active', true)
             ->where('is_hidden', false)
             ->get();
@@ -46,7 +50,7 @@ class TaskController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorizeManagerOrAccountant();
+        // Any logged-in user can create and assign tasks
 
         $request->validate([
             'title'       => 'required|string|max:255',
@@ -76,6 +80,8 @@ class TaskController extends Controller
             'task'
         );
 
+        ActivityLogService::log('assigned', 'تم تعيين مهمة "' . $task->title . '" للمستخدم ' . $task->assignee->name, $task);
+
         return redirect()->route('tasks.show', $task)->with('success', 'تم إنشاء المهمة بنجاح');
     }
 
@@ -83,19 +89,60 @@ class TaskController extends Controller
     {
         $user = auth()->user();
 
-        // Only assignee, creator, managers, and accountants can view
+        // Assignee, creator, managers, accountants, and viewers can see
         if (
             $task->assigned_to !== $user->id &&
             $task->created_by !== $user->id &&
             !$user->hasRole('مدير') &&
-            !$user->hasRole('محاسب')
+            !$user->hasRole('محاسب') &&
+            !$user->hasRole('مشرف')
         ) {
             abort(403);
         }
 
         $task->load(['creator', 'assignee', 'comments.user']);
+        $users = User::where('is_active', true)->where('is_hidden', false)->get();
 
-        return view('tasks.show', compact('task'));
+        return view('tasks.show', compact('task', 'users'));
+    }
+
+    public function delegate(Request $request, Task $task)
+    {
+        $user = auth()->user();
+
+        // Only creator, current assignee, or manager/accountant can re-delegate
+        $canDelegate = $task->created_by === $user->id
+            || $task->assigned_to === $user->id
+            || $user->hasRole('مدير')
+            || $user->hasRole('محاسب');
+
+        if (!$canDelegate) {
+            abort(403);
+        }
+
+        $request->validate([
+            'assigned_to' => 'required|exists:users,id|different:' . $task->assigned_to,
+        ], [
+            'assigned_to.different' => 'المستخدم المحدد هو نفس المكلف الحالي',
+        ]);
+
+        $oldAssignee = $task->assignee->name;
+        $task->update(['assigned_to' => $request->assigned_to]);
+        $task->refresh();
+
+        // Notify new assignee
+        NotificationService::notifyUser(
+            $task->assigned_to,
+            'تم تفويضك بمهمة',
+            $user->name . ' فوّض إليك المهمة: ' . $task->title,
+            'task',
+            $task->id,
+            'task'
+        );
+
+        ActivityLogService::log('assigned', 'تم تفويض مهمة "' . $task->title . '" من ' . $oldAssignee . ' إلى ' . $task->assignee->name, $task);
+
+        return back()->with('success', 'تم تفويض المهمة إلى ' . $task->assignee->name);
     }
 
     public function addComment(Request $request, Task $task)
@@ -106,7 +153,8 @@ class TaskController extends Controller
             $task->assigned_to !== $user->id &&
             $task->created_by !== $user->id &&
             !$user->hasRole('مدير') &&
-            !$user->hasRole('محاسب')
+            !$user->hasRole('محاسب') &&
+            !$user->can('add_comments')
         ) {
             abort(403);
         }

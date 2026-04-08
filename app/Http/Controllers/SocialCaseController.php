@@ -6,6 +6,7 @@ use App\Models\SocialCase;
 use App\Models\SocialCaseDocument;
 use App\Models\FamilyMember;
 use App\Models\Notification;
+use App\Services\ActivityLogService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -99,6 +100,7 @@ class SocialCaseController extends Controller
             $this->notifyManagers($case);
         });
 
+        ActivityLogService::log('created', 'تم إنشاء حالة اجتماعية جديدة');
         return redirect()->route('social_cases.index')->with('success', 'تم إنشاء الحالة الاجتماعية بنجاح');
     }
 
@@ -180,6 +182,7 @@ class SocialCaseController extends Controller
             'reviewed_by' => auth()->id(),
         ]);
 
+        ActivityLogService::approved($socialCase, 'تمت الموافقة على الحالة الاجتماعية: ' . $socialCase->name);
         return back()->with('success', 'تمت الموافقة على الحالة');
     }
 
@@ -193,6 +196,7 @@ class SocialCaseController extends Controller
             'internal_notes' => $request->notes,
         ]);
 
+        ActivityLogService::rejected($socialCase, 'تم رفض الحالة الاجتماعية: ' . $socialCase->name);
         return back()->with('success', 'تم رفض الحالة');
     }
 

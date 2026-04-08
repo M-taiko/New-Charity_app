@@ -3,14 +3,13 @@
 @section('content')
 <div class="container-fluid">
     <div class="row mb-4" data-aos="fade-down">
-        <div class="col-12">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
-                        <i class="fas fa-hand-holding-heart"></i> تفاصيل العهدة
-                    </h1>
-                </div>
-            </div>
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
+                <i class="fas fa-hand-holding-heart"></i> تفاصيل العهدة
+            </h1>
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm no-print">
+                <i class="fas fa-print"></i> طباعة
+            </button>
         </div>
     </div>
 
@@ -173,6 +172,22 @@
                             @if($custody->pending_return > 0)
                                 <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#approveReturnModal">
                                     <i class="fas fa-check-circle"></i> الموافقة على الرد
+                                </button>
+                            @endif
+                        @endcan
+
+                        @can('manage_treasury')
+                            @if(in_array($custody->status, ['active', 'accepted', 'partially_returned']))
+                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#externalDonationModal">
+                                    <i class="fas fa-plus-circle"></i> إضافة تبرع / استرداد
+                                </button>
+                            @endif
+                        @endcan
+
+                        @can('approve_custody')
+                            @if(in_array($custody->status, ['active', 'accepted', 'partially_returned']) && $custody->getRemainingBalance() > 0)
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#directReturnModal">
+                                    <i class="fas fa-vault"></i> رد مباشر للخزينة
                                 </button>
                             @endif
                         @endcan
@@ -537,4 +552,89 @@
         z-index: 1060 !important;
     }
 </style>
+
+{{-- External Donation / Expense Refund Modal --}}
+@can('manage_treasury')
+<div class="modal fade" id="externalDonationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-plus-circle"></i> إضافة تبرع خارجي / استرداد</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info" style="font-size:.9rem;">
+                        <i class="fas fa-info-circle"></i>
+                        المبلغ المضاف سيزيد رصيد عهدة <strong>{{ $custody->agent->name }}</strong> مباشرة دون المرور بالخزينة
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">نوع العملية</label>
+                        <select name="type" class="form-select" required>
+                            <option value="external_donation">تبرع خارجي</option>
+                            <option value="expense_refund">استرداد مصروف</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">المبلغ (ج.م) <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" class="form-control" step="0.01" min="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الوصف / المصدر <span class="text-danger">*</span></label>
+                        <input type="text" name="description" class="form-control" required placeholder="مثال: تبرع من جمعية X">
+                    </div>
+                    <div class="mb-0">
+                        <small class="text-muted">رصيد العهدة الحالي: <strong>{{ number_format($custody->amount, 2) }} ج.م</strong></small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus"></i> إضافة المبلغ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endcan
+
+{{-- Direct Return to Treasury Modal --}}
+@can('approve_custody')
+<div class="modal fade" id="directReturnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none;">
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-vault"></i> رد مباشر للخزينة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.directReturn', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-warning" style="font-size:.9rem;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        سيتم خصم المبلغ من عهدة <strong>{{ $custody->agent->name }}</strong> وإضافته للخزينة مباشرة دون انتظار طلب من المندوب.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">المبلغ المراد إرجاعه (ج.م) <span class="text-danger">*</span></label>
+                        <input type="number" name="return_amount" class="form-control" step="0.01" min="0.01"
+                               max="{{ $custody->getRemainingBalance() }}" required placeholder="0.00">
+                        <small class="text-muted mt-1 d-block">
+                            الرصيد المتاح: <strong>{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</strong>
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('تأكيد رد المبلغ للخزينة مباشرة؟')">
+                        <i class="fas fa-vault"></i> تأكيد الرد
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endcan
 @endsection

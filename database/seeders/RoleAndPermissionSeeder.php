@@ -29,6 +29,8 @@ class RoleAndPermissionSeeder extends Seeder
             'approve_custody_transfer',
             'direct_spend_from_treasury',
             'manage_expense_categories',
+            'view_all_records',   // مشرف: عرض كل شيء
+            'add_comments',       // مشرف: إضافة تعليقات
         ];
 
         foreach ($permissions as $permission) {
@@ -82,5 +84,17 @@ class RoleAndPermissionSeeder extends Seeder
             'create_social_case',
             'view_reports',
         ]);
+
+        // Create viewer (مشرف) role — read-only + comments
+        $viewerRole = Role::firstOrCreate(['name' => 'مشرف', 'guard_name' => 'web']);
+        $viewerRole->syncPermissions([
+            'view_reports',
+            'view_all_records',
+            'add_comments',
+        ]);
+
+        // Also give manager the new permissions
+        $managerRole->givePermissionTo(['view_all_records', 'add_comments']);
+        $accountantRole->givePermissionTo(['view_all_records', 'add_comments']);
     }
 }

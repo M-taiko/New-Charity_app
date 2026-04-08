@@ -216,16 +216,37 @@
         </div>
 
         <!-- Admin/Accountant Statistics -->
-        <div class="row g-4 mb-4">
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
+        {{-- الصف الأول: إجمالي الأصول + رصيد الخزينة + إجمالي العهد --}}
+        <div class="row g-4 mb-3">
+            <div class="col-12 col-lg-4" data-aos="fade-up" data-aos-delay="0">
+                <div class="stat-card" style="border-right: 4px solid #6366f1; background: linear-gradient(135deg, #f8f7ff 0%, #eef2ff 100%);">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-landmark"></i></div>
+                    <div class="stat-label" style="font-weight:700;">إجمالي الأصول (الكلي)</div>
+                    <div class="stat-number" style="color: #6366f1; font-size: 1.8rem;">{{ number_format($totalAssets, 0) }}</div>
+                    <small style="color: #6b7280;">ج.م &nbsp;|&nbsp; خزينة + عهد نشطة</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
                 <div class="stat-card success">
                     <div class="stat-icon"><i class="fas fa-wallet"></i></div>
-                    <div class="stat-label">رصيد الخزينة</div>
+                    <div class="stat-label">رصيد الخزينة (المتبقي)</div>
                     <div class="stat-number" style="color: var(--success);">{{ number_format($treasury->balance ?? 0, 0) }}</div>
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="stat-card info">
+                    <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                    <div class="stat-label">إجمالي العهد النشطة</div>
+                    <div class="stat-number" style="color: var(--info);">{{ number_format($totalCustodiesAmount, 0) }}</div>
+                    <small style="color: #6b7280;">ج.م &nbsp;|&nbsp; {{ $activeCustodies }} عهدة</small>
+                </div>
+            </div>
+        </div>
+
+        {{-- الصف الثاني: إحصائيات السنة --}}
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
                 <div class="stat-card info">
                     <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
                     <div class="stat-label">عهدات {{ $selectedYear }}</div>
@@ -233,7 +254,7 @@
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
                 <div class="stat-card danger">
                     <div class="stat-icon"><i class="fas fa-money-bill"></i></div>
                     <div class="stat-label">مصروفات {{ $selectedYear }}</div>
@@ -241,11 +262,19 @@
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
                 <div class="stat-card warning">
+                    <div class="stat-icon"><i class="fas fa-undo-alt"></i></div>
+                    <div class="stat-label">مبالغ مردودة {{ $selectedYear }}</div>
+                    <div class="stat-number" style="color: var(--warning);">{{ number_format($yearStats['total_returned'] ?? 0, 0) }}</div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="stat-card success">
                     <div class="stat-icon"><i class="fas fa-users"></i></div>
                     <div class="stat-label">حالات معتمدة {{ $selectedYear }}</div>
-                    <div class="stat-number" style="color: var(--warning);">{{ $yearStats['approved_cases'] ?? 0 }}</div>
+                    <div class="stat-number" style="color: var(--success);">{{ $yearStats['approved_cases'] ?? 0 }}</div>
                 </div>
             </div>
         </div>
@@ -501,6 +530,76 @@
                     </div>
                 </div>
             </div>
+            <!-- Agent Recent Expenses -->
+            @php
+                $recentExpenses = \App\Models\Expense::where('user_id', auth()->id())
+                    ->latest()->limit(5)->get();
+                $pendingTasks = \App\Models\Task::where('assigned_to', auth()->id())
+                    ->whereIn('status', ['pending','in_progress'])->latest()->limit(3)->get();
+            @endphp
+            @if($recentExpenses->count() > 0)
+            <div class="col-12 mt-3" data-aos="fade-up" data-aos-delay="450">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 style="margin:0;"><i class="fas fa-receipt"></i> آخر مصروفاتي</h5>
+                        <a href="{{ route('expenses.agent') }}" class="btn btn-light btn-sm">عرض الكل</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" style="font-size:.88rem;">
+                                <thead class="table-light">
+                                    <tr><th>التاريخ</th><th>الوصف</th><th>المبلغ</th><th>الحالة</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($recentExpenses as $exp)
+                                    <tr>
+                                        <td class="text-muted">{{ $exp->expense_date->format('d/m/Y') }}</td>
+                                        <td><a href="{{ route('expenses.show', $exp->id) }}" class="text-decoration-none">{{ Str::limit($exp->description, 30) }}</a></td>
+                                        <td><strong style="color:var(--danger);">{{ number_format($exp->amount, 0) }}</strong> ج.م</td>
+                                        <td>
+                                            @if($exp->isReviewed())
+                                                <span class="badge bg-info" style="font-size:.68rem;">تمت المراجعة</span>
+                                            @elseif($exp->isApproved())
+                                                <span class="badge bg-success" style="font-size:.68rem;">معتمد</span>
+                                            @else
+                                                <span class="badge bg-secondary" style="font-size:.68rem;">قيد المراجعة</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            @if($pendingTasks->count() > 0)
+            <div class="col-12 mt-3" data-aos="fade-up" data-aos-delay="480">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 style="margin:0;"><i class="fas fa-tasks"></i> مهامي النشطة</h5>
+                        <a href="{{ route('tasks.index') }}" class="btn btn-light btn-sm">عرض الكل</a>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        @foreach($pendingTasks as $task)
+                        <a href="{{ route('tasks.show', $task->id) }}" class="list-group-item list-group-item-action py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span style="font-size:.9rem;">{{ Str::limit($task->title, 40) }}</span>
+                                <span class="badge {{ $task->status === 'in_progress' ? 'bg-primary' : 'bg-warning text-dark' }}" style="font-size:.68rem;">
+                                    {{ $task->status === 'in_progress' ? 'جارٍ' : 'معلق' }}
+                                </span>
+                            </div>
+                            @if($task->due_date)
+                            <small class="text-muted"><i class="fas fa-calendar-alt"></i> {{ $task->due_date->format('d/m/Y') }}</small>
+                            @endif
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
         @else
             <!-- Recent Transactions (Admin/Accountant) -->
             <div class="col-12 col-lg-8" data-aos="fade-up" data-aos-delay="400">
@@ -653,9 +752,15 @@
                             <a href="{{ route('expenses.agent') }}" class="btn btn-outline-primary">
                                 <i class="fas fa-list"></i> عرض مصروفاتي
                             </a>
+                            <a href="{{ route('custodies.create') }}" class="btn btn-outline-success">
+                                <i class="fas fa-hand-holding-usd"></i> طلب عهدة جديدة
+                            </a>
                             <a href="{{ route('agent.transactions') }}" class="btn btn-outline-primary">
                                 <i class="fas fa-exchange-alt"></i> حركاتي من الخزينة
                             </a>
+                            <a href="{{ route('tasks.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-tasks"></i> مهامي
+            </a>
                         @else
                             <!-- Admin/Accountant Quick Actions -->
                             @can('create_custody')

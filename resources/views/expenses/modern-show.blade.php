@@ -3,14 +3,13 @@
 @section('content')
 <div class="container-fluid">
     <div class="row mb-4" data-aos="fade-down">
-        <div class="col-12">
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
-                        <i class="fas fa-receipt"></i> تفاصيل المصروف
-                    </h1>
-                </div>
-            </div>
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
+                <i class="fas fa-receipt"></i> تفاصيل المصروف
+            </h1>
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm no-print">
+                <i class="fas fa-print"></i> طباعة
+            </button>
         </div>
     </div>
 
@@ -85,22 +84,85 @@
                     </div>
                     @endif
 
-                    <!-- حالة المصروف وأزرار الإجراءات -->
+                    @if($expense->line_items && count($expense->line_items) > 0)
                     <div class="mb-3">
+                        <label class="form-label"><strong><i class="fas fa-list-ul"></i> تفاصيل البنود:</strong></label>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:.9rem;">
+                                <thead style="background:#f8f9fa;">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>البيان</th>
+                                        <th class="text-center">الكمية</th>
+                                        <th class="text-center">سعر الوحدة</th>
+                                        <th class="text-center">الإجمالي</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php $lineTotal = 0; @endphp
+                                    @foreach($expense->line_items as $i => $item)
+                                    @php
+                                        $qty = floatval($item['quantity'] ?? 1);
+                                        $price = floatval($item['unit_price'] ?? 0);
+                                        $sub = $qty * $price;
+                                        $lineTotal += $sub;
+                                    @endphp
+                                    <tr>
+                                        <td class="text-muted">{{ $i + 1 }}</td>
+                                        <td>{{ $item['description'] ?? '—' }}</td>
+                                        <td class="text-center">{{ $qty }}</td>
+                                        <td class="text-center">{{ number_format($price, 2) }} ج.م</td>
+                                        <td class="text-center"><strong>{{ number_format($sub, 2) }} ج.م</strong></td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot style="background:#fff8f0;">
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>الإجمالي:</strong></td>
+                                        <td class="text-center text-danger"><strong>{{ number_format($lineTotal, 2) }} ج.م</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    @endif
+
+                    <!-- حالة المصروف وأزرار الإجراءات -->
+                    <div class="mb-3 d-flex gap-2 flex-wrap">
                         @if($expense->isApproved())
                             <span class="badge bg-success"><i class="fas fa-check"></i> معتمد</span>
                         @elseif($expense->hasPendingEdit())
                             <span class="badge bg-warning"><i class="fas fa-clock"></i> في انتظار الموافقة على التعديل</span>
                         @endif
+
+                        @if($expense->isReviewed())
+                            <span class="badge bg-info">
+                                <i class="fas fa-user-check"></i> مراجع بواسطة {{ $expense->reviewer?->name }}
+                                ({{ $expense->reviewed_at->format('d/m/Y') }})
+                            </span>
+                        @else
+                            <span class="badge bg-secondary"><i class="fas fa-hourglass-half"></i> لم تتم المراجعة</span>
+                        @endif
                     </div>
 
-                    <div class="d-flex gap-2" style="margin-top: 2rem;">
+                    <div class="d-flex gap-2 flex-wrap" style="margin-top: 2rem;">
                         <a href="{{ route('expenses.index') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left"></i> رجوع
                         </a>
 
-                        <!-- زر طلب التعديل (للمندوب فقط) -->
-                        @if(auth()->user()->hasRole('مندوب') && $expense->user_id === auth()->id() && !$expense->isApproved() && !$expense->hasPendingEdit())
+                        <!-- زر المراجعة (للمحاسب/المدير) -->
+                        @if((auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير')) && !$expense->isReviewed())
+                            <form action="{{ route('expenses.mark-reviewed', $expense) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-success"
+                                        onclick="return confirm('تأكيد المراجعة وقفل التعديل من المندوب؟')">
+                                    <i class="fas fa-user-check"></i> تمت المراجعة
+                                </button>
+                            </form>
+                        @endif
+
+                        <!-- زر طلب التعديل (للمندوب فقط وقبل المراجعة) -->
+                        @if(auth()->user()->hasRole('مندوب') && $expense->user_id === auth()->id() && !$expense->isReviewed() && !$expense->isApproved() && !$expense->hasPendingEdit())
                             <a href="{{ route('expense-edit-requests.create', $expense) }}" class="btn btn-warning">
                                 <i class="fas fa-edit"></i> طلب تعديل
                             </a>

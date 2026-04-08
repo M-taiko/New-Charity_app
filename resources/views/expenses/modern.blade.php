@@ -60,6 +60,51 @@
         </div>
     </div>
 
+    <!-- Column Filters -->
+    <div class="row mb-3" data-aos="fade-up" data-aos-delay="350">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body py-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label small mb-1"><i class="fas fa-user"></i> المستخدم</label>
+                            <input type="text" id="filter_user" class="form-control form-control-sm" placeholder="ابحث بالاسم...">
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-2">
+                            <label class="form-label small mb-1"><i class="fas fa-tags"></i> النوع</label>
+                            <select id="filter_type" class="form-select form-select-sm">
+                                <option value="">الكل</option>
+                                <option value="general">مصروف عام</option>
+                                <option value="social_case">حالة اجتماعية</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-2">
+                            <label class="form-label small mb-1"><i class="fas fa-check-circle"></i> حالة المراجعة</label>
+                            <select id="filter_reviewed" class="form-select form-select-sm">
+                                <option value="">الكل</option>
+                                <option value="reviewed">مراجع</option>
+                                <option value="not_reviewed">غير مراجع</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-2">
+                            <label class="form-label small mb-1"><i class="fas fa-calendar"></i> من تاريخ</label>
+                            <input type="date" id="filter_date_from" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-2">
+                            <label class="form-label small mb-1"><i class="fas fa-calendar"></i> إلى تاريخ</label>
+                            <input type="date" id="filter_date_to" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-1">
+                            <button type="button" id="filter_reset" class="btn btn-sm btn-outline-secondary w-100">
+                                <i class="fas fa-times"></i> إعادة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Expenses Table -->
     <div class="row" data-aos="fade-up" data-aos-delay="400">
         <div class="col-12">
@@ -76,9 +121,11 @@
                                 <tr>
                                     <th>المستخدم</th>
                                     <th>النوع</th>
-                                    <th>الحالة</th>
+                                    <th>التصنيف</th>
+                                    <th>الحالة الاجتماعية</th>
                                     <th>المبلغ</th>
-                                    <th>التاريخ</th>
+                                    <th>تاريخ المصروف</th>
+                                    <th>المراجعة</th>
                                     <th>المرفق</th>
                                     <th>الإجراءات</th>
                                 </tr>
@@ -93,14 +140,26 @@
 
 @push('scripts')
 <script>
+    var expensesTable;
+
     $(document).ready(function() {
-        $('#expensesTable').DataTable({
+        expensesTable = $('#expensesTable').DataTable({
             processing: true,
             serverSide: true,
-            ajax: '{{ route("api.expenses.data") }}',
+            ajax: {
+                url: '{{ route("api.expenses.data") }}',
+                data: function(d) {
+                    d.user_filter     = $('#filter_user').val();
+                    d.type_filter     = $('#filter_type').val();
+                    d.reviewed_filter = $('#filter_reviewed').val();
+                    d.date_from       = $('#filter_date_from').val();
+                    d.date_to         = $('#filter_date_to').val();
+                }
+            },
             columns: [
                 { data: 'user_name' },
                 { data: 'type_label' },
+                { data: 'category_name', defaultContent: '-' },
                 { data: 'case_name' },
                 {
                     data: 'amount',
@@ -109,9 +168,19 @@
                     }
                 },
                 {
-                    data: 'created_at',
+                    data: 'expense_date',
                     render: function(data) {
-                        return new Date(data).toLocaleDateString('ar');
+                        if (!data) return '-';
+                        return new Date(data).toLocaleDateString('ar-EG');
+                    }
+                },
+                {
+                    data: 'reviewed_label',
+                    render: function(data) {
+                        if (data === 'مراجع') {
+                            return '<span class="badge bg-success"><i class="fas fa-check"></i> مراجع</span>';
+                        }
+                        return '<span class="badge bg-secondary"><i class="fas fa-hourglass-half"></i> غير مراجع</span>';
                     }
                 },
                 {
@@ -142,7 +211,30 @@
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             }
         });
+
+        // Apply filters on change
+        $('#filter_user').on('input', debounce(function() { expensesTable.ajax.reload(); }, 400));
+        $('#filter_type, #filter_reviewed').on('change', function() { expensesTable.ajax.reload(); });
+        $('#filter_date_from, #filter_date_to').on('change', function() { expensesTable.ajax.reload(); });
+
+        // Reset all filters
+        $('#filter_reset').on('click', function() {
+            $('#filter_user').val('');
+            $('#filter_type').val('');
+            $('#filter_reviewed').val('');
+            $('#filter_date_from').val('');
+            $('#filter_date_to').val('');
+            expensesTable.ajax.reload();
+        });
     });
+
+    function debounce(fn, delay) {
+        var timer;
+        return function() {
+            clearTimeout(timer);
+            timer = setTimeout(fn, delay);
+        };
+    }
 
     // View attachment in modal
     function viewAttachment(expenseId, attachment) {
