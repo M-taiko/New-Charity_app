@@ -23,5 +23,21 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->render(function (\Throwable $e) {
+            if ($e instanceof \Symfony\Component\HttpKernel\Exception\HttpException) {
+                $status = $e->getStatusCode();
+                $viewPath = resource_path("views/errors/{$status}.blade.php");
+
+                // Check if custom error page exists
+                if (in_array($status, [403, 404, 419, 500]) && file_exists($viewPath)) {
+                    try {
+                        return response()->view("errors.{$status}", [], $status);
+                    } catch (\Exception $viewE) {
+                        // If view rendering fails, continue
+                    }
+                }
+            }
+
+            return null; // Let Laravel handle other exceptions
+        });
     })->create();

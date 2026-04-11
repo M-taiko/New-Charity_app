@@ -61,151 +61,155 @@ class ExpenseController extends Controller
     {
         $this->authorize('spend_money');
 
-        // Determine source (default to custody)
-        $source = $request->input('source', 'custody');
+        try {
+            // Determine source (default to custody)
+            $source = $request->input('source', 'custody');
 
-        if ($source === 'treasury') {
-            // Direct treasury spending (for accountants)
-            $this->authorize('direct_spend_from_treasury');
+            if ($source === 'treasury') {
+                // Direct treasury spending (for accountants)
+                $this->authorize('direct_spend_from_treasury');
 
-            // Get treasury balance
-            $treasury = Treasury::first();
-            $treasuryBalance = $treasury ? $treasury->balance : 0;
+                // Get treasury balance
+                $treasury = Treasury::first();
+                $treasuryBalance = $treasury ? $treasury->balance : 0;
 
-            // Validate category to determine if item is required
-            $category = ExpenseCategory::find($request->expense_category_id);
-            $isOtherExpense = $category && $category->code === 'OTHER';
+                // Validate category to determine if item is required
+                $category = ExpenseCategory::find($request->expense_category_id);
+                $isOtherExpense = $category && $category->code === 'OTHER';
 
-            $rules = [
-                'amount' => 'required|numeric|min:0.01|max:' . min($treasuryBalance, 1000000),
-                'expense_category_id' => 'required|exists:expense_categories,id',
-                'expense_type' => 'required|in:social_case,general',
-                'description' => 'required|string|max:500',
-                'location' => 'nullable|string',
-                'social_case_id' => 'nullable|exists:social_cases,id',
-                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
-            ];
+                $rules = [
+                    'amount' => 'required|numeric|min:0.01|max:' . min($treasuryBalance, 1000000),
+                    'expense_category_id' => 'required|exists:expense_categories,id',
+                    'expense_type' => 'required|in:social_case,general',
+                    'description' => 'required|string|max:500',
+                    'location' => 'nullable|string',
+                    'social_case_id' => 'nullable|exists:social_cases,id',
+                    'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+                ];
 
-            // If expense type is social_case, social_case_id is required
-            if ($request->expense_type === 'social_case') {
-                $rules['social_case_id'] = 'required|exists:social_cases,id';
-            }
+                // If expense type is social_case, social_case_id is required
+                if ($request->expense_type === 'social_case') {
+                    $rules['social_case_id'] = 'required|exists:social_cases,id';
+                }
 
-            // Item is required only for non-"OTHER" categories
-            if (!$isOtherExpense) {
-                $rules['expense_item_id'] = 'required|exists:expense_items,id';
+                // Item is required only for non-"OTHER" categories
+                if (!$isOtherExpense) {
+                    $rules['expense_item_id'] = 'required|exists:expense_items,id';
+                } else {
+                    $rules['expense_item_id'] = 'nullable|exists:expense_items,id';
+                }
+
+                $request->validate($rules, [
+                    'amount.max' => 'المبلغ المدخل يتجاوز رصيد الخزينة. الحد الأقصى: ' . number_format($treasuryBalance, 2) . ' ج.م',
+                    'attachment.max' => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
+                    'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
+                ]);
+
+                // Handle file upload
+                $attachmentPath = null;
+                if ($request->hasFile('attachment')) {
+                    $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+                }
+
+                $lineItems = $request->filled('line_items_data')
+                    ? json_decode($request->line_items_data, true)
+                    : null;
+
+                $this->service->recordDirectExpenseFromTreasury(
+                    auth()->id(),
+                    $request->amount,
+                    $request->expense_category_id,
+                    $request->expense_item_id,
+                    $request->description,
+                    $request->location,
+                    $request->social_case_id,
+                    $attachmentPath,
+                    $request->expense_type,
+                    $lineItems
+                );
             } else {
-                $rules['expense_item_id'] = 'nullable|exists:expense_items,id';
-            }
+                // Custody spending - can use multiple custodies automatically
 
-            $request->validate($rules, [
-                'amount.max' => 'المبلغ المدخل يتجاوز رصيد الخزينة. الحد الأقصى: ' . number_format($treasuryBalance, 2) . ' ج.م',
-                'attachment.max' => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
-                'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
-            ]);
+                // Get all active custodies for the user
+                $availableCustodies = Custody::where('agent_id', auth()->id())
+                    ->whereIn('status', ['accepted', 'active'])
+                    ->get()
+                    ->filter(function($custody) {
+                        return $custody->getRemainingBalance() > 0;
+                    });
 
-            // Handle file upload
-            $attachmentPath = null;
-            if ($request->hasFile('attachment')) {
-                $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
-            }
-
-            $lineItems = $request->filled('line_items_data')
-                ? json_decode($request->line_items_data, true)
-                : null;
-
-            $this->service->recordDirectExpenseFromTreasury(
-                auth()->id(),
-                $request->amount,
-                $request->expense_category_id,
-                $request->expense_item_id,
-                $request->description,
-                $request->location,
-                $request->social_case_id,
-                $attachmentPath,
-                $request->expense_type,
-                $lineItems
-            );
-        } else {
-            // Custody spending - can use multiple custodies automatically
-
-            // Get all active custodies for the user
-            $availableCustodies = Custody::where('agent_id', auth()->id())
-                ->whereIn('status', ['accepted', 'active'])
-                ->get()
-                ->filter(function($custody) {
-                    return $custody->getRemainingBalance() > 0;
+                // Calculate total available balance
+                $totalAvailableBalance = $availableCustodies->sum(function($custody) {
+                    return $custody->getRemainingBalance();
                 });
 
-            // Calculate total available balance
-            $totalAvailableBalance = $availableCustodies->sum(function($custody) {
-                return $custody->getRemainingBalance();
-            });
+                // Validate category to determine if item is required
+                $category = ExpenseCategory::find($request->expense_category_id);
+                $isOtherExpense = $category && $category->code === 'OTHER';
 
-            // Validate category to determine if item is required
-            $category = ExpenseCategory::find($request->expense_category_id);
-            $isOtherExpense = $category && $category->code === 'OTHER';
+                $rules = [
+                    'custody_id' => 'nullable|exists:custodies,id', // Optional, for backward compatibility
+                    'amount' => 'required|numeric|min:0.01|max:' . min($totalAvailableBalance, 1000000),
+                    'expense_category_id' => 'required|exists:expense_categories,id',
+                    'expense_type' => 'required|in:social_case,general',
+                    'description' => 'required|string|max:500',
+                    'location' => 'nullable|string',
+                    'social_case_id' => 'nullable|exists:social_cases,id',
+                    'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+                ];
 
-            $rules = [
-                'custody_id' => 'nullable|exists:custodies,id', // Optional, for backward compatibility
-                'amount' => 'required|numeric|min:0.01|max:' . min($totalAvailableBalance, 1000000),
-                'expense_category_id' => 'required|exists:expense_categories,id',
-                'expense_type' => 'required|in:social_case,general',
-                'description' => 'required|string|max:500',
-                'location' => 'nullable|string',
-                'social_case_id' => 'nullable|exists:social_cases,id',
-                'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
-            ];
+                // If expense type is social_case, social_case_id is required
+                if ($request->expense_type === 'social_case') {
+                    $rules['social_case_id'] = 'required|exists:social_cases,id';
+                }
 
-            // If expense type is social_case, social_case_id is required
-            if ($request->expense_type === 'social_case') {
-                $rules['social_case_id'] = 'required|exists:social_cases,id';
+                // Item is required only for non-"OTHER" categories
+                if (!$isOtherExpense) {
+                    $rules['expense_item_id'] = 'required|exists:expense_items,id';
+                } else {
+                    $rules['expense_item_id'] = 'nullable|exists:expense_items,id';
+                }
+
+                $request->validate($rules, [
+                    'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح في جميع عهدك. الحد الأقصى: ' . number_format($totalAvailableBalance, 2) . ' ج.م',
+                    'attachment.max' => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
+                    'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
+                ]);
+
+                // Handle file upload
+                $attachmentPath = null;
+                if ($request->hasFile('attachment')) {
+                    $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+                }
+
+                // Use first custody ID for backward compatibility, or first available
+                $custodyId = $request->custody_id ?? $availableCustodies->first()->id;
+
+                $lineItems = $request->filled('line_items_data')
+                    ? json_decode($request->line_items_data, true)
+                    : null;
+
+                $this->service->recordExpenseWithItems(
+                    $custodyId,
+                    auth()->id(),
+                    $request->amount,
+                    $request->expense_category_id,
+                    $request->expense_item_id,
+                    $request->description,
+                    $request->location,
+                    $request->social_case_id,
+                    $attachmentPath,
+                    $request->expense_type,
+                    $lineItems
+                );
             }
 
-            // Item is required only for non-"OTHER" categories
-            if (!$isOtherExpense) {
-                $rules['expense_item_id'] = 'required|exists:expense_items,id';
-            } else {
-                $rules['expense_item_id'] = 'nullable|exists:expense_items,id';
-            }
+            ActivityLogService::log('created', 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
 
-            $request->validate($rules, [
-                'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح في جميع عهدك. الحد الأقصى: ' . number_format($totalAvailableBalance, 2) . ' ج.م',
-                'attachment.max' => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
-                'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
-            ]);
-
-            // Handle file upload
-            $attachmentPath = null;
-            if ($request->hasFile('attachment')) {
-                $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
-            }
-
-            // Use first custody ID for backward compatibility, or first available
-            $custodyId = $request->custody_id ?? $availableCustodies->first()->id;
-
-            $lineItems = $request->filled('line_items_data')
-                ? json_decode($request->line_items_data, true)
-                : null;
-
-            $this->service->recordExpenseWithItems(
-                $custodyId,
-                auth()->id(),
-                $request->amount,
-                $request->expense_category_id,
-                $request->expense_item_id,
-                $request->description,
-                $request->location,
-                $request->social_case_id,
-                $attachmentPath,
-                $request->expense_type,
-                $lineItems
-            );
+            return redirect()->route('expenses.index')->with('success', 'تم تسجيل المصروف');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'حدث خطأ أثناء تسجيل المصروف: ' . $e->getMessage());
         }
-
-        ActivityLogService::log('created', 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
-
-        return redirect()->route('expenses.index')->with('success', 'تم تسجيل المصروف');
     }
 
     public function show(Expense $expense)
@@ -235,77 +239,81 @@ class ExpenseController extends Controller
 
     public function update(Request $request, Expense $expense)
     {
-        $user = auth()->user();
+        try {
+            $user = auth()->user();
 
-        // فقط المحاسب والمدير يقدروا يعدلوا مباشرة
-        if (!$user->hasRole('محاسب') && !$user->hasRole('مدير')) {
-            abort(403, 'غير مصرح لك بهذا الإجراء');
+            // فقط المحاسب والمدير يقدروا يعدلوا مباشرة
+            if (!$user->hasRole('محاسب') && !$user->hasRole('مدير')) {
+                abort(403, 'غير مصرح لك بهذا الإجراء');
+            }
+
+            // إذا كان المصروف معتمداً، فقط المدير يقدر يعدل
+            if ($expense->isApproved() && !$user->hasRole('مدير')) {
+                abort(403, 'المصروفات المعتمدة لا يمكن تعديلها إلا من قِبَل المدير');
+            }
+
+            $category = ExpenseCategory::find($request->expense_category_id);
+            $isOtherExpense = $category && $category->code === 'OTHER';
+
+            $rules = [
+                'expense_category_id' => 'required|exists:expense_categories,id',
+                'expense_type'        => 'required|in:social_case,general',
+                'amount'              => 'required|numeric|min:0.01|max:1000000',
+                'description'         => 'required|string|max:500',
+                'location'            => 'nullable|string|max:255',
+                'social_case_id'      => 'nullable|exists:social_cases,id',
+                'expense_date'        => 'required|date',
+                'attachment'          => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+            ];
+
+            if ($request->expense_type === 'social_case') {
+                $rules['social_case_id'] = 'required|exists:social_cases,id';
+            }
+
+            $rules['expense_item_id'] = $isOtherExpense
+                ? 'nullable|exists:expense_items,id'
+                : 'required|exists:expense_items,id';
+
+            $request->validate($rules, [
+                'attachment.max'   => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
+                'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
+            ]);
+
+            // تحديث custody.spent إذا تغير المبلغ
+            $oldAmount = (float) $expense->amount;
+            $newAmount = (float) $request->amount;
+
+            if ($expense->custody_id && $oldAmount !== $newAmount) {
+                $custody = Custody::findOrFail($expense->custody_id);
+                $diff = $newAmount - $oldAmount;
+                $custody->increment('spent', $diff);
+            }
+
+            // رفع المرفق الجديد إذا وُجد
+            $attachmentPath = $expense->attachment;
+            if ($request->hasFile('attachment')) {
+                $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+            }
+
+            $expense->update([
+                'expense_category_id' => $request->expense_category_id,
+                'expense_item_id'     => $request->expense_item_id,
+                'type'                => $request->expense_type,
+                'amount'              => $newAmount,
+                'description'         => $request->description,
+                'location'            => $request->location,
+                'social_case_id'      => $request->expense_type === 'social_case' ? $request->social_case_id : null,
+                'expense_date'        => $request->expense_date,
+                'attachment'          => $attachmentPath,
+            ]);
+
+            ActivityLogService::updated($expense, 'تم تعديل المصروف #' . $expense->id . ' (المبلغ: ' . number_format($newAmount, 2) . ' ج.م)');
+
+            return redirect()->route('expenses.show', $expense)
+                ->with('success', 'تم تعديل المصروف بنجاح');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'حدث خطأ أثناء تعديل المصروف: ' . $e->getMessage());
         }
-
-        // إذا كان المصروف معتمداً، فقط المدير يقدر يعدل
-        if ($expense->isApproved() && !$user->hasRole('مدير')) {
-            abort(403, 'المصروفات المعتمدة لا يمكن تعديلها إلا من قِبَل المدير');
-        }
-
-        $category = ExpenseCategory::find($request->expense_category_id);
-        $isOtherExpense = $category && $category->code === 'OTHER';
-
-        $rules = [
-            'expense_category_id' => 'required|exists:expense_categories,id',
-            'expense_type'        => 'required|in:social_case,general',
-            'amount'              => 'required|numeric|min:0.01|max:1000000',
-            'description'         => 'required|string|max:500',
-            'location'            => 'nullable|string|max:255',
-            'social_case_id'      => 'nullable|exists:social_cases,id',
-            'expense_date'        => 'required|date',
-            'attachment'          => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
-        ];
-
-        if ($request->expense_type === 'social_case') {
-            $rules['social_case_id'] = 'required|exists:social_cases,id';
-        }
-
-        $rules['expense_item_id'] = $isOtherExpense
-            ? 'nullable|exists:expense_items,id'
-            : 'required|exists:expense_items,id';
-
-        $request->validate($rules, [
-            'attachment.max'   => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
-            'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
-        ]);
-
-        // تحديث custody.spent إذا تغير المبلغ
-        $oldAmount = (float) $expense->amount;
-        $newAmount = (float) $request->amount;
-
-        if ($expense->custody_id && $oldAmount !== $newAmount) {
-            $custody = Custody::findOrFail($expense->custody_id);
-            $diff = $newAmount - $oldAmount;
-            $custody->increment('spent', $diff);
-        }
-
-        // رفع المرفق الجديد إذا وُجد
-        $attachmentPath = $expense->attachment;
-        if ($request->hasFile('attachment')) {
-            $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
-        }
-
-        $expense->update([
-            'expense_category_id' => $request->expense_category_id,
-            'expense_item_id'     => $request->expense_item_id,
-            'type'                => $request->expense_type,
-            'amount'              => $newAmount,
-            'description'         => $request->description,
-            'location'            => $request->location,
-            'social_case_id'      => $request->expense_type === 'social_case' ? $request->social_case_id : null,
-            'expense_date'        => $request->expense_date,
-            'attachment'          => $attachmentPath,
-        ]);
-
-        ActivityLogService::updated($expense, 'تم تعديل المصروف #' . $expense->id . ' (المبلغ: ' . number_format($newAmount, 2) . ' ج.م)');
-
-        return redirect()->route('expenses.show', $expense)
-            ->with('success', 'تم تعديل المصروف بنجاح');
     }
 
     public function agentExpenses()
@@ -335,7 +343,7 @@ class ExpenseController extends Controller
     {
         $this->authorize('view_all_expenses');
 
-        $query = Expense::with(['user', 'custody', 'socialCase', 'category']);
+        $query = Expense::with(['user', 'custody', 'socialCase', 'category', 'item.category.parent.parent']);
 
         // Date range filter
         if ($request->filled('date_from')) {
@@ -369,6 +377,12 @@ class ExpenseController extends Controller
             ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
             ->addColumn('type_label', fn($row) => $row->type === 'social_case' ? 'حالة اجتماعية' : 'مصروف عام')
             ->addColumn('category_name', fn($row) => $row->category->name ?? '-')
+            ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->format('Y-m-d H:i') : '-')
+            ->addColumn('item_direction', function($row) {
+                if (!$row->item) return '-';
+                $category = $row->item->category;
+                return $category ? $category->full_path . ' > ' . $row->item->name : $row->item->name;
+            })
             ->addColumn('reviewed_label', fn($row) => $row->reviewed_at ? 'مراجع' : 'غير مراجع')
             ->filterColumn('user_name', fn($q, $k) => $q->whereHas('user', fn($q2) => $q2->where('name', 'like', "%$k%")))
             ->toJson();
@@ -387,13 +401,19 @@ class ExpenseController extends Controller
         $custodies = Custody::where('agent_id', $user->id)->pluck('id');
 
         // Get expenses for agent's custodies
-        $expenses = Expense::with(['user', 'custody', 'socialCase'])
+        $expenses = Expense::with(['user', 'custody', 'socialCase', 'item.category.parent.parent'])
             ->whereIn('custody_id', $custodies)
             ->get();
 
         return DataTables::of($expenses)
             ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
             ->addColumn('type_label', fn($row) => $row->type === 'social_case' ? 'حالة اجتماعية' : 'مصروف عام')
+            ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->format('Y-m-d H:i') : '-')
+            ->addColumn('item_direction', function($row) {
+                if (!$row->item) return '-';
+                $category = $row->item->category;
+                return $category ? $category->full_path . ' > ' . $row->item->name : $row->item->name;
+            })
             ->toJson();
     }
 

@@ -124,7 +124,8 @@
                                     <th>التصنيف</th>
                                     <th>الحالة الاجتماعية</th>
                                     <th>المبلغ</th>
-                                    <th>تاريخ المصروف</th>
+                                    <th>التاريخ والوقت</th>
+                                    <th>التوجيه المحاسبي</th>
                                     <th>المراجعة</th>
                                     <th>المرفق</th>
                                     <th>الإجراءات</th>
@@ -168,10 +169,17 @@
                     }
                 },
                 {
-                    data: 'expense_date',
+                    data: 'expense_datetime',
                     render: function(data) {
-                        if (!data) return '-';
-                        return new Date(data).toLocaleDateString('ar-EG');
+                        if (!data || data === '-') return '-';
+                        return data;
+                    }
+                },
+                {
+                    data: 'item_direction',
+                    render: function(data) {
+                        if (!data || data === '-') return '-';
+                        return '<small style="color: #666;">' + data + '</small>';
                     }
                 },
                 {

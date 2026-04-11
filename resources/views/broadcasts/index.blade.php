@@ -42,6 +42,34 @@
                             </select>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label fw-bold">الاستهداف</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" name="target_type" id="target_all" value="all" class="btn-check"
+                                       {{ old('target_type', 'all') === 'all' ? 'checked' : '' }} onchange="toggleUserSelect()">
+                                <label class="btn btn-outline-primary" for="target_all">
+                                    <i class="fas fa-globe"></i> للجميع
+                                </label>
+
+                                <input type="radio" name="target_type" id="target_user" value="user" class="btn-check"
+                                       {{ old('target_type') === 'user' ? 'checked' : '' }} onchange="toggleUserSelect()">
+                                <label class="btn btn-outline-primary" for="target_user">
+                                    <i class="fas fa-user"></i> لشخص محدد
+                                </label>
+                            </div>
+                        </div>
+                        <div class="mb-3" id="userSelectDiv" style="{{ old('target_type') === 'user' ? '' : 'display:none;' }}">
+                            <label class="form-label fw-bold">اختر المستخدم</label>
+                            <select name="target_user_id" class="form-select @error('target_user_id') is-invalid @enderror">
+                                <option value="">-- اختر مستخدم --</option>
+                                @foreach(\App\Models\User::all() as $user)
+                                    <option value="{{ $user->id }}" {{ old('target_user_id') == $user->id ? 'selected' : '' }}>
+                                        {{ $user->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('target_user_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label fw-bold">تنتهي في (اختياري)</label>
                             <input type="datetime-local" name="expires_at" class="form-control"
                                    value="{{ old('expires_at') }}">
@@ -99,13 +127,23 @@
                                         @endif
                                     </td>
                                     <td style="font-size: .8rem;">{{ $b->created_at->format('Y-m-d H:i') }}</td>
-                                    <td>
+                                    <td style="min-width: 120px;">
                                         @if($b->is_active)
-                                        <form action="{{ route('broadcasts.deactivate', $b) }}" method="POST">
+                                        <form action="{{ route('broadcasts.deactivate', $b) }}" method="POST" class="d-inline">
                                             @csrf
                                             <button type="submit" class="btn btn-sm btn-outline-secondary"
-                                                    onclick="return confirm('إيقاف الرسالة؟')">
+                                                    onclick="return confirm('إيقاف الرسالة؟')"
+                                                    title="إيقاف الرسالة">
                                                 <i class="fas fa-stop"></i>
+                                            </button>
+                                        </form>
+                                        @else
+                                        <form action="{{ route('broadcasts.reactivate', $b) }}" method="POST" class="d-inline">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-outline-success"
+                                                    onclick="return confirm('إعادة تفعيل الرسالة للجميع؟')"
+                                                    title="إعادة تفعيل الرسالة">
+                                                <i class="fas fa-play"></i>
                                             </button>
                                         </form>
                                         @endif
@@ -125,4 +163,12 @@
         </div>
     </div>
 </div>
+
+<script>
+    function toggleUserSelect() {
+        const userDiv = document.getElementById('userSelectDiv');
+        const isUser = document.getElementById('target_user').checked;
+        userDiv.style.display = isUser ? 'block' : 'none';
+    }
+</script>
 @endsection

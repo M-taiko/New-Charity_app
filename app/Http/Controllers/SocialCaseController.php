@@ -25,36 +25,13 @@ class SocialCaseController extends Controller
 
     public function store(Request $request)
     {
+        // Phase 1: Quick intake - only required fields
         $request->validate([
             'name' => 'required|string|max:200',
-            'national_id' => 'nullable|string|max:20',
-            'phone' => 'nullable|string|max:20',
-            'description' => 'nullable|string',
-            'assistance_type' => 'required|in:cash,monthly_salary,medicine,treatment,other',
-            'assistance_other' => 'nullable|string|max:100',
+            'phone' => 'required|string|max:20',
+            'affiliated_to' => 'required|string|max:255',
+            'case_intake_status' => 'required|in:searched_by_phone,completed_externally,needs_research',
             'researcher_id' => 'required|exists:users,id',
-            // New fields from Excel
-            'address' => 'nullable|string|max:500',
-            'city' => 'nullable|string|max:100',
-            'district' => 'nullable|string|max:100',
-            'birth_date' => 'nullable|date',
-            'gender' => 'nullable|in:male,female',
-            'marital_status' => 'nullable|in:single,married,widowed,divorced',
-            'family_members_count' => 'nullable|integer|min:1',
-            'monthly_income' => 'nullable|numeric|min:0',
-            'monthly_expenses' => 'nullable|numeric|min:0',
-            'health_conditions' => 'nullable|string',
-            'has_disability' => 'nullable|boolean',
-            'disability_description' => 'nullable|string',
-            'special_needs' => 'nullable|string',
-            'requested_amount' => 'nullable|numeric|min:0',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'file|max:10240|mimes:pdf,doc,docx,jpg,jpeg,png,gif,xlsx,xls',
-            'family_members' => 'nullable|array',
-            'family_members.*.name' => 'required|string|max:255',
-            'family_members.*.relationship' => 'required|string|max:100',
-            'family_members.*.gender' => 'required|in:male,female',
-            'family_members.*.phone' => 'nullable|string|max:20',
         ]);
 
         DB::transaction(function() use ($request) {
@@ -62,13 +39,10 @@ class SocialCaseController extends Controller
                 [
                     'researcher_id' => $request->researcher_id,
                     'status' => 'pending',
+                    'phase' => 1,
                 ],
                 $request->only([
-                    'name', 'national_id', 'phone', 'description', 'assistance_type', 'assistance_other',
-                    'address', 'city', 'district', 'birth_date', 'gender', 'marital_status',
-                    'family_members_count', 'monthly_income', 'monthly_expenses',
-                    'health_conditions', 'has_disability', 'disability_description',
-                    'special_needs', 'requested_amount'
+                    'name', 'phone', 'affiliated_to', 'case_intake_status'
                 ])
             ));
 
@@ -119,12 +93,73 @@ class SocialCaseController extends Controller
     public function update(Request $request, SocialCase $socialCase)
     {
         $this->authorize('manage_social_cases');
+
+        // Phase 2: Advance to full details
+        if ($request->filled('advance_phase') && $request->advance_phase == 2) {
+            // Validate phase 2 fields with national_id format check
+            $rules = [
+                'national_id' => 'required|string|max:20',
+                'nationality' => 'required|in:egyptian,other',
+                'name' => 'required|string|max:200',
+                'phone' => 'required|string|max:20',
+                'description' => 'nullable|string',
+                'assistance_type' => 'required|in:cash,monthly_salary,medicine,treatment,other',
+                'researcher_id' => 'required|exists:users,id',
+                'address' => 'nullable|string|max:500',
+                'city' => 'nullable|string|max:100',
+                'district' => 'nullable|string|max:100',
+                'birth_date' => 'nullable|date',
+                'gender' => 'nullable|in:male,female',
+                'marital_status' => 'nullable|in:single,married,widowed,divorced',
+                'family_members_count' => 'nullable|integer|min:1',
+                'monthly_income' => 'nullable|numeric|min:0',
+                'monthly_expenses' => 'nullable|numeric|min:0',
+                'health_conditions' => 'nullable|string',
+                'has_disability' => 'nullable|boolean',
+                'disability_description' => 'nullable|string',
+                'special_needs' => 'nullable|string',
+                'requested_amount' => 'nullable|numeric|min:0',
+            ];
+
+            // Add national_id format validation for Egyptian nationality
+            if ($request->nationality === 'egyptian') {
+                $rules['national_id'] = 'required|regex:/^\d{14}$/';
+            }
+
+            $request->validate($rules);
+
+            DB::transaction(function() use ($request, $socialCase) {
+                $socialCase->update(array_merge(
+                    ['phase' => 2],
+                    $request->only([
+                        'name', 'national_id', 'phone', 'description', 'assistance_type', 'researcher_id',
+                        'address', 'city', 'district', 'birth_date', 'gender', 'marital_status',
+                        'family_members_count', 'monthly_income', 'monthly_expenses',
+                        'health_conditions', 'has_disability', 'disability_description',
+                        'special_needs', 'requested_amount', 'nationality'
+                    ])
+                ));
+
+                // Delete old family members and create new ones
+                $socialCase->familyMembers()->delete();
+                if ($request->has('family_members') && is_array($request->family_members)) {
+                    foreach ($request->family_members as $member) {
+                        if (!empty($member['name'])) {
+                            $socialCase->familyMembers()->create($member);
+                        }
+                    }
+                }
+            });
+
+            return redirect()->route('social_cases.show', $socialCase)->with('success', 'تم إتمام بيانات الحالة الاجتماعية');
+        }
+
+        // Phase 1: Quick intake
         $request->validate([
             'name' => 'required|string|max:200',
-            'national_id' => 'nullable|string|max:20',
-            'phone' => 'nullable|string|max:20',
-            'description' => 'nullable|string',
-            'assistance_type' => 'required|in:cash,monthly_salary,medicine,treatment,other',
+            'phone' => 'required|string|max:20',
+            'affiliated_to' => 'required|string|max:255',
+            'case_intake_status' => 'required|in:searched_by_phone,completed_externally,needs_research',
             'researcher_id' => 'required|exists:users,id',
             // New fields from Excel
             'address' => 'nullable|string|max:500',

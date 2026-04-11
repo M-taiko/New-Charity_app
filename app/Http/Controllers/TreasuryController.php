@@ -33,14 +33,18 @@ class TreasuryController extends Controller
             'source' => 'required|in:company,external,returnings',
         ]);
 
-        $this->service->addDonation(
-            $request->amount,
-            $request->source,
-            $request->description,
-            auth()->id()
-        );
+        try {
+            $this->service->addDonation(
+                $request->amount,
+                $request->source,
+                $request->description,
+                auth()->id()
+            );
 
-        return back()->with('success', 'تم إضافة التبرع بنجاح');
+            return back()->with('success', 'تم إضافة التبرع بنجاح');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'حدث خطأ أثناء إضافة التبرع: ' . $e->getMessage());
+        }
     }
 
     public function transactionsData()

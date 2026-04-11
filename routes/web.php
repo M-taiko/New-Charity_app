@@ -18,6 +18,8 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\BroadcastController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\ChatPollController;
+use App\Http\Controllers\HrController;
 use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\MaintenanceRequestController;
 use App\Http\Controllers\SupplierController;
@@ -143,17 +145,42 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/chat/poll', [ChatController::class, 'poll'])->name('api.chat.poll');
     Route::delete('/chat/{chatMessage}', [ChatController::class, 'destroy'])->name('chat.destroy');
 
+    // Chat Polls
+    Route::post('/api/chat-polls', [ChatPollController::class, 'store'])->name('api.chat-polls.store');
+    Route::post('/api/chat-polls/{poll}/vote', [ChatPollController::class, 'vote'])->name('api.chat-polls.vote');
+    Route::get('/api/chat-polls/{poll}', [ChatPollController::class, 'show'])->name('api.chat-polls.show');
+    Route::post('/api/chat-polls/{poll}/close', [ChatPollController::class, 'close'])->name('api.chat-polls.close');
+
     // Activity Log
     Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');
+    Route::get('/my-activity', [ActivityLogController::class, 'myActivity'])->name('my-activity.index');
+
+    // HR Module
+    Route::prefix('/hr')->name('hr.')->group(function () {
+        Route::get('/dashboard', [HrController::class, 'dashboard'])->name('dashboard');
+
+        // Employees
+        Route::resource('/employees', HrController::class)->only(['index', 'create', 'store', 'edit', 'update']);
+
+        // Attendance
+        Route::get('/attendance', [HrController::class, 'attendanceIndex'])->name('attendance.index');
+        Route::post('/attendance', [HrController::class, 'attendanceStore'])->name('attendance.store');
+
+        // KPI
+        Route::get('/kpi', [HrController::class, 'kpiIndex'])->name('kpi.index');
+        Route::post('/kpi', [HrController::class, 'kpiStore'])->name('kpi.store');
+    });
 
     // Broadcasts (urgent messages)
     Route::get('/broadcasts', [BroadcastController::class, 'index'])->name('broadcasts.index');
     Route::post('/broadcasts', [BroadcastController::class, 'store'])->name('broadcasts.store');
     Route::post('/broadcasts/{broadcast}/deactivate', [BroadcastController::class, 'deactivate'])->name('broadcasts.deactivate');
+    Route::post('/broadcasts/{broadcast}/reactivate', [BroadcastController::class, 'reactivate'])->name('broadcasts.reactivate');
     Route::post('/broadcasts/dismiss', [BroadcastController::class, 'dismiss'])->name('broadcasts.dismiss');
 
     // Notification Routes
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/api/notifications/poll', [NotificationController::class, 'poll'])->name('api.notifications.poll');
     Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 });

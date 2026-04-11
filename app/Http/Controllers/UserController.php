@@ -105,10 +105,35 @@ class UserController extends Controller
         return back()->with('success', 'تم تحديث الأدوار');
     }
 
-    public function tableData()
+    public function tableData(Request $request)
     {
         $this->authorize('manage_users');
-        $users = User::with('roles')->where('is_hidden', false)->get();
+        $query = User::with('roles')->where('is_hidden', false);
+
+        // البحث بالاسم أو البريد
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // الفلترة بالدور
+        if ($request->filled('role_filter')) {
+            $roleId = $request->role_filter;
+            $query->whereHas('roles', function($q) use ($roleId) {
+                $q->where('roles.id', $roleId);
+            });
+        }
+
+        // الفلترة بالحالة
+        if ($request->filled('status_filter')) {
+            $status = $request->status_filter;
+            $query->where('is_active', $status == 'active' ? true : false);
+        }
+
+        $users = $query->get();
 
         return DataTables::of($users)
             ->addColumn('roles', fn($row) => implode(', ', $row->getRoleNames()->toArray()))

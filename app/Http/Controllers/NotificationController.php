@@ -52,6 +52,26 @@ class NotificationController extends Controller
     }
 
     /**
+     * Poll notifications via AJAX
+     */
+    public function poll()
+    {
+        $unreadCount = Notification::where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->count();
+
+        $latest = Notification::where('user_id', auth()->id())
+            ->latest('created_at')
+            ->limit(5)
+            ->get(['id', 'title', 'message', 'type', 'created_at', 'is_read']);
+
+        return response()->json([
+            'unread_count' => $unreadCount,
+            'latest' => $latest,
+        ]);
+    }
+
+    /**
      * Get the URL for the related resource
      */
     private function getRelatedUrl(Notification $notification): string

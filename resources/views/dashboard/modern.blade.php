@@ -22,7 +22,63 @@
     </div>
 
     <!-- Statistics Row -->
-    @if(auth()->user()->hasRole('مندوب'))
+    @if(auth()->user()->hasRole('باحث اجتماعي'))
+        <!-- Researcher Dashboard -->
+        <div class="row g-4 mb-4" data-aos="fade-up">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card info">
+                    <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="stat-label">إجمالي الحالات</div>
+                    <div class="stat-number" style="color: var(--info);">{{ $researcherStats['total_cases'] ?? 0 }}</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card success">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-label">حالات معتمدة</div>
+                    <div class="stat-number" style="color: var(--success);">{{ $researcherStats['approved_cases'] ?? 0 }}</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card warning">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-label">حالات معلقة</div>
+                    <div class="stat-number" style="color: var(--warning);">{{ $researcherStats['pending_cases'] ?? 0 }}</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card danger">
+                    <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                    <div class="stat-label">حالات مرفوضة</div>
+                    <div class="stat-number" style="color: var(--danger);">{{ $researcherStats['rejected_cases'] ?? 0 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approval Rate Card -->
+        <div class="row mb-4" data-aos="fade-up">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8">
+                                <h5 style="margin: 0 0 1rem 0;"><i class="fas fa-chart-pie"></i> معدل الموافقة</h5>
+                                <div class="progress" style="height: 24px; border-radius: 12px; background: #f0f0f0;">
+                                    <div class="progress-bar" style="width: {{ $researcherStats['approval_rate'] ?? 0 }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-weight: 700; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                                        {{ $researcherStats['approval_rate'] ?? 0 }}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 text-center mt-3 mt-lg-0">
+                                <div class="display-4" style="color: #667eea; font-weight: 700;">{{ $researcherStats['approval_rate'] ?? 0 }}%</div>
+                                <small class="text-muted">معدل القبول</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @elseif(auth()->user()->hasRole('مندوب'))
         <!-- Agent Statistics -->
         @php
             // فلترة العهد النشطة فقط (بدون closed)
@@ -423,7 +479,71 @@
 
     <!-- Charts and Content Row -->
     <div class="row g-4">
-        @if(auth()->user()->hasRole('مندوب'))
+        @if(auth()->user()->hasRole('باحث اجتماعي'))
+            <!-- Researcher's Recent Cases -->
+            <div class="col-12 col-lg-8" data-aos="fade-up" data-aos-delay="400">
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <h5 style="margin: 0;">
+                                    <i class="fas fa-file-alt"></i> آخر الحالات
+                                </h5>
+                            </div>
+                            <a href="{{ route('social_cases.researcher') }}" class="btn btn-light btn-sm">
+                                <i class="fas fa-arrow-left"></i> عرض الكل
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>اسم الحالة</th>
+                                        <th>الحالة</th>
+                                        <th>تاريخ الإنشاء</th>
+                                        <th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($researcherStats['recent_cases'] ?? [] as $case)
+                                        <tr>
+                                            <td><strong>{{ $case->name }}</strong></td>
+                                            <td>
+                                                @switch($case->status)
+                                                    @case('pending')
+                                                        <span class="badge bg-warning">معلقة</span>
+                                                        @break
+                                                    @case('approved')
+                                                        <span class="badge bg-success">معتمدة</span>
+                                                        @break
+                                                    @case('rejected')
+                                                        <span class="badge bg-danger">مرفوضة</span>
+                                                        @break
+                                                @endswitch
+                                            </td>
+                                            <td class="text-muted">{{ $case->created_at->format('d/m/Y') }}</td>
+                                            <td>
+                                                <a href="{{ route('social_cases.show', $case->id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                لا توجد حالات بعد
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @elseif(auth()->user()->hasRole('مندوب'))
             <!-- Agent's Custodies Summary -->
             <div class="col-12 col-lg-8" data-aos="fade-up" data-aos-delay="400">
                 <div class="card">
@@ -744,7 +864,18 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        @if(auth()->user()->hasRole('مندوب'))
+                        @if(auth()->user()->hasRole('باحث اجتماعي'))
+                            <!-- Researcher Quick Actions -->
+                            <a href="{{ route('social_cases.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle"></i> إضافة حالة جديدة
+                            </a>
+                            <a href="{{ route('social_cases.researcher') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-list"></i> حالاتي
+                            </a>
+                            <a href="{{ route('social_cases.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-folder-open"></i> جميع الحالات
+                            </a>
+                        @elseif(auth()->user()->hasRole('مندوب'))
                             <!-- Agent Quick Actions -->
                             <a href="{{ route('expenses.create') }}" class="btn btn-primary">
                                 <i class="fas fa-plus-circle"></i> تسجيل مصروف جديد

@@ -50,6 +50,44 @@
         </div>
     </div>
 
+    <!-- Filters -->
+    <div class="row mb-4" data-aos="fade-up" data-aos-delay="350">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body py-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md-4">
+                            <label class="form-label small fw-600">بحث بالاسم أو البريد</label>
+                            <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="ابحث...">
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small fw-600">فلترة بالدور</label>
+                            <select id="roleFilter" class="form-select form-select-sm">
+                                <option value="">-- جميع الأدوار --</option>
+                                @foreach(\Spatie\Permission\Models\Role::all() as $role)
+                                    <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <label class="form-label small fw-600">فلترة بالحالة</label>
+                            <select id="statusFilter" class="form-select form-select-sm">
+                                <option value="">-- جميع الحالات --</option>
+                                <option value="active">نشط</option>
+                                <option value="inactive">معطل</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <button id="resetFilters" class="btn btn-outline-secondary btn-sm w-100">
+                                <i class="fas fa-redo"></i> إعادة تعيين
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row" data-aos="fade-up" data-aos-delay="400">
         <div class="col-12">
             <div class="card">
@@ -82,10 +120,17 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        $('#usersTable').DataTable({
+        let table = $('#usersTable').DataTable({
             processing: true,
             serverSide: true,
-            ajax: '{{ route("api.users.data") }}',
+            ajax: {
+                url: '{{ route("api.users.data") }}',
+                data: function(d) {
+                    d.search = $('#searchInput').val();
+                    d.role_filter = $('#roleFilter').val();
+                    d.status_filter = $('#statusFilter').val();
+                }
+            },
             columns: [
                 { data: 'name' },
                 { data: 'email' },
@@ -103,6 +148,26 @@
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             }
+        });
+
+        // Wire up filter inputs
+        $('#searchInput').on('keyup', function() {
+            table.draw();
+        });
+
+        $('#roleFilter').on('change', function() {
+            table.draw();
+        });
+
+        $('#statusFilter').on('change', function() {
+            table.draw();
+        });
+
+        $('#resetFilters').on('click', function() {
+            $('#searchInput').val('');
+            $('#roleFilter').val('');
+            $('#statusFilter').val('');
+            table.draw();
         });
     });
 </script>

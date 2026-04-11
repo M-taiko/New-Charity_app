@@ -25,8 +25,71 @@
                             @method('PUT')
                         @endif
 
-                        <!-- Section 1: Basic Information -->
+                        <!-- PHASE 1: Quick Intake (only shown on create) -->
+                        @if(!isset($socialCase))
+                        <div class="mb-4" id="phase-1-section">
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle"></i> <strong>المرحلة الأولى: الاستقبال السريع</strong>
+                                <p class="mb-0 mt-2" style="font-size: 0.9rem;">يرجى إدخال البيانات الأساسية. يمكنك إتمام البيانات الكاملة لاحقاً.</p>
+                            </div>
+
+                            <h6 style="color: #4facfe; font-weight: 700; border-bottom: 2px solid #4facfe; padding-bottom: 10px; margin-bottom: 20px;">
+                                <i class="fas fa-user-circle"></i> البيانات الأساسية
+                            </h6>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label"><strong>اسم الحالة <span class="text-danger">*</span></strong></label>
+                                    <input type="text" name="name" class="form-control @error('name') is-invalid @enderror"
+                                           value="{{ old('name') }}" required placeholder="اسم الشخص المحتاج">
+                                    @error('name')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label"><strong>رقم الهاتف <span class="text-danger">*</span></strong></label>
+                                    <input type="tel" name="phone" class="form-control @error('phone') is-invalid @enderror"
+                                           value="{{ old('phone') }}" required placeholder="رقم هاتفه/ها">
+                                    @error('phone')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label"><strong>تابعة لمن <span class="text-danger">*</span></strong></label>
+                                    <input type="text" name="affiliated_to" class="form-control @error('affiliated_to') is-invalid @enderror"
+                                           value="{{ old('affiliated_to') }}" required placeholder="جمعية / جهة / مدرسة...">
+                                    @error('affiliated_to')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label"><strong>حالة الحالة <span class="text-danger">*</span></strong></label>
+                                    <select name="case_intake_status" class="form-select @error('case_intake_status') is-invalid @enderror" required>
+                                        <option value="">-- اختر --</option>
+                                        <option value="searched_by_phone" {{ old('case_intake_status') == 'searched_by_phone' ? 'selected' : '' }}>تم البحث بالهاتف</option>
+                                        <option value="completed_externally" {{ old('case_intake_status') == 'completed_externally' ? 'selected' : '' }}>تم التنفيذ من الخارج</option>
+                                        <option value="needs_research" {{ old('case_intake_status') == 'needs_research' ? 'selected' : '' }}>تحتاج لبحث</option>
+                                    </select>
+                                    @error('case_intake_status')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+                        @else
+                        <!-- PHASE 2+: Full Details (shown on edit) -->
                         <div class="mb-4">
+                            @if($socialCase->phase == 1)
+                            <div class="alert alert-warning" role="alert">
+                                <i class="fas fa-flag"></i> <strong>المرحلة الثانية: إتمام البيانات الكاملة</strong>
+                                <p class="mb-0 mt-2" style="font-size: 0.9rem;">أكمل البيانات الإضافية للحالة.</p>
+                            </div>
+                            <input type="hidden" name="advance_phase" value="2">
+                            @endif
+
                             <h6 style="color: #4facfe; font-weight: 700; border-bottom: 2px solid #4facfe; padding-bottom: 10px; margin-bottom: 20px;">
                                 <i class="fas fa-user-circle"></i> البيانات الأساسية
                             </h6>
@@ -41,16 +104,48 @@
                                     @enderror
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label"><strong>رقم الهوية</strong></label>
-                                    <input type="text" name="national_id" class="form-control @error('national_id') is-invalid @enderror"
-                                           value="{{ old('national_id', $socialCase->national_id ?? '') }}">
-                                    @error('national_id')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    <label class="form-label"><strong>الجنسية <span class="text-danger">*</span></strong></label>
+                                    <div class="btn-group w-100" role="group">
+                                        <input type="radio" name="nationality" id="nationality_egyptian" value="egyptian"
+                                               class="btn-check" {{ old('nationality', $socialCase->nationality ?? '') == 'egyptian' ? 'checked' : '' }}
+                                               onchange="toggleNationalityField()">
+                                        <label class="btn btn-outline-primary" for="nationality_egyptian">
+                                            <i class="fas fa-flag"></i> مصري
+                                        </label>
+
+                                        <input type="radio" name="nationality" id="nationality_other" value="other"
+                                               class="btn-check" {{ old('nationality', $socialCase->nationality ?? '') == 'other' ? 'checked' : '' }}
+                                               onchange="toggleNationalityField()">
+                                        <label class="btn btn-outline-primary" for="nationality_other">
+                                            <i class="fas fa-globe"></i> أخرى
+                                        </label>
+                                    </div>
+                                    @error('nationality')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
                                 </div>
                             </div>
 
                             <div class="row">
+                                <div class="col-md-6 mb-3" id="national_id_field">
+                                    <label class="form-label"><strong>رقم الهوية الوطنية <span class="text-danger" id="id_required">*</span></strong></label>
+                                    <input type="text" id="national_id_input" name="national_id" class="form-control @error('national_id') is-invalid @enderror"
+                                           value="{{ old('national_id', $socialCase->national_id ?? '') }}"
+                                           placeholder="14 رقم للمصريين" maxlength="14" pattern="\d{14}">
+                                    <small class="text-muted d-block mt-1" id="national_id_hint">أدخل 14 رقم فقط للمصريين</small>
+                                    @error('national_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-6 mb-3" id="passport_field" style="display: none;">
+                                    <label class="form-label"><strong>رقم الهوية/جواز <span class="text-danger">*</span></strong></label>
+                                    <input type="text" id="passport_input" name="national_id" class="form-control @error('national_id') is-invalid @enderror"
+                                           value="{{ old('national_id', $socialCase->national_id ?? '') }}"
+                                           placeholder="رقم جواز السفر أو الهوية">
+                                    @error('national_id')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label"><strong>رقم الهاتف</strong></label>
                                     <input type="tel" name="phone" class="form-control @error('phone') is-invalid @enderror"
@@ -59,7 +154,10 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                                <div class="col-md-6 mb-3">
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
                                     <label class="form-label"><strong>الجنس</strong></label>
                                     <select name="gender" class="form-select @error('gender') is-invalid @enderror">
                                         <option value="">-- اختر --</option>
@@ -70,9 +168,6 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
-                            </div>
-
-                            <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label"><strong>تاريخ الميلاد</strong></label>
                                     <input type="date" name="birth_date" class="form-control @error('birth_date') is-invalid @enderror"
@@ -94,6 +189,9 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
+                            </div>
+
+                            <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <label class="form-label"><strong>عدد أفراد الأسرة</strong></label>
                                     <input type="number" id="family_members_count" name="family_members_count" class="form-control @error('family_members_count') is-invalid @enderror"
@@ -102,10 +200,32 @@
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
                                 </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label"><strong>تابعة لمن</strong></label>
+                                    <input type="text" name="affiliated_to" class="form-control @error('affiliated_to') is-invalid @enderror"
+                                           value="{{ old('affiliated_to', $socialCase->affiliated_to ?? '') }}">
+                                    @error('affiliated_to')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label"><strong>حالة الحالة</strong></label>
+                                    <select name="case_intake_status" class="form-select @error('case_intake_status') is-invalid @enderror">
+                                        <option value="">-- اختر --</option>
+                                        <option value="searched_by_phone" {{ old('case_intake_status', $socialCase->case_intake_status ?? '') == 'searched_by_phone' ? 'selected' : '' }}>تم البحث بالهاتف</option>
+                                        <option value="completed_externally" {{ old('case_intake_status', $socialCase->case_intake_status ?? '') == 'completed_externally' ? 'selected' : '' }}>تم التنفيذ من الخارج</option>
+                                        <option value="needs_research" {{ old('case_intake_status', $socialCase->case_intake_status ?? '') == 'needs_research' ? 'selected' : '' }}>تحتاج لبحث</option>
+                                    </select>
+                                    @error('case_intake_status')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
+                        @endif
 
-                        <!-- Section 2: Location Information -->
+                        <!-- Section 2: Location Information (Phase 2 only) -->
+                        @if(isset($socialCase))
                         <div class="mb-4">
                             <h6 style="color: #4facfe; font-weight: 700; border-bottom: 2px solid #4facfe; padding-bottom: 10px; margin-bottom: 20px;">
                                 <i class="fas fa-map-marker-alt"></i> معلومات السكن
@@ -139,8 +259,10 @@
                                 </div>
                             </div>
                         </div>
+                        @endif
 
-                        <!-- Section 2.5: Family Members Details -->
+                        <!-- Section 2.5: Family Members Details (Phase 2 only) -->
+                        @if(isset($socialCase))
                         <div class="mb-4" id="family-members-section" style="display: none;">
                             <h6 style="color: #4facfe; font-weight: 700; border-bottom: 2px solid #4facfe; padding-bottom: 10px; margin-bottom: 20px;">
                                 <i class="fas fa-users"></i> بيانات أفراد العائلة
@@ -273,6 +395,7 @@
                                 @enderror
                             </div>
                         </div>
+                        @endif
 
                         <!-- Hidden field -->
                         @if(!isset($socialCase))
@@ -300,6 +423,29 @@
 <script>
     // Existing family members data (if editing)
     const existingFamilyMembers = @json(isset($socialCase) && $socialCase->familyMembers ? $socialCase->familyMembers->toArray() : []);
+
+    // Toggle nationality field (Egyptian national_id vs other passport)
+    function toggleNationalityField() {
+        const nationality = document.querySelector('input[name="nationality"]:checked').value;
+        const nationalIdField = document.getElementById('national_id_field');
+        const passportField = document.getElementById('passport_field');
+        const nationalIdInput = document.getElementById('national_id_input');
+        const passportInput = document.getElementById('passport_input');
+
+        if (nationality === 'egyptian') {
+            nationalIdField.style.display = 'block';
+            passportField.style.display = 'none';
+            nationalIdInput.disabled = false;
+            passportInput.disabled = true;
+            document.getElementById('national_id_hint').textContent = 'أدخل 14 رقم فقط للمصريين';
+        } else {
+            nationalIdField.style.display = 'none';
+            passportField.style.display = 'block';
+            nationalIdInput.disabled = true;
+            passportInput.disabled = false;
+            document.getElementById('national_id_hint').textContent = 'أدخل رقم جواز السفر أو الهوية';
+        }
+    }
 
     function toggleDisabilityField() {
         const hasDisability = document.querySelector('select[name="has_disability"]').value;
@@ -403,10 +549,14 @@
 
     // Check expense warning
     function checkExpenseWarning() {
-        const income = parseFloat(document.getElementById('monthly_income').value) || 0;
-        const expenses = parseFloat(document.getElementById('monthly_expenses').value) || 0;
-        const warning = document.getElementById('expense-warning');
+        const incomeField = document.getElementById('monthly_income');
         const expensesField = document.getElementById('monthly_expenses');
+        const warning = document.getElementById('expense-warning');
+
+        if (!incomeField || !expensesField) return;
+
+        const income = parseFloat(incomeField.value) || 0;
+        const expenses = parseFloat(expensesField.value) || 0;
 
         if (expenses > income && income > 0) {
             warning.style.display = 'block';
@@ -419,6 +569,11 @@
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', function() {
+        // Check if we're in Phase 2 edit mode
+        if (document.getElementById('nationality_egyptian')) {
+            toggleNationalityField();
+        }
+
         toggleDisabilityField();
         toggleOtherAssistance();
         updateFamilyMembersFields();

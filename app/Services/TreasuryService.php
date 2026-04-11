@@ -35,7 +35,7 @@ class TreasuryService
 
                 $this->notifyManagers(
                     'طلب عهدة جديد',
-                    "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م",
+                    "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م - يرجى المراجعة والموافقة",
                     'warning',
                     $custody->id,
                     'custody',
@@ -43,7 +43,7 @@ class TreasuryService
                 );
                 $this->notifyAccountants(
                     'طلب عهدة جديد',
-                    "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م",
+                    "المندوب {$agent->name} يطلب عهدة بقيمة {$amount} ج.م - يرجى المراجعة والموافقة",
                     'warning',
                     $custody->id,
                     'custody',
@@ -51,10 +51,12 @@ class TreasuryService
                 );
             } else {
                 // Manager/Accountant created: notify agent that custody was assigned
+                $accountant = User::find($accountantId);
+                $accountantName = $accountant ? $accountant->name : 'المحاسب';
                 $this->notifyUser(
                     $agentId,
                     'عهدة جديدة تتطلب موافقتك',
-                    "تم تخصيص عهدة لك بقيمة {$amount} ج.م. يرجى قبول أو رفض العهدة",
+                    "تم إصدار عهدة جديدة بقيمة {$amount} ج.م بواسطة {$accountantName} - يرجى قبول أو رفض العهدة",
                     'warning',
                     $custody->id,
                     'custody'

@@ -26,6 +26,12 @@ class SocialCase extends Model
         'reviewed_at',
         'reviewed_by',
         'is_active',
+        // Phase fields
+        'phase',
+        'affiliated_to',
+        'case_intake_status',
+        'nationality',
+        'id_type',
         // New fields from Excel
         'address',
         'city',
@@ -48,6 +54,7 @@ class SocialCase extends Model
         'reviewed_at' => 'datetime',
         'birth_date' => 'date',
         'has_disability' => 'boolean',
+        'phase' => 'integer',
         'is_verified' => 'boolean',
         'family_members_count' => 'integer',
         'monthly_income' => 'decimal:2',

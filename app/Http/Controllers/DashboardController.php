@@ -34,7 +34,26 @@ class DashboardController extends Controller
         $selectedYear     = (int) $request->get('year', now()->year);
         $availableYears   = [];
 
-        if (!$user->hasRole('مندوب')) {
+        // للباحث الاجتماعي فقط: إحصائيات خاصة به
+        $researcherStats = [];
+        if ($user->hasRole('باحث اجتماعي')) {
+            $totalCases    = SocialCase::where('researcher_id', $user->id)->count();
+            $approvedCases = SocialCase::where('researcher_id', $user->id)->where('status', 'approved')->count();
+            $pendingCases  = SocialCase::where('researcher_id', $user->id)->where('status', 'pending')->count();
+            $rejectedCases = SocialCase::where('researcher_id', $user->id)->where('status', 'rejected')->count();
+            $recentCases   = SocialCase::where('researcher_id', $user->id)->latest()->limit(5)->get();
+
+            $researcherStats = [
+                'total_cases'    => $totalCases,
+                'approved_cases' => $approvedCases,
+                'pending_cases'  => $pendingCases,
+                'rejected_cases' => $rejectedCases,
+                'approval_rate'  => $totalCases > 0 ? round(($approvedCases / $totalCases) * 100) : 0,
+                'recent_cases'   => $recentCases,
+            ];
+        }
+
+        if (!$user->hasRole('مندوب') && !$user->hasRole('باحث اجتماعي')) {
             // السنوات المتاحة بناءً على بيانات الخزينة والمصروفات
             $firstYear = (int) min(
                 Custody::min(\DB::raw('YEAR(created_at)')) ?? now()->year,
@@ -129,7 +148,8 @@ class DashboardController extends Controller
         return view('dashboard.modern', compact(
             'treasury', 'activeCustodies', 'pendingCases', 'todayExpenses', 'totalSpent',
             'totalCustodiesAmount', 'totalAssets',
-            'agentsStats', 'researchersStats', 'yearStats', 'selectedYear', 'availableYears'
+            'agentsStats', 'researchersStats', 'yearStats', 'selectedYear', 'availableYears',
+            'researcherStats'
         ));
     }
 

@@ -72,7 +72,8 @@
                                 <tr>
                                     <th>النوع</th>
                                     <th>المبلغ</th>
-                                    <th>التاريخ</th>
+                                    <th>التاريخ والوقت</th>
+                                    <th>التوجيه المحاسبي</th>
                                     <th>الوصف</th>
                                     <th>الحالة الاجتماعية</th>
                                     <th>الإجراءات</th>
@@ -107,9 +108,15 @@
                     }
                 },
                 {
-                    data: 'expense_date',
+                    data: 'expense_datetime',
                     render: function(data) {
-                        return new Date(data).toLocaleDateString('ar-SA');
+                        return data && data !== '-' ? data : '-';
+                    }
+                },
+                {
+                    data: 'item_direction',
+                    render: function(data) {
+                        return data && data !== '-' ? '<small style="color: #666;">' + data + '</small>' : '-';
                     }
                 },
                 { data: 'description' },

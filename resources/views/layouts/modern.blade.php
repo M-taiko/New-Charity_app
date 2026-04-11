@@ -641,7 +641,7 @@
 
     {{-- Urgent Broadcast Overlay --}}
     @php
-        $activeBroadcast = \App\Models\Broadcast::activeNow();
+        $activeBroadcast = \App\Models\Broadcast::activeNow(auth()->id());
         $dismissedBroadcasts = session('dismissed_broadcasts', []);
         $showBroadcast = $activeBroadcast && !in_array($activeBroadcast->id, $dismissedBroadcasts);
     @endphp
@@ -1009,6 +1009,45 @@
                 </li>
                 @endcan
 
+                <li>
+                    <a href="{{ route('my-activity.index') }}" class="@if(Route::current()->getName() == 'my-activity.index') active @endif">
+                        <i class="fas fa-user-clock"></i>
+                        <span>سجل نشاطي</span>
+                    </a>
+                </li>
+
+                @if(auth()->user()->hasRole('مدير') || auth()->user()->hasRole('محاسب'))
+                <li style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
+                        الموارد البشرية
+                    </span>
+                </li>
+                <li>
+                    <a href="{{ route('hr.dashboard') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'hr.')) active @endif">
+                        <i class="fas fa-users"></i>
+                        <span>إدارة الموارد البشرية</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('hr.employees.index') }}" class="@if(Route::current()->getName() == 'hr.employees.index') active @endif">
+                        <i class="fas fa-list"></i>
+                        <span>الموظفون</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('hr.attendance.index') }}" class="@if(Route::current()->getName() == 'hr.attendance.index') active @endif">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>الحضور والغياب</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('hr.kpi.index') }}" class="@if(Route::current()->getName() == 'hr.kpi.index') active @endif">
+                        <i class="fas fa-chart-line"></i>
+                        <span>مؤشرات الأداء</span>
+                    </a>
+                </li>
+                @endif
+
                 @can('manage_users')
                 <li style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="{{ route('users.index') }}" class="@if(Route::current()->getName() == 'users.index') active @endif">
@@ -1067,6 +1106,32 @@
             </div>
         @endif
 
+        @if (session('error'))
+            <div class="alert alert-danger alert-dismissible fade show" role="alert" data-aos="fade-in">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <i class="fas fa-times-circle" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <strong>خطأ!</strong>
+                        <div>{{ session('error') }}</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
+        @if (session('warning'))
+            <div class="alert alert-warning alert-dismissible fade show" role="alert" data-aos="fade-in">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 1.5rem;"></i>
+                    <div>
+                        <strong>تنبيه!</strong>
+                        <div>{{ session('warning') }}</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        @endif
+
         @yield('content')
     </div>
 
@@ -1099,6 +1164,59 @@
                 }
             });
         });
+
+        // Notification Sound - Web Audio API
+        function playNotificationSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.3);
+            } catch(e) {
+                console.log('Notification sound not supported');
+            }
+        }
+
+        // Notification Polling
+        let lastUnreadCount = {{ $unreadCount ?? 0 }};
+        setInterval(function() {
+            fetch('/api/notifications/poll', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.unread_count > lastUnreadCount) {
+                    playNotificationSound();
+                }
+                lastUnreadCount = data.unread_count;
+
+                // Update badge
+                const badge = document.querySelector('.notification-badge');
+                const bell = document.querySelector('.notification-bell');
+                if (badge) {
+                    if (data.unread_count > 0) {
+                        badge.textContent = data.unread_count;
+                        badge.style.display = 'block';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                } else if (data.unread_count > 0) {
+                    const newBadge = document.createElement('span');
+                    newBadge.className = 'notification-badge';
+                    newBadge.textContent = data.unread_count;
+                    if (bell) bell.appendChild(newBadge);
+                }
+            })
+            .catch(e => console.log('Poll failed:', e));
+        }, 15000);
 
         // Toggle Notifications
         function toggleNotifications() {
