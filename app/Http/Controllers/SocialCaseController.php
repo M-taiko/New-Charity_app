@@ -10,6 +10,7 @@ use App\Services\ActivityLogService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class SocialCaseController extends Controller
 {
@@ -55,7 +56,49 @@ class SocialCaseController extends Controller
                 }
             }
 
-            // Handle file uploads
+            // Handle document uploads (new format)
+            if ($request->filled('documents')) {
+                try {
+                    $documents = json_decode($request->documents, true);
+
+                    if (is_array($documents)) {
+                        foreach ($documents as $doc) {
+                            if (!empty($doc['file']) && !empty($doc['name'])) {
+                                // Decode base64 file data
+                                $fileData = $doc['file'];
+                                if (strpos($fileData, 'data:') === 0) {
+                                    list($type, $fileData) = explode(';', $fileData);
+                                    list(, $fileData) = explode(',', $fileData);
+                                    $fileData = base64_decode($fileData);
+                                }
+
+                                // Generate unique filename
+                                $fileName = time() . '_' . str_replace([' ', '/'], '_', $doc['name']);
+                                $filePath = 'social-cases/' . $case->id . '/' . $fileName;
+
+                                // Create directory if needed
+                                if (!Storage::disk('public')->exists('social-cases/' . $case->id)) {
+                                    Storage::disk('public')->makeDirectory('social-cases/' . $case->id);
+                                }
+
+                                // Save file
+                                Storage::disk('public')->put($filePath, $fileData);
+
+                                SocialCaseDocument::create([
+                                    'social_case_id' => $case->id,
+                                    'name' => $doc['name'],
+                                    'file_path' => $filePath,
+                                    'file_type' => $doc['type'] ?? '',
+                                ]);
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Error saving documents: ' . $e->getMessage());
+                }
+            }
+
+            // Handle legacy file uploads if any
             if ($request->hasFile('attachments')) {
                 foreach ($request->file('attachments') as $file) {
                     $fileName = $file->getClientOriginalName();

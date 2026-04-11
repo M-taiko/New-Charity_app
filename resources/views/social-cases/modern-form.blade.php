@@ -397,6 +397,90 @@
                         </div>
                         @endif
 
+                        <!-- Section 6: Documents -->
+                        <div class="mb-4">
+                            <h6 style="color: #4facfe; font-weight: 700; border-bottom: 2px solid #4facfe; padding-bottom: 10px; margin-bottom: 20px;">
+                                <i class="fas fa-file-upload"></i> المستندات والصور
+                            </h6>
+
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle"></i> يمكنك رفع صور ومستندات مختلفة للحالة (الطاقة الشخصية، صورة شخصية، بطاقات العائلة، صور البيت، إلخ)
+                            </div>
+
+                            <!-- Existing Documents (if editing) -->
+                            @if(isset($socialCase) && $socialCase->documents->count() > 0)
+                            <div class="mb-4">
+                                <h6 style="color: #6366f1; margin-bottom: 15px;">
+                                    <i class="fas fa-list"></i> المستندات المرفوعة ({{ $socialCase->documents->count() }})
+                                </h6>
+                                <div class="row">
+                                    @foreach($socialCase->documents as $doc)
+                                    <div class="col-md-6 mb-3">
+                                        <div class="card border" style="position: relative;">
+                                            <div class="card-body">
+                                                <div class="d-flex align-items-start gap-2">
+                                                    <div style="flex-grow: 1;">
+                                                        <h6 class="mb-1">{{ $doc->name }}</h6>
+                                                        <small class="text-muted">{{ $doc->file_type ?? 'ملف' }}</small>
+                                                    </div>
+                                                    <a href="{{ asset('storage/' . $doc->file_path) }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            @endif
+
+                            <!-- Document Upload Form -->
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label"><strong>وصف المستند</strong></label>
+                                    <select id="doc_type_select" class="form-select">
+                                        <option value="">اختر نوع المستند</option>
+                                        <option value="national_id">الهوية الشخصية</option>
+                                        <option value="passport">جواز السفر</option>
+                                        <option value="family_book">دفتر العائلة</option>
+                                        <option value="birth_certificate">شهادة الميلاد</option>
+                                        <option value="marriage_certificate">شهادة الزواج</option>
+                                        <option value="divorce_certificate">شهادة الطلاق</option>
+                                        <option value="school_certificate">شهادة دراسية</option>
+                                        <option value="medical_report">تقرير طبي</option>
+                                        <option value="disability_certificate">شهادة إعاقة</option>
+                                        <option value="personal_photo">صورة شخصية</option>
+                                        <option value="family_photo">صورة عائلية</option>
+                                        <option value="house_exterior">صورة البيت من الخارج</option>
+                                        <option value="house_interior">صورة البيت من الداخل</option>
+                                        <option value="work_certificate">شهادة عمل</option>
+                                        <option value="income_certificate">شهادة دخل</option>
+                                        <option value="utility_bill">فاتورة كهرباء/ماء</option>
+                                        <option value="other">أخرى</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label"><strong>ملف المستند</strong></label>
+                                    <input type="file" id="document_file" class="form-control" accept="image/*,.pdf,.doc,.docx">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <button type="button" class="btn btn-outline-primary" onclick="addDocument()">
+                                    <i class="fas fa-plus"></i> إضافة مستند
+                                </button>
+                            </div>
+
+                            <!-- Documents List -->
+                            <div id="documents-list" class="row" style="margin-top: 20px;">
+                                <!-- Added documents will appear here -->
+                            </div>
+
+                            <!-- Hidden input to store documents -->
+                            <input type="hidden" id="documents_json" name="documents" value="[]">
+                        </div>
+
                         <!-- Hidden field -->
                         @if(!isset($socialCase))
                             <input type="hidden" name="researcher_id" value="{{ auth()->id() }}">
@@ -565,6 +649,89 @@
             warning.style.display = 'none';
             expensesField.classList.remove('border-danger');
         }
+    }
+
+    // Documents management
+    let uploadedDocuments = [];
+
+    function addDocument() {
+        const docTypeSelect = document.getElementById('doc_type_select');
+        const fileInput = document.getElementById('document_file');
+
+        if (!docTypeSelect.value) {
+            alert('يرجى اختيار نوع المستند');
+            return;
+        }
+
+        if (!fileInput.files[0]) {
+            alert('يرجى اختيار ملف');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const docType = docTypeSelect.value;
+        const docTypeText = docTypeSelect.options[docTypeSelect.selectedIndex].text;
+
+        // Create a FileReader to read the file
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            uploadedDocuments.push({
+                name: docTypeText,
+                type: docType,
+                file: file,
+                fileData: e.target.result // Base64 encoded file
+            });
+
+            // Update the display
+            renderDocuments();
+
+            // Reset the form
+            docTypeSelect.value = '';
+            fileInput.value = '';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function renderDocuments() {
+        const container = document.getElementById('documents-list');
+        container.innerHTML = '';
+
+        uploadedDocuments.forEach((doc, index) => {
+            const docDiv = document.createElement('div');
+            docDiv.className = 'col-md-6 mb-3';
+            docDiv.innerHTML = `
+                <div class="card border border-success" style="background: rgba(34, 197, 94, 0.05);">
+                    <div class="card-body">
+                        <div class="d-flex align-items-start gap-2 mb-2">
+                            <div style="flex-grow: 1;">
+                                <h6 class="mb-1" style="color: #22c55e;">
+                                    <i class="fas fa-file-alt"></i> ${doc.name}
+                                </h6>
+                                <small class="text-muted">${doc.file.name}</small>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeDocument(${index})">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(docDiv);
+        });
+
+        // Update hidden input with documents data
+        const documentsData = uploadedDocuments.map(doc => ({
+            name: doc.name,
+            type: doc.type,
+            file: doc.fileData,
+            fileName: doc.file.name
+        }));
+        document.getElementById('documents_json').value = JSON.stringify(documentsData);
+    }
+
+    function removeDocument(index) {
+        uploadedDocuments.splice(index, 1);
+        renderDocuments();
     }
 
     // Initialize on page load
