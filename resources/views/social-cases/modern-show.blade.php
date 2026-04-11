@@ -207,8 +207,8 @@
                                         <small style="color: #6b7280;">{{ $document->file_type }}</small>
                                     </div>
                                 </div>
-                                <a href="{{ '/storage/app/public/' . $document->file_path }}" class="btn btn-sm btn-outline-primary" download>
-                                    <i class="fas fa-download"></i> تحميل
+                                <a href="{{ asset('storage/' . $document->file_path) }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                    <i class="fas fa-eye"></i> عرض
                                 </a>
                             </div>
                             @endforeach
