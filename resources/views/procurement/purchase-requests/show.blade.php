@@ -74,13 +74,10 @@
                 <div class="card-body d-flex flex-column gap-2">
 
                     @if($purchaseRequest->status === 'pending')
-                    {{-- Approve --}}
-                    <form action="{{ route('purchase-requests.approve', $purchaseRequest) }}" method="POST">
-                        @csrf
-                        <button type="submit" class="btn btn-success w-100">
-                            <i class="fas fa-check"></i> الموافقة على الطلب
-                        </button>
-                    </form>
+                    {{-- Approve with modal --}}
+                    <button type="button" class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#approveModal">
+                        <i class="fas fa-check"></i> الموافقة على الطلب
+                    </button>
 
                     {{-- Reject --}}
                     <button class="btn btn-danger w-100" data-bs-toggle="collapse" data-bs-target="#rejectForm">
@@ -127,4 +124,209 @@
         </div>
     </div>
 </div>
+
+<!-- Approval Modal with Treasury and Category Selection -->
+<div class="modal fade" id="approveModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-check-circle"></i> الموافقة على طلب الشراء</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('purchase-requests.approve', $purchaseRequest) }}" method="POST" onsubmit="return validateApproval()">
+                @csrf
+
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> حدد الخزائن التي سيتم صرف المبلغ منها والفئة المحاسبية
+                    </div>
+
+                    <!-- Request Summary -->
+                    <div class="card mb-3" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1)); border: 1px solid rgba(76, 175, 80, 0.3);">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">عنوان الطلب</p>
+                                    <h6 style="margin: 5px 0 0; color: #333;">{{ $purchaseRequest->title }}</h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ المراد صرفه</p>
+                                    <h6 style="margin: 5px 0 0; color: #4caf50; font-weight: bold;">
+                                        {{ number_format($purchaseRequest->estimated_cost ?? 0, 2) }} ج.م
+                                    </h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expense Category Selection -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الفئة المحاسبية <span class="text-danger">*</span></strong></label>
+                        <select name="expense_category_id" id="expenseCategorySelect" class="form-select @error('expense_category_id') is-invalid @enderror" required>
+                            <option value="">-- اختر الفئة --</option>
+                            @forelse($expenseCategories ?? [] as $category)
+                                <option value="{{ $category->id }}">{{ $category->fullPath }}</option>
+                            @empty
+                                <option disabled>لا توجد فئات متاحة</option>
+                            @endforelse
+                        </select>
+                        @error('expense_category_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Primary Treasury Selection -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الخزينة الرئيسية <span class="text-danger">*</span></strong></label>
+                        <select name="treasury_id" id="primaryTreasurySelect" class="form-select @error('treasury_id') is-invalid @enderror"
+                                onchange="updateTreasuryAmounts()" required>
+                            <option value="">-- اختر الخزينة --</option>
+                            @forelse($treasuries ?? [] as $treasury)
+                                <option value="{{ $treasury->id }}" data-balance="{{ $treasury->balance }}">
+                                    {{ $treasury->name }} (الرصيد: {{ number_format($treasury->balance, 2) }} ج.م)
+                                </option>
+                            @empty
+                                <option disabled>لا توجد خزائن متاحة</option>
+                            @endforelse
+                        </select>
+                        @error('treasury_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Treasury Distribution -->
+                    <div class="mb-3">
+                        <label class="form-label"><strong>توزيع الصرف على الخزائن <span class="text-danger">*</span></strong></label>
+                        <div id="treasuryDistribution" style="max-height: 300px; overflow-y: auto;">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                        @error('treasury_amounts')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <!-- Distribution Summary -->
+                    <div class="card mb-3" style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(13, 71, 161, 0.1)); border: 1px solid rgba(33, 150, 243, 0.3);">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ المطلوب</p>
+                                    <h5 id="requiredAmount" style="margin: 5px 0 0; color: #2196f3;">
+                                        {{ number_format($purchaseRequest->estimated_cost ?? 0, 2) }} ج.م
+                                    </h5>
+                                </div>
+                                <div class="col-md-6">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي المدخل</p>
+                                    <h5 id="totalEntered" style="margin: 5px 0 0; color: #ff9800; font-weight: bold;">0.00 ج.م</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success" id="approveButton" disabled>
+                        <i class="fas fa-check"></i> تأكيد الموافقة والصرف
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const requiredAmount = parseFloat('{{ $purchaseRequest->estimated_cost ?? 0 }}');
+
+function updateTreasuryAmounts() {
+    const primaryTreasurySelect = document.getElementById('primaryTreasurySelect');
+    const selectedTreasuryId = primaryTreasurySelect.value;
+    const treasuryDistribution = document.getElementById('treasuryDistribution');
+
+    if (!selectedTreasuryId) {
+        treasuryDistribution.innerHTML = '';
+        return;
+    }
+
+    const treasuries = @json($treasuries ?? []);
+    const selectedTreasury = treasuries.find(t => t.id == selectedTreasuryId);
+
+    if (!selectedTreasury) {
+        treasuryDistribution.innerHTML = '';
+        return;
+    }
+
+    let html = `
+        <div class="input-group mb-2">
+            <span class="input-group-text">${selectedTreasury.name}</span>
+            <input type="number" name="treasury_amounts[${selectedTreasuryId}]" class="form-control treasury-amount"
+                   step="0.01" min="0" max="${selectedTreasury.balance}" placeholder="0.00"
+                   oninput="calculateTotal()">
+            <span class="input-group-text">ج.م</span>
+        </div>
+    `;
+
+    treasuryDistribution.innerHTML = html;
+    calculateTotal();
+}
+
+function calculateTotal() {
+    const inputs = document.querySelectorAll('.treasury-amount');
+    let total = 0;
+
+    inputs.forEach(input => {
+        total += parseFloat(input.value) || 0;
+    });
+
+    const totalElement = document.getElementById('totalEntered');
+    totalElement.textContent = total.toFixed(2) + ' ج.م';
+
+    // Update button state
+    const approveButton = document.getElementById('approveButton');
+    const isValid = Math.abs(total - requiredAmount) < 0.01 && requiredAmount > 0;
+    approveButton.disabled = !isValid;
+
+    if (isValid) {
+        totalElement.style.color = '#4caf50';
+    } else if (total > requiredAmount) {
+        totalElement.style.color = '#f44336';
+    } else if (total > 0) {
+        totalElement.style.color = '#ff9800';
+    }
+}
+
+function validateApproval() {
+    const categorySelect = document.getElementById('expenseCategorySelect');
+    const treasurySelect = document.getElementById('primaryTreasurySelect');
+
+    if (!categorySelect.value) {
+        alert('يرجى اختيار الفئة المحاسبية');
+        return false;
+    }
+
+    if (!treasurySelect.value) {
+        alert('يرجى اختيار الخزينة');
+        return false;
+    }
+
+    const inputs = document.querySelectorAll('.treasury-amount');
+    let total = 0;
+    inputs.forEach(input => {
+        total += parseFloat(input.value) || 0;
+    });
+
+    if (Math.abs(total - requiredAmount) > 0.01) {
+        alert('إجمالي المبالغ المدخلة يجب أن يساوي المبلغ المطلوب بالضبط');
+        return false;
+    }
+
+    return true;
+}
+
+// Initialize on modal open
+document.getElementById('approveModal').addEventListener('shown.bs.modal', function() {
+    updateTreasuryAmounts();
+});
+</script>
+
 @endsection

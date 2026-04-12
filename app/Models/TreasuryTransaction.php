@@ -16,6 +16,8 @@ class TreasuryTransaction extends Model
         'user_id',
         'custody_id',
         'transaction_date',
+        'reference_id',
+        'reference_type',
     ];
 
     protected $casts = [

@@ -15,6 +15,7 @@ class PurchaseRequest extends Model
         'title', 'description', 'estimated_cost', 'actual_cost',
         'priority', 'status', 'category',
         'attachment', 'rejection_reason', 'needed_by', 'reviewed_at',
+        'treasury_id', 'expense_category_id', 'treasury_distribution',
     ];
 
     protected $casts = [
@@ -22,6 +23,7 @@ class PurchaseRequest extends Model
         'actual_cost'    => 'decimal:2',
         'needed_by'      => 'date',
         'reviewed_at'    => 'datetime',
+        'treasury_distribution' => 'array',
     ];
 
     public function requester(): BelongsTo
@@ -37,6 +39,16 @@ class PurchaseRequest extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function treasury(): BelongsTo
+    {
+        return $this->belongsTo(Treasury::class);
+    }
+
+    public function expenseCategory(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseCategory::class);
     }
 
     public function getStatusLabelAttribute(): string

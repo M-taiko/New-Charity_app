@@ -82,32 +82,95 @@ class PurchaseRequestController extends Controller
 
     public function show(PurchaseRequest $purchaseRequest)
     {
-        $purchaseRequest->load(['requester', 'reviewer', 'supplier']);
-        return view('procurement.purchase-requests.show', compact('purchaseRequest'));
+        $purchaseRequest->load(['requester', 'reviewer', 'supplier', 'treasury', 'expenseCategory']);
+
+        // Get all treasuries with balances
+        $treasuries = \App\Models\Treasury::all();
+
+        // Get all active expense categories (root level)
+        $expenseCategories = \App\Models\ExpenseCategory::roots()->active()->ordered()->get();
+
+        return view('procurement.purchase-requests.show', compact('purchaseRequest', 'treasuries', 'expenseCategories'));
     }
 
     public function approve(Request $request, PurchaseRequest $purchaseRequest)
     {
         $this->authorizeManager();
 
-        $purchaseRequest->update([
-            'status'      => 'approved',
-            'reviewed_by' => auth()->id(),
-            'reviewed_at' => now(),
+        // Validate treasury and category selection
+        $request->validate([
+            'treasury_id' => 'required|exists:treasuries,id',
+            'expense_category_id' => 'required|exists:expense_categories,id',
+            'treasury_amounts' => 'required|array|min:1',
+            'treasury_amounts.*' => 'numeric|min:0.01',
         ]);
 
-        NotificationService::notifyUser(
-            $purchaseRequest->requested_by,
-            'تمت الموافقة على طلب شرائك',
-            'تم الموافقة على طلب: ' . $purchaseRequest->title,
-            'success',
-            $purchaseRequest->id,
-            'purchase_request'
-        );
+        // Calculate total from distribution
+        $totalAmount = array_sum($request->treasury_amounts ?? []);
+        $estimatedCost = $purchaseRequest->estimated_cost ?? 0;
 
-        ActivityLogService::approved($purchaseRequest, 'موافقة على طلب شراء: ' . $purchaseRequest->title);
+        if (abs($totalAmount - $estimatedCost) > 0.01) {
+            return back()->withInput()->with('error',
+                'إجمالي المبالغ المدفوعة (' . number_format($totalAmount, 2) . ') يجب أن يساوي التكلفة التقديرية (' . number_format($estimatedCost, 2) . ')');
+        }
 
-        return back()->with('success', 'تمت الموافقة على الطلب');
+        // Check all treasuries have sufficient balance
+        foreach ($request->treasury_amounts as $treasuryId => $amount) {
+            $treasury = \App\Models\Treasury::findOrFail($treasuryId);
+            if ($treasury->balance < $amount) {
+                return back()->withInput()->with('error',
+                    'رصيد الخزينة "' . $treasury->name . '" (' . number_format($treasury->balance, 2) . ') غير كافي للمبلغ المطلوب (' . number_format($amount, 2) . ')');
+            }
+        }
+
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () use ($request, $purchaseRequest, $totalAmount) {
+                // Update purchase request with allocation details
+                $purchaseRequest->update([
+                    'status'               => 'approved',
+                    'treasury_id'          => $request->treasury_id,
+                    'expense_category_id'  => $request->expense_category_id,
+                    'treasury_distribution' => $request->treasury_amounts,
+                    'reviewed_by'          => auth()->id(),
+                    'reviewed_at'          => now(),
+                ]);
+
+                // Deduct from all allocated treasuries and record transactions
+                foreach ($request->treasury_amounts as $treasuryId => $amount) {
+                    if ($amount > 0) {
+                        $treasury = \App\Models\Treasury::findOrFail($treasuryId);
+                        $treasury->decrement('balance', $amount);
+
+                        // Record transaction for audit trail
+                        \App\Models\TreasuryTransaction::create([
+                            'treasury_id' => $treasuryId,
+                            'type' => 'purchase_request',
+                            'amount' => $amount,
+                            'description' => 'صرف لطلب شراء: ' . $purchaseRequest->title,
+                            'user_id' => auth()->id(),
+                            'transaction_date' => now(),
+                            'reference_id' => $purchaseRequest->id,
+                            'reference_type' => 'purchase_request',
+                        ]);
+                    }
+                }
+            });
+
+            NotificationService::notifyUser(
+                $purchaseRequest->requested_by,
+                'تمت الموافقة على طلب شرائك',
+                'تم الموافقة على طلب: ' . $purchaseRequest->title . ' بمبلغ ' . number_format($totalAmount, 2) . ' ج.م',
+                'success',
+                $purchaseRequest->id,
+                'purchase_request'
+            );
+
+            ActivityLogService::approved($purchaseRequest, 'موافقة على طلب شراء: ' . $purchaseRequest->title . ' - صرف ' . number_format($totalAmount, 2) . ' ج.م');
+
+            return back()->with('success', 'تمت الموافقة على الطلب وتسجيل الصرف من الخزائن');
+        } catch (\Exception $e) {
+            return back()->withInput()->with('error', 'حدث خطأ: ' . $e->getMessage());
+        }
     }
 
     public function reject(Request $request, PurchaseRequest $purchaseRequest)
