@@ -64,8 +64,14 @@ class HrController extends Controller
     public function create()
     {
         $this->checkHrAccess();
-        $users = User::whereDoesntHave('employee')->get();
-        return view('hr.employees.form', compact('users'));
+        try {
+            $users = User::whereDoesntHave('employee')->get();
+            return view('hr.employees.form', compact('users'));
+        } catch (\Exception $e) {
+            // If there's an error with the relation, just get all users
+            $users = User::all();
+            return view('hr.employees.form', compact('users'));
+        }
     }
 
     /**

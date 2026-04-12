@@ -31,10 +31,11 @@ class CustodyController extends Controller
             $this->authorize('create_custody');
         }
 
-        $treasury = Treasury::first();
+        // Get all treasuries for selection
+        $treasuries = Treasury::all();
 
-        if (!$treasury) {
-            return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+        if ($treasuries->isEmpty()) {
+            return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزائن. يرجى الاتصال بالمسؤول.');
         }
 
         // Route to appropriate view based on request type
@@ -45,13 +46,13 @@ class CustodyController extends Controller
                 ->orderBy('name')
                 ->get();
 
-            return view('custodies.create-for-user', compact('users', 'treasury'));
+            return view('custodies.create-for-agent', compact('users', 'treasuries'));
         } elseif ($forType === 'self') {
             // Personal request (accountant/manager requests for themselves)
-            return view('custodies.personal-request', compact('treasury'));
+            return view('custodies.personal-request', compact('treasuries'));
         } else {
             // Agent request (agent requests custody for themselves)
-            return view('custodies.agent-request', compact('treasury'));
+            return view('custodies.agent-request', compact('treasuries'));
         }
     }
 
@@ -64,14 +65,21 @@ class CustodyController extends Controller
             $this->authorize('create_custody');
         }
 
-        $treasury = Treasury::first();
-        if (!$treasury) {
-            return back()->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+        // Get selected treasury or default to first
+        $treasuryId = $request->input('treasury_id');
+        if ($treasuryId) {
+            $treasury = Treasury::findOrFail($treasuryId);
+        } else {
+            $treasury = Treasury::first();
+            if (!$treasury) {
+                return back()->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+            }
         }
 
         // Build validation rules with conditional treasury balance check for agents
         $validationRules = [
             'agent_id' => ($isAgent || $isForSelf) ? 'nullable' : 'required|exists:users,id',
+            'treasury_id' => 'required|exists:treasuries,id',
             'amount' => [
                 'required',
                 'numeric',
@@ -82,15 +90,11 @@ class CustodyController extends Controller
             'notes' => 'nullable|string',
         ];
 
-        // Add max amount rule for agents requesting custody (don't exceed treasury balance)
-        if ($isAgent) {
-            $validationRules['amount'][] = 'max:' . $treasury->balance;
-        }
+        // Add max amount rule (don't exceed selected treasury balance)
+        $validationRules['amount'][] = 'max:' . $treasury->balance;
 
-        // Customize error message based on user role
-        $amountMaxError = $isAgent
-            ? 'المبلغ المطلوب يتجاوز الرصيد المتاح في الخزينة. يرجى تقليل المبلغ والمحاولة مرة أخرى.'
-            : 'المبلغ المدخل يتجاوز رصيد الخزينة. الحد الأقصى: ' . number_format($treasury->balance, 2) . ' ج.م';
+        // Customize error message
+        $amountMaxError = 'المبلغ المدخل يتجاوز رصيد الخزينة المختارة. الحد الأقصى: ' . number_format($treasury->balance, 2) . ' ج.م';
 
         $request->validate(
             $validationRules,
@@ -151,14 +155,48 @@ class CustodyController extends Controller
         return redirect()->route('custodies.index')->with('success', 'تم تحديث العهدة بنجاح');
     }
 
-    public function accept(Custody $custody)
+    public function accept(Custody $custody, Request $request)
     {
         $this->authorize('approve_custody');
 
+        // Get treasury amounts distribution
+        $treasuryAmounts = $request->input('treasury_amounts', []);
+
+        if (empty($treasuryAmounts) || !array_filter($treasuryAmounts)) {
+            return back()->with('error', 'يرجى توزيع المبالغ على الخزائن');
+        }
+
+        // Calculate total and validate
+        $totalAmount = 0;
+        $distribution = [];
+
+        foreach ($treasuryAmounts as $treasuryId => $amount) {
+            $amount = (float) $amount;
+            if ($amount > 0) {
+                $treasury = Treasury::findOrFail($treasuryId);
+
+                // Validate treasury has enough balance
+                if ($treasury->balance < $amount) {
+                    return back()->with('error', "رصيد خزينة '{$treasury->name}' غير كافي. المطلوب: {$amount}, المتاح: {$treasury->balance}");
+                }
+
+                $distribution[$treasuryId] = [
+                    'treasury' => $treasury,
+                    'amount' => $amount
+                ];
+                $totalAmount += $amount;
+            }
+        }
+
+        // Validate total equals custody amount
+        if (abs($totalAmount - $custody->amount) > 0.01) {
+            return back()->with('error', 'مجموع المبالغ المتوزعة يجب أن يساوي ' . number_format($custody->amount, 2) . ' ج.م');
+        }
+
         try {
-            $this->service->acceptCustody($custody);
+            $this->service->acceptCustodyWithDistribution($custody, $distribution);
             ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
-            return back()->with('success', 'تم الموافقة على العهدة');
+            return back()->with('success', 'تم الموافقة على العهدة وتوزيع الأموال بنجاح');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -192,10 +230,23 @@ class CustodyController extends Controller
         }
     }
 
-    public function agentAccept(Custody $custody)
+    public function agentAccept(Custody $custody, Request $request)
     {
+        // Get selected treasury
+        $treasuryId = $request->input('treasury_id');
+        if (!$treasuryId) {
+            return back()->with('error', 'يرجى اختيار خزينة');
+        }
+
+        $treasury = Treasury::findOrFail($treasuryId);
+
+        // Validate that treasury has enough balance
+        if ($treasury->balance < $custody->amount) {
+            return back()->with('error', 'رصيد الخزينة المختارة غير كافي. الرصيد المتاح: ' . number_format($treasury->balance, 2) . ' ج.م');
+        }
+
         try {
-            $this->service->agentAcceptCustody($custody);
+            $this->service->agentAcceptCustodyFromTreasury($custody, $treasury);
             return back()->with('success', 'تم قبول العهدة وصرف الفلوس بنجاح');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());

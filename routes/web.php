@@ -23,6 +23,7 @@ use App\Http\Controllers\HrController;
 use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\MaintenanceRequestController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SalaryController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -34,7 +35,11 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::resource('treasury', TreasuryController::class)->only(['index', 'store', 'update', 'destroy']);
+    // Treasury management (multiple treasuries)
+    Route::resource('treasury', TreasuryController::class); // Full CRUD
+    Route::post('/treasury/{treasury}/add-donation', [TreasuryController::class, 'addDonation'])->name('treasury.add-donation');
+    Route::get('/treasury/transfer/form', [TreasuryController::class, 'transfer'])->name('treasury.transfer');
+    Route::post('/treasury/perform-transfer', [TreasuryController::class, 'performTransfer'])->name('treasury.perform-transfer');
     Route::resource('custodies', CustodyController::class);
     Route::post('/custodies/{custody}/accept', [CustodyController::class, 'accept'])->name('custodies.accept');
     Route::post('/custodies/{custody}/receive', [CustodyController::class, 'receive'])->name('custodies.receive');
@@ -113,7 +118,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/expense-categories/{expenseCategory}', [ExpenseItemController::class, 'destroyCategory'])->name('expense-categories.destroy');
 
     // DataTables APIs
-    Route::get('/api/treasury-transactions', [TreasuryController::class, 'transactionsData'])->name('api.treasury.transactions');
+    Route::get('/api/treasury/{treasury}/transactions', [TreasuryController::class, 'transactionsData'])->name('api.treasury.transactions');
     Route::get('/api/custodies', [CustodyController::class, 'tableData'])->name('api.custodies.data');
     Route::get('/api/expenses', [ExpenseController::class, 'tableData'])->name('api.expenses.data');
     Route::get('/api/social-cases', [SocialCaseController::class, 'tableData'])->name('api.social_cases.data');
@@ -169,6 +174,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // KPI
         Route::get('/kpi', [HrController::class, 'kpiIndex'])->name('kpi.index');
         Route::post('/kpi', [HrController::class, 'kpiStore'])->name('kpi.store');
+
+        // Salaries
+        Route::get('/salaries', [SalaryController::class, 'index'])->name('salaries.index');
+        Route::post('/salaries/calculate', [SalaryController::class, 'calculate'])->name('salaries.calculate');
+        Route::get('/salaries/{salary}', [SalaryController::class, 'show'])->name('salaries.show');
+        Route::get('/salaries/{salary}/edit', [SalaryController::class, 'edit'])->name('salaries.edit');
+        Route::put('/salaries/{salary}', [SalaryController::class, 'update'])->name('salaries.update');
+        Route::post('/salaries/{salary}/allowance', [SalaryController::class, 'addAllowance'])->name('salaries.allowance');
+        Route::post('/salaries/{salary}/approve', [SalaryController::class, 'approve'])->name('salaries.approve');
+        Route::post('/salaries/{salary}/record-expense', [SalaryController::class, 'recordExpense'])->name('salaries.record-expense');
+        Route::get('/employees/{employee}/salary-history', [SalaryController::class, 'employeeHistory'])->name('salaries.history');
+        Route::get('/salaries-report/export', [SalaryController::class, 'exportReport'])->name('salaries.export');
     });
 
     // Broadcasts (urgent messages)

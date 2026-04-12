@@ -27,7 +27,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('custodies.store') }}" method="POST">
+                    <form action="{{ route('custodies.store') }}" method="POST" onsubmit="return validateCustodyAmount()">
                         @csrf
 
                         <div class="row mb-3">
@@ -54,15 +54,41 @@
                         </div>
 
                         <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label"><strong>اختر الخزينة</strong></label>
+                                <select name="treasury_id" id="treasurySelect" class="form-select @error('treasury_id') is-invalid @enderror" required onchange="updateTreasuryInfo()">
+                                    <option value="">-- اختر الخزينة --</option>
+                                    @foreach($treasuries as $treasury)
+                                        <option value="{{ $treasury->id }}"
+                                                data-balance="{{ $treasury->balance }}"
+                                                {{ old('treasury_id') == $treasury->id ? 'selected' : '' }}>
+                                            {{ $treasury->name }} (الرصيد: {{ number_format($treasury->balance, 2) }} ج.م)
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('treasury_id')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label"><strong>المبلغ (ج.م)</strong></label>
                                 <input
                                     type="number"
                                     name="amount"
+                                    id="custodyAmount"
                                     class="form-control @error('amount') is-invalid @enderror"
                                     step="0.01"
                                     value="{{ old('amount') }}"
+                                    max="0"
+                                    onchange="validateAmount()"
+                                    oninput="validateAmount()"
                                     required>
+                                <small class="form-text text-muted" id="maxAmountHint" style="display: none; margin-top: 0.5rem;">
+                                    الحد الأقصى المتاح: <strong id="maxAmount">0</strong> ج.م
+                                </small>
                                 @error('amount')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -101,13 +127,13 @@
             <div class="card mb-3" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(56, 142, 60, 0.1)); border: 1px solid rgba(76, 175, 80, 0.3);">
                 <div class="card-body">
                     <h6 class="card-title mb-3">
-                        <i class="fas fa-wallet" style="color: #4caf50;"></i> رصيد الخزينة
+                        <i class="fas fa-wallet" style="color: #4caf50;"></i> رصيد الخزينة المختارة
                     </h6>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #4caf50;">
-                        {{ number_format($treasury->balance, 2) }} ج.م
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #4caf50;" id="treasuryBalanceDisplay">
+                        0.00 ج.م
                     </div>
                     <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.85rem;">
-                        الرصيد المتاح في الخزينة
+                        الرصيد المتاح في الخزينة المختارة
                     </p>
                 </div>
             </div>
@@ -129,4 +155,94 @@
         </div>
     </div>
 </div>
+
+<script>
+function updateTreasuryInfo() {
+    const treasurySelect = document.getElementById('treasurySelect');
+    const amountInput = document.getElementById('custodyAmount');
+    const balanceDisplay = document.getElementById('treasuryBalanceDisplay');
+    const maxAmountInput = document.getElementById('maxAmount');
+    const maxAmountHint = document.getElementById('maxAmountHint');
+
+    if (treasurySelect.value) {
+        const option = treasurySelect.options[treasurySelect.selectedIndex];
+        const balance = parseFloat(option.dataset.balance) || 0;
+
+        // Update display
+        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+
+        // Set max amount
+        amountInput.max = balance.toFixed(2);
+        maxAmountInput.textContent = balance.toFixed(2);
+        maxAmountHint.style.display = 'block';
+
+        // Clear previous validation messages
+        amountInput.classList.remove('is-invalid');
+    } else {
+        balanceDisplay.textContent = '0.00 ج.م';
+        amountInput.max = 0;
+        maxAmountHint.style.display = 'none';
+    }
+
+    validateAmount();
+}
+
+function validateAmount() {
+    const treasurySelect = document.getElementById('treasurySelect');
+    const amountInput = document.getElementById('custodyAmount');
+
+    if (!treasurySelect.value) {
+        amountInput.classList.add('is-invalid');
+        return false;
+    }
+
+    const max = parseFloat(amountInput.max) || 0;
+    const amount = parseFloat(amountInput.value) || 0;
+
+    if (amount > max) {
+        amountInput.classList.add('is-invalid');
+        amountInput.title = `المبلغ لا يمكن أن يتجاوز ${max.toFixed(2)} ج.م`;
+        return false;
+    } else {
+        amountInput.classList.remove('is-invalid');
+        amountInput.title = '';
+        return true;
+    }
+}
+
+function validateCustodyAmount() {
+    const treasurySelect = document.getElementById('treasurySelect');
+    const amountInput = document.getElementById('custodyAmount');
+
+    if (!treasurySelect.value) {
+        alert('يرجى اختيار الخزينة');
+        return false;
+    }
+
+    if (!amountInput.value) {
+        alert('يرجى إدخال المبلغ');
+        return false;
+    }
+
+    const max = parseFloat(amountInput.max) || 0;
+    const amount = parseFloat(amountInput.value) || 0;
+
+    if (amount > max) {
+        alert(`المبلغ لا يمكن أن يتجاوز ${max.toFixed(2)} ج.م`);
+        return false;
+    }
+
+    if (amount <= 0) {
+        alert('يرجى إدخال مبلغ صحيح');
+        return false;
+    }
+
+    return true;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateTreasuryInfo();
+});
+</script>
 @endsection

@@ -1046,6 +1046,12 @@
                         <span>مؤشرات الأداء</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('hr.salaries.index') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'hr.salaries')) active @endif">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>حسابات المرتبات</span>
+                    </a>
+                </li>
                 @endif
 
                 @can('manage_users')

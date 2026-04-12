@@ -13,6 +13,7 @@ class Expense extends Model
 
     protected $fillable = [
         'custody_id',
+        'treasury_id',
         'user_id',
         'social_case_id',
         'expense_category_id',
@@ -42,6 +43,11 @@ class Expense extends Model
     public function custody(): BelongsTo
     {
         return $this->belongsTo(Custody::class);
+    }
+
+    public function treasury(): BelongsTo
+    {
+        return $this->belongsTo(Treasury::class);
     }
 
     public function user(): BelongsTo

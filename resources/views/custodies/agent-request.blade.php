@@ -32,26 +32,23 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label"><strong>المبلغ (ج.م)</strong></label>
+                                <label class="form-label"><strong>المبلغ المطلوب (ج.م)</strong></label>
                                 <input
                                     type="number"
                                     name="amount"
                                     id="custodyAmount"
                                     class="form-control @error('amount') is-invalid @enderror"
                                     step="0.01"
+                                    min="0.01"
                                     value="{{ old('amount') }}"
-                                    required>
-                                <small class="text-muted">
-                                    <i class="fas fa-info-circle"></i>
-                                    يرجى إدخال المبلغ المطلوب
-                                </small>
+                                    required
+                                    placeholder="أدخل المبلغ المطلوب">
                                 @error('amount')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
-                                <div id="amountError" class="invalid-feedback" style="display: none;"></div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label"><strong>تاريخ الإصدار</strong></label>
+                                <label class="form-label"><strong>تاريخ الطلب</strong></label>
                                 <input type="date" name="issued_date" class="form-control @error('issued_date') is-invalid @enderror" value="{{ old('issued_date', date('Y-m-d')) }}" required>
                                 @error('issued_date')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -99,39 +96,4 @@
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const amountInput = document.getElementById('custodyAmount');
-    const amountError = document.getElementById('amountError');
-    const submitBtn = document.querySelector('button[type="submit"]');
-
-    if (amountInput) {
-        amountInput.addEventListener('input', function() {
-            const enteredAmount = parseFloat(this.value);
-
-            if (enteredAmount <= 0) {
-                this.classList.add('is-invalid');
-                amountError.style.display = 'block';
-                amountError.textContent = 'المبلغ يجب أن يكون أكبر من صفر';
-                submitBtn.disabled = true;
-            } else {
-                this.classList.remove('is-invalid');
-                amountError.style.display = 'none';
-                submitBtn.disabled = false;
-            }
-        });
-
-        // Prevent form submission if amount is invalid
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const enteredAmount = parseFloat(amountInput.value);
-            if (enteredAmount <= 0) {
-                e.preventDefault();
-                amountInput.classList.add('is-invalid');
-                amountError.style.display = 'block';
-                amountError.textContent = 'المبلغ يجب أن يكون أكبر من صفر';
-            }
-        });
-    }
-});
-</script>
 @endsection

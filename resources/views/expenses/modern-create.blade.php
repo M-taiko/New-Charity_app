@@ -70,15 +70,33 @@
                             </small>
                         </div>
 
+                        <!-- Treasury Selection (shown when treasury source is selected) -->
+                        @if($canSpendFromTreasury && count($treasuries) > 0)
+                        <div class="mb-3" id="treasury-select-field" style="display: none;">
+                            <label class="form-label"><strong>اختر الخزينة</strong></label>
+                            <select name="treasury_id" id="treasury_select" class="form-select @error('treasury_id') is-invalid @enderror" onchange="updateTreasuryInfo()">
+                                <option value="">-- اختر خزينة --</option>
+                                @foreach($treasuries as $treas)
+                                    <option value="{{ $treas->id }}"
+                                            data-balance="{{ $treas->balance }}"
+                                            {{ old('treasury_id') == $treas->id ? 'selected' : '' }}>
+                                        {{ $treas->name }} (الرصيد: {{ number_format($treas->balance, 2) }} ج.م)
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('treasury_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <!-- Treasury Balance Display (shown when treasury source is selected) -->
-                        @if($canSpendFromTreasury && $treasury)
                         <div class="mb-3" id="treasury-balance-field" style="display: none;">
                             <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); border: 1px solid rgba(79, 172, 254, 0.3);">
                                 <h6 class="mb-2">
                                     <i class="fas fa-vault"></i> رصيد الخزينة
                                 </h6>
-                                <div style="font-size: 1.5rem; font-weight: 700; color: #4facfe;">
-                                    {{ number_format($treasury->balance, 2) }} ج.م
+                                <div style="font-size: 1.5rem; font-weight: 700; color: #4facfe;" id="treasury-balance-display">
+                                    0.00 ج.م
                                 </div>
                                 <small class="text-muted">الرصيد المتاح للصرف المباشر</small>
                             </div>
@@ -386,25 +404,34 @@
     function toggleSourceFields() {
         const source = document.querySelector('input[name="source"]:checked').value;
         const custodyField = document.getElementById('custody-field');
+        const treasurySelectField = document.getElementById('treasury-select-field');
         const treasuryBalanceField = document.getElementById('treasury-balance-field');
-        const balanceWarning = document.getElementById('balance-warning');
 
         if (source === 'treasury') {
             // Hide custody field
             custodyField.style.display = 'none';
             document.querySelector('select[name="custody_id"]').removeAttribute('required');
 
+            // Show treasury select field
+            if (treasurySelectField) {
+                treasurySelectField.style.display = 'block';
+            }
+
             // Show treasury balance
             if (treasuryBalanceField) {
                 treasuryBalanceField.style.display = 'block';
             }
 
-            // Display treasury balance info
-            balanceWarning.innerHTML = '<i class="fas fa-info-circle"></i> الرصيد المتاح: <strong>{{ $treasury ? number_format($treasury->balance, 2) : '0.00' }} ج.م</strong>';
+            updateTreasuryInfo();
         } else {
             // Show custody field
             custodyField.style.display = 'block';
             document.querySelector('select[name="custody_id"]').setAttribute('required', 'required');
+
+            // Hide treasury select field
+            if (treasurySelectField) {
+                treasurySelectField.style.display = 'none';
+            }
 
             // Hide treasury balance
             if (treasuryBalanceField) {
@@ -412,6 +439,19 @@
             }
 
             updateCustodyInfo();
+        }
+    }
+
+    function updateTreasuryInfo() {
+        const treasurySelect = document.getElementById('treasury_select');
+        const balanceDisplay = document.getElementById('treasury-balance-display');
+
+        if (treasurySelect && treasurySelect.value) {
+            const option = treasurySelect.options[treasurySelect.selectedIndex];
+            const balance = option.dataset.balance || '0.00';
+            balanceDisplay.textContent = parseFloat(balance).toFixed(2) + ' ج.م';
+        } else {
+            balanceDisplay.textContent = '0.00 ج.م';
         }
     }
 

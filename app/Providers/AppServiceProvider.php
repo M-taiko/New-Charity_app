@@ -44,5 +44,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view_all_records', function ($user) {
             return $user->hasRole('محاسب') || $user->hasRole('مدير') || $user->hasRole('مشرف');
         });
+
+        Gate::define('manage_social_cases', function ($user) {
+            return $user->hasRole('محاسب') || $user->hasRole('مدير') || $user->hasRole('باحث اجتماعي');
+        });
     }
 }

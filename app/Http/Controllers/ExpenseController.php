@@ -48,13 +48,13 @@ class ExpenseController extends Controller
         // Check if current user is accountant (محاسب) - can spend from treasury
         $canSpendFromTreasury = auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير');
 
-        // Get treasury balance for display when spending from treasury
-        $treasury = null;
+        // Get treasuries for display when spending from treasury
+        $treasuries = [];
         if ($canSpendFromTreasury) {
-            $treasury = Treasury::first();
+            $treasuries = Treasury::all();
         }
 
-        return view('expenses.modern-create', compact('custodies', 'cases', 'categoryRoots', 'canSpendFromTreasury', 'treasury'));
+        return view('expenses.modern-create', compact('custodies', 'cases', 'categoryRoots', 'canSpendFromTreasury', 'treasuries'));
     }
 
     public function store(Request $request)
@@ -69,9 +69,14 @@ class ExpenseController extends Controller
                 // Direct treasury spending (for accountants)
                 $this->authorize('direct_spend_from_treasury');
 
-                // Get treasury balance
-                $treasury = Treasury::first();
-                $treasuryBalance = $treasury ? $treasury->balance : 0;
+                // Get selected treasury
+                $treasuryId = $request->input('treasury_id');
+                if (!$treasuryId) {
+                    return back()->withInput()->with('error', 'يجب اختيار خزينة');
+                }
+
+                $treasury = Treasury::findOrFail($treasuryId);
+                $treasuryBalance = $treasury->balance;
 
                 // Validate category to determine if item is required
                 $category = ExpenseCategory::find($request->expense_category_id);
@@ -116,6 +121,7 @@ class ExpenseController extends Controller
                     : null;
 
                 $this->service->recordDirectExpenseFromTreasury(
+                    $treasuryId,
                     auth()->id(),
                     $request->amount,
                     $request->expense_category_id,

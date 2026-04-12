@@ -295,40 +295,205 @@
 </div>
 
 <!-- Accept Custody Modal -->
-<div class="modal fade" id="acceptModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="acceptModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg" style="z-index: 1070;">
         <div class="modal-content">
             <div class="modal-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
-                <h5 class="modal-title" style="color: white;"><i class="fas fa-check-circle"></i> قبول العهدة</h5>
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-check-circle"></i> قبول العهدة وتوزيع الأموال</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.accept', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" onsubmit="return validateTreasuryDistribution()">
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> هل تريد قبول هذه العهدة؟
+                        <i class="fas fa-info-circle"></i> حدد من أي خزائن سيتم الصرف والمبالغ من كل خزينة
                     </div>
-                    <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
-                    <p><strong>المبلغ:</strong> {{ number_format($custody->amount, 2) }} ج.م</p>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>بيانات العهدة:</strong></label>
+                        <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                        <p><strong>المبلغ الإجمالي:</strong> <span class="text-primary fw-bold" style="font-size: 1.1rem;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
+                    </div>
+
+                    @php
+                        $treasuries = \App\Models\Treasury::all();
+                        $requiredAmount = $custody->amount;
+                    @endphp
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>توزيع الصرف على الخزائن:</strong></label>
+                        <div id="treasuriesDistributionContainer" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px;">
+                            @foreach($treasuries as $treasury)
+                            <div class="treasury-item mb-3" data-treasury-id="{{ $treasury->id }}" data-balance="{{ $treasury->balance }}">
+                                <div class="row align-items-end">
+                                    <div class="col-md-6">
+                                        <label class="form-label mb-2" style="font-weight: 600;">{{ $treasury->name }}</label>
+                                        <small class="d-block text-muted mb-2">الرصيد المتاح: <span class="fw-bold text-info">{{ number_format($treasury->balance, 2) }} ج.م</span></small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="number"
+                                               name="treasury_amounts[{{ $treasury->id }}]"
+                                               class="form-control treasury-amount"
+                                               data-treasury-id="{{ $treasury->id }}"
+                                               min="0"
+                                               step="0.01"
+                                               value="0"
+                                               oninput="updateDistributionTotal()"
+                                               placeholder="0.00">
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div class="card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border: 1px solid rgba(102, 126, 234, 0.3);" id="distributionSummary">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ الإجمالي المطلوب:</p>
+                                    <h5 style="margin: 5px 0 0; color: #667eea;">{{ number_format($custody->amount, 2) }} ج.م</h5>
+                                </div>
+                                <div class="col-md-6">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ المدخل:</p>
+                                    <h5 id="totalEnteredAmount" style="margin: 5px 0 0; color: #4caf50;">0.00 ج.م</h5>
+                                </div>
+                            </div>
+                            <div id="distributionStatus" style="margin-top: 15px; padding: 10px; border-radius: 4px; background: white; text-align: center;">
+                                <span class="text-warning"><i class="fas fa-exclamation-circle"></i> لم تدخل المبالغ بعد</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
-                        <i class="fas fa-arrow-left"></i> عند القبول، سيتم:
+                        <i class="fas fa-info-circle"></i> ملاحظات:
                     </p>
-                    <ul style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
-                        <li>خصم المبلغ من رصيد الخزينة</li>
-                        <li>تحويل العهدة لحساب الوكيل</li>
-                        <li>إرسال إخطار للمحاسب</li>
+                    <ul style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                        <li>يجب أن يساوي مجموع الصرف المبلغ الإجمالي للعهدة</li>
+                        <li>لا يمكن الصرف أكثر من رصيد الخزينة</li>
+                        <li>كل صرف سيتم تسجيله بشكل منفصل في السجل</li>
                     </ul>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check"></i> تأكيد القبول
+                    <button type="submit" class="btn btn-success" id="acceptSubmitBtn" disabled>
+                        <i class="fas fa-check"></i> تأكيد القبول والصرف
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+function updateDistributionTotal() {
+    const inputs = document.querySelectorAll('.treasury-amount');
+    let total = 0;
+    let hasError = false;
+    const requiredAmount = {{ $custody->amount }};
+    const submitBtn = document.getElementById('acceptSubmitBtn');
+    const statusDiv = document.getElementById('distributionStatus');
+    const totalDisplay = document.getElementById('totalEnteredAmount');
+
+    // Calculate total
+    inputs.forEach(input => {
+        const amount = parseFloat(input.value) || 0;
+        const treasuryId = input.dataset.treasuryId;
+        const treasuryItem = document.querySelector(`[data-treasury-id="${treasuryId}"]`);
+        const balance = parseFloat(treasuryItem.dataset.balance);
+
+        // Check if exceeds treasury balance
+        if (amount > balance) {
+            input.classList.add('is-invalid');
+            hasError = true;
+        } else {
+            input.classList.remove('is-invalid');
+        }
+
+        total += amount;
+    });
+
+    totalDisplay.textContent = total.toFixed(2) + ' ج.م';
+
+    // Check if total matches required amount
+    if (hasError) {
+        statusDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle"></i> يوجد خزينة بمبلغ أكبر من رصيدها</span>';
+        submitBtn.disabled = true;
+    } else if (Math.abs(total - requiredAmount) < 0.01) {
+        statusDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle"></i> المبالغ صحيحة وجاهزة للموافقة</span>';
+        submitBtn.disabled = false;
+    } else if (total < requiredAmount) {
+        const remaining = (requiredAmount - total).toFixed(2);
+        statusDiv.innerHTML = `<span class="text-warning"><i class="fas fa-exclamation-circle"></i> ينقص ${remaining} ج.م</span>`;
+        submitBtn.disabled = true;
+    } else {
+        statusDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle"></i> المبلغ المدخل أكثر من المطلوب</span>';
+        submitBtn.disabled = true;
+    }
+}
+
+function validateTreasuryDistribution() {
+    const inputs = document.querySelectorAll('.treasury-amount');
+    let total = 0;
+    const requiredAmount = {{ $custody->amount }};
+
+    inputs.forEach(input => {
+        const amount = parseFloat(input.value) || 0;
+        const treasuryId = input.dataset.treasuryId;
+        const treasuryItem = document.querySelector(`[data-treasury-id="${treasuryId}"]`);
+        const balance = parseFloat(treasuryItem.dataset.balance);
+
+        if (amount > balance) {
+            alert(`المبلغ المدخل في خزينة يتجاوز الرصيد المتاح`);
+            return false;
+        }
+        total += amount;
+    });
+
+    if (Math.abs(total - requiredAmount) > 0.01) {
+        alert(`مجموع المبالغ المدخلة يجب أن يساوي ${requiredAmount.toFixed(2)} ج.م`);
+        return false;
+    }
+
+    return true;
+}
+
+// Initialize on modal open
+document.getElementById('acceptModal').addEventListener('shown.bs.modal', function() {
+    updateDistributionTotal();
+});
+</script>
+
+<script>
+function updateAcceptTreasuryInfo() {
+    const select = document.getElementById('acceptTreasurySelect');
+    const infoCard = document.getElementById('treasuryInfoCard');
+    const balanceDisplay = document.getElementById('selectedTreasuryBalance');
+    const statusMessage = document.getElementById('treasuryStatusMessage');
+    const submitBtn = document.getElementById('acceptSubmitBtn');
+    const requiredAmount = {{ $custody->amount }};
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const balance = parseFloat(option.dataset.balance) || 0;
+
+        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+        infoCard.style.display = 'block';
+
+        if (balance >= requiredAmount) {
+            statusMessage.innerHTML = '<span style="color: #4caf50;"><i class="fas fa-check-circle"></i> رصيد كافي لقبول العهدة</span>';
+            submitBtn.disabled = false;
+        } else {
+            const shortfall = requiredAmount - balance;
+            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + shortfall.toFixed(2) + ' ج.م</span>';
+            submitBtn.disabled = true;
+        }
+    } else {
+        infoCard.style.display = 'none';
+        submitBtn.disabled = true;
+    }
+}
+</script>
 
 <!-- Reject Custody Modal -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
@@ -473,20 +638,101 @@
             <form action="{{ route('custodies.agent-accept', $custody->id) }}" method="POST">
                 @csrf
                 <div class="modal-body">
-                    <p>هل تريد قبول العهدة بقيمة <strong>{{ number_format($custody->amount, 2) }} ج.م</strong>؟</p>
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>ملاحظة:</strong> سيتم صرف الفلوس فوراً عند القبول.
+                        <i class="fas fa-info-circle"></i> اختر الخزينة التي ستستقبل العهدة منها
                     </div>
+                    <p>العهدة بقيمة <strong>{{ number_format($custody->amount, 2) }} ج.م</strong></p>
+
+                    @php
+                        $treasuries = \App\Models\Treasury::all();
+                        $requiredAmount = $custody->amount;
+                    @endphp
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اختر الخزينة</strong></label>
+                        <select name="treasury_id" id="agentAcceptTreasurySelect" class="form-select @error('treasury_id') is-invalid @enderror"
+                                onchange="updateAgentAcceptTreasuryInfo()" required>
+                            <option value="">-- اختر خزينة --</option>
+                            @foreach($treasuries as $treasury)
+                                @php
+                                    $isDisabled = $treasury->balance < $requiredAmount;
+                                @endphp
+                                <option value="{{ $treasury->id }}"
+                                        data-balance="{{ $treasury->balance }}"
+                                        {{ $isDisabled ? 'disabled' : '' }}>
+                                    {{ $treasury->name }}
+                                    (الرصيد: {{ number_format($treasury->balance, 2) }} ج.م)
+                                    @if($isDisabled)
+                                        - غير متوفر
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('treasury_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="card" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1)); border: 1px solid rgba(76, 175, 80, 0.3);" id="agentTreasuryInfoCard" style="display: none;">
+                        <div class="card-body">
+                            <p style="margin: 0 0 0.5rem 0; color: #666; font-size: 0.9rem;">
+                                <strong>رصيد الخزينة المختارة:</strong>
+                            </p>
+                            <h5 style="margin: 0; color: #4caf50;" id="agentSelectedTreasuryBalance">0.00 ج.م</h5>
+                            <small class="text-muted" id="agentTreasuryStatusMessage"></small>
+                        </div>
+                    </div>
+
+                    <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle"></i> عند القبول، سيتم:
+                    </p>
+                    <ul style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
+                        <li>خصم {{ number_format($custody->amount, 2) }} ج.م من الخزينة المختارة</li>
+                        <li>استقبال العهدة في حسابك</li>
+                        <li>صرف الأموال فوراً</li>
+                    </ul>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success">قبول وصرف</button>
+                    <button type="submit" class="btn btn-success" id="agentAcceptSubmitBtn" disabled>
+                        <i class="fas fa-check"></i> قبول وصرف
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+function updateAgentAcceptTreasuryInfo() {
+    const select = document.getElementById('agentAcceptTreasurySelect');
+    const infoCard = document.getElementById('agentTreasuryInfoCard');
+    const balanceDisplay = document.getElementById('agentSelectedTreasuryBalance');
+    const statusMessage = document.getElementById('agentTreasuryStatusMessage');
+    const submitBtn = document.getElementById('agentAcceptSubmitBtn');
+    const requiredAmount = {{ $custody->amount }};
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const balance = parseFloat(option.dataset.balance) || 0;
+
+        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+        infoCard.style.display = 'block';
+
+        if (balance >= requiredAmount) {
+            statusMessage.innerHTML = '<span style="color: #4caf50;"><i class="fas fa-check-circle"></i> رصيد كافي لقبول العهدة</span>';
+            submitBtn.disabled = false;
+        } else {
+            const shortfall = requiredAmount - balance;
+            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + shortfall.toFixed(2) + ' ج.م</span>';
+            submitBtn.disabled = true;
+        }
+    } else {
+        infoCard.style.display = 'none';
+        submitBtn.disabled = true;
+    }
+}
+</script>
 
 {{-- Agent Reject Modal (Workflow 2) --}}
 <div class="modal fade" id="agentRejectModal" tabindex="-1">
