@@ -16,7 +16,7 @@ class SalaryCalculationService
      */
     public function calculateEmployeeSalary(Employee $employee, $year, $month, $calculationMethod = 'daily_rate')
     {
-        DB::transaction(function() use ($employee, $year, $month, $calculationMethod) {
+        return DB::transaction(function() use ($employee, $year, $month, $calculationMethod) {
             // Get or create salary calculation record
             $salary = SalaryCalculation::firstOrCreate(
                 [
@@ -58,10 +58,6 @@ class SalaryCalculationService
 
             return $salary;
         });
-
-        return SalaryCalculation::where('employee_id', $employee->id)
-            ->forMonth($year, $month)
-            ->first();
     }
 
     /**
@@ -69,11 +65,27 @@ class SalaryCalculationService
      */
     public function calculateMonthSalaries($year, $month, $calculationMethod = 'daily_rate')
     {
-        $employees = Employee::where('status', 'active')->get();
+        // Try both 'active' status and null status (if status field doesn't distinguish)
+        $employees = Employee::where('status', 'active')
+            ->orWhereNull('status')
+            ->get();
+
+        if ($employees->isEmpty()) {
+            throw new \Exception('لا توجد موظفين نشطين لحساب المرتبات');
+        }
+
         $calculations = [];
 
         foreach ($employees as $employee) {
-            $calculations[] = $this->calculateEmployeeSalary($employee, $year, $month, $calculationMethod);
+            try {
+                $calculation = $this->calculateEmployeeSalary($employee, $year, $month, $calculationMethod);
+                if ($calculation) {
+                    $calculations[] = $calculation;
+                }
+            } catch (\Exception $e) {
+                // Log employee calculation error but continue with others
+                \Log::warning("Failed to calculate salary for employee {$employee->id}: " . $e->getMessage());
+            }
         }
 
         return $calculations;

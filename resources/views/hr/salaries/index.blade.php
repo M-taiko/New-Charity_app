@@ -206,7 +206,14 @@
                 calculation_method: formData.get('calculation_method')
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`Server error (${response.status}): ${text.substring(0, 200)}`);
+                });
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.success) {
                 showAlert('success', data.message);
@@ -221,6 +228,7 @@
             showAlert('danger', 'حدث خطأ: ' + error.message);
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-calculator"></i> حساب المرتبات';
+            console.error('Salary calculation error:', error);
         });
     });
 
