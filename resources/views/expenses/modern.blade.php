@@ -394,7 +394,7 @@
             processing: true,
             serverSide: true,
             ajax: {
-                url: '{{ route("api.salary-calculations.data") }}',
+                url: '{{ route("hr.salaries.data") }}',
             },
             columns: [
                 { data: 'id' },
