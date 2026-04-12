@@ -99,7 +99,14 @@ class SalaryCalculation extends Model
     // Methods
     public function calculateSalary()
     {
-        $dailyRate = $this->base_salary / $this->total_working_days;
+        // Ensure total_working_days has a valid default (30 days per month)
+        $totalWorkingDays = $this->total_working_days ?: 30;
+
+        if ($totalWorkingDays <= 0) {
+            $totalWorkingDays = 30;
+        }
+
+        $dailyRate = $this->base_salary / $totalWorkingDays;
 
         if ($this->calculation_method === 'daily_rate') {
             $this->calculated_salary = $dailyRate * $this->attendance_days;
@@ -108,7 +115,7 @@ class SalaryCalculation extends Model
             $this->calculated_salary = $this->base_salary - ($dailyRate * $this->absence_days);
         }
 
-        $this->final_salary = $this->calculated_salary + $this->bonuses - $this->deductions;
+        $this->final_salary = $this->calculated_salary + ($this->bonuses ?? 0) - ($this->deductions ?? 0);
 
         return $this;
     }

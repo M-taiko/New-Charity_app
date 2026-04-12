@@ -26,6 +26,7 @@ class SalaryCalculationService
                 ],
                 [
                     'base_salary' => $employee->salary,
+                    'total_working_days' => 30, // Default 30 days per month
                     'calculation_method' => $calculationMethod,
                     'calculated_by' => auth()->id(),
                     'calculated_at' => now(),
