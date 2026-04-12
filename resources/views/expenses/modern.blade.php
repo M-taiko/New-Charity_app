@@ -29,32 +29,32 @@
                 <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
                 <div class="stat-label">إجمالي المصروفات</div>
                 <div class="stat-number" style="color: var(--danger);">
-                    {{ number_format(\App\Models\Expense::sum('amount'), 0) }}
+                    {{ number_format(\App\Models\Expense::sum('amount') + \App\Models\PurchaseRequest::where('status', 'purchased')->sum('actual_cost') + (\App\Models\SalaryCalculation::approved()->sum('final_salary') ?? 0), 0) }}
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
             <div class="stat-card primary">
-                <div class="stat-icon"><i class="fas fa-list"></i></div>
-                <div class="stat-label">عدد المصروفات</div>
+                <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+                <div class="stat-label">مصروفات العهد</div>
                 <div class="stat-number" style="color: var(--primary);">{{ \App\Models\Expense::count() }}</div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
             <div class="stat-card success">
-                <div class="stat-icon"><i class="fas fa-people-group"></i></div>
-                <div class="stat-label">حالات اجتماعية</div>
+                <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
+                <div class="stat-label">طلبات الشراء</div>
                 <div class="stat-number" style="color: var(--success);">
-                    {{ \App\Models\Expense::where('type', 'social_case')->count() }}
+                    {{ \App\Models\PurchaseRequest::where('status', 'purchased')->count() }}
                 </div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
             <div class="stat-card warning">
-                <div class="stat-icon"><i class="fas fa-tasks"></i></div>
-                <div class="stat-label">مصروفات عامة</div>
+                <div class="stat-icon"><i class="fas fa-money-bill"></i></div>
+                <div class="stat-label">الرواتب والمرتبات</div>
                 <div class="stat-number" style="color: var(--warning);">
-                    {{ \App\Models\Expense::where('type', 'general')->count() }}
+                    {{ \App\Models\SalaryCalculation::approved()->count() ?? 0 }}
                 </div>
             </div>
         </div>
@@ -105,13 +105,40 @@
         </div>
     </div>
 
+    <!-- Tabs for Different Expense Types -->
+    <div class="row mb-3" data-aos="fade-up" data-aos-delay="350">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="expenseTypeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expensesPanel" type="button" role="tab">
+                        <i class="fas fa-receipt"></i> مصروفات العهد
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="purchases-tab" data-bs-toggle="tab" data-bs-target="#purchasesPanel" type="button" role="tab">
+                        <i class="fas fa-shopping-cart"></i> طلبات الشراء
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="salaries-tab" data-bs-toggle="tab" data-bs-target="#salariesPanel" type="button" role="tab">
+                        <i class="fas fa-money-bill"></i> الرواتب والمرتبات
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="expenseTypeTabContent">
+        <!-- Expenses Tab -->
+        <div class="tab-pane fade show active" id="expensesPanel" role="tabpanel">
     <!-- Expenses Table -->
     <div class="row" data-aos="fade-up" data-aos-delay="400">
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
                     <h5 style="margin: 0;">
-                        <i class="fas fa-table"></i> سجل المصروفات
+                        <i class="fas fa-table"></i> سجل مصروفات العهد
                     </h5>
                 </div>
                 <div class="card-body p-0">
@@ -132,6 +159,76 @@
                                 </tr>
                             </thead>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+
+        <!-- Purchase Requests Tab -->
+        <div class="tab-pane fade" id="purchasesPanel" role="tabpanel">
+            <div class="row" data-aos="fade-up" data-aos-delay="400">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 style="margin: 0;">
+                                <i class="fas fa-table"></i> سجل طلبات الشراء
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="purchasesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>العنوان</th>
+                                            <th>الفئة</th>
+                                            <th>المورد</th>
+                                            <th>التكلفة المقدرة</th>
+                                            <th>التكلفة الفعلية</th>
+                                            <th>الحالة</th>
+                                            <th>التاريخ</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Salaries Tab -->
+        <div class="tab-pane fade" id="salariesPanel" role="tabpanel">
+            <div class="row" data-aos="fade-up" data-aos-delay="400">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 style="margin: 0;">
+                                <i class="fas fa-table"></i> سجل الرواتب والمرتبات
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="salariesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>الموظف</th>
+                                            <th>الراتب الأساسي</th>
+                                            <th>البدلات</th>
+                                            <th>الخصومات</th>
+                                            <th>الراتب الصافي</th>
+                                            <th>الفترة</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -233,6 +330,124 @@
             $('#filter_date_from').val('');
             $('#filter_date_to').val('');
             expensesTable.ajax.reload();
+        });
+
+        // Initialize Purchases Table
+        $('#purchasesTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '{{ route("api.purchase-requests.data") }}',
+            },
+            columns: [
+                { data: 'id' },
+                { data: 'title' },
+                { data: 'category_label' },
+                { data: 'supplier_name', defaultContent: '-' },
+                {
+                    data: 'estimated_cost',
+                    render: function(data) {
+                        return data ? parseFloat(data).toLocaleString('ar') + ' ج.م' : '-';
+                    }
+                },
+                {
+                    data: 'actual_cost',
+                    render: function(data) {
+                        return data ? '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>' : '-';
+                    }
+                },
+                {
+                    data: 'status_label',
+                    render: function(data, type, row) {
+                        const colors = {
+                            'في الانتظار': 'warning',
+                            'موافق عليه': 'success',
+                            'مرفوض': 'danger',
+                            'تم الشراء': 'primary'
+                        };
+                        const color = colors[data] || 'secondary';
+                        return '<span class="badge bg-' + color + '">' + data + '</span>';
+                    }
+                },
+                {
+                    data: 'created_at',
+                    render: function(data) {
+                        return new Date(data).toLocaleDateString('ar');
+                    }
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return '<a href="/purchase-requests/' + data + '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> عرض</a>';
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            }
+        });
+
+        // Initialize Salaries Table
+        $('#salariesTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '{{ route("api.salary-calculations.data") }}',
+            },
+            columns: [
+                { data: 'id' },
+                { data: 'employee_name' },
+                {
+                    data: 'base_salary',
+                    render: function(data) {
+                        return parseFloat(data).toLocaleString('ar') + ' ج.م';
+                    }
+                },
+                {
+                    data: 'allowances_total',
+                    render: function(data) {
+                        return data ? parseFloat(data).toLocaleString('ar') + ' ج.م' : '0.00 ج.م';
+                    }
+                },
+                {
+                    data: 'deductions_total',
+                    render: function(data) {
+                        return data ? parseFloat(data).toLocaleString('ar') + ' ج.م' : '0.00 ج.م';
+                    }
+                },
+                {
+                    data: 'total_salary',
+                    render: function(data) {
+                        return '<strong style="color: var(--success);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>';
+                    }
+                },
+                { data: 'period_label', defaultContent: '-' },
+                {
+                    data: 'status_label',
+                    render: function(data) {
+                        const colors = {
+                            'مسودة': 'secondary',
+                            'معتمدة': 'success',
+                            'مرحلة': 'warning'
+                        };
+                        const color = colors[data] || 'secondary';
+                        return '<span class="badge bg-' + color + '">' + (data || 'غير محدد') + '</span>';
+                    }
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return '<a href="/hr/salaries/' + data + '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> عرض</a>';
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            }
         });
     });
 

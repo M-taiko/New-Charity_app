@@ -241,4 +241,21 @@ class PurchaseRequestController extends Controller
             abort(403);
         }
     }
+
+    public function tableData()
+    {
+        $requests = PurchaseRequest::with(['requester', 'supplier', 'treasury', 'expenseCategory'])->latest()->get();
+
+        return \Yajra\DataTables\DataTables::of($requests)
+            ->addColumn('supplier_name', function ($row) {
+                return $row->supplier?->name ?? '-';
+            })
+            ->addColumn('category_label', function ($row) {
+                return $row->category_label;
+            })
+            ->addColumn('status_label', function ($row) {
+                return $row->status_label;
+            })
+            ->make(true);
+    }
 }

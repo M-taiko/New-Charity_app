@@ -269,4 +269,39 @@ class SalaryController extends Controller
         fclose($handle);
         exit;
     }
+
+    /**
+     * Get salary calculations data for DataTables
+     */
+    public function tableData()
+    {
+        $this->checkHrAccess();
+
+        $salaries = SalaryCalculation::with(['employee', 'employee.user'])->latest()->get();
+
+        return \Yajra\DataTables\DataTables::of($salaries)
+            ->addColumn('employee_name', function ($row) {
+                return $row->employee?->user?->name ?? '-';
+            })
+            ->addColumn('period_label', function ($row) {
+                return Carbon::createFromDate($row->year, $row->month, 1)->format('F Y');
+            })
+            ->addColumn('status_label', function ($row) {
+                return match($row->status ?? 'draft') {
+                    'approved' => 'معتمدة',
+                    'paid' => 'مرحلة',
+                    default => 'مسودة',
+                };
+            })
+            ->addColumn('allowances_total', function ($row) {
+                return $row->bonuses ?? 0;
+            })
+            ->addColumn('deductions_total', function ($row) {
+                return $row->deductions ?? 0;
+            })
+            ->addColumn('total_salary', function ($row) {
+                return $row->final_salary ?? 0;
+            })
+            ->make(true);
+    }
 }

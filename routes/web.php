@@ -135,6 +135,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/purchase-requests/{purchaseRequest}/approve',  [PurchaseRequestController::class, 'approve'])->name('purchase-requests.approve');
     Route::post('/purchase-requests/{purchaseRequest}/reject',   [PurchaseRequestController::class, 'reject'])->name('purchase-requests.reject');
     Route::post('/purchase-requests/{purchaseRequest}/purchased',[PurchaseRequestController::class, 'markPurchased'])->name('purchase-requests.purchased');
+    Route::get('/api/purchase-requests', [PurchaseRequestController::class, 'tableData'])->name('api.purchase-requests.data');
 
     Route::resource('maintenance-requests', MaintenanceRequestController::class)->except(['edit', 'update']);
     Route::post('/maintenance-requests/{maintenanceRequest}/assign',  [MaintenanceRequestController::class, 'assign'])->name('maintenance-requests.assign');
@@ -186,6 +187,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/salaries/{salary}/record-expense', [SalaryController::class, 'recordExpense'])->name('salaries.record-expense');
         Route::get('/employees/{employee}/salary-history', [SalaryController::class, 'employeeHistory'])->name('salaries.history');
         Route::get('/salaries-report/export', [SalaryController::class, 'exportReport'])->name('salaries.export');
+        Route::get('/api/salaries', [SalaryController::class, 'tableData'])->name('salaries.data');
     });
 
     // Broadcasts (urgent messages)
