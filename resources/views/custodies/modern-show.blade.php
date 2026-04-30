@@ -131,6 +131,18 @@
                                 <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
                                     <i class="fas fa-times-circle"></i> رفض الطلب
                                 </button>
+                            @elseif($custody->status === 'pending' && $custody->initiated_by === 'accountant')
+                                {{-- Auto-approve accountant-created custodies --}}
+                                <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" style="display:inline;">
+                                    @csrf
+                                    <input type="hidden" name="auto_approve" value="1">
+                                    <button type="submit" class="btn btn-success" onclick="return confirm('هل تريد الموافقة على هذه العهدة؟')">
+                                        <i class="fas fa-check-circle"></i> الموافقة
+                                    </button>
+                                </form>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                    <i class="fas fa-times-circle"></i> رفض
+                                </button>
                             @endif
                         @endcan
 

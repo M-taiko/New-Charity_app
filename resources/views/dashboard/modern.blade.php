@@ -302,7 +302,7 @@
 
         {{-- الصف الثاني: إحصائيات السنة --}}
         <div class="row g-4 mb-4">
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="0">
                 <div class="stat-card info">
                     <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
                     <div class="stat-label">عهدات {{ $selectedYear }}</div>
@@ -310,7 +310,7 @@
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
                 <div class="stat-card danger">
                     <div class="stat-icon"><i class="fas fa-money-bill"></i></div>
                     <div class="stat-label">مصروفات {{ $selectedYear }}</div>
@@ -318,7 +318,7 @@
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
                 <div class="stat-card warning">
                     <div class="stat-icon"><i class="fas fa-undo-alt"></i></div>
                     <div class="stat-label">مبالغ مردودة {{ $selectedYear }}</div>
@@ -326,17 +326,10 @@
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
-                <div class="stat-card success">
-                    <div class="stat-icon"><i class="fas fa-users"></i></div>
-                    <div class="stat-label">حالات معتمدة {{ $selectedYear }}</div>
-                    <div class="stat-number" style="color: var(--success);">{{ $yearStats['approved_cases'] ?? 0 }}</div>
-                </div>
-            </div>
         </div>
 
         <!-- Agents Performance -->
-        @if(count($agentsStats) > 0)
+        @if(count($agentsStats) > 0 && auth()->user()->hasRole('مدير'))
         <div class="row mb-4" data-aos="fade-up">
             <div class="col-12">
                 <div class="card border-0 shadow-sm">
@@ -411,7 +404,7 @@
         @endif
 
         <!-- Researchers Performance -->
-        @if(count($researchersStats) > 0)
+        @if(count($researchersStats) > 0 && auth()->user()->hasRole('مدير'))
         <div class="row mb-4" data-aos="fade-up">
             <div class="col-12">
                 <div class="card border-0 shadow-sm">

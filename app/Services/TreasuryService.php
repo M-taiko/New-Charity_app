@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\DB;
 
 class TreasuryService
 {
-    public function createCustody($treasuryId, $agentId, $accountantId, $amount, $notes = null, $isAgentRequest = false)
+    public function createCustody($treasuryId, $agentId, $accountantId, $amount, $notes = null, $isAgentRequest = false, $isPersonalCustody = false)
     {
-        return DB::transaction(function () use ($treasuryId, $agentId, $accountantId, $amount, $notes, $isAgentRequest) {
+        return DB::transaction(function () use ($treasuryId, $agentId, $accountantId, $amount, $notes, $isAgentRequest, $isPersonalCustody) {
             $custody = Custody::create([
                 'treasury_id' => $treasuryId,
                 'agent_id' => $agentId,
@@ -23,12 +23,27 @@ class TreasuryService
                 'amount' => $amount,
                 'spent' => 0,
                 'returned' => 0,
-                'status' => 'pending',
+                'status' => $isPersonalCustody ? 'accepted' : 'pending', // Auto-accept personal custodies
                 'notes' => $notes,
+                'accepted_at' => $isPersonalCustody ? now() : null,
             ]);
 
             // Notifications based on request type
-            if ($isAgentRequest) {
+            if ($isPersonalCustody) {
+                // Personal custody for accountant/manager: auto-accepted, notify managers/other accountants
+                $user = User::find($accountantId);
+                $userName = $user ? $user->name : 'المستخدم';
+                $notifiedUsers = [];
+
+                $this->notifyManagers(
+                    'عهدة شخصية جديدة',
+                    "{$userName} أنشأ عهدة شخصية بقيمة {$amount} ج.م من خزينة ID {$treasuryId}",
+                    'info',
+                    $custody->id,
+                    'custody',
+                    $notifiedUsers
+                );
+            } elseif ($isAgentRequest) {
                 // Agent request: notify managers and accountants for approval
                 $agent = User::find($agentId);
                 $notifiedUsers = [];

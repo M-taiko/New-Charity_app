@@ -117,18 +117,23 @@ class CustodyController extends Controller
             $isAgentRequest = $isAgent; // True if agent requesting, false if accountant for self
         }
 
-        $this->service->createCustody(
-            $treasury->id,
-            $agentId,
-            auth()->id(),
-            $request->amount,
-            $request->notes,
-            $isAgentRequest
-        );
+        try {
+            $this->service->createCustody(
+                $treasury->id,
+                $agentId,
+                auth()->id(),
+                $request->amount,
+                $request->notes,
+                $isAgentRequest,
+                $isForSelf  // Pass personal custody flag
+            );
 
-        $message = $isAgentRequest ? 'تم إرسال طلب العهدة للمحاسب للموافقة' : 'تم إنشاء العهدة بنجاح';
-        ActivityLogService::log('created', ($isAgentRequest ? 'طلب عهدة جديد' : 'إنشاء عهدة') . ' بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
-        return redirect()->route($isAgentRequest ? 'agent.transactions' : 'custodies.index')->with('success', $message);
+            $message = $isAgentRequest ? 'تم إرسال طلب العهدة للمحاسب للموافقة' : 'تم إنشاء العهدة بنجاح';
+            ActivityLogService::log('created', ($isAgentRequest ? 'طلب عهدة جديد' : 'إنشاء عهدة') . ' بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
+            return redirect()->route($isAgentRequest ? 'agent.transactions' : 'custodies.index')->with('success', $message);
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function show(Custody $custody)
@@ -158,6 +163,17 @@ class CustodyController extends Controller
     public function accept(Custody $custody, Request $request)
     {
         $this->authorize('approve_custody');
+
+        // Handle auto-approve for accountant-created custodies
+        if ($request->has('auto_approve') && $custody->initiated_by === 'accountant') {
+            try {
+                $this->service->acceptCustody($custody);
+                ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
+                return back()->with('success', 'تم الموافقة على العهدة. المندوب سيختار الخزينة عند الاستقبال');
+            } catch (\Exception $e) {
+                return back()->with('error', $e->getMessage());
+            }
+        }
 
         // Get treasury amounts distribution
         $treasuryAmounts = $request->input('treasury_amounts', []);
