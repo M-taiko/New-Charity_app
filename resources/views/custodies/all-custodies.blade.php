@@ -113,19 +113,27 @@
         </div>
 
         <div class="col-xl-2 col-md-4 col-sm-6 mb-3">
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm" id="remainingCard" style="cursor: pointer; transition: all 0.3s ease;" onclick="toggleRemainingBreakdown()">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="rounded-circle p-3" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
-                                <i class="fas fa-wallet text-white" style="font-size: 1.2rem;"></i>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center flex-grow-1">
+                            <div class="flex-shrink-0">
+                                <div class="rounded-circle p-3" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);">
+                                    <i class="fas fa-wallet text-white" style="font-size: 1.2rem;"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <div class="text-muted small">المتبقي</div>
+                                <h6 class="mb-0" style="font-size: 0.9rem;">{{ number_format($stats['total_remaining'], 0) }} ج.م</h6>
                             </div>
                         </div>
-                        <div class="flex-grow-1 ms-3">
-                            <div class="text-muted small">المتبقي</div>
-                            <h6 class="mb-0" style="font-size: 0.9rem;">{{ number_format($stats['total_remaining'], 0) }} ج.م</h6>
+                        <div>
+                            <i class="fas fa-chevron-down" id="remainingChevron" style="font-size: 0.9rem; color: #3b82f6;"></i>
                         </div>
                     </div>
+                    <small class="text-muted d-block mt-2" style="font-size: 0.7rem;">
+                        <i class="fas fa-click"></i> اضغط لتفصيل المندوبين
+                    </small>
                 </div>
             </div>
         </div>
@@ -259,6 +267,119 @@
                     <div class="pt-2 border-top">
                         <small class="text-muted">المرتجع</small>
                         <h6 class="mb-0 text-success">{{ number_format($stats['partially_returned_returned'], 2) }} ج.م</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Agents Remaining Breakdown (Hidden by default) -->
+    <div id="remainingBreakdown" style="display: none; margin-bottom: 2rem;" data-aos="fade-up">
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none;">
+                        <h5 style="color: white; margin: 0;">
+                            <i class="fas fa-user-group"></i> تفصيل المتبقي لكل مندوب
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @if($agentsSummary->isEmpty())
+                            <div class="alert alert-info" role="alert">
+                                <i class="fas fa-info-circle"></i> لا توجد عهدات نشطة حالياً
+                            </div>
+                        @else
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="30%">المندوب</th>
+                                            <th width="10%" class="text-center">عدد العهدات</th>
+                                            <th width="15%" class="text-end">إجمالي المبالغ</th>
+                                            <th width="12%" class="text-end">المصروف</th>
+                                            <th width="12%" class="text-end">المرتجع</th>
+                                            <th width="15%" class="text-end text-success fw-bold">المتبقي</th>
+                                            <th width="6%" class="text-center"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($agentsSummary as $item)
+                                        <tr style="cursor: pointer;" onclick="toggleAgentDetail({{ $item['agent']->id }})">
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar me-2" style="width: 35px; height: 35px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold;">
+                                                        {{ substr($item['agent']->name, 0, 2) }}
+                                                    </div>
+                                                    <span>{{ $item['agent']->name }}</span>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-primary">{{ $item['count'] }}</span>
+                                            </td>
+                                            <td class="text-end">{{ number_format($item['total_amount'], 2) }} ج.م</td>
+                                            <td class="text-end text-danger">{{ number_format($item['total_spent'], 2) }} ج.م</td>
+                                            <td class="text-end text-warning">{{ number_format($item['total_returned'], 2) }} ج.م</td>
+                                            <td class="text-end text-success fw-bold">{{ number_format($item['total_remaining'], 2) }} ج.م</td>
+                                            <td class="text-center">
+                                                <i class="fas fa-chevron-down" id="agentChevron{{ $item['agent']->id }}" style="transition: transform 0.3s;"></i>
+                                            </td>
+                                        </tr>
+
+                                        <!-- Agent Detail Row (Hidden by default) -->
+                                        <tr id="agentDetail{{ $item['agent']->id }}" style="display: none;">
+                                            <td colspan="7">
+                                                <table class="table table-sm table-bordered mb-0" style="background-color: #f8f9fa;">
+                                                    <thead style="background-color: #e9ecef;">
+                                                        <tr>
+                                                            <th width="10%">#</th>
+                                                            <th width="15%">تاريخ الإنشاء</th>
+                                                            <th width="15%">الحالة</th>
+                                                            <th width="15%" class="text-end">المبلغ</th>
+                                                            <th width="12%" class="text-end">المصروف</th>
+                                                            <th width="12%" class="text-end">المرتجع</th>
+                                                            <th width="12%" class="text-end text-success fw-bold">المتبقي</th>
+                                                            <th width="9%"></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach($item['custodies'] as $custody)
+                                                        <tr>
+                                                            <td><strong>#{{ $custody['id'] }}</strong></td>
+                                                            <td>{{ $custody['created_at'] }}</td>
+                                                            <td>
+                                                                @php
+                                                                    $statusLabels = [
+                                                                        'pending' => ['label' => 'انتظار', 'class' => 'bg-warning'],
+                                                                        'accepted' => ['label' => 'مقبولة', 'class' => 'bg-info'],
+                                                                        'active' => ['label' => 'نشطة', 'class' => 'bg-success'],
+                                                                        'rejected' => ['label' => 'مرفوضة', 'class' => 'bg-danger'],
+                                                                        'partially_returned' => ['label' => 'مرتجع جزئياً', 'class' => 'bg-primary'],
+                                                                        'closed' => ['label' => 'مغلقة', 'class' => 'bg-secondary'],
+                                                                    ];
+                                                                    $status = $statusLabels[$custody['status']] ?? ['label' => $custody['status'], 'class' => 'bg-secondary'];
+                                                                @endphp
+                                                                <span class="badge {{ $status['class'] }}">{{ $status['label'] }}</span>
+                                                            </td>
+                                                            <td class="text-end">{{ number_format($custody['amount'], 2) }} ج.م</td>
+                                                            <td class="text-end text-danger">{{ number_format($custody['spent'], 2) }} ج.م</td>
+                                                            <td class="text-end text-warning">{{ number_format($custody['returned'], 2) }} ج.م</td>
+                                                            <td class="text-end text-success fw-bold">{{ number_format($custody['remaining'], 2) }} ج.م</td>
+                                                            <td>
+                                                                <a href="{{ route('custodies.show', $custody['id']) }}" class="btn btn-sm btn-outline-primary" title="عرض تفاصيل">
+                                                                    <i class="fas fa-eye"></i>
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -833,4 +954,53 @@ function viewExpenseAttachment(expenseId, attachment) {
         </div>
     </div>
 </div>
+
+<script>
+// Toggle remaining breakdown visibility
+function toggleRemainingBreakdown() {
+    const breakdownEl = document.getElementById('remainingBreakdown');
+    const chevronEl = document.getElementById('remainingChevron');
+    const cardEl = document.getElementById('remainingCard');
+
+    const isHidden = breakdownEl.style.display === 'none';
+
+    if (isHidden) {
+        breakdownEl.style.display = 'block';
+        chevronEl.classList.remove('fa-chevron-down');
+        chevronEl.classList.add('fa-chevron-up');
+        cardEl.style.boxShadow = '0 10px 25px rgba(59, 130, 246, 0.15)';
+    } else {
+        breakdownEl.style.display = 'none';
+        chevronEl.classList.remove('fa-chevron-up');
+        chevronEl.classList.add('fa-chevron-down');
+        cardEl.style.boxShadow = '';
+    }
+}
+
+// Toggle agent detail row visibility
+function toggleAgentDetail(agentId) {
+    const detailEl = document.getElementById('agentDetail' + agentId);
+    const chevronEl = document.getElementById('agentChevron' + agentId);
+
+    const isHidden = detailEl.style.display === 'none';
+
+    if (isHidden) {
+        detailEl.style.display = 'table-row';
+        chevronEl.style.transform = 'rotate(180deg)';
+    } else {
+        detailEl.style.display = 'none';
+        chevronEl.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Prevent event bubbling for expand/collapse
+document.addEventListener('DOMContentLoaded', function() {
+    const detailRows = document.querySelectorAll('tr[id^="agentDetail"]');
+    detailRows.forEach(row => {
+        row.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+});
+</script>
 @endsection

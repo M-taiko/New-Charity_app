@@ -705,7 +705,33 @@ class CustodyController extends Controller
         // Get agents list for filtering
         $agents = User::role('مندوب')->orderBy('name')->get();
 
-        return view('custodies.all-custodies', compact('custodies', 'stats', 'agents'));
+        // Build per-agent summary for breakdown view
+        $agentsSummary = $activeCustodies
+            ->groupBy('agent_id')
+            ->map(function ($agentCustodies) {
+                $agent = $agentCustodies->first()->agent;
+                return [
+                    'agent' => $agent,
+                    'count' => $agentCustodies->count(),
+                    'total_amount' => $agentCustodies->sum('amount'),
+                    'total_spent' => $agentCustodies->sum('spent'),
+                    'total_returned' => $agentCustodies->sum('returned'),
+                    'total_remaining' => $agentCustodies->sum(fn($c) => $c->getRemainingBalance()),
+                    'custodies' => $agentCustodies->map(fn($c) => [
+                        'id' => $c->id,
+                        'amount' => $c->amount,
+                        'spent' => $c->spent,
+                        'returned' => $c->returned,
+                        'remaining' => $c->getRemainingBalance(),
+                        'status' => $c->status,
+                        'created_at' => $c->created_at->format('Y-m-d'),
+                    ])->values(),
+                ];
+            })
+            ->sortByDesc('total_remaining')
+            ->values();
+
+        return view('custodies.all-custodies', compact('custodies', 'stats', 'agents', 'agentsSummary'));
     }
 
     /**
