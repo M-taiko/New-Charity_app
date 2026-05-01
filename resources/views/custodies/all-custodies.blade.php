@@ -464,12 +464,16 @@
                                 <tr data-agent-id="{{ $custody->agent_id }}" data-status="{{ $custody->status }}">
                                     <td>{{ $custody->id }}</td>
                                     <td>
+                                        @if($custody->agent)
                                         <div class="d-flex align-items-center">
                                             <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem;">
                                                 {{ substr($custody->agent->name, 0, 2) }}
                                             </div>
                                             <span class="ms-2">{{ $custody->agent->name }}</span>
                                         </div>
+                                        @else
+                                        <span class="text-muted">-</span>
+                                        @endif
                                     </td>
                                     <td>{{ $custody->created_at->format('Y-m-d') }}</td>
                                     <td>{{ number_format($custody->amount, 2) }} ج.م</td>
@@ -550,7 +554,7 @@
         <div class="modal-content">
             <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                 <h5 class="modal-title" style="color: white;">
-                    <i class="fas fa-history"></i> حركات العهدة #{{ $custody->id }} - {{ $custody->agent->name }}
+                    <i class="fas fa-history"></i> حركات العهدة #{{ $custody->id }} - {{ $custody->agent?->name ?? '-' }}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -600,7 +604,7 @@
                                     <h6>إنشاء العهدة</h6>
                                     <small class="text-muted">{{ $custody->created_at->format('Y-m-d') }}</small>
                                 </div>
-                                <p class="mb-0">تم إنشاء عهدة للمندوب {{ $custody->agent->name }} بقيمة {{ number_format($custody->amount, 2) }} ج.م</p>
+                                <p class="mb-0">تم إنشاء عهدة للمندوب {{ $custody->agent?->name ?? '-' }} بقيمة {{ number_format($custody->amount, 2) }} ج.م</p>
                             </div>
                         </div>
 

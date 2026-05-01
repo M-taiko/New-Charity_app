@@ -706,7 +706,10 @@ class CustodyController extends Controller
         $agents = User::role('مندوب')->orderBy('name')->get();
 
         // Build per-agent summary for breakdown view
-        $agentsSummary = $activeCustodies
+        // Filter out custodies with deleted agents (null agent relationship)
+        $custodiesWithAgents = $activeCustodies->filter(fn($c) => $c->agent !== null);
+
+        $agentsSummary = $custodiesWithAgents
             ->groupBy('agent_id')
             ->map(function ($agentCustodies) {
                 $agent = $agentCustodies->first()->agent;
