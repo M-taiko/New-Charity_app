@@ -112,4 +112,26 @@ class Custody extends Model
             && $this->status === 'accepted'
             && $this->agent_id === auth()->id();
     }
+
+    public function hasPendingTransfers(): bool
+    {
+        return \App\Models\CustodyTransfer::where('custody_id', $this->id)
+            ->where('status', 'pending')
+            ->exists();
+    }
+
+    public function pendingTransfers()
+    {
+        return $this->hasMany(\App\Models\CustodyTransfer::class);
+    }
+
+    public function returnRequests(): HasMany
+    {
+        return $this->hasMany(CustodyReturnRequest::class);
+    }
+
+    public function hasPendingReturnRequest(): bool
+    {
+        return $this->returnRequests()->where('status', 'pending')->exists();
+    }
 }

@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TreasuryController;
 use App\Http\Controllers\CustodyController;
 use App\Http\Controllers\CustodyTransferController;
+use App\Http\Controllers\CustodyReturnRequestController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseItemController;
 use App\Http\Controllers\SocialCaseController;
@@ -53,6 +54,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agent/transactions', [CustodyController::class, 'agentTransactions'])->name('agent.transactions');
     Route::get('/api/agent/transactions', [CustodyController::class, 'agentTransactionsData'])->name('api.agent.transactions');
     Route::get('/api/agent/returned', [CustodyController::class, 'agentReturnedData'])->name('api.agent.returned');
+    Route::get('/api/custodies/data', [CustodyController::class, 'apiCustodiesData'])->name('api.custodies.data');
+    Route::post('/custodies/{custody}/request-return', [CustodyController::class, 'requestReturn'])->name('custodies.requestReturn');
+    Route::post('/custody-return-requests/{returnRequest}/approve', [CustodyController::class, 'approveReturnRequest'])->name('custody-return-requests.approve');
+    Route::post('/custody-return-requests/{returnRequest}/reject', [CustodyController::class, 'rejectReturnRequest'])->name('custody-return-requests.reject');
+    Route::get('/custody-return-requests', [CustodyReturnRequestController::class, 'index'])->name('custody-return-requests.index');
+    Route::post('/custody-transfers/{custodyTransfer}/approve', [CustodyTransferController::class, 'approve'])->name('custody-transfers.approve');
+    Route::post('/custody-transfers/{custodyTransfer}/reject', [CustodyTransferController::class, 'reject'])->name('custody-transfers.reject');
     Route::get('/agent/my-custodies', [CustodyController::class, 'myCustodies'])->name('agent.my-custodies');
     Route::get('/accountant/all-custodies', [CustodyController::class, 'allCustodies'])->name('accountant.all-custodies');
 

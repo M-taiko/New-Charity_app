@@ -167,15 +167,113 @@
         </div>
     </div>
 
+    <!-- Status Breakdown Summary -->
+    <div class="row mb-4" data-aos="fade-up">
+        <div class="col-12">
+            <h5 class="mb-3">
+                <i class="fas fa-chart-pie"></i> تفصيل المبالغ حسب الحالة
+            </h5>
+        </div>
+
+        <!-- Active Custodies -->
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                    <h6 style="color: white; margin: 0;">
+                        <i class="fas fa-check-circle"></i> النشطة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted">المبلغ الكلي</small>
+                        <h6 class="mb-0">{{ number_format($stats['active_amount'], 2) }} ج.م</h6>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">المصروف</small>
+                        <h6 class="mb-0 text-danger">{{ number_format($stats['active_spent'], 2) }} ج.م</h6>
+                    </div>
+                    <div class="pt-2 border-top">
+                        <small class="text-muted">المتبقي</small>
+                        <h6 class="mb-0 text-success">{{ number_format($stats['active_remaining'], 2) }} ج.م</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Custodies -->
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none;">
+                    <h6 style="color: white; margin: 0;">
+                        <i class="fas fa-clock"></i> المعلقة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div>
+                        <small class="text-muted">المبلغ المعلق</small>
+                        <h6 class="mb-0">{{ number_format($stats['pending_amount'], 2) }} ج.م</h6>
+                    </div>
+                    <p class="mb-0 mt-2 small text-muted">في انتظار الموافقة أو الرد</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rejected Custodies -->
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none;">
+                    <h6 style="color: white; margin: 0;">
+                        <i class="fas fa-times-circle"></i> المرفوضة
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted">المبلغ المرفوض</small>
+                        <h6 class="mb-0">{{ number_format($stats['rejected_amount'], 2) }} ج.م</h6>
+                    </div>
+                    <div>
+                        <small class="text-muted">المصروف</small>
+                        <h6 class="mb-0 text-danger">{{ number_format($stats['rejected_spent'], 2) }} ج.م</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Partially Returned Custodies -->
+        <div class="col-md-3 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); border: none;">
+                    <h6 style="color: white; margin: 0;">
+                        <i class="fas fa-undo"></i> المرتجع جزئياً
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2">
+                        <small class="text-muted">المبلغ الكلي</small>
+                        <h6 class="mb-0">{{ number_format($stats['partially_returned_amount'], 2) }} ج.م</h6>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted">المصروف</small>
+                        <h6 class="mb-0 text-danger">{{ number_format($stats['partially_returned_spent'], 2) }} ج.م</h6>
+                    </div>
+                    <div class="pt-2 border-top">
+                        <small class="text-muted">المرتجع</small>
+                        <h6 class="mb-0 text-success">{{ number_format($stats['partially_returned_returned'], 2) }} ج.م</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Filter and Search -->
     <div class="row mb-3" data-aos="fade-up">
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="input-group">
                 <span class="input-group-text"><i class="fas fa-search"></i></span>
                 <input type="text" id="searchInput" class="form-control" placeholder="بحث في العهدات...">
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <select id="agentFilter" class="form-select">
                 <option value="">جميع المندوبين</option>
                 @foreach($agents as $agent)
@@ -183,7 +281,7 @@
                 @endforeach
             </select>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <select id="statusFilter" class="form-select">
                 <option value="">جميع الحالات</option>
                 <option value="pending">في الانتظار</option>
@@ -193,6 +291,25 @@
                 <option value="partially_returned">مرتجع جزئياً</option>
                 <option value="closed">مغلقة</option>
             </select>
+        </div>
+        <div class="col-md-3">
+            <div class="form-check form-switch pt-2">
+                <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked style="width: 2rem; height: 1rem; cursor: pointer;">
+                <label class="form-check-label ms-2" for="autoRefreshToggle" style="cursor: pointer;">
+                    <i class="fas fa-sync-alt"></i> التحديث التلقائي
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auto-refresh status indicator -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <small class="text-muted">
+                <i class="fas fa-info-circle"></i>
+                <span id="refreshStatus">سيتم التحديث التلقائي كل 15 ثانية</span>
+                <span id="lastUpdateTime" style="display: none;"></span>
+            </small>
         </div>
     </div>
 
@@ -484,13 +601,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('searchInput');
     const agentFilter = document.getElementById('agentFilter');
     const statusFilter = document.getElementById('statusFilter');
+    const autoRefreshToggle = document.getElementById('autoRefreshToggle');
     const table = document.getElementById('custodiesTable');
-    const rows = table.querySelectorAll('tbody tr');
+    const refreshStatus = document.getElementById('refreshStatus');
+    const lastUpdateTime = document.getElementById('lastUpdateTime');
+
+    let autoRefreshInterval = null;
+    const REFRESH_INTERVAL = 15000; // 15 seconds
 
     function filterTable() {
         const searchTerm = searchInput.value.toLowerCase();
         const selectedAgent = agentFilter.value;
         const selectedStatus = statusFilter.value;
+        const rows = table.querySelectorAll('tbody tr');
 
         rows.forEach(row => {
             const text = row.textContent.toLowerCase();
@@ -509,9 +632,137 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function updateLastUpdateTime() {
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('ar-EG');
+        lastUpdateTime.textContent = ` - آخر تحديث: ${timeString}`;
+        lastUpdateTime.style.display = 'inline';
+    }
+
+    function refreshTableData() {
+        // Preserve current filter values
+        const searchTerm = searchInput.value;
+        const selectedAgent = agentFilter.value;
+        const selectedStatus = statusFilter.value;
+
+        fetch('{{ route("api.custodies.data") }}', {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.stats && data.custodies) {
+                // Update table rows
+                const tbody = table.querySelector('tbody');
+                tbody.innerHTML = '';
+
+                data.custodies.forEach(custody => {
+                    const statusBadge = getStatusBadge(custody.status, custody.initiated_by);
+
+                    const row = document.createElement('tr');
+                    row.dataset.agentId = custody.agent_id;
+                    row.dataset.status = custody.status;
+
+                    row.innerHTML = `
+                        <td>${custody.id}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.8rem;">
+                                    ${custody.agent_name.substring(0, 2)}
+                                </div>
+                                <span class="ms-2">${custody.agent_name}</span>
+                            </div>
+                        </td>
+                        <td>${custody.created_at}</td>
+                        <td>${custody.amount} ج.م</td>
+                        <td><span class="badge bg-danger">${custody.spent} ج.م</span></td>
+                        <td><span class="badge bg-success">${custody.returned} ج.م</span></td>
+                        <td><span class="badge bg-primary">${custody.remaining} ج.م</span></td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="/custodies/${custody.id}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#transactionsModal${custody.id}" title="عرض الحركات">
+                                    <i class="fas fa-history"></i>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+
+                    tbody.appendChild(row);
+                });
+
+                filterTable(); // Reapply filters after update
+                updateLastUpdateTime();
+
+                // Update statistics cards
+                updateStatistics(data.stats);
+            }
+        })
+        .catch(error => console.log('Refresh error:', error));
+    }
+
+    function getStatusBadge(status, initiatedBy) {
+        const badges = {
+            'pending': {
+                bg: 'bg-warning',
+                text: initiatedBy === 'agent' ? 'طلب انتظار' : 'انتظار قبول المندوب'
+            },
+            'accepted': { bg: 'bg-info', text: 'مقبولة' },
+            'active': { bg: 'bg-success', text: 'نشطة' },
+            'rejected': { bg: 'bg-danger', text: 'مرفوضة' },
+            'partially_returned': { bg: 'bg-info', text: 'مرتجع جزئياً' },
+            'closed': { bg: 'bg-secondary', text: 'مغلقة' }
+        };
+
+        const badge = badges[status] || { bg: 'bg-secondary', text: status };
+        return `<span class="badge ${badge.bg}">${badge.text}</span>`;
+    }
+
+    function updateStatistics(stats) {
+        // Update main statistics if needed
+        // Could be expanded to update stat cards dynamically
+    }
+
+    function startAutoRefresh() {
+        if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+
+        refreshStatus.textContent = 'سيتم التحديث التلقائي كل 15 ثانية';
+
+        autoRefreshInterval = setInterval(() => {
+            refreshTableData();
+        }, REFRESH_INTERVAL);
+    }
+
+    function stopAutoRefresh() {
+        if (autoRefreshInterval) {
+            clearInterval(autoRefreshInterval);
+            autoRefreshInterval = null;
+        }
+        refreshStatus.textContent = 'التحديث التلقائي معطل';
+        lastUpdateTime.style.display = 'none';
+    }
+
+    // Auto-refresh toggle
+    autoRefreshToggle.addEventListener('change', function() {
+        if (this.checked) {
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+    });
+
+    // Initial setup
     searchInput.addEventListener('input', filterTable);
     agentFilter.addEventListener('change', filterTable);
     statusFilter.addEventListener('change', filterTable);
+
+    // Start auto-refresh by default
+    startAutoRefresh();
 });
 
 // View expense attachment in modal

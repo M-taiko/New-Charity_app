@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Custody;
 use App\Models\Treasury;
 use App\Models\User;
+use App\Models\CustodyReturnRequest;
+use App\Models\Notification;
 use App\Services\TreasuryService;
 use App\Services\ActivityLogService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CustodyController extends Controller
 {
@@ -169,7 +172,7 @@ class CustodyController extends Controller
             try {
                 $this->service->acceptCustody($custody);
                 ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
-                return back()->with('success', 'تم الموافقة على العهدة. المندوب سيختار الخزينة عند الاستقبال');
+                return back()->with('success', 'تم الموافقة على العهدة. المندوب سيستقبل الأموال من خزينة "' . ($custody->treasury->name ?? 'غير محددة') . '" عند القبول');
             } catch (\Exception $e) {
                 return back()->with('error', $e->getMessage());
             }
@@ -248,22 +251,22 @@ class CustodyController extends Controller
 
     public function agentAccept(Custody $custody, Request $request)
     {
-        // Get selected treasury
-        $treasuryId = $request->input('treasury_id');
-        if (!$treasuryId) {
-            return back()->with('error', 'يرجى اختيار خزينة');
-        }
+        // Use the treasury that was pre-determined when the custody was created
+        // The agent cannot choose a different treasury
+        $treasury = $custody->treasury;
 
-        $treasury = Treasury::findOrFail($treasuryId);
+        if (!$treasury) {
+            return back()->with('error', 'لم يتم تحديد خزينة للعهدة. يرجى الاتصال بالمحاسب');
+        }
 
         // Validate that treasury has enough balance
         if ($treasury->balance < $custody->amount) {
-            return back()->with('error', 'رصيد الخزينة المختارة غير كافي. الرصيد المتاح: ' . number_format($treasury->balance, 2) . ' ج.م');
+            return back()->with('error', 'رصيد الخزينة "' . $treasury->name . '" غير كافي. الرصيد المتاح: ' . number_format($treasury->balance, 2) . ' ج.م. يرجى الاتصال بالمحاسب');
         }
 
         try {
             $this->service->agentAcceptCustodyFromTreasury($custody, $treasury);
-            return back()->with('success', 'تم قبول العهدة وصرف الفلوس بنجاح');
+            return back()->with('success', 'تم قبول العهدة من خزينة "' . $treasury->name . '" وصرف الأموال بنجاح');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -288,6 +291,11 @@ class CustodyController extends Controller
         // Only the agent who owns this custody can request to return it
         if ($custody->agent_id !== auth()->id()) {
             abort(403, 'Unauthorized');
+        }
+
+        // Check if there are pending transfers
+        if ($custody->hasPendingTransfers()) {
+            return back()->with('error', 'لا يمكن رد عهدة بها تحويلات معلقة. يرجى انتظار قبول أو رفض التحويلات أولاً');
         }
 
         $remainingBalance = $custody->getRemainingBalance();
@@ -333,24 +341,159 @@ class CustodyController extends Controller
         return back()->with('success', 'تم قبول رد العهدة والتحويل للخزينة');
     }
 
-    public function directReturn(Request $request, Custody $custody)
+    /**
+     * Request to return part of custody (accounting request to custody owner)
+     */
+    public function requestReturn(Request $request, Custody $custody)
     {
         $this->authorize('approve_custody');
+
+        // Check if there are pending transfers
+        if ($custody->hasPendingTransfers()) {
+            return back()->with('error', 'لا يمكن طلب رد عهدة بها تحويلات معلقة. يرجى انتظار قبول أو رفض التحويلات أولاً');
+        }
+
+        // Check if there's already a pending return request
+        if ($custody->hasPendingReturnRequest()) {
+            return back()->with('error', 'يوجد طلب رد معلق بالفعل على هذه العهدة. يرجى الانتظار لحين الموافقة عليه');
+        }
 
         $remaining = $custody->getRemainingBalance();
 
         $request->validate([
             'return_amount' => 'required|numeric|min:0.01|max:' . $remaining,
+            'reason' => 'nullable|string|max:500',
         ], [
             'return_amount.max' => 'المبلغ يتجاوز الرصيد المتاح (' . number_format($remaining, 2) . ' ج.م)',
         ]);
 
         try {
-            $this->service->returnCustody($custody, $request->return_amount);
-            ActivityLogService::returned($custody, 'رد مباشر ' . number_format($request->return_amount, 2) . ' ج.م من العهدة #' . $custody->id . ' للخزينة');
-            return back()->with('success', 'تم رد المبلغ للخزينة مباشرة بنجاح');
+            $returnRequest = CustodyReturnRequest::create([
+                'custody_id' => $custody->id,
+                'requested_by' => auth()->id(),
+                'amount' => $request->return_amount,
+                'reason' => $request->reason,
+                'status' => 'pending',
+            ]);
+
+            // Notify custody owner (the one who initiated the custody)
+            $custodyOwner = $custody->initiated_by === 'agent'
+                ? $custody->agent_id
+                : $custody->accountant_id;
+
+            Notification::create([
+                'user_id' => $custodyOwner,
+                'title' => 'طلب رد عهدة',
+                'message' => 'المحاسب ' . auth()->user()->name . ' يطلب رد ' . number_format($request->return_amount, 2) . ' ج.م من العهدة #' . $custody->id,
+                'type' => 'info',
+                'reference_id' => $returnRequest->id,
+                'reference_type' => 'custody_return_request',
+            ]);
+
+            ActivityLogService::logged('تم تقديم طلب رد عهدة', 'CustodyReturnRequest', $returnRequest->id);
+            return back()->with('success', 'تم تقديم طلب الرد لصاحب العهدة بنجاح. يرجى انتظار الموافقة');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
+     * Approve return request (custody owner action only)
+     */
+    public function approveReturnRequest(CustodyReturnRequest $returnRequest)
+    {
+        if (!$returnRequest->isPending()) {
+            return back()->with('error', 'لا يمكن الموافقة على طلب تم البت فيه بالفعل');
+        }
+
+        $custody = $returnRequest->custody;
+
+        // Verify that the approver is the custody owner
+        $custodyOwnerId = $custody->initiated_by === 'agent'
+            ? $custody->agent_id
+            : $custody->accountant_id;
+
+        if (auth()->id() !== $custodyOwnerId) {
+            abort(403, 'فقط صاحب العهدة يمكنه الموافقة على طلبات الرد');
+        }
+
+        try {
+            DB::transaction(function () use ($returnRequest, $custody) {
+                // Update request status
+                $returnRequest->update([
+                    'status' => 'approved',
+                    'approved_by' => auth()->id(),
+                    'approved_at' => now(),
+                ]);
+
+                // Execute the return
+                $this->service->returnCustody($custody, $returnRequest->amount);
+
+                // Notify requester
+                Notification::create([
+                    'user_id' => $returnRequest->requested_by,
+                    'title' => 'موافقة على طلب الرد',
+                    'message' => 'تمت الموافقة على طلب رد ' . number_format($returnRequest->amount, 2) . ' ج.م من العهدة #' . $custody->id,
+                    'type' => 'success',
+                    'reference_id' => $returnRequest->id,
+                    'reference_type' => 'custody_return_request',
+                ]);
+
+                ActivityLogService::returned($custody, 'رد مقبول ' . number_format($returnRequest->amount, 2) . ' ج.م من العهدة #' . $custody->id . ' بموافقة من المدير');
+            });
+
+            return back()->with('success', 'تمت الموافقة على طلب الرد وتنفيذه بنجاح');
+        } catch (\Exception $e) {
+            return back()->with('error', 'خطأ: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Reject return request (custody owner action only)
+     */
+    public function rejectReturnRequest(Request $request, CustodyReturnRequest $returnRequest)
+    {
+        if (!$returnRequest->isPending()) {
+            return back()->with('error', 'لا يمكن رفض طلب تم البت فيه بالفعل');
+        }
+
+        $custody = $returnRequest->custody;
+
+        // Verify that the rejector is the custody owner
+        $custodyOwnerId = $custody->initiated_by === 'agent'
+            ? $custody->agent_id
+            : $custody->accountant_id;
+
+        if (auth()->id() !== $custodyOwnerId) {
+            abort(403, 'فقط صاحب العهدة يمكنه رفض طلبات الرد');
+        }
+
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+        ]);
+
+        try {
+            $returnRequest->update([
+                'status' => 'rejected',
+                'approved_by' => auth()->id(),
+                'approval_notes' => $request->rejection_reason,
+                'approved_at' => now(),
+            ]);
+
+            // Notify requester
+            Notification::create([
+                'user_id' => $returnRequest->requested_by,
+                'title' => 'رفض طلب الرد',
+                'message' => 'تم رفض طلب رد ' . number_format($returnRequest->amount, 2) . ' ج.م من العهدة #' . $returnRequest->custody_id,
+                'type' => 'warning',
+                'reference_id' => $returnRequest->id,
+                'reference_type' => 'custody_return_request',
+            ]);
+
+            ActivityLogService::logged('تم رفض طلب رد عهدة', 'CustodyReturnRequest', $returnRequest->id);
+            return back()->with('success', 'تم رفض الطلب بنجاح');
+        } catch (\Exception $e) {
+            return back()->with('error', 'خطأ: ' . $e->getMessage());
         }
     }
 
@@ -466,20 +609,36 @@ class CustodyController extends Controller
             abort(403, 'Unauthorized');
         }
 
-        // Get agent's custodies with related data
-        $custodies = Custody::where('agent_id', $user->id)
+        // Get agent's own custodies with related data
+        $myCustodies = Custody::where('agent_id', $user->id)
             ->with(['treasury', 'accountant', 'transactions', 'expenses'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get transfers sent by this agent (pending + approved)
+        $sentTransfers = \App\Models\CustodyTransfer::where('from_agent_id', $user->id)
+            ->with(['toAgent', 'custody.treasury'])
+            ->whereIn('status', ['pending', 'approved'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Get transfers received by this agent (pending only - approved ones become new custodies)
+        $receivedTransfers = \App\Models\CustodyTransfer::where('to_agent_id', $user->id)
+            ->with(['fromAgent', 'custody.treasury'])
+            ->where('status', 'pending')
             ->orderBy('created_at', 'desc')
             ->get();
 
         // Calculate statistics
         // For financial calculations, exclude rejected and pending custodies
-        $acceptedCustodies = $custodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']);
+        $acceptedCustodies = $myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']);
 
         $stats = [
-            'total_custodies' => $custodies->count(),
-            'active_custodies' => $custodies->whereIn('status', ['accepted', 'active'])->count(),
-            'pending_custodies' => $custodies->where('status', 'pending')->count(),
+            'total_custodies' => $myCustodies->count(),
+            'active_custodies' => $myCustodies->whereIn('status', ['accepted', 'active'])->count(),
+            'pending_custodies' => $myCustodies->where('status', 'pending')->count(),
+            'pending_transfers_sent' => $sentTransfers->where('status', 'pending')->count(),
+            'pending_transfers_received' => $receivedTransfers->count(),
             // Financial stats only for accepted custodies (exclude rejected and pending)
             'total_amount' => $acceptedCustodies->sum('amount'),
             'total_spent' => $acceptedCustodies->sum('spent'),
@@ -487,7 +646,12 @@ class CustodyController extends Controller
             'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
         ];
 
-        return view('custodies.my-custodies', compact('custodies', 'stats'));
+        return view('custodies.my-custodies', compact(
+            'myCustodies',
+            'sentTransfers',
+            'receivedTransfers',
+            'stats'
+        ));
     }
 
     public function allCustodies()
@@ -507,23 +671,108 @@ class CustodyController extends Controller
         // For financial calculations, exclude rejected and pending custodies
         $acceptedCustodies = $custodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']);
 
+        // Breakdown by status
+        $activeCustodies = $custodies->whereIn('status', ['accepted', 'active']);
+        $pendingCustodies = $custodies->where('status', 'pending');
+        $rejectedCustodies = $custodies->where('status', 'rejected');
+        $partiallyReturnedCustodies = $custodies->where('status', 'partially_returned');
+        $closedCustodies = $custodies->where('status', 'closed');
+
         $stats = [
             'total_custodies' => $custodies->count(),
-            'active_custodies' => $custodies->whereIn('status', ['accepted', 'active'])->count(),
-            'pending_custodies' => $custodies->where('status', 'pending')->count(),
-            'rejected_custodies' => $custodies->where('status', 'rejected')->count(),
-            'closed_custodies' => $custodies->where('status', 'closed')->count(),
+            'active_custodies' => $activeCustodies->count(),
+            'pending_custodies' => $pendingCustodies->count(),
+            'rejected_custodies' => $rejectedCustodies->count(),
+            'closed_custodies' => $closedCustodies->count(),
             // Financial stats only for accepted custodies (exclude rejected and pending)
             'total_amount' => $acceptedCustodies->sum('amount'),
             'total_spent' => $acceptedCustodies->sum('spent'),
             'total_returned' => $acceptedCustodies->sum('returned'),
             'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
             'pending_returns' => $acceptedCustodies->sum('pending_return'),
+            // Breakdown by status with amounts
+            'active_amount' => $activeCustodies->sum('amount'),
+            'active_spent' => $activeCustodies->sum('spent'),
+            'active_remaining' => $activeCustodies->sum(fn($c) => $c->getRemainingBalance()),
+            'pending_amount' => $pendingCustodies->sum('amount'),
+            'rejected_amount' => $rejectedCustodies->sum('amount'),
+            'rejected_spent' => $rejectedCustodies->sum('spent'),
+            'partially_returned_amount' => $partiallyReturnedCustodies->sum('amount'),
+            'partially_returned_spent' => $partiallyReturnedCustodies->sum('spent'),
+            'partially_returned_returned' => $partiallyReturnedCustodies->sum('returned'),
         ];
 
         // Get agents list for filtering
         $agents = User::role('مندوب')->orderBy('name')->get();
 
         return view('custodies.all-custodies', compact('custodies', 'stats', 'agents'));
+    }
+
+    /**
+     * API endpoint for real-time data refresh (used by AJAX)
+     */
+    public function apiCustodiesData()
+    {
+        // Accountants, managers, and viewers (مشرف) can see all custodies
+        $user = auth()->user();
+        if (!$user->can('approve_custody') && !$user->can('view_all_records')) {
+            return response()->json(['error' => 'Unauthorized'], 403);
+        }
+
+        // Get all custodies with related data
+        $custodies = Custody::with(['agent', 'treasury', 'accountant', 'transactions', 'expenses'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Calculate statistics
+        $acceptedCustodies = $custodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']);
+
+        // Breakdown by status
+        $activeCustodies = $custodies->whereIn('status', ['accepted', 'active']);
+        $pendingCustodies = $custodies->where('status', 'pending');
+        $rejectedCustodies = $custodies->where('status', 'rejected');
+        $partiallyReturnedCustodies = $custodies->where('status', 'partially_returned');
+
+        $stats = [
+            'total_custodies' => $custodies->count(),
+            'active_custodies' => $activeCustodies->count(),
+            'pending_custodies' => $pendingCustodies->count(),
+            'rejected_custodies' => $rejectedCustodies->count(),
+            'closed_custodies' => $custodies->where('status', 'closed')->count(),
+            'total_amount' => $acceptedCustodies->sum('amount'),
+            'total_spent' => $acceptedCustodies->sum('spent'),
+            'total_returned' => $acceptedCustodies->sum('returned'),
+            'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
+            'pending_returns' => $acceptedCustodies->sum('pending_return'),
+            'active_amount' => $activeCustodies->sum('amount'),
+            'active_spent' => $activeCustodies->sum('spent'),
+            'active_remaining' => $activeCustodies->sum(fn($c) => $c->getRemainingBalance()),
+            'pending_amount' => $pendingCustodies->sum('amount'),
+            'rejected_amount' => $rejectedCustodies->sum('amount'),
+            'rejected_spent' => $rejectedCustodies->sum('spent'),
+            'partially_returned_amount' => $partiallyReturnedCustodies->sum('amount'),
+            'partially_returned_spent' => $partiallyReturnedCustodies->sum('spent'),
+            'partially_returned_returned' => $partiallyReturnedCustodies->sum('returned'),
+        ];
+
+        // Format custodies data for table
+        $custodiesData = $custodies->map(fn($c) => [
+            'id' => $c->id,
+            'agent_id' => $c->agent_id,
+            'agent_name' => $c->agent->name,
+            'created_at' => $c->created_at->format('Y-m-d'),
+            'amount' => number_format($c->amount, 2),
+            'spent' => number_format($c->spent, 2),
+            'returned' => number_format($c->returned, 2),
+            'remaining' => number_format($c->getRemainingBalance(), 2),
+            'status' => $c->status,
+            'initiated_by' => $c->initiated_by,
+        ]);
+
+        return response()->json([
+            'stats' => $stats,
+            'custodies' => $custodiesData,
+            'timestamp' => now()->toIso8601String(),
+        ]);
     }
 }

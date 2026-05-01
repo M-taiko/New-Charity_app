@@ -93,6 +93,42 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle p-3" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                                <i class="fas fa-arrow-right text-white" style="font-size: 1.5rem;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">تحويلات معلقة (مُرسلة)</div>
+                            <h4 class="mb-0">{{ $stats['pending_transfers_sent'] ?? 0 }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle p-3" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);">
+                                <i class="fas fa-arrow-left text-white" style="font-size: 1.5rem;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">تحويلات معلقة (مستقبلة)</div>
+                            <h4 class="mb-0">{{ $stats['pending_transfers_received'] ?? 0 }}</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Custodies List -->
@@ -105,7 +141,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    @if($custodies->isEmpty())
+                    @if($myCustodies->isEmpty())
                         <div class="text-center py-5">
                             <i class="fas fa-inbox text-muted" style="font-size: 4rem;"></i>
                             <p class="text-muted mt-3">لا توجد عهدات حتى الآن</p>
@@ -129,7 +165,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($custodies as $custody)
+                                    @foreach($myCustodies as $custody)
                                     <tr>
                                         <td>{{ $custody->id }}</td>
                                         <td>{{ $custody->created_at->format('Y-m-d') }}</td>
@@ -205,10 +241,119 @@
             </div>
         </div>
     </div>
+
+    <!-- Sent Transfers (معلقة) -->
+    @if($sentTransfers->isNotEmpty())
+    <div class="row mt-4" data-aos="fade-up">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-arrow-right"></i> التحويلات المرسلة (معلقة الاستقبال)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>العهدة</th>
+                                    <th>المُرسل إليه</th>
+                                    <th>المبلغ</th>
+                                    <th>الحالة</th>
+                                    <th>التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($sentTransfers as $transfer)
+                                <tr>
+                                    <td>{{ $transfer->id }}</td>
+                                    <td>
+                                        <a href="{{ route('custodies.show', $transfer->custody_id) }}" class="badge bg-primary">
+                                            #{{ $transfer->custody_id }}
+                                        </a>
+                                    </td>
+                                    <td>{{ $transfer->toAgent->name }}</td>
+                                    <td><strong>{{ number_format($transfer->amount, 2) }} ج.م</strong></td>
+                                    <td>
+                                        @if($transfer->status === 'pending')
+                                            <span class="badge bg-warning">قيد الانتظار</span>
+                                        @elseif($transfer->status === 'approved')
+                                            <span class="badge bg-success">تم الاستقبال</span>
+                                        @else
+                                            <span class="badge bg-danger">مرفوض</span>
+                                        @endif
+                                    </td>
+                                    <td>{{ $transfer->created_at->format('Y-m-d H:i') }}</td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <!-- Received Transfers (معلقة) -->
+    @if($receivedTransfers->isNotEmpty())
+    <div class="row mt-4" data-aos="fade-up">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-arrow-left"></i> التحويلات المستقبلة (بانتظار الموافقة)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>العهدة</th>
+                                    <th>المُرسل من</th>
+                                    <th>المبلغ</th>
+                                    <th>التاريخ</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($receivedTransfers as $transfer)
+                                <tr>
+                                    <td>{{ $transfer->id }}</td>
+                                    <td>
+                                        <a href="{{ route('custodies.show', $transfer->custody_id) }}" class="badge bg-primary">
+                                            #{{ $transfer->custody_id }}
+                                        </a>
+                                    </td>
+                                    <td>{{ $transfer->fromAgent->name }}</td>
+                                    <td><strong>{{ number_format($transfer->amount, 2) }} ج.م</strong></td>
+                                    <td>{{ $transfer->created_at->format('Y-m-d H:i') }}</td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-success" onclick="approveCustodyTransfer({{ $transfer->id }})">
+                                            <i class="fas fa-check"></i> قبول
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="rejectCustodyTransfer({{ $transfer->id }})">
+                                            <i class="fas fa-times"></i> رفض
+                                        </button>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 
 <!-- Modals for transactions -->
-@foreach($custodies as $custody)
+@foreach($myCustodies as $custody)
 <div class="modal fade" id="transactionsModal{{ $custody->id }}" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -370,4 +515,49 @@
         font-size: 0.9rem;
     }
 </style>
+
+<script>
+function approveCustodyTransfer(transferId) {
+    if (confirm('هل تريد قبول هذا التحويل؟')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/custody-transfers/${transferId}/approve`;
+
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = '_token';
+        csrf.value = document.querySelector('meta[name="csrf-token"]').content;
+        form.appendChild(csrf);
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function rejectCustodyTransfer(transferId) {
+    const reason = prompt('أدخل سبب الرفض:');
+    if (reason !== null && reason.trim() !== '') {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/custody-transfers/${transferId}/reject`;
+
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = '_token';
+        csrf.value = document.querySelector('meta[name="csrf-token"]').content;
+        form.appendChild(csrf);
+
+        const reasonInput = document.createElement('input');
+        reasonInput.type = 'hidden';
+        reasonInput.name = 'rejection_reason';
+        reasonInput.value = reason;
+        form.appendChild(reasonInput);
+
+        document.body.appendChild(form);
+        form.submit();
+    } else if (reason !== null) {
+        alert('يرجى إدخال سبب الرفض');
+    }
+}
+</script>
 @endsection

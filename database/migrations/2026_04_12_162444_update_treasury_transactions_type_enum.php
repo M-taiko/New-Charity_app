@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         // For MySQL, we need to change the enum type
-        \DB::statement("ALTER TABLE treasury_transactions MODIFY COLUMN type ENUM('donation', 'expense', 'custody_out', 'custody_return', 'transfer_in', 'transfer_out', 'purchase_request') NOT NULL");
+        \DB::statement("ALTER TABLE treasury_transactions MODIFY COLUMN type ENUM('donation', 'expense', 'custody_out', 'custody_return', 'transfer_in', 'transfer_out', 'purchase_request', 'custody_transfer_in', 'custody_transfer_out') NOT NULL");
     }
 
     /**
@@ -20,7 +20,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Revert to old enum
-        \DB::statement("ALTER TABLE treasury_transactions MODIFY COLUMN type ENUM('donation', 'expense', 'custody_out', 'custody_return') NOT NULL");
+        // Revert to previous enum
+        \DB::statement("ALTER TABLE treasury_transactions MODIFY COLUMN type ENUM('donation', 'expense', 'custody_out', 'custody_return', 'custody_close', 'custody_transfer', 'custody_transfer_in', 'custody_transfer_out') NOT NULL");
     }
 };
