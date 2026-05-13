@@ -182,7 +182,7 @@ class CustodyController extends Controller
         if ($request->has('auto_approve') && $custody->initiated_by === 'accountant') {
             try {
                 $this->service->acceptCustody($custody);
-                ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
+                ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . ($custody->agent?->name ?? 'غير محدد'));
                 return back()->with('success', 'تم الموافقة على العهدة. المندوب سيستقبل الأموال من خزينة "' . ($custody->treasury->name ?? 'غير محددة') . '" عند القبول');
             } catch (\Exception $e) {
                 return back()->with('error', $e->getMessage());
@@ -225,7 +225,7 @@ class CustodyController extends Controller
 
         try {
             $this->service->acceptCustodyWithDistribution($custody, $distribution);
-            ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
+            ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . ($custody->agent?->name ?? 'غير محدد'));
             return back()->with('success', 'تم الموافقة على العهدة وتوزيع الأموال بنجاح');
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
@@ -514,9 +514,9 @@ class CustodyController extends Controller
         $custodies = Custody::with(['agent', 'accountant'])->get();
 
         return DataTables::of($custodies)
-            ->addColumn('agent_name', fn($row) => $row->agent->name)
-            ->addColumn('spent_percent', fn($row) => $row->amount > 0 ? round(($row->spent / $row->amount) * 100) . '%' : '0%')
-            ->addColumn('remaining', fn($row) => $row->getRemainingBalance())
+            ->addColumn('agent_name', fn($row) => $row->agent?->name ?? '-')
+            ->addColumn('spent_percent', fn($row) => $row->amount > 0 ? (int)round(($row->spent / $row->amount) * 100) : 0)
+            ->addColumn('remaining', fn($row) => (float)$row->getRemainingBalance())
             ->addColumn('status_label', fn($row) => $this->getStatusLabel($row->status))
             ->addColumn('actions', fn($row) => view('custodies.actions', compact('row'))->render())
             ->rawColumns(['status_label', 'actions'])
@@ -749,70 +749,6 @@ class CustodyController extends Controller
     }
 
     /**
-     * API endpoint for real-time data refresh (used by AJAX)
+     * API endpoint for DataTables server-side processing (used by modern.blade.php)
      */
-    public function apiCustodiesData()
-    {
-        // Accountants, managers, and viewers (مشرف) can see all custodies
-        $user = auth()->user();
-        if (!$user->can('approve_custody') && !$user->can('view_all_records')) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        // Get all custodies with related data
-        $custodies = Custody::with(['agent', 'treasury', 'accountant', 'transactions', 'expenses'])
-            ->orderBy('created_at', 'desc')
-            ->get();
-
-        // Calculate statistics
-        $acceptedCustodies = $custodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']);
-
-        // Breakdown by status
-        $activeCustodies = $custodies->whereIn('status', ['accepted', 'active']);
-        $pendingCustodies = $custodies->where('status', 'pending');
-        $rejectedCustodies = $custodies->where('status', 'rejected');
-        $partiallyReturnedCustodies = $custodies->where('status', 'partially_returned');
-
-        $stats = [
-            'total_custodies' => $custodies->count(),
-            'active_custodies' => $activeCustodies->count(),
-            'pending_custodies' => $pendingCustodies->count(),
-            'rejected_custodies' => $rejectedCustodies->count(),
-            'closed_custodies' => $custodies->where('status', 'closed')->count(),
-            'total_amount' => $acceptedCustodies->sum('amount'),
-            'total_spent' => $acceptedCustodies->sum('spent'),
-            'total_returned' => $acceptedCustodies->sum('returned'),
-            'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
-            'pending_returns' => $acceptedCustodies->sum('pending_return'),
-            'active_amount' => $activeCustodies->sum('amount'),
-            'active_spent' => $activeCustodies->sum('spent'),
-            'active_remaining' => $activeCustodies->sum(fn($c) => $c->getRemainingBalance()),
-            'pending_amount' => $pendingCustodies->sum('amount'),
-            'rejected_amount' => $rejectedCustodies->sum('amount'),
-            'rejected_spent' => $rejectedCustodies->sum('spent'),
-            'partially_returned_amount' => $partiallyReturnedCustodies->sum('amount'),
-            'partially_returned_spent' => $partiallyReturnedCustodies->sum('spent'),
-            'partially_returned_returned' => $partiallyReturnedCustodies->sum('returned'),
-        ];
-
-        // Format custodies data for table
-        $custodiesData = $custodies->map(fn($c) => [
-            'id' => $c->id,
-            'agent_id' => $c->agent_id,
-            'agent_name' => $c->agent?->name ?? '-',
-            'created_at' => $c->created_at->format('Y-m-d'),
-            'amount' => number_format($c->amount, 2),
-            'spent' => number_format($c->spent, 2),
-            'returned' => number_format($c->returned, 2),
-            'remaining' => number_format($c->getRemainingBalance(), 2),
-            'status' => $c->status,
-            'initiated_by' => $c->initiated_by,
-        ]);
-
-        return response()->json([
-            'stats' => $stats,
-            'custodies' => $custodiesData,
-            'timestamp' => now()->toIso8601String(),
-        ]);
-    }
 }

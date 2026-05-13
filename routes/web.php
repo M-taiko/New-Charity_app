@@ -54,7 +54,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/agent/transactions', [CustodyController::class, 'agentTransactions'])->name('agent.transactions');
     Route::get('/api/agent/transactions', [CustodyController::class, 'agentTransactionsData'])->name('api.agent.transactions');
     Route::get('/api/agent/returned', [CustodyController::class, 'agentReturnedData'])->name('api.agent.returned');
-    Route::get('/api/custodies/data', [CustodyController::class, 'apiCustodiesData'])->name('api.custodies.data');
     Route::post('/custodies/{custody}/request-return', [CustodyController::class, 'requestReturn'])->name('custodies.requestReturn');
     Route::post('/custody-return-requests/{returnRequest}/approve', [CustodyController::class, 'approveReturnRequest'])->name('custody-return-requests.approve');
     Route::post('/custody-return-requests/{returnRequest}/reject', [CustodyController::class, 'rejectReturnRequest'])->name('custody-return-requests.reject');
@@ -127,7 +126,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // DataTables APIs
     Route::get('/api/treasury/{treasury}/transactions', [TreasuryController::class, 'transactionsData'])->name('api.treasury.transactions');
-    Route::get('/api/custodies', [CustodyController::class, 'tableData'])->name('api.custodies.data');
+    Route::get('/api/custodies/data', [CustodyController::class, 'tableData'])->name('api.custodies.data');
     Route::get('/api/expenses', [ExpenseController::class, 'tableData'])->name('api.expenses.data');
     Route::get('/api/social-cases', [SocialCaseController::class, 'tableData'])->name('api.social_cases.data');
     Route::get('/api/users', [UserController::class, 'tableData'])->name('api.users.data');
