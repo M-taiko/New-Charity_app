@@ -35,9 +35,9 @@
 
                         <div class="row mb-3">
                             <div class="col-md-12">
-                                <label class="form-label"><strong>اختر الخزينة</strong></label>
-                                <select name="treasury_id" id="treasurySelect" class="form-select @error('treasury_id') is-invalid @enderror" required onchange="updateTreasuryInfo()">
-                                    <option value="">-- اختر الخزينة --</option>
+                                <label class="form-label"><strong>اختر الخزينة <span style="color: #6b7280; font-weight: normal;">(اختياري)</span></strong></label>
+                                <select name="treasury_id" id="treasurySelect" class="form-select @error('treasury_id') is-invalid @enderror" onchange="updateTreasuryInfo()">
+                                    <option value="">-- لم تختر خزينة (سيتم الاختيار من قبل المدير) --</option>
                                     @foreach($treasuries as $treasury)
                                         <option value="{{ $treasury->id }}"
                                                 data-balance="{{ $treasury->balance }}"
@@ -46,6 +46,9 @@
                                         </option>
                                     @endforeach
                                 </select>
+                                <small class="form-text text-muted" style="margin-top: 0.5rem; display: block;">
+                                    إذا لم تختر خزينة، سيقوم المدير باختيار الخزينة المناسبة عند الموافقة على الطلب
+                                </small>
                                 @error('treasury_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
@@ -194,27 +197,25 @@ function validateCustodyAmount() {
     const treasurySelect = document.getElementById('treasurySelect');
     const amountInput = document.getElementById('custodyAmount');
 
-    if (!treasurySelect.value) {
-        alert('يرجى اختيار الخزينة');
-        return false;
-    }
-
     if (!amountInput.value) {
         alert('يرجى إدخال المبلغ');
         return false;
     }
 
-    const max = parseFloat(amountInput.max) || 0;
-    const amount = parseFloat(amountInput.value) || 0;
-
-    if (amount > max) {
-        alert(`المبلغ لا يمكن أن يتجاوز ${max.toFixed(2)} ج.م`);
+    if (amountInput.value <= 0) {
+        alert('يرجى إدخال مبلغ صحيح');
         return false;
     }
 
-    if (amount <= 0) {
-        alert('يرجى إدخال مبلغ صحيح');
-        return false;
+    // Only check max amount if a treasury is selected
+    if (treasurySelect.value) {
+        const max = parseFloat(amountInput.max) || 0;
+        const amount = parseFloat(amountInput.value) || 0;
+
+        if (amount > max) {
+            alert(`المبلغ لا يمكن أن يتجاوز ${max.toFixed(2)} ج.م`);
+            return false;
+        }
     }
 
     return true;

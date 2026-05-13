@@ -68,21 +68,10 @@ class CustodyController extends Controller
             $this->authorize('create_custody');
         }
 
-        // Get selected treasury or default to first
-        $treasuryId = $request->input('treasury_id');
-        if ($treasuryId) {
-            $treasury = Treasury::findOrFail($treasuryId);
-        } else {
-            $treasury = Treasury::first();
-            if (!$treasury) {
-                return back()->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
-            }
-        }
-
-        // Build validation rules with conditional treasury balance check for agents
+        // Build validation rules - treasury_id is optional for personal requests
         $validationRules = [
             'agent_id' => ($isAgent || $isForSelf) ? 'nullable' : 'required|exists:users,id',
-            'treasury_id' => 'required|exists:treasuries,id',
+            'treasury_id' => $isForSelf ? 'nullable|exists:treasuries,id' : 'required|exists:treasuries,id',
             'amount' => [
                 'required',
                 'numeric',
@@ -93,18 +82,30 @@ class CustodyController extends Controller
             'notes' => 'nullable|string',
         ];
 
-        // Add max amount rule (don't exceed selected treasury balance)
-        $validationRules['amount'][] = 'max:' . $treasury->balance;
+        // Get selected treasury for validation if provided
+        $treasuryId = $request->input('treasury_id');
+        $treasury = null;
+        if ($treasuryId) {
+            $treasury = Treasury::findOrFail($treasuryId);
+            // Add max amount rule only if treasury is selected
+            $validationRules['amount'][] = 'max:' . $treasury->balance;
+            $amountMaxError = 'المبلغ المدخل يتجاوز رصيد الخزينة المختارة. الحد الأقصى: ' . number_format($treasury->balance, 2) . ' ج.م';
+        } else {
+            // For personal requests without selected treasury, allow any amount (manager will decide during approval)
+            $amountMaxError = null;
+            // Default to first treasury for now, will be finalized during approval
+            $treasury = Treasury::first();
+            if (!$treasury) {
+                return back()->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
+            }
+        }
 
-        // Customize error message
-        $amountMaxError = 'المبلغ المدخل يتجاوز رصيد الخزينة المختارة. الحد الأقصى: ' . number_format($treasury->balance, 2) . ' ج.م';
+        $validationMessages = [];
+        if ($amountMaxError) {
+            $validationMessages['amount.max'] = $amountMaxError;
+        }
 
-        $request->validate(
-            $validationRules,
-            [
-                'amount.max' => $amountMaxError,
-            ]
-        );
+        $request->validate($validationRules, $validationMessages);
 
         // Determine agent ID:
         // - If agent_id is provided in request (creating for another user), use it
