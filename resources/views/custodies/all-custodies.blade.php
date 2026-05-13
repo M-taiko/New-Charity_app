@@ -415,7 +415,7 @@
         </div>
         <div class="col-md-3">
             <div class="form-check form-switch pt-2">
-                <input class="form-check-input" type="checkbox" id="autoRefreshToggle" checked style="width: 2rem; height: 1rem; cursor: pointer;">
+                <input class="form-check-input" type="checkbox" id="autoRefreshToggle" style="width: 2rem; height: 1rem; cursor: pointer;">
                 <label class="form-check-label ms-2" for="autoRefreshToggle" style="cursor: pointer;">
                     <i class="fas fa-sync-alt"></i> التحديث التلقائي
                 </label>
@@ -428,7 +428,7 @@
         <div class="col-12">
             <small class="text-muted">
                 <i class="fas fa-info-circle"></i>
-                <span id="refreshStatus">سيتم التحديث التلقائي كل 15 ثانية</span>
+                <span id="refreshStatus">التحديث التلقائي معطل - فعّله للحصول على البيانات الحية</span>
                 <span id="lastUpdateTime" style="display: none;"></span>
             </small>
         </div>
@@ -886,8 +886,8 @@ document.addEventListener('DOMContentLoaded', function() {
     agentFilter.addEventListener('change', filterTable);
     statusFilter.addEventListener('change', filterTable);
 
-    // Start auto-refresh by default
-    startAutoRefresh();
+    // Auto-refresh is disabled by default - users can enable it if they want
+    // This avoids clearing the initial table data on page load
 });
 
 // View expense attachment in modal
