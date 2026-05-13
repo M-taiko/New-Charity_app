@@ -788,7 +788,7 @@ class CustodyController extends Controller
         $custodiesData = $custodies->map(fn($c) => [
             'id' => $c->id,
             'agent_id' => $c->agent_id,
-            'agent_name' => $c->agent->name,
+            'agent_name' => $c->agent?->name ?? '-',
             'created_at' => $c->created_at->format('Y-m-d'),
             'amount' => number_format($c->amount, 2),
             'spent' => number_format($c->spent, 2),
