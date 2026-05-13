@@ -714,11 +714,13 @@ class TreasuryService
             // زيادة مبلغ العهدة مباشرة
             $custody->increment('amount', $amount);
 
+            // Map external type labels to valid enum values
             $typeLabel = $type === 'expense_refund' ? 'استرداد مصروف' : 'تبرع خارجي';
+            $enumType = 'donation'; // Both external_donation and expense_refund are types of donation
 
             TreasuryTransaction::create([
                 'treasury_id'      => $custody->treasury_id,
-                'type'             => $type,
+                'type'             => $enumType,
                 'amount'           => $amount,
                 'description'      => "{$typeLabel} لعهدة المندوب {$custody->agent->name}: {$description}",
                 'user_id'          => auth()->id(),
