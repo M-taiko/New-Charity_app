@@ -23,22 +23,22 @@ class TreasuryService
                 'amount' => $amount,
                 'spent' => 0,
                 'returned' => 0,
-                'status' => $isPersonalCustody ? 'accepted' : 'pending', // Auto-accept personal custodies
+                'status' => 'pending', // Always pending - requires approval from manager
                 'notes' => $notes,
-                'accepted_at' => $isPersonalCustody ? now() : null,
+                'accepted_at' => null,
             ]);
 
             // Notifications based on request type
             if ($isPersonalCustody) {
-                // Personal custody for accountant/manager: auto-accepted, notify managers/other accountants
+                // Personal custody for accountant/manager: requires manager approval
                 $user = User::find($accountantId);
                 $userName = $user ? $user->name : 'المستخدم';
                 $notifiedUsers = [];
 
                 $this->notifyManagers(
-                    'عهدة شخصية جديدة',
-                    "{$userName} أنشأ عهدة شخصية بقيمة {$amount} ج.م من خزينة ID {$treasuryId}",
-                    'info',
+                    'طلب عهدة شخصية يحتاج موافقة',
+                    "{$userName} طلب عهدة شخصية بقيمة {$amount} ج.م من الخزينة - يرجى المراجعة والموافقة",
+                    'warning',
                     $custody->id,
                     'custody',
                     $notifiedUsers

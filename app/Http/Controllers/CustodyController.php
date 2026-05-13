@@ -121,7 +121,7 @@ class CustodyController extends Controller
         }
 
         try {
-            $this->service->createCustody(
+            $custody = $this->service->createCustody(
                 $treasury->id,
                 $agentId,
                 auth()->id(),
@@ -131,8 +131,19 @@ class CustodyController extends Controller
                 $isForSelf  // Pass personal custody flag
             );
 
-            $message = $isAgentRequest ? 'تم إرسال طلب العهدة للمحاسب للموافقة' : 'تم إنشاء العهدة بنجاح';
-            ActivityLogService::log('created', ($isAgentRequest ? 'طلب عهدة جديد' : 'إنشاء عهدة') . ' بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
+            // Log the activity with the custody as subject
+            if ($isAgentRequest) {
+                $message = 'تم إرسال طلب العهدة للمحاسب للموافقة';
+                ActivityLogService::created($custody, 'طلب عهدة جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
+            } elseif ($isForSelf) {
+                // Personal custody - requires explicit approval workflow
+                $message = 'تم إنشاء طلب العهدة الشخصية. يرجى انتظار موافقة مدير';
+                ActivityLogService::log('created', 'طلب عهدة شخصية بمبلغ ' . number_format($request->amount, 2) . ' ج.م من قبل ' . auth()->user()->name, $custody);
+            } else {
+                $message = 'تم إنشاء العهدة بنجاح';
+                ActivityLogService::created($custody, 'إنشاء عهدة بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
+            }
+
             return redirect()->route($isAgentRequest ? 'agent.transactions' : 'custodies.index')->with('success', $message);
         } catch (\Exception $e) {
             return back()->with('error', $e->getMessage());
