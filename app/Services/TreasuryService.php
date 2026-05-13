@@ -37,7 +37,7 @@ class TreasuryService
 
                 $this->notifyManagers(
                     'طلب عهدة شخصية يحتاج موافقة',
-                    "{$userName} طلب عهدة شخصية بقيمة {$amount} ج.م من الخزينة - يرجى المراجعة والموافقة",
+                    "{$userName} طلب عهدة شخصية بقيمة {$amount} ج.م - يرجى المراجعة والموافقة واختيار الخزينة المناسبة",
                     'warning',
                     $custody->id,
                     'custody',

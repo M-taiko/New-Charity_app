@@ -68,10 +68,10 @@ class CustodyController extends Controller
             $this->authorize('create_custody');
         }
 
-        // Build validation rules - treasury_id is optional for personal requests
+        // Build validation rules - treasury_id is required only for non-personal requests
         $validationRules = [
             'agent_id' => ($isAgent || $isForSelf) ? 'nullable' : 'required|exists:users,id',
-            'treasury_id' => $isForSelf ? 'nullable|exists:treasuries,id' : 'required|exists:treasuries,id',
+            'treasury_id' => $isForSelf ? 'nullable' : 'required|exists:treasuries,id',
             'amount' => [
                 'required',
                 'numeric',
@@ -82,27 +82,17 @@ class CustodyController extends Controller
             'notes' => 'nullable|string',
         ];
 
-        // Get selected treasury for validation if provided
+        // Get selected treasury for validation and use
         $treasuryId = $request->input('treasury_id');
-        $treasury = null;
         if ($treasuryId) {
             $treasury = Treasury::findOrFail($treasuryId);
             // Add max amount rule only if treasury is selected
             $validationRules['amount'][] = 'max:' . $treasury->balance;
-            $amountMaxError = 'المبلغ المدخل يتجاوز رصيد الخزينة المختارة. الحد الأقصى: ' . number_format($treasury->balance, 2) . ' ج.م';
+            $validationMessages = ['amount.max' => 'المبلغ المدخل يتجاوز رصيد الخزينة المختارة. الحد الأقصى: ' . number_format($treasury->balance, 2) . ' ج.م'];
         } else {
-            // For personal requests without selected treasury, allow any amount (manager will decide during approval)
-            $amountMaxError = null;
-            // Default to first treasury for now, will be finalized during approval
-            $treasury = Treasury::first();
-            if (!$treasury) {
-                return back()->with('error', 'لم يتم العثور على خزينة. يرجى الاتصال بالمسؤول.');
-            }
-        }
-
-        $validationMessages = [];
-        if ($amountMaxError) {
-            $validationMessages['amount.max'] = $amountMaxError;
+            // For personal requests without selected treasury, use null treasury
+            $treasury = null;
+            $validationMessages = [];
         }
 
         $request->validate($validationRules, $validationMessages);
@@ -123,7 +113,7 @@ class CustodyController extends Controller
 
         try {
             $custody = $this->service->createCustody(
-                $treasury->id,
+                $treasury?->id,  // Can be null for personal requests
                 $agentId,
                 auth()->id(),
                 $request->amount,
