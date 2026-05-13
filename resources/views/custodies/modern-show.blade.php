@@ -927,4 +927,198 @@ function updateAgentAcceptTreasuryInfo() {
     </div>
 </div>
 @endcan
+
+<style>
+    @media print {
+        /* Hide non-printable elements */
+        .btn, button, form, .no-print,
+        [data-bs-toggle="modal"],
+        .modal,
+        .alert-warning,
+        .d-flex.gap-2 > a:not(.no-print),
+        .d-flex.gap-2 > button:not(.no-print),
+        .dropdown,
+        nav,
+        .navbar {
+            display: none !important;
+        }
+
+        /* Keep the main content visible */
+        body {
+            background: white !important;
+            color: black !important;
+            font-size: 12pt;
+            line-height: 1.6;
+        }
+
+        .container-fluid {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .row {
+            margin: 0 !important;
+            break-inside: avoid;
+        }
+
+        .col-lg-8, .col-12 {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Card styles for print */
+        .card {
+            border: 1px solid #333 !important;
+            box-shadow: none !important;
+            page-break-inside: avoid;
+            margin-bottom: 1cm !important;
+            padding: 0 !important;
+        }
+
+        .card-header {
+            background: #f0f0f0 !important;
+            color: black !important;
+            border-bottom: 2px solid #333 !important;
+            padding: 10pt !important;
+            page-break-inside: avoid;
+        }
+
+        .card-header h5 {
+            color: black !important;
+            margin: 0 !important;
+            font-size: 14pt !important;
+            font-weight: bold !important;
+        }
+
+        .card-body {
+            padding: 10pt !important;
+        }
+
+        /* Text and headings */
+        h1, h2, h3, h4, h5, h6 {
+            color: black !important;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* Labels and values */
+        .form-label {
+            color: black !important;
+            font-weight: bold !important;
+            font-size: 11pt !important;
+            margin-bottom: 2pt !important;
+        }
+
+        p {
+            color: black !important;
+            margin: 0 0 5pt 0 !important;
+            page-break-inside: avoid;
+        }
+
+        /* Badge styles */
+        .badge {
+            border: 1px solid #333 !important;
+            background: white !important;
+            color: black !important;
+            padding: 2pt 4pt !important;
+        }
+
+        /* Table styles */
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 10pt !important;
+            page-break-inside: avoid;
+        }
+
+        table thead {
+            background: #f0f0f0 !important;
+            border: 1px solid #333 !important;
+        }
+
+        table th {
+            border: 1px solid #333 !important;
+            padding: 5pt !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            color: black !important;
+            background: #f0f0f0 !important;
+        }
+
+        table td {
+            border: 1px solid #ccc !important;
+            padding: 5pt !important;
+            text-align: right !important;
+            color: black !important;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: #fafafa !important;
+        }
+
+        /* Progress bars */
+        .progress {
+            background: #e0e0e0 !important;
+            border: 1px solid #333 !important;
+        }
+
+        .progress-bar {
+            background: #666 !important;
+            color: white !important;
+        }
+
+        /* Timeline */
+        .timeline {
+            page-break-inside: avoid;
+        }
+
+        .timeline-item {
+            page-break-inside: avoid;
+            margin-bottom: 10pt !important;
+        }
+
+        /* Spacing for print */
+        .mb-3 { margin-bottom: 10pt !important; }
+        .mb-4 { margin-bottom: 15pt !important; }
+        .mt-3 { margin-top: 10pt !important; }
+
+        /* Links */
+        a {
+            color: black !important;
+            text-decoration: underline !important;
+        }
+
+        /* Page breaks */
+        @page {
+            margin: 1.5cm;
+            size: A4;
+        }
+
+        /* Avoid breaking content */
+        .card, .table, .timeline-item {
+            page-break-inside: avoid;
+        }
+
+        /* Print header with custody info */
+        .print-header {
+            display: block !important;
+            text-align: center;
+            border-bottom: 2px solid #333;
+            margin-bottom: 20pt;
+            padding-bottom: 10pt;
+        }
+
+        /* Make sure important data is visible */
+        .text-primary, .text-success, .text-danger, .text-warning {
+            color: black !important;
+        }
+
+        /* Ensure icons are not printed */
+        i.fas, i.far, i.fal {
+            display: none !important;
+        }
+    }
+</style>
 @endsection
