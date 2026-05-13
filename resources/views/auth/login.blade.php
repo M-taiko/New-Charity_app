@@ -144,21 +144,21 @@
         }
         .form-control {
             width: 100%;
-            background: rgba(255,255,255,.08);
-            border: 1px solid rgba(255,255,255,.12);
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
             border-radius: 10px;
             padding: .8rem 1rem .8rem 2.8rem;
             font-size: .92rem; font-family: 'Cairo', sans-serif;
-            color: #f1f5f9; transition: all .25s;
+            color: #1e293b; transition: all .25s;
             outline: none;
         }
-        .form-control::placeholder { color: #64748b; }
+        .form-control::placeholder { color: #94a3b8; }
         .form-control:focus {
-            background: rgba(26,86,219,.06);
+            background: #ffffff;
             border-color: #1a56db;
             box-shadow: 0 0 0 3px rgba(26,86,219,.15);
         }
-        .form-control:focus ~ .input-icon { color: #60a5fa; }
+        .form-control:focus ~ .input-icon { color: #1a56db; }
 
         /* Password toggle */
         .pass-toggle {
