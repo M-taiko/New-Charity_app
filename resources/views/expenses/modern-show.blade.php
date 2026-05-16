@@ -3,6 +3,18 @@
 @section('content')
 <div class="container-fluid">
     <div class="row mb-4" data-aos="fade-down">
+        <div class="col-12">
+            @if($expense->is_quick_expense)
+            <div class="alert alert-warning alert-dismissible fade show" role="alert" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; color: white;">
+                <i class="fas fa-bolt"></i>
+                <strong>مصروف سريع - بحاجة إلى تفاصيل كاملة</strong>
+                <p class="mb-0 mt-1" style="font-size: 0.95rem;">هذا المصروف تم تسجيله بدون تفاصيل كاملة. يرجى تعديله لإضافة الفئة والبند والتفاصيل المطلوبة.</p>
+            </div>
+            @endif
+        </div>
+    </div>
+
+    <div class="row mb-4" data-aos="fade-down">
         <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
                 <i class="fas fa-receipt"></i> تفاصيل المصروف
