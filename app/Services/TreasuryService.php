@@ -717,9 +717,16 @@ class TreasuryService
             // زيادة مبلغ العهدة مباشرة
             $custody->increment('amount', $amount);
 
-            // Map external type labels to valid enum values
-            $typeLabel = $type === 'expense_refund' ? 'استرداد مصروف' : 'تبرع خارجي';
-            $enumType = 'donation'; // Both external_donation and expense_refund are types of donation
+            // Map transaction type labels to valid enum values
+            $typeMapping = [
+                'external_donation' => ['label' => 'تبرع خارجي', 'enum' => 'donation'],
+                'expense_refund' => ['label' => 'استرداد مصروف', 'enum' => 'donation'],
+                'recovery' => ['label' => 'استرداد', 'enum' => 'recovery'],
+            ];
+
+            $typeConfig = $typeMapping[$type] ?? $typeMapping['external_donation'];
+            $typeLabel = $typeConfig['label'];
+            $enumType = $typeConfig['enum'];
 
             // Get agent name safely
             $agentName = $custody->agent?->name ?? 'غير محدد';

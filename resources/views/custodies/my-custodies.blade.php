@@ -144,8 +144,11 @@
                         <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickDonationModal" title="إضافة تبرع خارجي سريع">
                             <i class="fas fa-gift"></i> تبرع خارجي
                         </button>
-                        <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickRefundModal" title="استرجاع أموال سريع">
-                            <i class="fas fa-undo"></i> استرجاع للخزينة
+                        <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickRecoveryModal" title="استرجاع أموال من المشتريات">
+                            <i class="fas fa-arrow-left"></i> استرداد
+                        </button>
+                        <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickRefundModal" title="استرجاع أموال للخزينة">
+                            <i class="fas fa-undo"></i> رد للخزينة
                         </button>
                     </div>
                     @endif
@@ -457,16 +460,20 @@
                                             <i class="fas fa-arrow-down text-danger"></i> صرف عهدة
                                         @elseif($transaction->type === 'custody_return')
                                             <i class="fas fa-arrow-up text-success"></i> رد عهدة
+                                        @elseif($transaction->type === 'recovery')
+                                            <i class="fas fa-arrow-left text-info"></i> استرداد
                                         @elseif($transaction->type === 'donation')
                                             @if(str_contains($transaction->description, 'استرداد مصروف'))
                                                 <i class="fas fa-undo text-success"></i> استرداد مصروف
-                                            @else
+                                            @elseif(str_contains($transaction->description, 'تبرع خارجي'))
                                                 <i class="fas fa-gift text-success"></i> تبرع خارجي
+                                            @else
+                                                <i class="fas fa-gift text-success"></i> {{ $transaction->description }}
                                             @endif
                                         @elseif($transaction->type === 'expense')
                                             <i class="fas fa-shopping-cart text-warning"></i> مصروف
                                         @else
-                                            <i class="fas fa-exchange-alt text-info"></i> {{ $transaction->type }}
+                                            <i class="fas fa-exchange-alt text-muted"></i> {{ $transaction->type }}
                                         @endif
                                     </h6>
                                     <small class="text-muted">{{ $transaction->transaction_date->format('Y-m-d H:i:s') }}</small>
@@ -674,6 +681,75 @@
     </div>
 </div>
 
+<!-- Quick Recovery Modal (Select Custody) -->
+<div class="modal fade" id="quickRecoveryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);">
+                <h5 class="modal-title" style="color: white;">
+                    <i class="fas fa-arrow-left"></i> تسجيل استرداد
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="quickRecoveryForm" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle"></i>
+                        استرجاع أموال من المشتريات (خصم، استرجاع حقيبة، إلخ)
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اختر العهدة</strong></label>
+                        <select id="recoveryCustodySelect" class="form-select" required onchange="updateRecoveryBalance()">
+                            <option value="">-- اختر العهدة --</option>
+                            @foreach($myCustodies->whereIn('status', ['accepted', 'active']) as $custody)
+                                <option value="{{ $custody->id }}" data-balance="{{ $custody->getRemainingBalance() }}">
+                                    #{{ $custody->id }} - الرصيد: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info" id="recoveryBalanceInfo" style="display: none;">
+                        <strong>الرصيد الحالي:</strong> <span id="recoveryCurrentBalance">0.00</span> ج.م
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>المبلغ المسترجع (ج.م)</strong></label>
+                        <input type="number"
+                               id="recoveryAmount"
+                               name="amount"
+                               class="form-control"
+                               step="0.01"
+                               min="0.01"
+                               placeholder="أدخل المبلغ المسترجع"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>سبب الاسترجاع</strong></label>
+                        <textarea name="description"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="مثل: خصم من البائع، استرجاع حقيبة مشتراة، تصحيح فاتورة..."
+                                  required></textarea>
+                    </div>
+
+                    <input type="hidden" id="recoveryCustodyId" name="custody_id">
+                    <input type="hidden" name="type" value="recovery">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-check"></i> تسجيل الاسترداد
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Quick Refund Modal (Select Custody) -->
 <div class="modal fade" id="quickRefundModal" tabindex="-1">
     <div class="modal-dialog">
@@ -758,6 +834,24 @@ function updateDonationBalance() {
     }
 }
 
+function updateRecoveryBalance() {
+    const select = document.getElementById('recoveryCustodySelect');
+    const custodyId = document.getElementById('recoveryCustodyId');
+    const balanceInfo = document.getElementById('recoveryBalanceInfo');
+    const currentBalance = document.getElementById('recoveryCurrentBalance');
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const balance = parseFloat(option.dataset.balance) || 0;
+        custodyId.value = select.value;
+        currentBalance.textContent = balance.toFixed(2);
+        balanceInfo.style.display = 'block';
+    } else {
+        balanceInfo.style.display = 'none';
+        custodyId.value = '';
+    }
+}
+
 function updateRefundBalance() {
     const select = document.getElementById('refundCustodySelect');
     const custodyId = document.getElementById('refundCustodyId');
@@ -785,6 +879,18 @@ function updateRefundBalance() {
 document.getElementById('quickDonationForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const custodyId = document.getElementById('donationCustodyId').value;
+    if (!custodyId) {
+        alert('يرجى اختيار عهدة');
+        return;
+    }
+    this.action = `/custodies/${custodyId}/external-donation`;
+    this.submit();
+});
+
+// Handle form submission for quick recovery
+document.getElementById('quickRecoveryForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const custodyId = document.getElementById('recoveryCustodyId').value;
     if (!custodyId) {
         alert('يرجى اختيار عهدة');
         return;
