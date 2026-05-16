@@ -11,6 +11,9 @@
                     </h1>
                 </div>
                 <div class="d-flex gap-2" style="flex-wrap: wrap;">
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#quickExpenseModal">
+                        <i class="fas fa-bolt"></i> مصروف سريع
+                    </button>
                     <a href="{{ route('expenses.create') }}" class="btn btn-primary">
                         <i class="fas fa-plus-circle"></i> مصروف جديد
                     </a>
@@ -87,9 +90,94 @@
     </div>
 </div>
 
+<!-- Quick Expense Modal -->
+<div class="modal fade" id="quickExpenseModal" tabindex="-1" aria-labelledby="quickExpenseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none;">
+                <h5 class="modal-title" id="quickExpenseModalLabel" style="color: white;">
+                    <i class="fas fa-bolt"></i> إضافة مصروف سريع
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="quickExpenseForm">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="quick_custody_id" class="form-label">
+                            <i class="fas fa-box"></i> العهدة
+                        </label>
+                        <select id="quick_custody_id" name="custody_id" class="form-select" required>
+                            <option value="">اختر العهدة...</option>
+                        </select>
+                        <small class="text-muted d-block mt-1">الرصيد المتاح: <span id="custody_balance" class="fw-bold text-success">0</span></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_expense_date" class="form-label">
+                            <i class="fas fa-calendar"></i> تاريخ المصروف
+                        </label>
+                        <input type="date" id="quick_expense_date" name="expense_date" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_amount" class="form-label">
+                            <i class="fas fa-money-bill"></i> المبلغ
+                        </label>
+                        <input type="number" id="quick_amount" name="amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_description" class="form-label">
+                            <i class="fas fa-file-alt"></i> وصف المصروف
+                        </label>
+                        <textarea id="quick_description" name="description" class="form-control" rows="3" placeholder="وصف المصروف..." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_line_items" class="form-label">
+                            <i class="fas fa-list"></i> تفاصيل البنود <span class="badge bg-secondary">اختياري</span>
+                        </label>
+                        <textarea id="quick_line_items" name="line_items" class="form-control" rows="2" placeholder="مثال: 2x قميص بـ 50 ج.م، 1x حذاء بـ 100 ج.م..."></textarea>
+                    </div>
+
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>ملاحظة:</strong> هذا المصروف سيُسجّل كمصروف سريع بدون تفاصيل كاملة. يمكنك تعديله لاحقاً لإضافة المزيد من التفاصيل.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> حفظ المصروف السريع
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script>
     $(document).ready(function() {
+        // Set default expense date to today
+        const today = new Date().toISOString().split('T')[0];
+        $('#quick_expense_date').val(today);
+
+        // Load custodies for quick expense form
+        loadQuickExpenseCustodies();
+
+        // Quick expense form submission
+        $('#quickExpenseForm').on('submit', function(e) {
+            e.preventDefault();
+            submitQuickExpense();
+        });
+
+        // Update custody balance when custody is selected
+        $('#quick_custody_id').on('change', function() {
+            updateQuickCustodyBalance();
+        });
+
         $('#expensesTable').DataTable({
             processing: true,
             serverSide: true,
@@ -138,6 +226,118 @@
             }
         });
     });
+
+    // Load custodies for quick expense modal
+    function loadQuickExpenseCustodies() {
+        $.ajax({
+            url: '{{ route("api.user-custodies") }}',
+            type: 'GET',
+            success: function(data) {
+                const select = $('#quick_custody_id');
+                select.find('option:not(:first)').remove();
+
+                if (data.length === 0) {
+                    select.append('<option disabled>لا توجد عهد متاحة</option>');
+                    return;
+                }
+
+                data.forEach(function(custody) {
+                    const balance = parseFloat(custody.balance) - parseFloat(custody.spent);
+                    if (balance > 0) {
+                        select.append(`
+                            <option value="${custody.id}" data-balance="${balance}">
+                                ${custody.reason} (الرصيد: ${balance.toLocaleString('ar')} ج.م)
+                            </option>
+                        `);
+                    }
+                });
+
+                if (select.find('option').length === 1) {
+                    select.append('<option disabled>لا توجد عهد بها رصيد متاح</option>');
+                }
+            },
+            error: function() {
+                alert('حدث خطأ في تحميل العهد');
+            }
+        });
+    }
+
+    // Update custody balance display
+    function updateQuickCustodyBalance() {
+        const selectedOption = $('#quick_custody_id option:selected');
+        const balance = selectedOption.data('balance');
+
+        if (balance !== undefined) {
+            $('#custody_balance').text(parseFloat(balance).toLocaleString('ar') + ' ج.م');
+            $('#quick_amount').attr('max', balance);
+        }
+    }
+
+    // Submit quick expense
+    function submitQuickExpense() {
+        const formData = {
+            custody_id: $('#quick_custody_id').val(),
+            expense_date: $('#quick_expense_date').val(),
+            amount: parseFloat($('#quick_amount').val()),
+            description: $('#quick_description').val(),
+            line_items: $('#quick_line_items').val() || null,
+            is_quick_expense: true
+        };
+
+        $.ajax({
+            url: '{{ route("expenses.quick-store") }}',
+            type: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('quickExpenseModal'));
+                    if (modal) modal.hide();
+
+                    // Reset form
+                    $('#quickExpenseForm')[0].reset();
+                    const today = new Date().toISOString().split('T')[0];
+                    $('#quick_expense_date').val(today);
+
+                    // Show success message
+                    showAlert('success', 'تم تسجيل المصروف السريع بنجاح. يمكنك تعديله لاحقاً');
+
+                    // Reload table
+                    $('#expensesTable').DataTable().ajax.reload();
+                } else {
+                    showAlert('danger', response.message || 'حدث خطأ');
+                }
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.message || 'حدث خطأ أثناء تسجيل المصروف';
+                showAlert('danger', error);
+            }
+        });
+    }
+
+    // Show alert message
+    function showAlert(type, message) {
+        const alertId = 'tempAlert_' + Date.now();
+        const alertHtml = `
+            <div id="${alertId}" class="alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 400px;">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+
+        $('body').append(alertHtml);
+
+        setTimeout(function() {
+            $(`#${alertId}`).fadeOut(300, function() {
+                $(this).remove();
+            });
+        }, 5000);
+    }
 </script>
 @endpush
 @endsection
