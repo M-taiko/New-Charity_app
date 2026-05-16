@@ -266,8 +266,8 @@
                             <div class="collapse mt-2" id="editDetails{{ $editRequest->id }}">
                                 <div class="card card-body">
                                     @php
-                                        $original = json_decode($editRequest->original_data, true) ?? [];
-                                        $changes = json_decode($editRequest->requested_changes, true) ?? [];
+                                        $original = is_array($editRequest->original_data) ? $editRequest->original_data : (json_decode($editRequest->original_data, true) ?? []);
+                                        $changes = is_array($editRequest->requested_changes) ? $editRequest->requested_changes : (json_decode($editRequest->requested_changes, true) ?? []);
                                     @endphp
 
                                     @if(!empty($changes))
