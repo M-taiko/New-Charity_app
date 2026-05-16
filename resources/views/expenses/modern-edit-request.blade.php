@@ -47,7 +47,15 @@
                                 <select id="cat_level1" class="form-select" onchange="catLoadChildren(1, this.value)">
                                     <option value="">-- اختر --</option>
                                     @foreach($categoryRoots as $root)
-                                    <option value="{{ $root->id }}" {{ $expense->category->id == $root->id || $expense->category->parent?->id == $root->id || $expense->category->parent?->parent?->id == $root->id ? 'selected' : '' }}>{{ $root->name }}</option>
+                                    @php
+                                        $isSelected = false;
+                                        if ($expense->category) {
+                                            $isSelected = $expense->category->id == $root->id ||
+                                                         $expense->category->parent?->id == $root->id ||
+                                                         $expense->category->parent?->parent?->id == $root->id;
+                                        }
+                                    @endphp
+                                    <option value="{{ $root->id }}" {{ $isSelected ? 'selected' : '' }}>{{ $root->name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -69,7 +77,7 @@
                                         class="form-select @error('expense_item_id') is-invalid @enderror"
                                         onchange="setDefaultAmount(this)">
                                     <option value="">-- اختر بند --</option>
-                                    @if($expense->item)
+                                    @if($expense->item_id && $expense->item)
                                         <option value="{{ $expense->item->id }}" selected>{{ $expense->item->name }}</option>
                                     @endif
                                 </select>
@@ -77,7 +85,7 @@
                                 <small class="text-muted mt-1 d-block" id="default-amount-info"></small>
                             </div>
                         </div>
-                        <input type="hidden" name="expense_category_id" id="final_category_id" value="{{ $expense->expense_category_id }}">
+                        <input type="hidden" name="expense_category_id" id="final_category_id" value="{{ $expense->expense_category_id ?? '' }}">
 
                         <!-- Expense Type Selection -->
                         <div class="mb-3">
@@ -213,10 +221,10 @@
                     </h6>
                     <div style="font-size: 0.9rem; line-height: 1.8;">
                         <p><strong>المبلغ الحالي:</strong> {{ number_format($expense->amount, 2) }} ج.م</p>
-                        <p><strong>التاريخ الحالي:</strong> {{ $expense->expense_date?->format('Y-m-d') }}</p>
-                        <p><strong>الفئة الحالية:</strong> {{ $expense->category->name ?? '-' }}</p>
-                        <p><strong>البند الحالي:</strong> {{ $expense->item->name ?? '-' }}</p>
-                        <p><strong>الحالة الاجتماعية:</strong> {{ $expense->socialCase->name ?? '-' }}</p>
+                        <p><strong>التاريخ الحالي:</strong> {{ $expense->expense_date?->format('Y-m-d') ?? '-' }}</p>
+                        <p><strong>الفئة الحالية:</strong> {{ $expense->category?->name ?? '-' }}</p>
+                        <p><strong>البند الحالي:</strong> {{ $expense->item?->name ?? '-' }}</p>
+                        <p><strong>الحالة الاجتماعية:</strong> {{ $expense->socialCase?->name ?? '-' }}</p>
                     </div>
                 </div>
             </div>
