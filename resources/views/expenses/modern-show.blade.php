@@ -96,9 +96,15 @@
                     </div>
                     @endif
 
-                    @if($expense->line_items && count($expense->line_items) > 0)
+                    @if($expense->line_items && is_array($expense->line_items) && count($expense->line_items) > 0)
                     <div class="mb-3">
                         <label class="form-label"><strong><i class="fas fa-list-ul"></i> تفاصيل البنود:</strong></label>
+                        @if(isset($expense->line_items['raw_text']) && !empty($expense->line_items['raw_text']))
+                        <div class="alert alert-info">
+                            <strong>ملاحظات:</strong>
+                            <p class="mb-0">{{ $expense->line_items['raw_text'] }}</p>
+                        </div>
+                        @elseif(isset($expense->line_items[0]) && is_array($expense->line_items[0]))
                         <div class="table-responsive">
                             <table class="table table-sm table-bordered mb-0" style="font-size:.9rem;">
                                 <thead style="background:#f8f9fa;">
@@ -136,6 +142,7 @@
                                 </tfoot>
                             </table>
                         </div>
+                        @endif
                     </div>
                     @endif
 
