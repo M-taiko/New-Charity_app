@@ -445,6 +445,8 @@
                             <div class="timeline-marker
                                 @if($transaction->type === 'custody_out') bg-danger
                                 @elseif($transaction->type === 'custody_return') bg-success
+                                @elseif($transaction->type === 'donation') bg-success
+                                @elseif($transaction->type === 'expense') bg-warning
                                 @else bg-info
                                 @endif
                             "></div>
@@ -455,11 +457,19 @@
                                             <i class="fas fa-arrow-down text-danger"></i> صرف عهدة
                                         @elseif($transaction->type === 'custody_return')
                                             <i class="fas fa-arrow-up text-success"></i> رد عهدة
+                                        @elseif($transaction->type === 'donation')
+                                            @if(str_contains($transaction->description, 'استرداد مصروف'))
+                                                <i class="fas fa-undo text-success"></i> استرداد مصروف
+                                            @else
+                                                <i class="fas fa-gift text-success"></i> تبرع خارجي
+                                            @endif
+                                        @elseif($transaction->type === 'expense')
+                                            <i class="fas fa-shopping-cart text-warning"></i> مصروف
                                         @else
                                             <i class="fas fa-exchange-alt text-info"></i> {{ $transaction->type }}
                                         @endif
                                     </h6>
-                                    <small class="text-muted">{{ $transaction->transaction_date->format('Y-m-d H:i') }}</small>
+                                    <small class="text-muted">{{ $transaction->transaction_date->format('Y-m-d H:i:s') }}</small>
                                 </div>
                                 <p class="mb-0">{{ $transaction->description }}</p>
                                 <strong>المبلغ: {{ number_format($transaction->amount, 2) }} ج.م</strong>

@@ -711,6 +711,9 @@ class TreasuryService
         return DB::transaction(function () use ($custody, $amount, $description, $type) {
             $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
 
+            // Reload to get fresh agent relationship
+            $custody->load('agent');
+
             // زيادة مبلغ العهدة مباشرة
             $custody->increment('amount', $amount);
 
@@ -718,15 +721,25 @@ class TreasuryService
             $typeLabel = $type === 'expense_refund' ? 'استرداد مصروف' : 'تبرع خارجي';
             $enumType = 'donation'; // Both external_donation and expense_refund are types of donation
 
-            TreasuryTransaction::create([
+            // Get agent name safely
+            $agentName = $custody->agent?->name ?? 'غير محدد';
+
+            // Record transaction in journal (دفتر اليومية)
+            $transaction = TreasuryTransaction::create([
                 'treasury_id'      => $custody->treasury_id,
                 'type'             => $enumType,
                 'amount'           => $amount,
-                'description'      => "{$typeLabel} لعهدة المندوب {$custody->agent->name}: {$description}",
+                'description'      => "{$typeLabel} لعهدة {$agentName}: {$description}",
                 'user_id'          => auth()->id(),
                 'custody_id'       => $custody->id,
                 'transaction_date' => now(),
             ]);
+
+            // Log activity for audit trail
+            \App\Services\ActivityLogService::created(
+                $custody,
+                "{$typeLabel} بمبلغ " . number_format($amount, 2) . " ج.م - {$description}"
+            );
 
             // إشعار المندوب
             $this->notifyUser(
