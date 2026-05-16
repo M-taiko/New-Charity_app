@@ -313,7 +313,10 @@ class CustodyController extends Controller
 
     public function addExternalDonation(Request $request, Custody $custody)
     {
-        $this->authorize('manage_treasury');
+        // Allow custody owner or users with manage_treasury permission
+        if (auth()->id() !== $custody->agent_id && !auth()->user()->can('manage_treasury')) {
+            return back()->with('error', 'غير مصرح لك بإضافة تبرعات لهذه العهدة');
+        }
 
         $request->validate([
             'amount'      => 'required|numeric|min:0.01',

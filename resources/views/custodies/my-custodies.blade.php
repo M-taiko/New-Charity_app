@@ -229,6 +229,22 @@
                                                         title="عرض الحركات">
                                                     <i class="fas fa-history"></i>
                                                 </button>
+                                                @if($custody->status === 'accepted' || $custody->status === 'active')
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-success"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#donationModal{{ $custody->id }}"
+                                                            title="تبرع خارجي">
+                                                        <i class="fas fa-gift"></i>
+                                                    </button>
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-warning"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#refundModal{{ $custody->id }}"
+                                                            title="استرجاع للخزينة">
+                                                        <i class="fas fa-undo"></i>
+                                                    </button>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -461,6 +477,114 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
             </div>
+        </div>
+    </div>
+</div>
+@endforeach
+
+<!-- External Donation Modals -->
+@foreach($myCustodies as $custody)
+<div class="modal fade" id="donationModal{{ $custody->id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <h5 class="modal-title" style="color: white;">
+                    <i class="fas fa-gift"></i> تسجيل تبرع خارجي
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        <strong>العهدة:</strong> #{{ $custody->id }}<br>
+                        <strong>الرصيد الحالي:</strong> {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>المبلغ (ج.م)</strong></label>
+                        <input type="number"
+                               name="amount"
+                               class="form-control"
+                               step="0.01"
+                               min="0.01"
+                               placeholder="أدخل المبلغ"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>وصف التبرع</strong></label>
+                        <textarea name="description"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="مثل: تبرع من المتبرعين، استرجاع من حملة..."
+                                  required></textarea>
+                    </div>
+
+                    <input type="hidden" name="type" value="external_donation">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> تسجيل التبرع
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endforeach
+
+<!-- Refund to Treasury Modals -->
+@foreach($myCustodies as $custody)
+<div class="modal fade" id="refundModal{{ $custody->id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <h5 class="modal-title" style="color: white;">
+                    <i class="fas fa-undo"></i> استرجاع أموال للخزينة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        <strong>العهدة:</strong> #{{ $custody->id }}<br>
+                        <strong>الرصيد المتاح للاسترجاع:</strong> {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>المبلغ المسترجع (ج.م)</strong></label>
+                        <input type="number"
+                               name="amount"
+                               class="form-control"
+                               step="0.01"
+                               min="0.01"
+                               max="{{ $custody->getRemainingBalance() }}"
+                               placeholder="أدخل المبلغ المراد استرجاعه"
+                               required>
+                        <small class="text-muted">الحد الأقصى: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>سبب الاسترجاع</strong></label>
+                        <textarea name="description"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="مثل: استرجاع أموال غير مستخدمة، انتهاء الحملة..."
+                                  required></textarea>
+                    </div>
+
+                    <input type="hidden" name="type" value="expense_refund">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-check"></i> استرجاع الأموال
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
