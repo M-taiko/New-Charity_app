@@ -349,6 +349,208 @@
             @endif
         </div>
     </div>
+
+    <!-- Journal/Ledger Section - دفتر اليومية -->
+    <div class="row mt-5" data-aos="fade-up">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-book"></i> دفتر اليومية - سجل جميع الحركات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @php
+                        // Get all transactions and expenses for this custody
+                        $transactions = $custody->transactions()->orderBy('transaction_date', 'desc')->get();
+                        $expenses = $custody->expenses()->orderBy('created_at', 'desc')->get();
+
+                        // Calculate running balance
+                        $runningBalance = $custody->amount;
+                    @endphp
+
+                    @if($transactions->isEmpty() && $expenses->isEmpty())
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> لم يتم تسجيل أي حركات على هذه العهدة حتى الآن
+                        </div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm" style="font-size: 0.9rem;">
+                                <thead style="background-color: #f3f4f6;">
+                                    <tr style="border-bottom: 2px solid #d1d5db;">
+                                        <th style="width: 15%; text-align: right;">التاريخ والوقت</th>
+                                        <th style="width: 20%; text-align: right;">نوع الحركة</th>
+                                        <th style="width: 15%; text-align: center;">المبلغ الداخل</th>
+                                        <th style="width: 15%; text-align: center;">المبلغ الخارج</th>
+                                        <th style="width: 15%; text-align: center;">الرصيد</th>
+                                        <th style="width: 20%; text-align: right;">البيان</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Starting balance row -->
+                                    <tr style="background-color: #f0f9ff; font-weight: bold;">
+                                        <td style="text-align: right;">{{ $custody->created_at->format('Y-m-d H:i:s') }}</td>
+                                        <td style="text-align: right;">
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-plus-circle"></i> إنشاء العهدة
+                                            </span>
+                                        </td>
+                                        <td style="text-align: center; color: #059669;">
+                                            <strong>{{ number_format($custody->amount, 2) }}</strong>
+                                        </td>
+                                        <td style="text-align: center;">-</td>
+                                        <td style="text-align: center; color: #0369a1;">
+                                            <strong>{{ number_format($custody->amount, 2) }}</strong>
+                                        </td>
+                                        <td style="text-align: right;">العهدة الأولية</td>
+                                    </tr>
+
+                                    <!-- Transactions and Expenses combined and sorted -->
+                                    @php
+                                        $allEvents = [];
+
+                                        // Add transactions
+                                        foreach($transactions as $trans) {
+                                            $allEvents[] = [
+                                                'type' => 'transaction',
+                                                'date' => $trans->transaction_date,
+                                                'object' => $trans
+                                            ];
+                                        }
+
+                                        // Add expenses
+                                        foreach($expenses as $exp) {
+                                            $allEvents[] = [
+                                                'type' => 'expense',
+                                                'date' => $exp->created_at,
+                                                'object' => $exp
+                                            ];
+                                        }
+
+                                        // Sort by date descending
+                                        usort($allEvents, function($a, $b) {
+                                            return $b['date']->timestamp - $a['date']->timestamp;
+                                        });
+                                    @endphp
+
+                                    @forelse($allEvents as $event)
+                                        @if($event['type'] === 'transaction')
+                                            @php
+                                                $trans = $event['object'];
+                                                $isIncome = in_array($trans->type, ['donation', 'recovery', 'custody_return', 'transfer_in']);
+                                                $amount = $trans->amount;
+                                                $runningBalance += $isIncome ? $amount : -$amount;
+                                            @endphp
+                                            <tr style="border-bottom: 1px solid #e5e7eb;">
+                                                <td style="text-align: right; font-family: monospace;">{{ $trans->transaction_date->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right;">
+                                                    @if($trans->type === 'donation')
+                                                        @if(str_contains($trans->description, 'استرداد مصروف'))
+                                                            <span class="badge bg-info"><i class="fas fa-undo"></i> استرداد مصروف</span>
+                                                        @elseif(str_contains($trans->description, 'استرداد'))
+                                                            <span class="badge bg-cyan" style="background-color: #06b6d4;"><i class="fas fa-arrow-left"></i> استرداد</span>
+                                                        @else
+                                                            <span class="badge bg-success"><i class="fas fa-gift"></i> تبرع خارجي</span>
+                                                        @endif
+                                                    @elseif($trans->type === 'recovery')
+                                                        <span class="badge" style="background-color: #06b6d4;"><i class="fas fa-arrow-left"></i> استرداد</span>
+                                                    @elseif($trans->type === 'custody_out')
+                                                        <span class="badge bg-danger"><i class="fas fa-arrow-down"></i> صرف</span>
+                                                    @elseif($trans->type === 'custody_return')
+                                                        <span class="badge bg-success"><i class="fas fa-arrow-up"></i> رد</span>
+                                                    @else
+                                                        <span class="badge bg-secondary">{{ $trans->type }}</span>
+                                                    @endif
+                                                </td>
+                                                <td style="text-align: center; color: #059669; font-weight: bold;">
+                                                    {{ $isIncome ? number_format($amount, 2) : '-' }}
+                                                </td>
+                                                <td style="text-align: center; color: #dc2626; font-weight: bold;">
+                                                    {{ !$isIncome ? number_format($amount, 2) : '-' }}
+                                                </td>
+                                                <td style="text-align: center; color: #0369a1; font-weight: bold;">
+                                                    {{ number_format($runningBalance, 2) }}
+                                                </td>
+                                                <td style="text-align: right; font-size: 0.85rem;">{{ $trans->description }}</td>
+                                            </tr>
+                                        @else
+                                            @php
+                                                $exp = $event['object'];
+                                                $runningBalance -= $exp->amount;
+                                            @endphp
+                                            <tr style="border-bottom: 1px solid #e5e7eb; background-color: #fef2f2;">
+                                                <td style="text-align: right; font-family: monospace;">{{ $exp->created_at->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right;">
+                                                    <span class="badge bg-warning"><i class="fas fa-shopping-cart"></i> مصروف</span>
+                                                </td>
+                                                <td style="text-align: center;">-</td>
+                                                <td style="text-align: center; color: #dc2626; font-weight: bold;">
+                                                    {{ number_format($exp->amount, 2) }}
+                                                </td>
+                                                <td style="text-align: center; color: #0369a1; font-weight: bold;">
+                                                    {{ number_format($runningBalance, 2) }}
+                                                </td>
+                                                <td style="text-align: right; font-size: 0.85rem;">
+                                                    {{ $exp->category?->name ?? 'غير محدد' }} - {{ $exp->description }}
+                                                </td>
+                                            </tr>
+                                        @endif
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">لا توجد حركات</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                                <tfoot style="background-color: #f0f9ff; font-weight: bold; border-top: 2px solid #d1d5db;">
+                                    <tr>
+                                        <td colspan="2" style="text-align: right;">الرصيد الحالي</td>
+                                        <td style="text-align: center; color: #059669;">{{ number_format($custody->getRemainingBalance(), 2) }}</td>
+                                        <td colspan="3"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Summary Statistics -->
+                        <div class="row mt-4 pt-3 border-top">
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي الدخل</p>
+                                    <h4 style="margin: 0.5rem 0; color: #059669; font-weight: bold;">
+                                        {{ number_format($transactions->whereIn('type', ['donation', 'recovery', 'custody_return'])->sum('amount'), 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي الصرف</p>
+                                    <h4 style="margin: 0.5rem 0; color: #dc2626; font-weight: bold;">
+                                        {{ number_format($custody->spent, 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي المسترجع</p>
+                                    <h4 style="margin: 0.5rem 0; color: #0369a1; font-weight: bold;">
+                                        {{ number_format($custody->returned, 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">الرصيد المتبقي</p>
+                                    <h4 style="margin: 0.5rem 0; color: #0369a1; font-weight: bold;">
+                                        {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Accept Custody Modal -->
