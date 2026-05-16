@@ -121,19 +121,21 @@ class ExpenseController extends Controller
                     ? json_decode($request->line_items_data, true)
                     : null;
 
-                $this->service->recordDirectExpenseFromTreasury(
-                    $treasuryId,
-                    auth()->id(),
-                    $request->amount,
-                    $request->expense_category_id,
-                    $request->expense_item_id,
-                    $request->description,
-                    $request->location,
-                    $request->social_case_id,
-                    $attachmentPath,
-                    $request->expense_type,
-                    $lineItems
-                );
+            $expense = $this->service->recordDirectExpenseFromTreasury(
+                $treasuryId,
+                auth()->id(),
+                $request->amount,
+                $request->expense_category_id,
+                $request->expense_item_id,
+                $request->description,
+                $request->location,
+                $request->social_case_id,
+                $attachmentPath,
+                $request->expense_type,
+                $lineItems
+            );
+
+            ActivityLogService::created($expense, 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
             } else {
                 // Custody spending - can use multiple custodies automatically
 
@@ -196,7 +198,7 @@ class ExpenseController extends Controller
                     ? json_decode($request->line_items_data, true)
                     : null;
 
-                $this->service->recordExpenseWithItems(
+                $expense = $this->service->recordExpenseWithItems(
                     $custodyId,
                     auth()->id(),
                     $request->amount,
@@ -209,9 +211,9 @@ class ExpenseController extends Controller
                     $request->expense_type,
                     $lineItems
                 );
-            }
 
-            ActivityLogService::log('created', 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
+                ActivityLogService::created($expense, 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
+            }
 
             return redirect()->route('expenses.index')->with('success', 'تم تسجيل المصروف');
         } catch (\Exception $e) {
