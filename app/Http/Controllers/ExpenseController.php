@@ -507,7 +507,7 @@ class ExpenseController extends Controller
                 'amount' => $validated['amount'],
                 'description' => $validated['description'],
                 'type' => 'general',
-                'approval_status' => 'draft',
+                'approval_status' => 'pending_edit',
                 'is_quick_expense' => true,
                 'line_items' => $validated['line_items'] ? json_encode(['raw_text' => $validated['line_items']]) : null,
             ]);
