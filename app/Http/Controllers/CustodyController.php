@@ -755,7 +755,7 @@ class CustodyController extends Controller
                 if ($remaining > 0) {
                     return [
                         'id' => $custody->id,
-                        'reason' => $custody->reason,
+                        'reason' => $custody->notes ?: 'عهدة #' . $custody->id,
                         'balance' => $custody->amount,
                         'spent' => $custody->spent,
                     ];

@@ -578,9 +578,10 @@
                 data.forEach(function(custody) {
                     const balance = parseFloat(custody.balance) - parseFloat(custody.spent);
                     if (balance > 0) {
+                        const reason = custody.reason || 'عهدة بدون وصف';
                         select.append(`
                             <option value="${custody.id}" data-balance="${balance}">
-                                ${custody.reason} (الرصيد: ${balance.toLocaleString('ar')} ج.م)
+                                ${reason} (الرصيد: ${balance.toLocaleString('ar')} ج.م)
                             </option>
                         `);
                     }

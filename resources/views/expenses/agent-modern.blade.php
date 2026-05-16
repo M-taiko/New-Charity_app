@@ -236,17 +236,21 @@
                 const select = $('#quick_custody_id');
                 select.find('option:not(:first)').remove();
 
-                if (data.length === 0) {
+                console.log('Custodies data:', data);
+
+                if (!data || data.length === 0) {
                     select.append('<option disabled>لا توجد عهد متاحة</option>');
                     return;
                 }
 
                 data.forEach(function(custody) {
                     const balance = parseFloat(custody.balance) - parseFloat(custody.spent);
+                    const reason = custody.reason || 'عهدة بدون وصف';
+                    console.log('Custody:', reason, 'Balance:', custody.balance, 'Spent:', custody.spent, 'Remaining:', balance);
                     if (balance > 0) {
                         select.append(`
                             <option value="${custody.id}" data-balance="${balance}">
-                                ${custody.reason} (الرصيد: ${balance.toLocaleString('ar')} ج.م)
+                                ${reason} (الرصيد: ${balance.toLocaleString('ar')} ج.م)
                             </option>
                         `);
                     }
@@ -256,8 +260,9 @@
                     select.append('<option disabled>لا توجد عهد بها رصيد متاح</option>');
                 }
             },
-            error: function() {
-                alert('حدث خطأ في تحميل العهد');
+            error: function(xhr) {
+                console.error('Error loading custodies:', xhr);
+                alert('حدث خطأ في تحميل العهد: ' + xhr.statusText);
             }
         });
     }
