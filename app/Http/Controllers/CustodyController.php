@@ -129,7 +129,7 @@ class CustodyController extends Controller
             } elseif ($isForSelf) {
                 // Personal custody - requires explicit approval workflow
                 $message = 'تم إنشاء طلب العهدة الشخصية. يرجى انتظار موافقة مدير';
-                ActivityLogService::log('created', 'طلب عهدة شخصية بمبلغ ' . number_format($request->amount, 2) . ' ج.م من قبل ' . auth()->user()->name, $custody);
+                ActivityLogService::created($custody, 'طلب عهدة شخصية بمبلغ ' . number_format($request->amount, 2) . ' ج.م من قبل ' . auth()->user()->name);
             } else {
                 $message = 'تم إنشاء العهدة بنجاح';
                 ActivityLogService::created($custody, 'إنشاء عهدة بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
@@ -180,7 +180,26 @@ class CustodyController extends Controller
             }
         }
 
-        // Get treasury amounts distribution
+        // Handle personal custody (treasury_id is null)
+        if ($custody->treasury_id === null) {
+            // Personal custody - select single treasury
+            $treasuryId = $request->input('treasury_id');
+
+            if (!$treasuryId) {
+                return back()->with('error', 'يرجى اختيار خزينة');
+            }
+
+            try {
+                $treasury = Treasury::findOrFail($treasuryId);
+                $this->service->acceptPersonalCustodyFromTreasury($custody, $treasury);
+                ActivityLogService::approved($custody, 'تم الموافقة على العهدة الشخصية #' . $custody->id . ' للموظف ' . ($custody->agent?->name ?? 'غير محدد'));
+                return back()->with('success', 'تم الموافقة على العهدة الشخصية وصرف الأموال من خزينة "' . $treasury->name . '" بنجاح');
+            } catch (\Exception $e) {
+                return back()->with('error', $e->getMessage());
+            }
+        }
+
+        // Get treasury amounts distribution for regular custodies
         $treasuryAmounts = $request->input('treasury_amounts', []);
 
         if (empty($treasuryAmounts) || !array_filter($treasuryAmounts)) {

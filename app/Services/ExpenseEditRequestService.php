@@ -16,14 +16,18 @@ class ExpenseEditRequestService
     public function requestEdit(Expense $expense, array $changes, User $requester)
     {
         return DB::transaction(function () use ($expense, $changes, $requester) {
-            // حفظ البيانات الأصلية
+            // حفظ البيانات الأصلية (مع الأسماء والمسارات الكاملة للعرض)
             $originalData = [
                 'amount' => $expense->amount,
                 'description' => $expense->description,
                 'location' => $expense->location,
                 'expense_category_id' => $expense->expense_category_id,
+                'expense_category_name' => $expense->category?->name,
+                'expense_category_path' => $expense->category?->full_path,
                 'expense_item_id' => $expense->expense_item_id,
+                'expense_item_name' => $expense->item?->name,
                 'social_case_id' => $expense->social_case_id,
+                'social_case_name' => $expense->socialCase?->name,
                 'attachment' => $expense->attachment,
             ];
 

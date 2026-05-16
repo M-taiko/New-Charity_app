@@ -558,80 +558,121 @@
     <div class="modal-dialog modal-lg" style="z-index: 1070;">
         <div class="modal-content">
             <div class="modal-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
-                <h5 class="modal-title" style="color: white;"><i class="fas fa-check-circle"></i> قبول العهدة وتوزيع الأموال</h5>
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-check-circle"></i>
+                    @if($custody->treasury_id === null)
+                        قبول العهدة الشخصية واختيار الخزينة
+                    @else
+                        قبول العهدة وتوزيع الأموال
+                    @endif
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" onsubmit="return validateTreasuryDistribution()">
+            <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" onsubmit="return @if($custody->treasury_id === null) validateSingleTreasury() @else validateTreasuryDistribution() @endif">
                 @csrf
                 <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> حدد من أي خزائن سيتم الصرف والمبالغ من كل خزينة
-                    </div>
+                    @if($custody->treasury_id === null)
+                        {{-- Personal Custody: Select Single Treasury --}}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> هذه عهدة شخصية. اختر خزينة واحدة لصرف الأموال منها
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label"><strong>بيانات العهدة:</strong></label>
-                        <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
-                        <p><strong>المبلغ الإجمالي:</strong> <span class="text-primary fw-bold" style="font-size: 1.1rem;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>بيانات العهدة:</strong></label>
+                            <p><strong>الموظف:</strong> {{ $custody->agent->name }}</p>
+                            <p><strong>المبلغ الإجمالي:</strong> <span class="text-primary fw-bold" style="font-size: 1.1rem;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
+                        </div>
 
-                    @php
-                        $treasuries = \App\Models\Treasury::all();
-                        $requiredAmount = $custody->amount;
-                    @endphp
+                        @php
+                            $treasuries = \App\Models\Treasury::all();
+                        @endphp
 
-                    <div class="mb-3">
-                        <label class="form-label"><strong>توزيع الصرف على الخزائن:</strong></label>
-                        <div id="treasuriesDistributionContainer" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px;">
-                            @foreach($treasuries as $treasury)
-                            <div class="treasury-item mb-3" data-treasury-id="{{ $treasury->id }}" data-balance="{{ $treasury->balance }}">
-                                <div class="row align-items-end">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>اختر الخزينة:</strong></label>
+                            <select name="treasury_id" id="singleTreasurySelect" class="form-control" required onchange="updatePersonalCustodyBalance()">
+                                <option value="">-- اختر خزينة --</option>
+                                @foreach($treasuries as $treasury)
+                                <option value="{{ $treasury->id }}" data-balance="{{ $treasury->balance }}">
+                                    {{ $treasury->name }} (الرصيد: {{ number_format($treasury->balance, 2) }} ج.م)
+                                </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-2" id="selectedTreasuryBalance"></small>
+                        </div>
+
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>تنبيه:</strong> تأكد من أن الخزينة المختارة بها رصيد كافي ({{ number_format($custody->amount, 2) }} ج.م على الأقل)
+                        </div>
+                    @else
+                        {{-- Regular Custody: Distribute across treasuries --}}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> حدد من أي خزائن سيتم الصرف والمبالغ من كل خزينة
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label"><strong>بيانات العهدة:</strong></label>
+                            <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                            <p><strong>المبلغ الإجمالي:</strong> <span class="text-primary fw-bold" style="font-size: 1.1rem;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
+                        </div>
+
+                        @php
+                            $treasuries = \App\Models\Treasury::all();
+                            $requiredAmount = $custody->amount;
+                        @endphp
+
+                        <div class="mb-3">
+                            <label class="form-label"><strong>توزيع الصرف على الخزائن:</strong></label>
+                            <div id="treasuriesDistributionContainer" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px;">
+                                @foreach($treasuries as $treasury)
+                                <div class="treasury-item mb-3" data-treasury-id="{{ $treasury->id }}" data-balance="{{ $treasury->balance }}">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-6">
+                                            <label class="form-label mb-2" style="font-weight: 600;">{{ $treasury->name }}</label>
+                                            <small class="d-block text-muted mb-2">الرصيد المتاح: <span class="fw-bold text-info">{{ number_format($treasury->balance, 2) }} ج.م</span></small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="number"
+                                                   name="treasury_amounts[{{ $treasury->id }}]"
+                                                   class="form-control treasury-amount"
+                                                   data-treasury-id="{{ $treasury->id }}"
+                                                   min="0"
+                                                   step="0.01"
+                                                   value="0"
+                                                   oninput="updateDistributionTotal()"
+                                                   placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div class="card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border: 1px solid rgba(102, 126, 234, 0.3);" id="distributionSummary">
+                            <div class="card-body">
+                                <div class="row">
                                     <div class="col-md-6">
-                                        <label class="form-label mb-2" style="font-weight: 600;">{{ $treasury->name }}</label>
-                                        <small class="d-block text-muted mb-2">الرصيد المتاح: <span class="fw-bold text-info">{{ number_format($treasury->balance, 2) }} ج.م</span></small>
+                                        <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ الإجمالي المطلوب:</p>
+                                        <h5 style="margin: 5px 0 0; color: #667eea;">{{ number_format($custody->amount, 2) }} ج.م</h5>
                                     </div>
                                     <div class="col-md-6">
-                                        <input type="number"
-                                               name="treasury_amounts[{{ $treasury->id }}]"
-                                               class="form-control treasury-amount"
-                                               data-treasury-id="{{ $treasury->id }}"
-                                               min="0"
-                                               step="0.01"
-                                               value="0"
-                                               oninput="updateDistributionTotal()"
-                                               placeholder="0.00">
+                                        <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ المدخل:</p>
+                                        <h5 id="totalEnteredAmount" style="margin: 5px 0 0; color: #4caf50;">0.00 ج.م</h5>
                                     </div>
                                 </div>
-                            </div>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <div class="card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border: 1px solid rgba(102, 126, 234, 0.3);" id="distributionSummary">
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ الإجمالي المطلوب:</p>
-                                    <h5 style="margin: 5px 0 0; color: #667eea;">{{ number_format($custody->amount, 2) }} ج.م</h5>
-                                </div>
-                                <div class="col-md-6">
-                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ المدخل:</p>
-                                    <h5 id="totalEnteredAmount" style="margin: 5px 0 0; color: #4caf50;">0.00 ج.م</h5>
+                                <div id="distributionStatus" style="margin-top: 15px; padding: 10px; border-radius: 4px; background: white; text-align: center;">
+                                    <span class="text-warning"><i class="fas fa-exclamation-circle"></i> لم تدخل المبالغ بعد</span>
                                 </div>
                             </div>
-                            <div id="distributionStatus" style="margin-top: 15px; padding: 10px; border-radius: 4px; background: white; text-align: center;">
-                                <span class="text-warning"><i class="fas fa-exclamation-circle"></i> لم تدخل المبالغ بعد</span>
-                            </div>
                         </div>
-                    </div>
 
-                    <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
-                        <i class="fas fa-info-circle"></i> ملاحظات:
-                    </p>
-                    <ul style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
-                        <li>يجب أن يساوي مجموع الصرف المبلغ الإجمالي للعهدة</li>
-                        <li>لا يمكن الصرف أكثر من رصيد الخزينة</li>
-                        <li>كل صرف سيتم تسجيله بشكل منفصل في السجل</li>
-                    </ul>
+                        <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                            <i class="fas fa-info-circle"></i> ملاحظات:
+                        </p>
+                        <ul style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                            <li>يجب أن يساوي مجموع الصرف المبلغ الإجمالي للعهدة</li>
+                            <li>لا يمكن الصرف أكثر من رصيد الخزينة</li>
+                            <li>كل صرف سيتم تسجيله بشكل منفصل في السجل</li>
+                        </ul>
+                    @endif
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -645,6 +686,41 @@
 </div>
 
 <script>
+// For Personal Custodies - Single Treasury Selection
+function updatePersonalCustodyBalance() {
+    const select = document.getElementById('singleTreasurySelect');
+    const balanceDiv = document.getElementById('selectedTreasuryBalance');
+    const submitBtn = document.getElementById('acceptSubmitBtn');
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const balance = parseFloat(option.dataset.balance);
+        const requiredAmount = {{ $custody->amount }};
+
+        if (balance >= requiredAmount) {
+            balanceDiv.textContent = '✓ رصيد الخزينة كافي (' + balance.toFixed(2) + ' ج.م)';
+            balanceDiv.style.color = '#4caf50';
+            submitBtn.disabled = false;
+        } else {
+            balanceDiv.textContent = '✗ رصيد الخزينة غير كافي (متوفر: ' + balance.toFixed(2) + ' ج.م، مطلوب: ' + requiredAmount.toFixed(2) + ' ج.م)';
+            balanceDiv.style.color = '#dc2626';
+            submitBtn.disabled = true;
+        }
+    } else {
+        balanceDiv.textContent = '';
+        submitBtn.disabled = true;
+    }
+}
+
+function validateSingleTreasury() {
+    const select = document.getElementById('singleTreasurySelect');
+    if (!select.value) {
+        alert('يرجى اختيار خزينة');
+        return false;
+    }
+    return true;
+}
+
 function updateDistributionTotal() {
     const inputs = document.querySelectorAll('.treasury-amount');
     let total = 0;

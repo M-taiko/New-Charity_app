@@ -90,14 +90,18 @@ class TreasuryService
                 throw new \Exception('هذه العملية متاحة فقط لطلبات العهد من المندوب');
             }
 
-            // Check if treasury has sufficient balance
-            $treasury = $custody->treasury;
-            if ($treasury->balance < $custody->amount) {
-                $agentName = $custody->agent->name ?? 'غير محدد';
-                throw new \Exception(
-                    "❌ لا يمكن الموافقة على عهدة المندوب {$agentName}\n\n" .
-                    $this->insufficientBalanceError($treasury->balance, $custody->amount, 'الموافقة على العهدة')
-                );
+            // For personal custodies (treasury_id is null), skip treasury balance check
+            // Manager will select treasury during approval
+            if ($custody->treasury_id !== null) {
+                // Check if treasury has sufficient balance for regular custodies
+                $treasury = $custody->treasury;
+                if ($treasury->balance < $custody->amount) {
+                    $agentName = $custody->agent->name ?? 'غير محدد';
+                    throw new \Exception(
+                        "❌ لا يمكن الموافقة على عهدة المندوب {$agentName}\n\n" .
+                        $this->insufficientBalanceError($treasury->balance, $custody->amount, 'الموافقة على العهدة')
+                    );
+                }
             }
 
             $custody->update([
@@ -111,6 +115,62 @@ class TreasuryService
                 'تمت الموافقة على عهدتك',
                 "تم الموافقة على عهدتك بقيمة {$custody->amount} ج.م. يرجى تأكيد الاستقبال لصرف الفلوس",
                 'info',
+                $custody->id,
+                'custody'
+            );
+
+            return $custody;
+        });
+    }
+
+    /**
+     * Accept personal custody and deduct from selected treasury
+     */
+    public function acceptPersonalCustodyFromTreasury($custody, $treasury)
+    {
+        return DB::transaction(function () use ($custody, $treasury) {
+            // Ensure this is a personal custody (treasury_id is null)
+            if ($custody->treasury_id !== null) {
+                throw new \Exception('هذه العملية متاحة فقط للعهد الشخصية');
+            }
+
+            // Check if selected treasury has sufficient balance
+            if ($treasury->balance < $custody->amount) {
+                $treasuryName = $treasury->name ?? 'غير محددة';
+                throw new \Exception(
+                    "❌ الخزينة '{$treasuryName}' لا تملك رصيد كافي\n\n" .
+                    $this->insufficientBalanceError($treasury->balance, $custody->amount, 'الموافقة على العهدة الشخصية')
+                );
+            }
+
+            // Update custody status and link to selected treasury
+            $custody->update([
+                'status' => 'active',
+                'accepted_at' => now(),
+                'received_at' => now(),
+                'treasury_id' => $treasury->id,  // Link custody to selected treasury
+            ]);
+
+            // Deduct from treasury balance
+            $treasury->decrement('balance', $custody->amount);
+
+            // Create treasury transaction
+            \App\Models\TreasuryTransaction::create([
+                'treasury_id' => $treasury->id,
+                'type' => 'custody_out',
+                'amount' => $custody->amount,
+                'description' => 'عهدة شخصية للموظف ' . $custody->agent->name,
+                'user_id' => auth()->id(),
+                'custody_id' => $custody->id,
+                'transaction_date' => now(),
+            ]);
+
+            // Notify agent that funds were transferred
+            $this->notifyUser(
+                $custody->agent_id,
+                'تم الموافقة على عهدتك الشخصية',
+                "تم الموافقة على عهدتك الشخصية بقيمة {$custody->amount} ج.م من خزينة {$treasury->name}. يمكنك الآن استخدام المبلغ",
+                'success',
                 $custody->id,
                 'custody'
             );

@@ -282,20 +282,66 @@
                                         <tbody>
                                             @foreach($changes as $field => $newValue)
                                             @php
+                                                // Skip name fields - we only show IDs and use name fields for lookup
+                                                if (in_array($field, ['expense_category_name', 'expense_item_name', 'social_case_name'])) {
+                                                    continue;
+                                                }
+
                                                 $oldValue = $original[$field] ?? '-';
+                                                $oldValueDisplay = $oldValue;
                                                 $fieldLabel = '';
-                                                if ($field === 'amount') $fieldLabel = 'المبلغ';
-                                                elseif ($field === 'description') $fieldLabel = 'الوصف';
-                                                elseif ($field === 'location') $fieldLabel = 'الموقع';
-                                                elseif ($field === 'expense_date') $fieldLabel = 'التاريخ';
-                                                elseif ($field === 'expense_category_id') $fieldLabel = 'الفئة';
-                                                elseif ($field === 'expense_item_id') $fieldLabel = 'البند';
-                                                elseif ($field === 'social_case_id') $fieldLabel = 'الحالة الاجتماعية';
-                                                else $fieldLabel = $field;
+
+                                                if ($field === 'amount') {
+                                                    $fieldLabel = 'المبلغ';
+                                                } elseif ($field === 'description') {
+                                                    $fieldLabel = 'الوصف';
+                                                } elseif ($field === 'location') {
+                                                    $fieldLabel = 'الموقع';
+                                                } elseif ($field === 'expense_date') {
+                                                    $fieldLabel = 'التاريخ';
+                                                } elseif ($field === 'expense_category_id') {
+                                                    $fieldLabel = 'الفئة';
+                                                    // Get old category full path
+                                                    $oldCategoryPath = $original['expense_category_path'] ?? '-';
+                                                    if ($oldCategoryPath && $oldCategoryPath !== '-') {
+                                                        $oldValueDisplay = $oldCategoryPath . ' (ID: ' . $oldValue . ')';
+                                                    }
+                                                    // Get new category full path
+                                                    if ($newValue) {
+                                                        $newCat = \App\Models\ExpenseCategory::find($newValue);
+                                                        $newValue = ($newCat?->full_path ?? '-') . ' (ID: ' . $newValue . ')';
+                                                    }
+                                                } elseif ($field === 'expense_item_id') {
+                                                    $fieldLabel = 'البند';
+                                                    // Get old item name
+                                                    $oldItemName = $original['expense_item_name'] ?? '-';
+                                                    if ($oldItemName && $oldValue) {
+                                                        $oldValueDisplay = $oldItemName . ' (ID: ' . $oldValue . ')';
+                                                    }
+                                                    // Get new item name
+                                                    if ($newValue) {
+                                                        $newItem = \App\Models\ExpenseItem::find($newValue);
+                                                        $newValue = ($newItem?->name ?? '-') . ' (ID: ' . $newValue . ')';
+                                                    }
+                                                } elseif ($field === 'social_case_id') {
+                                                    $fieldLabel = 'الحالة الاجتماعية';
+                                                    // Get old case name
+                                                    $oldCaseName = $original['social_case_name'] ?? '-';
+                                                    if ($oldCaseName && $oldValue) {
+                                                        $oldValueDisplay = $oldCaseName . ' (ID: ' . $oldValue . ')';
+                                                    }
+                                                    // Get new case name
+                                                    if ($newValue) {
+                                                        $newCase = \App\Models\SocialCase::find($newValue);
+                                                        $newValue = ($newCase?->name ?? '-') . ' (ID: ' . $newValue . ')';
+                                                    }
+                                                } else {
+                                                    $fieldLabel = $field;
+                                                }
                                             @endphp
                                             <tr>
                                                 <td><strong>{{ $fieldLabel }}</strong></td>
-                                                <td><small style="color: #999;">{{ is_array($oldValue) ? json_encode($oldValue) : $oldValue }}</small></td>
+                                                <td><small style="color: #999;">{{ is_array($oldValueDisplay) ? json_encode($oldValueDisplay) : $oldValueDisplay }}</small></td>
                                                 <td>
                                                     <span style="color: #4caf50;">
                                                         <strong>{{ is_array($newValue) ? json_encode($newValue) : $newValue }}</strong>
