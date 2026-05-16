@@ -207,6 +207,115 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Edit Requests History -->
+            @if($expense->editRequests()->count() > 0)
+            <div class="card mt-4">
+                <div class="card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-history"></i> تاريخ التعديلات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @foreach($expense->editRequests()->orderBy('created_at', 'desc')->get() as $editRequest)
+                    <div class="mb-4 pb-3" style="border-bottom: 1px solid #eee;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>طلب التعديل #{{ $editRequest->id }}</strong><br>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i>
+                                    {{ $editRequest->requested_at?->format('Y-m-d H:i') ?? $editRequest->created_at->format('Y-m-d H:i') }}
+                                </small>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span class="badge {{ $editRequest->status === 'approved' ? 'bg-success' : ($editRequest->status === 'rejected' ? 'bg-danger' : 'bg-warning') }}">
+                                    {{ $editRequest->status === 'approved' ? 'تم الموافقة' : ($editRequest->status === 'rejected' ? 'تم الرفض' : 'قيد الانتظار') }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="mt-2">
+                            <strong>طلب التعديل من:</strong> {{ $editRequest->requester?->name ?? 'حذف المستخدم' }}
+                        </div>
+
+                        @if($editRequest->reviewed_by)
+                        <div class="mt-2">
+                            <strong>تمت المراجعة بواسطة:</strong>
+                            <span style="color: #4caf50;">{{ $editRequest->reviewer?->name ?? 'حذف المستخدم' }}</span>
+                            @if($editRequest->reviewed_at)
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-clock"></i> {{ $editRequest->reviewed_at->format('Y-m-d H:i') }}
+                            </small>
+                            @endif
+                        </div>
+                        @endif
+
+                        @if($editRequest->rejection_reason)
+                        <div class="alert alert-danger mt-2 mb-0">
+                            <strong>سبب الرفض:</strong>
+                            <p class="mb-0">{{ $editRequest->rejection_reason }}</p>
+                        </div>
+                        @endif
+
+                        <!-- Show Changes -->
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editDetails{{ $editRequest->id }}" aria-expanded="false">
+                                <i class="fas fa-chevron-down"></i> عرض التغييرات المطلوبة
+                            </button>
+
+                            <div class="collapse mt-2" id="editDetails{{ $editRequest->id }}">
+                                <div class="card card-body">
+                                    @php
+                                        $original = json_decode($editRequest->original_data, true) ?? [];
+                                        $changes = json_decode($editRequest->requested_changes, true) ?? [];
+                                    @endphp
+
+                                    @if(!empty($changes))
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                                                <th>الحقل</th>
+                                                <th>القيمة السابقة</th>
+                                                <th>القيمة الجديدة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($changes as $field => $newValue)
+                                            @php
+                                                $oldValue = $original[$field] ?? '-';
+                                                $fieldLabel = '';
+                                                if ($field === 'amount') $fieldLabel = 'المبلغ';
+                                                elseif ($field === 'description') $fieldLabel = 'الوصف';
+                                                elseif ($field === 'location') $fieldLabel = 'الموقع';
+                                                elseif ($field === 'expense_date') $fieldLabel = 'التاريخ';
+                                                elseif ($field === 'expense_category_id') $fieldLabel = 'الفئة';
+                                                elseif ($field === 'expense_item_id') $fieldLabel = 'البند';
+                                                elseif ($field === 'social_case_id') $fieldLabel = 'الحالة الاجتماعية';
+                                                else $fieldLabel = $field;
+                                            @endphp
+                                            <tr>
+                                                <td><strong>{{ $fieldLabel }}</strong></td>
+                                                <td><small style="color: #999;">{{ is_array($oldValue) ? json_encode($oldValue) : $oldValue }}</small></td>
+                                                <td>
+                                                    <span style="color: #4caf50;">
+                                                        <strong>{{ is_array($newValue) ? json_encode($newValue) : $newValue }}</strong>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                    @else
+                                    <p class="text-muted mb-0">لا توجد تغييرات محددة</p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
         </div>
 
         <div class="col-lg-4">
