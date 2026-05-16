@@ -35,9 +35,10 @@ class ExpenseEditRequestController extends Controller
         }
 
         // جلب البيانات الحالية
-        $categories = \App\Models\ExpenseCategory::active()->with('items')->ordered()->get();
+        $cases = \App\Models\SocialCase::where('status', 'approved')->get();
+        $categoryRoots = \App\Models\ExpenseCategory::roots()->active()->ordered()->get();
 
-        return view('expenses.edit-request', compact('expense', 'categories'));
+        return view('expenses.modern-edit-request', compact('expense', 'cases', 'categoryRoots'));
     }
 
     /**
