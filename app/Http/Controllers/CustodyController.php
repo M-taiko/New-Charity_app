@@ -743,6 +743,32 @@ class CustodyController extends Controller
     }
 
     /**
+     * API endpoint for user's custodies with available balance
+     */
+    public function userCustodiesApi()
+    {
+        $custodies = Custody::where('agent_id', auth()->id())
+            ->whereIn('status', ['accepted', 'active'])
+            ->get()
+            ->map(function ($custody) {
+                $remaining = $custody->getRemainingBalance();
+                if ($remaining > 0) {
+                    return [
+                        'id' => $custody->id,
+                        'reason' => $custody->reason,
+                        'balance' => $custody->amount,
+                        'spent' => $custody->spent,
+                    ];
+                }
+                return null;
+            })
+            ->filter()
+            ->values();
+
+        return response()->json($custodies);
+    }
+
+    /**
      * API endpoint for DataTables server-side processing (used by modern.blade.php)
      */
 }

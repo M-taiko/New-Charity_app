@@ -30,6 +30,7 @@ class Expense extends Model
         'reviewed_by',
         'reviewed_at',
         'line_items',
+        'is_quick_expense',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class Expense extends Model
         'reviewed_at'  => 'datetime',
         'line_items'   => 'array',
         'approval_status' => 'string',
+        'is_quick_expense' => 'boolean',
     ];
 
     public function custody(): BelongsTo

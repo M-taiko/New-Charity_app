@@ -12,6 +12,7 @@ use App\Services\TreasuryService;
 use App\Services\ActivityLogService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ExpenseController extends Controller
 {
@@ -389,6 +390,7 @@ class ExpenseController extends Controller
                 $category = $row->item->category;
                 return $category ? $category->full_path . ' > ' . $row->item->name : $row->item->name;
             })
+            ->addColumn('is_quick_expense', fn($row) => $row->is_quick_expense ?? false)
             ->addColumn('reviewed_label', fn($row) => $row->reviewed_at ? 'مراجع' : 'غير مراجع')
             ->filterColumn('user_name', fn($q, $k) => $q->whereHas('user', fn($q2) => $q2->where('name', 'like', "%$k%")))
             ->toJson();
@@ -465,6 +467,74 @@ class ExpenseController extends Controller
         ActivityLogService::reviewed($expense, 'تمت مراجعة المصروف #' . $expense->id . ' بواسطة ' . $user->name);
 
         return back()->with('success', 'تمت مراجعة المصروف وتم قفل التعديل');
+    }
+
+    public function quickStore(Request $request)
+    {
+        $this->authorize('spend_money');
+
+        try {
+            $validated = $request->validate([
+                'custody_id' => 'required|exists:custodies,id',
+                'expense_date' => 'required|date',
+                'amount' => 'required|numeric|min:0.01',
+                'description' => 'required|string|max:500',
+                'line_items' => 'nullable|string|max:1000',
+                'is_quick_expense' => 'required|boolean',
+            ]);
+
+            // Verify custody belongs to user
+            $custody = Custody::findOrFail($validated['custody_id']);
+            if ($custody->agent_id !== auth()->id()) {
+                return response()->json(['success' => false, 'message' => 'غير مصرح لك بصرف من هذه العهدة'], 403);
+            }
+
+            // Check custody has enough balance
+            $remaining = $custody->getRemainingBalance();
+            if ($validated['amount'] > $remaining) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'المبلغ يتجاوز الرصيد المتاح. الرصيد المتاح: ' . number_format($remaining, 2) . ' ج.م'
+                ], 422);
+            }
+
+            // Create expense with quick flag
+            $expense = Expense::create([
+                'custody_id' => $validated['custody_id'],
+                'treasury_id' => $custody->treasury_id,
+                'user_id' => auth()->id(),
+                'expense_date' => $validated['expense_date'],
+                'amount' => $validated['amount'],
+                'description' => $validated['description'],
+                'type' => 'general',
+                'approval_status' => 'draft',
+                'is_quick_expense' => true,
+                'line_items' => $validated['line_items'] ? json_encode(['raw_text' => $validated['line_items']]) : null,
+            ]);
+
+            // Update custody spent amount
+            $custody->increment('spent', $validated['amount']);
+
+            // Create treasury transaction for tracking
+            if ($custody->treasury_id) {
+                DB::table('treasury_transactions')->insert([
+                    'treasury_id' => $custody->treasury_id,
+                    'custody_id' => $custody->id,
+                    'type' => 'expense',
+                    'amount' => $validated['amount'],
+                    'description' => 'مصروف سريع: ' . $validated['description'],
+                    'transaction_date' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            ActivityLogService::log('created', 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
+
+            return response()->json(['success' => true, 'message' => 'تم تسجيل المصروف بنجاح']);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     public function destroy(Expense $expense)

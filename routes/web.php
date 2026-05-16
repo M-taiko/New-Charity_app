@@ -66,6 +66,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('expenses', ExpenseController::class);
     Route::get('/my-expenses', [ExpenseController::class, 'agentExpenses'])->name('expenses.agent');
     Route::get('/api/agent-expenses', [ExpenseController::class, 'agentExpensesData'])->name('api.agent-expenses.data');
+    Route::post('/expenses/quick-store', [ExpenseController::class, 'quickStore'])->name('expenses.quick-store');
     Route::get('/expenses/{expense}/download-attachment', [ExpenseController::class, 'downloadAttachment'])->name('expenses.download-attachment');
     Route::post('/expenses/{expense}/mark-reviewed', [ExpenseController::class, 'markReviewed'])->name('expenses.mark-reviewed');
 
@@ -127,6 +128,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // DataTables APIs
     Route::get('/api/treasury/{treasury}/transactions', [TreasuryController::class, 'transactionsData'])->name('api.treasury.transactions');
     Route::get('/api/custodies/data', [CustodyController::class, 'tableData'])->name('api.custodies.data');
+    Route::get('/api/user-custodies', [CustodyController::class, 'userCustodiesApi'])->name('api.user-custodies');
     Route::get('/api/expenses', [ExpenseController::class, 'tableData'])->name('api.expenses.data');
     Route::get('/api/social-cases', [SocialCaseController::class, 'tableData'])->name('api.social_cases.data');
     Route::get('/api/users', [UserController::class, 'tableData'])->name('api.users.data');
