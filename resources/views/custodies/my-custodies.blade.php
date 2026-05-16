@@ -135,10 +135,20 @@
     <div class="row" data-aos="fade-up">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
-                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; display: flex; justify-content: space-between; align-items: center;">
                     <h5 style="margin: 0; color: white;">
                         <i class="fas fa-list"></i> جميع العهدات
                     </h5>
+                    @if($myCustodies->whereIn('status', ['accepted', 'active'])->isNotEmpty())
+                    <div class="btn-group" role="group" style="gap: 0.5rem;">
+                        <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickDonationModal" title="إضافة تبرع خارجي سريع">
+                            <i class="fas fa-gift"></i> تبرع خارجي
+                        </button>
+                        <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickRefundModal" title="استرجاع أموال سريع">
+                            <i class="fas fa-undo"></i> استرجاع للخزينة
+                        </button>
+                    </div>
+                    @endif
                 </div>
                 <div class="card-body">
                     @if($myCustodies->isEmpty())
@@ -589,6 +599,202 @@
     </div>
 </div>
 @endforeach
+
+<!-- Quick External Donation Modal (Select Custody) -->
+<div class="modal fade" id="quickDonationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <h5 class="modal-title" style="color: white;">
+                    <i class="fas fa-gift"></i> إضافة تبرع خارجي
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="quickDonationForm" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اختر العهدة</strong></label>
+                        <select id="donationCustodySelect" class="form-select" required onchange="updateDonationBalance()">
+                            <option value="">-- اختر العهدة --</option>
+                            @foreach($myCustodies->whereIn('status', ['accepted', 'active']) as $custody)
+                                <option value="{{ $custody->id }}" data-balance="{{ $custody->getRemainingBalance() }}">
+                                    #{{ $custody->id }} - الرصيد: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info" id="donationBalanceInfo" style="display: none;">
+                        <strong>الرصيد الحالي:</strong> <span id="donationCurrentBalance">0.00</span> ج.م
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>المبلغ (ج.م)</strong></label>
+                        <input type="number"
+                               id="donationAmount"
+                               name="amount"
+                               class="form-control"
+                               step="0.01"
+                               min="0.01"
+                               placeholder="أدخل المبلغ"
+                               required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>وصف التبرع</strong></label>
+                        <textarea name="description"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="مثل: تبرع من المتبرعين، استرجاع من حملة..."
+                                  required></textarea>
+                    </div>
+
+                    <input type="hidden" id="donationCustodyId" name="custody_id">
+                    <input type="hidden" name="type" value="external_donation">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> تسجيل التبرع
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Refund Modal (Select Custody) -->
+<div class="modal fade" id="quickRefundModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <h5 class="modal-title" style="color: white;">
+                    <i class="fas fa-undo"></i> استرجاع أموال للخزينة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="quickRefundForm" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اختر العهدة</strong></label>
+                        <select id="refundCustodySelect" class="form-select" required onchange="updateRefundBalance()">
+                            <option value="">-- اختر العهدة --</option>
+                            @foreach($myCustodies->whereIn('status', ['accepted', 'active']) as $custody)
+                                <option value="{{ $custody->id }}" data-balance="{{ $custody->getRemainingBalance() }}">
+                                    #{{ $custody->id }} - الرصيد: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="alert alert-info" id="refundBalanceInfo" style="display: none;">
+                        <strong>الرصيد المتاح:</strong> <span id="refundCurrentBalance">0.00</span> ج.م
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>المبلغ المسترجع (ج.م)</strong></label>
+                        <input type="number"
+                               id="refundAmount"
+                               name="amount"
+                               class="form-control"
+                               step="0.01"
+                               min="0.01"
+                               placeholder="أدخل المبلغ المراد استرجاعه"
+                               required>
+                        <small class="text-muted" id="refundMaxHint">الحد الأقصى: 0.00 ج.م</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>سبب الاسترجاع</strong></label>
+                        <textarea name="description"
+                                  class="form-control"
+                                  rows="3"
+                                  placeholder="مثل: استرجاع أموال غير مستخدمة، انتهاء الحملة..."
+                                  required></textarea>
+                    </div>
+
+                    <input type="hidden" id="refundCustodyId" name="custody_id">
+                    <input type="hidden" name="type" value="expense_refund">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-check"></i> استرجاع الأموال
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateDonationBalance() {
+    const select = document.getElementById('donationCustodySelect');
+    const custodyId = document.getElementById('donationCustodyId');
+    const balanceInfo = document.getElementById('donationBalanceInfo');
+    const currentBalance = document.getElementById('donationCurrentBalance');
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const balance = parseFloat(option.dataset.balance) || 0;
+        custodyId.value = select.value;
+        currentBalance.textContent = balance.toFixed(2);
+        balanceInfo.style.display = 'block';
+    } else {
+        balanceInfo.style.display = 'none';
+        custodyId.value = '';
+    }
+}
+
+function updateRefundBalance() {
+    const select = document.getElementById('refundCustodySelect');
+    const custodyId = document.getElementById('refundCustodyId');
+    const amountInput = document.getElementById('refundAmount');
+    const balanceInfo = document.getElementById('refundBalanceInfo');
+    const currentBalance = document.getElementById('refundCurrentBalance');
+    const maxHint = document.getElementById('refundMaxHint');
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const balance = parseFloat(option.dataset.balance) || 0;
+        custodyId.value = select.value;
+        currentBalance.textContent = balance.toFixed(2);
+        amountInput.max = balance.toFixed(2);
+        maxHint.textContent = `الحد الأقصى: ${balance.toFixed(2)} ج.م`;
+        balanceInfo.style.display = 'block';
+    } else {
+        balanceInfo.style.display = 'none';
+        custodyId.value = '';
+        amountInput.max = '';
+    }
+}
+
+// Handle form submission for quick donation
+document.getElementById('quickDonationForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const custodyId = document.getElementById('donationCustodyId').value;
+    if (!custodyId) {
+        alert('يرجى اختيار عهدة');
+        return;
+    }
+    this.action = `/custodies/${custodyId}/external-donation`;
+    this.submit();
+});
+
+// Handle form submission for quick refund
+document.getElementById('quickRefundForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const custodyId = document.getElementById('refundCustodyId').value;
+    if (!custodyId) {
+        alert('يرجى اختيار عهدة');
+        return;
+    }
+    this.action = `/custodies/${custodyId}/external-donation`;
+    this.submit();
+});
+</script>
 
 <style>
     .timeline {
