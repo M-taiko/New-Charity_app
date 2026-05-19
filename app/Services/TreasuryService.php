@@ -667,11 +667,12 @@ class TreasuryService
             $treasury->increment('balance', $returnedAmount);
 
             // Create transaction
+            $treasuryName = Treasury::find($treasuryId)->name ?? 'غير محددة';
             TreasuryTransaction::create([
                 'treasury_id' => $treasuryId,
                 'type' => 'custody_return',
                 'amount' => $returnedAmount,
-                'description' => "إرجاع عهدة من المندوب {$custody->agent->name}",
+                'description' => "إرجاع عهدة من المندوب {$custody->agent->name} إلى خزينة {$treasuryName}",
                 'user_id' => auth()->id(),
                 'custody_id' => $custody->id,
                 'transaction_date' => now(),
@@ -736,11 +737,12 @@ class TreasuryService
             $treasury->increment('balance', $returnedAmount);
 
             // Create transaction
+            $treasuryName = Treasury::find($custody->treasury_id)->name ?? 'غير محددة';
             TreasuryTransaction::create([
                 'treasury_id' => $custody->treasury_id,
                 'type' => 'custody_return',
                 'amount' => $returnedAmount,
-                'description' => "إرجاع عهدة من المندوب {$custody->agent->name}",
+                'description' => "إرجاع عهدة من المندوب {$custody->agent->name} إلى خزينة {$treasuryName}",
                 'user_id' => auth()->id(),
                 'custody_id' => $custody->id,
                 'transaction_date' => now(),
@@ -755,7 +757,7 @@ class TreasuryService
                     'treasury_id' => $custody->treasury_id,
                     'type' => 'custody_close',
                     'amount' => 0,
-                    'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (تم رد المبلغ بالكامل)",
+                    'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} - تم رد المبلغ بالكامل إلى خزينة {$treasuryName}",
                     'user_id' => auth()->id(),
                     'custody_id' => $custody->id,
                     'transaction_date' => now(),
