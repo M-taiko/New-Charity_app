@@ -364,6 +364,9 @@
                         // Get all transactions and expenses for this custody
                         $transactions = $custody->transactions()->orderBy('transaction_date', 'desc')->get();
                         $expenses = $custody->expenses()->orderBy('created_at', 'desc')->get();
+                        $returnRequests = \App\Models\CustodyReturnRequest::where('custody_id', $custody->id)
+                            ->orderBy('created_at', 'desc')
+                            ->get();
 
                         // Calculate running balance
                         $runningBalance = $custody->amount;
@@ -405,7 +408,7 @@
                                         <td style="text-align: right;">العهدة الأولية</td>
                                     </tr>
 
-                                    <!-- Transactions and Expenses combined and sorted -->
+                                    <!-- Transactions, Expenses, and Return Requests combined and sorted -->
                                     @php
                                         $allEvents = [];
 
@@ -427,6 +430,15 @@
                                             ];
                                         }
 
+                                        // Add return requests
+                                        foreach($returnRequests as $request) {
+                                            $allEvents[] = [
+                                                'type' => 'return_request',
+                                                'date' => $request->created_at,
+                                                'object' => $request
+                                            ];
+                                        }
+
                                         // Sort by date descending
                                         usort($allEvents, function($a, $b) {
                                             return $b['date']->timestamp - $a['date']->timestamp;
@@ -434,10 +446,49 @@
                                     @endphp
 
                                     @forelse($allEvents as $event)
-                                        @if($event['type'] === 'transaction')
+                                        @if($event['type'] === 'return_request')
+                                            @php
+                                                $returnReq = $event['object'];
+                                            @endphp
+                                            <tr style="border-bottom: 1px solid #e5e7eb; background-color: #fef3c7;">
+                                                <td style="text-align: right; font-family: monospace;">{{ $returnReq->created_at->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right;">
+                                                    @if($returnReq->status === 'pending')
+                                                        <span class="badge" style="background-color: #f59e0b;"><i class="fas fa-hourglass-half"></i> طلب رد معلق</span>
+                                                    @elseif($returnReq->status === 'approved')
+                                                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> موافقة على رد</span>
+                                                    @elseif($returnReq->status === 'rejected')
+                                                        <span class="badge bg-danger"><i class="fas fa-times-circle"></i> رفض الرد</span>
+                                                    @endif
+                                                </td>
+                                                <td style="text-align: center;">-</td>
+                                                <td style="text-align: center; color: #dc2626; font-weight: bold;">
+                                                    @if($returnReq->status !== 'rejected')
+                                                        {{ number_format($returnReq->amount, 2) }}
+                                                    @else
+                                                        -
+                                                    @endif
+                                                </td>
+                                                <td style="text-align: center; color: #0369a1; font-weight: bold;">
+                                                    -
+                                                </td>
+                                                <td style="text-align: right; font-size: 0.85rem;">
+                                                    @if($returnReq->reason)
+                                                        {{ $returnReq->reason }}
+                                                    @else
+                                                        طلب رد العهدة
+                                                    @endif
+                                                    @if($returnReq->status === 'approved')
+                                                        <br><small style="color: #059669;"><i class="fas fa-check"></i> تمت الموافقة بواسطة {{ $returnReq->approver?->name ?? 'نظام' }}</small>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @elseif($event['type'] === 'transaction')
                                             @php
                                                 $trans = $event['object'];
-                                                $isIncome = in_array($trans->type, ['donation', 'recovery', 'custody_return', 'transfer_in']);
+                                                // Income: donation, recovery, transfer_in
+                                                // Outgoing: custody_out, custody_return (returns reduce the custody amount)
+                                                $isIncome = in_array($trans->type, ['donation', 'recovery', 'transfer_in']);
                                                 $amount = $trans->amount;
                                                 $runningBalance += $isIncome ? $amount : -$amount;
                                             @endphp
