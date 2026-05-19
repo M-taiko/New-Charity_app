@@ -16,11 +16,15 @@ class ActivityLogService
         ?array $properties = null,
         ?int $userId = null
     ): ActivityLog {
+        // If no subject provided, use a generic 'System' type
+        $subjectType = $subject ? get_class($subject) : 'System';
+        $subjectId = $subject?->id ?? null;
+
         return ActivityLog::create([
             'user_id'      => $userId ?? auth()->id(),
             'event'        => $event,
-            'subject_type' => $subject ? get_class($subject) : null,
-            'subject_id'   => $subject?->id,
+            'subject_type' => $subjectType,
+            'subject_id'   => $subjectId,
             'description'  => $description,
             'properties'   => $properties,
             'ip_address'   => request()?->ip(),

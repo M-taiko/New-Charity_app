@@ -500,38 +500,42 @@ class ExpenseController extends Controller
                 ], 422);
             }
 
-            // Create expense with quick flag
-            $expense = Expense::create([
-                'custody_id' => $validated['custody_id'],
-                'treasury_id' => $custody->treasury_id,
-                'user_id' => auth()->id(),
-                'expense_date' => $validated['expense_date'],
-                'amount' => $validated['amount'],
-                'description' => $validated['description'],
-                'type' => 'general',
-                'approval_status' => 'pending_edit',
-                'is_quick_expense' => true,
-                'line_items' => $validated['line_items'] ? json_encode(['raw_text' => $validated['line_items']]) : null,
-            ]);
-
-            // Update custody spent amount
-            $custody->increment('spent', $validated['amount']);
-
-            // Create treasury transaction for tracking
-            if ($custody->treasury_id) {
-                DB::table('treasury_transactions')->insert([
+            // Use transaction to ensure all operations succeed or all fail
+            DB::transaction(function () use ($validated, $custody) {
+                // Create expense with quick flag
+                $expense = Expense::create([
+                    'custody_id' => $validated['custody_id'],
                     'treasury_id' => $custody->treasury_id,
-                    'custody_id' => $custody->id,
-                    'type' => 'expense',
+                    'user_id' => auth()->id(),
+                    'expense_date' => $validated['expense_date'],
                     'amount' => $validated['amount'],
-                    'description' => 'مصروف سريع: ' . $validated['description'],
-                    'transaction_date' => now(),
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'description' => $validated['description'],
+                    'type' => 'general',
+                    'approval_status' => 'pending_edit',
+                    'is_quick_expense' => true,
+                    'line_items' => $validated['line_items'] ? json_encode(['raw_text' => $validated['line_items']]) : null,
                 ]);
-            }
 
-            ActivityLogService::created($expense, 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
+                // Update custody spent amount
+                $custody->increment('spent', $validated['amount']);
+
+                // Create treasury transaction for tracking
+                if ($custody->treasury_id) {
+                    DB::table('treasury_transactions')->insert([
+                        'treasury_id' => $custody->treasury_id,
+                        'custody_id' => $custody->id,
+                        'type' => 'expense',
+                        'amount' => $validated['amount'],
+                        'description' => 'مصروف سريع: ' . $validated['description'],
+                        'transaction_date' => now(),
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+
+                // Log the activity
+                ActivityLogService::created($expense, 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
+            });
 
             return response()->json(['success' => true, 'message' => 'تم تسجيل المصروف بنجاح']);
         } catch (\Exception $e) {
