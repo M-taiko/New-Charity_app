@@ -405,18 +405,22 @@ class ExpenseController extends Controller
         // Get agent's custodies
         $custodies = Custody::where('agent_id', $user->id)->pluck('id');
 
-        // Get expenses for agent's custodies, ordered by newest first
+        // Get expenses for agent's custodies OR direct expenses by this user
         // Hide original quick expenses (those that are still marked as quick_expense and lack proper category/item)
         $expenses = Expense::with(['user', 'custody', 'socialCase', 'item.category.parent.parent'])
-            ->whereIn('custody_id', $custodies)
+            ->where(function($q) use ($custodies, $user) {
+                $q->whereIn('custody_id', $custodies)
+                  ->orWhere(function($q2) use ($user) {
+                      $q2->whereNull('custody_id')->where('user_id', $user->id);
+                  });
+            })
             ->where(function($q) {
                 // Show non-quick expenses
                 $q->where('is_quick_expense', false)
-                  // Or show quick expenses that have been edited (have category_id and expense_item_id)
+                  // Or show quick expenses that have been edited (have category_id)
                   ->orWhere(function($q2) {
                       $q2->where('is_quick_expense', true)
-                        ->whereNotNull('expense_category_id')
-                        ->whereNotNull('expense_item_id');
+                        ->whereNotNull('expense_category_id');
                   });
             })
             ->orderBy('created_at', 'desc')
