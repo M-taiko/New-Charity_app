@@ -69,13 +69,14 @@ class CustodyController extends Controller
     public function store(Request $request)
     {
         $isAgent = auth()->user()->hasRole('مندوب');
-        $isForSelf = $request->has('for_self'); // Accountant/Manager requesting for themselves
+        $isForSelf = $request->has('for_self') || (!$isAgent && !$request->filled('agent_id')); // Accountant/Manager requesting for themselves
 
         if (!$isAgent && !$isForSelf) {
             $this->authorize('create_custody');
         }
 
-        // Build validation rules - treasury_id is required only for non-personal requests
+        // Build validation rules - treasury_id is required only for agent/admin requests
+        // For personal custodies (isForSelf=true), treasury_id is determined by manager during approval
         $validationRules = [
             'agent_id' => ($isAgent || $isForSelf) ? 'nullable' : 'required|exists:users,id',
             'treasury_id' => $isForSelf ? 'nullable' : 'required|exists:treasuries,id',

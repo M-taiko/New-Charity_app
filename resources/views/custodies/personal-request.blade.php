@@ -30,9 +30,17 @@
                     <form action="{{ route('custodies.store') }}" method="POST" onsubmit="return validateCustodyAmount()">
                         @csrf
 
-                        <!-- Hidden field to indicate personal request -->
+                        <!-- Hidden fields -->
                         <input type="hidden" name="for_self" value="1">
+                        <input type="hidden" name="treasury_id" value="">
 
+                        @if($errors->has('treasury_id'))
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <strong>خطأ في النموذج:</strong> {{ $errors->first('treasury_id') }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        @endif
 
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -113,6 +121,15 @@ function validateCustodyAmount() {
         alert('يرجى إدخال مبلغ صحيح');
         return false;
     }
+
+    // Debug: Log form data being sent
+    const form = event.target;
+    console.log('Form data:', {
+        for_self: form.elements['for_self']?.value,
+        treasury_id: form.elements['treasury_id']?.value,
+        amount: form.elements['amount']?.value,
+        issued_date: form.elements['issued_date']?.value,
+    });
 
     return true;
 }
