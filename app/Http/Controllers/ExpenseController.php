@@ -131,24 +131,30 @@ class ExpenseController extends Controller
             NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
             NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
             } else {
-                // Custody spending - can use multiple custodies automatically
+                // Custody spending - validate against selected custody balance
 
-                // Get all active custodies for the user
-                $availableCustodies = Custody::where('agent_id', auth()->id())
-                    ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
-                    ->get()
-                    ->filter(function($custody) {
-                        return $custody->getRemainingBalance() > 0;
-                    });
-
-                // Calculate total available balance
-                $totalAvailableBalance = $availableCustodies->sum(function($custody) {
-                    return $custody->getRemainingBalance();
-                });
+                // If custody_id is provided, validate against that specific custody
+                $maxAmount = 1000000;
+                if ($request->filled('custody_id')) {
+                    $custody = Custody::findOrFail($request->custody_id);
+                    if ($custody->agent_id !== auth()->id()) {
+                        return back()->withInput()->with('error', 'غير مصرح لك بالصرف من هذه العهدة');
+                    }
+                    $maxAmount = $custody->getRemainingBalance();
+                } else {
+                    // If no custody specified, calculate total available across all custodies
+                    $totalAvailable = Custody::where('agent_id', auth()->id())
+                        ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
+                        ->get()
+                        ->sum(function($custody) {
+                            return max(0, $custody->getRemainingBalance());
+                        });
+                    $maxAmount = $totalAvailable;
+                }
 
                 $rules = [
                     'custody_id' => 'nullable|exists:custodies,id',
-                    'amount' => 'required|numeric|min:0.01|max:' . min($totalAvailableBalance, 1000000),
+                    'amount' => 'required|numeric|min:0.01|max:' . $maxAmount,
                     'expense_category_id' => 'required|exists:expense_categories,id',
                     'expense_type' => 'required|in:social_case,general',
                     'description' => 'required|string|max:500',
@@ -164,7 +170,7 @@ class ExpenseController extends Controller
                 }
 
                 $request->validate($rules, [
-                    'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح في جميع عهدك. الحد الأقصى: ' . number_format($totalAvailableBalance, 2) . ' ج.م',
+                    'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح. الحد الأقصى: ' . number_format($maxAmount, 2) . ' ج.م',
                     'attachment.max' => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
                     'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
                 ]);
