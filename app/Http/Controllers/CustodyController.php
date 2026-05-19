@@ -75,11 +75,12 @@ class CustodyController extends Controller
             $this->authorize('create_custody');
         }
 
-        // Build validation rules - treasury_id is required only for agent/admin requests
-        // For personal custodies (isForSelf=true), treasury_id is determined by manager during approval
+        // Build validation rules
+        // treasury_id is required only when explicitly selecting a user (create-for-agent form)
+        // For agents and personal custody, treasury_id is determined by manager during approval
         $validationRules = [
             'agent_id' => ($isAgent || $isForSelf) ? 'nullable' : 'required|exists:users,id',
-            'treasury_id' => $isForSelf ? 'nullable' : 'required|exists:treasuries,id',
+            'treasury_id' => ($isForSelf || $isAgent || !$request->filled('agent_id')) ? 'nullable' : 'required|exists:treasuries,id',
             'amount' => [
                 'required',
                 'numeric',
