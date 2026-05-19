@@ -34,14 +34,17 @@ class CustodyController extends Controller
             $this->authorize('create_custody');
         }
 
-        // Get all treasuries for selection
+        // Get all treasuries for selection (only needed for agent requests)
         $treasuries = Treasury::all();
 
         if ($treasuries->isEmpty()) {
             return redirect()->route('custodies.index')->with('error', 'لم يتم العثور على خزائن. يرجى الاتصال بالمسؤول.');
         }
 
-        // Route to appropriate view based on request type
+        // Auto-route based on request type or user role
+        // If no explicit for_type specified, route based on user role:
+        // - Agents get agent-request form
+        // - Non-agents (accountants/managers) get personal-request form
         if ($forType === 'agent') {
             // Creating custody for a user (accountant/manager creates for someone else)
             // Exclude specific email and hidden users
@@ -54,8 +57,12 @@ class CustodyController extends Controller
             // Personal request (accountant/manager requests for themselves)
             return view('custodies.personal-request', compact('treasuries'));
         } else {
-            // Agent request (agent requests custody for themselves)
-            return view('custodies.agent-request', compact('treasuries'));
+            // Default routing: agents get agent-request form, non-agents get personal-request form
+            if ($isAgent) {
+                return view('custodies.agent-request', compact('treasuries'));
+            } else {
+                return view('custodies.personal-request', compact('treasuries'));
+            }
         }
     }
 
