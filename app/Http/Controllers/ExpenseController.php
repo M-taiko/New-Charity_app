@@ -430,6 +430,7 @@ class ExpenseController extends Controller
             })
             ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
             ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->format('Y-m-d H:i') : '-')
+            ->addColumn('is_quick_expense', fn($row) => $row->is_quick_expense ? 1 : 0)
             ->toJson();
     }
 

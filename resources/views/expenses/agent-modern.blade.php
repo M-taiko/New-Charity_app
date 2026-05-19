@@ -210,8 +210,12 @@
                 },
                 {
                     data: 'category_path',
-                    render: function(data) {
-                        return data && data !== '-' ? '<small style="color: #666;">' + data + '</small>' : '-';
+                    render: function(data, type, row) {
+                        let categoryHtml = data && data !== '-' ? '<small style="color: #666;">' + data + '</small>' : '-';
+                        if (row.is_quick_expense) {
+                            categoryHtml = '<span class="badge bg-warning me-2">مصروف سريع</span>' + categoryHtml;
+                        }
+                        return categoryHtml;
                     }
                 },
                 { data: 'description' },
