@@ -82,17 +82,22 @@
 
                         <!-- Action -->
                         <div class="flex-shrink-0">
-                            <form action="{{ route('notifications.read', $notif->id) }}" method="POST">
-                                @csrf
-                                <button type="submit" class="btn btn-sm {{ $notif->is_read ? 'btn-outline-secondary' : 'btn-primary' }}"
-                                        title="{{ $notif->is_read ? 'عرض' : 'تعليم كمقروء والانتقال' }}">
-                                    @if($notif->related_id)
-                                        <i class="fas fa-arrow-left"></i>
-                                    @else
+                            @if($notif->related_id)
+                                <a href="{{ route('notifications.read', $notif->id) }}" class="btn btn-sm btn-primary"
+                                   title="اذهب إلى المعاملة">
+                                    <i class="fas fa-arrow-left"></i>
+                                    <span class="ms-1 d-none d-sm-inline">اذهب</span>
+                                </a>
+                            @else
+                                <form action="{{ route('notifications.read', $notif->id) }}" method="POST" style="display:inline;">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary"
+                                            title="تعليم كمقروء">
                                         <i class="fas fa-check"></i>
-                                    @endif
-                                </button>
-                            </form>
+                                        <span class="ms-1 d-none d-sm-inline">تم</span>
+                                    </button>
+                                </form>
+                            @endif
                         </div>
                     </div>
                 </div>

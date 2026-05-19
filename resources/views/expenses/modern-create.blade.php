@@ -134,7 +134,7 @@
                                 </select>
                             </div>
                             <div class="col-md-6" id="itemWrap" style="display:none;">
-                                <label class="form-label small text-muted">البند النهائي *</label>
+                                <label class="form-label small text-muted">البند النهائي</label>
                                 <select id="cat_item" name="expense_item_id"
                                         class="form-select @error('expense_item_id') is-invalid @enderror"
                                         onchange="setDefaultAmount(this)">
@@ -336,6 +336,7 @@
         const items = await res.json();
         const wrap = document.getElementById('itemWrap');
         const sel = document.getElementById('cat_item');
+
         sel.innerHTML = '<option value="">-- اختر بند --</option>';
         if (items.length) {
             items.forEach(i => sel.innerHTML += `<option value="${i.id}" data-default="${i.default_amount || ''}">${i.name}</option>`);

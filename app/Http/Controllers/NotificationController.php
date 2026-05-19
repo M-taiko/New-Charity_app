@@ -76,25 +76,27 @@ class NotificationController extends Controller
      */
     private function getRelatedUrl(Notification $notification): string
     {
-        if ($notification->related_type === 'social_case' && $notification->related_id) {
+        $type = strtolower($notification->related_type ?? '');
+
+        if ($type === 'social_case' && $notification->related_id) {
             return route('social_cases.show', $notification->related_id);
         }
-        if ($notification->related_type === 'custody' && $notification->related_id) {
+        if ($type === 'custody' && $notification->related_id) {
             return route('custodies.show', $notification->related_id);
         }
-        if ($notification->related_type === 'expense' && $notification->related_id) {
+        if ($type === 'expense' && $notification->related_id) {
             return route('expenses.show', $notification->related_id);
         }
-        if ($notification->related_type === 'custody_transfer' && $notification->related_id) {
+        if ($type === 'custody_transfer' && $notification->related_id) {
             return route('custody-transfers.show', $notification->related_id);
         }
-        if ($notification->related_type === 'task' && $notification->related_id) {
+        if ($type === 'task' && $notification->related_id) {
             return route('tasks.show', $notification->related_id);
         }
-        if ($notification->related_type === 'purchase_request' && $notification->related_id) {
+        if ($type === 'purchase_request' && $notification->related_id) {
             return route('purchase-requests.show', $notification->related_id);
         }
-        if ($notification->related_type === 'maintenance_request' && $notification->related_id) {
+        if ($type === 'maintenance_request' && $notification->related_id) {
             return route('maintenance-requests.show', $notification->related_id);
         }
 

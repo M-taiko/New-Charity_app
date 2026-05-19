@@ -73,10 +73,10 @@
                         <table class="table table-hover mb-0" id="expensesTable">
                             <thead>
                                 <tr>
-                                    <th>النوع</th>
-                                    <th>المبلغ</th>
+                                    <th>#</th>
                                     <th>التاريخ والوقت</th>
-                                    <th>التوجيه المحاسبي</th>
+                                    <th>المبلغ</th>
+                                    <th>نوع المصروف</th>
                                     <th>الوصف</th>
                                     <th>الحالة الاجتماعية</th>
                                     <th>الإجراءات</th>
@@ -160,6 +160,11 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
+        // Show toast if expense was just registered
+        @if (session('success'))
+            showAlert('success', '{{ session('success') }}');
+        @endif
+
         // Set default expense date to today
         const today = new Date().toISOString().split('T')[0];
         $('#quick_expense_date').val(today);
@@ -178,15 +183,23 @@
             updateQuickCustodyBalance();
         });
 
-        $('#expensesTable').DataTable({
+        const table = $('#expensesTable').DataTable({
             processing: true,
             serverSide: true,
             ajax: '{{ route("api.agent-expenses.data") }}',
             columns: [
                 {
-                    data: 'type_label',
+                    data: null,
+                    render: function(data, type, row, meta) {
+                        return meta.row + 1;
+                    },
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'expense_datetime',
                     render: function(data) {
-                        return data;
+                        return data && data !== '-' ? data : '-';
                     }
                 },
                 {
@@ -196,13 +209,7 @@
                     }
                 },
                 {
-                    data: 'expense_datetime',
-                    render: function(data) {
-                        return data && data !== '-' ? data : '-';
-                    }
-                },
-                {
-                    data: 'item_direction',
+                    data: 'category_path',
                     render: function(data) {
                         return data && data !== '-' ? '<small style="color: #666;">' + data + '</small>' : '-';
                     }
@@ -218,9 +225,12 @@
                     data: null,
                     render: function(data) {
                         return `<a href="/expenses/${data.id}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>`;
-                    }
+                    },
+                    orderable: false,
+                    searchable: false
                 }
             ],
+            order: [[1, 'desc']],
             language: {
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             }

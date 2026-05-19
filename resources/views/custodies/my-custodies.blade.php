@@ -454,32 +454,49 @@
                                 @endif
                             "></div>
                             <div class="timeline-content">
-                                <div class="d-flex justify-content-between">
-                                    <h6>
-                                        @if($transaction->type === 'custody_out')
-                                            <i class="fas fa-arrow-down text-danger"></i> صرف عهدة
-                                        @elseif($transaction->type === 'custody_return')
-                                            <i class="fas fa-arrow-up text-success"></i> رد عهدة
-                                        @elseif($transaction->type === 'recovery')
-                                            <i class="fas fa-arrow-left text-info"></i> استرداد
-                                        @elseif($transaction->type === 'donation')
-                                            @if(str_contains($transaction->description, 'استرداد مصروف'))
-                                                <i class="fas fa-undo text-success"></i> استرداد مصروف
-                                            @elseif(str_contains($transaction->description, 'تبرع خارجي'))
-                                                <i class="fas fa-gift text-success"></i> تبرع خارجي
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6>
+                                            @if($transaction->type === 'custody_out')
+                                                <i class="fas fa-arrow-down text-danger"></i> صرف عهدة
+                                            @elseif($transaction->type === 'custody_return')
+                                                <i class="fas fa-arrow-up text-success"></i> رد عهدة
+                                            @elseif($transaction->type === 'recovery')
+                                                <i class="fas fa-arrow-left text-info"></i> استرداد
+                                            @elseif($transaction->type === 'donation')
+                                                @if(str_contains($transaction->description, 'استرداد مصروف'))
+                                                    <i class="fas fa-undo text-success"></i> استرداد مصروف
+                                                @elseif(str_contains($transaction->description, 'تبرع خارجي'))
+                                                    <i class="fas fa-gift text-success"></i> تبرع خارجي
+                                                @else
+                                                    <i class="fas fa-gift text-success"></i> {{ $transaction->description }}
+                                                @endif
+                                            @elseif($transaction->type === 'expense')
+                                                <i class="fas fa-shopping-cart text-warning"></i> مصروف
                                             @else
-                                                <i class="fas fa-gift text-success"></i> {{ $transaction->description }}
+                                                <i class="fas fa-exchange-alt text-muted"></i> {{ $transaction->type }}
                                             @endif
-                                        @elseif($transaction->type === 'expense')
-                                            <i class="fas fa-shopping-cart text-warning"></i> مصروف
-                                        @else
-                                            <i class="fas fa-exchange-alt text-muted"></i> {{ $transaction->type }}
+                                        </h6>
+                                        <p class="mb-0">{{ $transaction->description }}</p>
+                                        <strong>المبلغ: {{ number_format($transaction->amount, 2) }} ج.م</strong>
+
+                                        {{-- Link to related resource if available --}}
+                                        @if($transaction->expense_id)
+                                            <div class="mt-2">
+                                                <a href="{{ route('expenses.show', $transaction->expense_id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i> عرض المصروف
+                                                </a>
+                                            </div>
+                                        @elseif($transaction->custody_id && $transaction->type === 'custody_return')
+                                            <div class="mt-2">
+                                                <a href="{{ route('custodies.show', $transaction->custody_id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i> عرض العهدة
+                                                </a>
+                                            </div>
                                         @endif
-                                    </h6>
-                                    <small class="text-muted">{{ $transaction->transaction_date->format('Y-m-d H:i:s') }}</small>
+                                    </div>
+                                    <small class="text-muted ms-2" style="white-space: nowrap;">{{ $transaction->transaction_date->format('Y-m-d H:i:s') }}</small>
                                 </div>
-                                <p class="mb-0">{{ $transaction->description }}</p>
-                                <strong>المبلغ: {{ number_format($transaction->amount, 2) }} ج.م</strong>
                             </div>
                         </div>
                         @endforeach
@@ -489,12 +506,19 @@
                         <div class="timeline-item">
                             <div class="timeline-marker bg-warning"></div>
                             <div class="timeline-content">
-                                <div class="d-flex justify-content-between">
-                                    <h6><i class="fas fa-shopping-cart text-warning"></i> مصروف</h6>
-                                    <small class="text-muted">{{ $expense->created_at->format('Y-m-d H:i') }}</small>
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6><i class="fas fa-shopping-cart text-warning"></i> مصروف</h6>
+                                        <p class="mb-1">{{ $expense->category->name ?? 'غير محدد' }} - {{ $expense->description }}</p>
+                                        <strong>المبلغ: {{ number_format($expense->amount, 2) }} ج.م</strong>
+                                        <div class="mt-2">
+                                            <a href="{{ route('expenses.show', $expense->id) }}" class="btn btn-sm btn-outline-warning">
+                                                <i class="fas fa-eye"></i> عرض المصروف
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted ms-2" style="white-space: nowrap;">{{ $expense->created_at->format('Y-m-d H:i') }}</small>
                                 </div>
-                                <p class="mb-1">{{ $expense->category->name ?? 'غير محدد' }} - {{ $expense->description }}</p>
-                                <strong>المبلغ: {{ number_format($expense->amount, 2) }} ج.م</strong>
                             </div>
                         </div>
                         @endforeach

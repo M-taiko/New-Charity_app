@@ -10,6 +10,7 @@ use App\Models\ExpenseItem;
 use App\Models\Treasury;
 use App\Services\TreasuryService;
 use App\Services\ActivityLogService;
+use App\Services\NotificationService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,7 @@ class ExpenseController extends Controller
 
         // Get custodies for current user only (agent_id) that are active/accepted with available balance
         $custodies = Custody::where('agent_id', auth()->id())
-            ->whereIn('status', ['accepted', 'active'])
+            ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
             ->get()
             ->filter(function($custody) {
                 return $custody->getRemainingBalance() > 0;
@@ -79,10 +80,6 @@ class ExpenseController extends Controller
                 $treasury = Treasury::findOrFail($treasuryId);
                 $treasuryBalance = $treasury->balance;
 
-                // Validate category to determine if item is required
-                $category = ExpenseCategory::find($request->expense_category_id);
-                $isOtherExpense = $category && $category->code === 'OTHER';
-
                 $rules = [
                     'amount' => 'required|numeric|min:0.01|max:' . min($treasuryBalance, 1000000),
                     'expense_category_id' => 'required|exists:expense_categories,id',
@@ -90,19 +87,13 @@ class ExpenseController extends Controller
                     'description' => 'required|string|max:500',
                     'location' => 'nullable|string',
                     'social_case_id' => 'nullable|exists:social_cases,id',
+                    'expense_item_id' => 'nullable|exists:expense_items,id',
                     'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
                 ];
 
                 // If expense type is social_case, social_case_id is required
                 if ($request->expense_type === 'social_case') {
                     $rules['social_case_id'] = 'required|exists:social_cases,id';
-                }
-
-                // Item is required only for non-"OTHER" categories
-                if (!$isOtherExpense) {
-                    $rules['expense_item_id'] = 'required|exists:expense_items,id';
-                } else {
-                    $rules['expense_item_id'] = 'nullable|exists:expense_items,id';
                 }
 
                 $request->validate($rules, [
@@ -136,6 +127,12 @@ class ExpenseController extends Controller
             );
 
             ActivityLogService::created($expense, 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
+
+            // Send notification to managers and accountants for review
+            $user = auth()->user();
+            $notificationMessage = "المستخدم: {$user->name} - سجل مصروفاً بمبلغ " . number_format($request->amount, 2) . " ج.م من الخزينة - الوصف: {$request->description}";
+            NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
+            NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
             } else {
                 // Custody spending - can use multiple custodies automatically
 
@@ -152,31 +149,21 @@ class ExpenseController extends Controller
                     return $custody->getRemainingBalance();
                 });
 
-                // Validate category to determine if item is required
-                $category = ExpenseCategory::find($request->expense_category_id);
-                $isOtherExpense = $category && $category->code === 'OTHER';
-
                 $rules = [
-                    'custody_id' => 'nullable|exists:custodies,id', // Optional, for backward compatibility
+                    'custody_id' => 'nullable|exists:custodies,id',
                     'amount' => 'required|numeric|min:0.01|max:' . min($totalAvailableBalance, 1000000),
                     'expense_category_id' => 'required|exists:expense_categories,id',
                     'expense_type' => 'required|in:social_case,general',
                     'description' => 'required|string|max:500',
                     'location' => 'nullable|string',
                     'social_case_id' => 'nullable|exists:social_cases,id',
+                    'expense_item_id' => 'nullable|exists:expense_items,id',
                     'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
                 ];
 
                 // If expense type is social_case, social_case_id is required
                 if ($request->expense_type === 'social_case') {
                     $rules['social_case_id'] = 'required|exists:social_cases,id';
-                }
-
-                // Item is required only for non-"OTHER" categories
-                if (!$isOtherExpense) {
-                    $rules['expense_item_id'] = 'required|exists:expense_items,id';
-                } else {
-                    $rules['expense_item_id'] = 'nullable|exists:expense_items,id';
                 }
 
                 $request->validate($rules, [
@@ -213,9 +200,15 @@ class ExpenseController extends Controller
                 );
 
                 ActivityLogService::created($expense, 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
+
+                // Send notification to managers and accountants for review
+                $user = auth()->user();
+                $notificationMessage = "المستخدم: {$user->name} - سجل مصروفاً بمبلغ " . number_format($request->amount, 2) . " ج.م - الوصف: {$request->description}";
+                NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'Expense');
+                NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'Expense');
             }
 
-            return redirect()->route('expenses.index')->with('success', 'تم تسجيل المصروف');
+            return redirect()->route('expenses.agent')->with('success', 'تم تسجيل المصروف');
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'حدث خطأ أثناء تسجيل المصروف: ' . $e->getMessage());
         }
@@ -314,6 +307,8 @@ class ExpenseController extends Controller
                 'social_case_id'      => $request->expense_type === 'social_case' ? $request->social_case_id : null,
                 'expense_date'        => $request->expense_date,
                 'attachment'          => $attachmentPath,
+                'is_quick_expense'    => false, // Mark as no longer a quick expense after editing
+                'approval_status'     => 'pending_edit', // Reset to pending edit
             ]);
 
             ActivityLogService::updated($expense, 'تم تعديل المصروف #' . $expense->id . ' (المبلغ: ' . number_format($newAmount, 2) . ' ج.م)');
@@ -410,20 +405,35 @@ class ExpenseController extends Controller
         // Get agent's custodies
         $custodies = Custody::where('agent_id', $user->id)->pluck('id');
 
-        // Get expenses for agent's custodies
+        // Get expenses for agent's custodies, ordered by newest first
+        // Hide original quick expenses (those that are still marked as quick_expense and lack proper category/item)
         $expenses = Expense::with(['user', 'custody', 'socialCase', 'item.category.parent.parent'])
             ->whereIn('custody_id', $custodies)
+            ->where(function($q) {
+                // Show non-quick expenses
+                $q->where('is_quick_expense', false)
+                  // Or show quick expenses that have been edited (have category_id and expense_item_id)
+                  ->orWhere(function($q2) {
+                      $q2->where('is_quick_expense', true)
+                        ->whereNotNull('expense_category_id')
+                        ->whereNotNull('expense_item_id');
+                  });
+            })
+            ->orderBy('created_at', 'desc')
             ->get();
 
         return DataTables::of($expenses)
-            ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
-            ->addColumn('type_label', fn($row) => $row->type === 'social_case' ? 'حالة اجتماعية' : 'مصروف عام')
-            ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->format('Y-m-d H:i') : '-')
-            ->addColumn('item_direction', function($row) {
-                if (!$row->item) return '-';
+            ->addColumn('category_path', function($row) {
+                if (!$row->item) {
+                    $category = $row->category;
+                    return $category ? $category->full_path : 'مصروفات أخرى';
+                }
                 $category = $row->item->category;
-                return $category ? $category->full_path . ' > ' . $row->item->name : $row->item->name;
+                if (!$category) return $row->item->name;
+                return $category->full_path . ' > ' . $row->item->name;
             })
+            ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
+            ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->format('Y-m-d H:i') : '-')
             ->toJson();
     }
 
