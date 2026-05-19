@@ -414,15 +414,7 @@ class ExpenseController extends Controller
                       $q2->whereNull('custody_id')->where('user_id', $user->id);
                   });
             })
-            ->where(function($q) {
-                // Show non-quick expenses
-                $q->where('is_quick_expense', false)
-                  // Or show quick expenses that have been edited (have category_id)
-                  ->orWhere(function($q2) {
-                      $q2->where('is_quick_expense', true)
-                        ->whereNotNull('expense_category_id');
-                  });
-            })
+            // Show all non-quick expenses and all quick expenses (regardless of edit status)
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -515,7 +507,7 @@ class ExpenseController extends Controller
             }
 
             // Use transaction to ensure all operations succeed or all fail
-            DB::transaction(function () use ($validated, $custody) {
+            $expense = DB::transaction(function () use ($validated, $custody) {
                 // Create expense with quick flag
                 $expense = Expense::create([
                     'custody_id' => $validated['custody_id'],
@@ -549,7 +541,15 @@ class ExpenseController extends Controller
 
                 // Log the activity
                 ActivityLogService::created($expense, 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
+
+                return $expense;
             });
+
+            // Send notification to managers and accountants for review
+            $user = auth()->user();
+            $notificationMessage = "المستخدم: {$user->name} - سجل مصروفاً سريعاً بمبلغ " . number_format($expense->amount, 2) . " ج.م - الوصف: {$expense->description}";
+            NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
+            NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
 
             return response()->json(['success' => true, 'message' => 'تم تسجيل المصروف بنجاح']);
         } catch (\Exception $e) {
