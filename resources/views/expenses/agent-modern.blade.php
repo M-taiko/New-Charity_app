@@ -244,13 +244,13 @@
                 }
 
                 data.forEach(function(custody) {
-                    const balance = parseFloat(custody.balance) - parseFloat(custody.spent);
-                    const reason = custody.reason || 'عهدة بدون وصف';
-                    console.log('Custody:', reason, 'Balance:', custody.balance, 'Spent:', custody.spent, 'Remaining:', balance);
-                    if (balance > 0) {
+                    const remaining = parseFloat(custody.remaining || 0);
+                    const reason = custody.reason || 'عهدة #' + custody.id;
+                    console.log('Custody:', reason, 'Amount:', custody.amount, 'Spent:', custody.spent, 'Remaining:', remaining);
+                    if (remaining > 0) {
                         select.append(`
-                            <option value="${custody.id}" data-balance="${balance}">
-                                ${reason} (الرصيد: ${balance.toLocaleString('ar')} ج.م)
+                            <option value="${custody.id}" data-balance="${remaining}">
+                                ${reason} (الرصيد: ${remaining.toLocaleString('ar')} ج.م)
                             </option>
                         `);
                     }

@@ -785,16 +785,23 @@ class CustodyController extends Controller
     public function userCustodiesApi()
     {
         $custodies = Custody::where('agent_id', auth()->id())
-            ->whereIn('status', ['accepted', 'active'])
+            // Only show custodies that are active (accepted, partially_returned) or closed but with remaining balance
+            ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
             ->get()
             ->map(function ($custody) {
                 $remaining = $custody->getRemainingBalance();
+                // Only include if there's still balance to spend or return
                 if ($remaining > 0) {
                     return [
                         'id' => $custody->id,
                         'reason' => $custody->notes ?: 'عهدة #' . $custody->id,
-                        'balance' => $custody->amount,
-                        'spent' => $custody->spent,
+                        'amount' => (float)$custody->amount,
+                        'spent' => (float)$custody->spent,
+                        'returned' => (float)$custody->returned,
+                        'pending_return' => (float)$custody->pending_return,
+                        'transferred_in' => (float)($custody->transferred_in ?? 0),
+                        'transferred_out' => (float)($custody->transferred_out ?? 0),
+                        'remaining' => (float)$remaining,
                     ];
                 }
                 return null;
