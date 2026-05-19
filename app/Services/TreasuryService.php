@@ -360,8 +360,11 @@ class TreasuryService
                 throw new \Exception('هذه العملية متاحة فقط لطلبات العهد من المندوب');
             }
 
+            // When rejecting a custody, set amount to 0 since no funds were actually disbursed
+            // This custody request had no value as no money left any treasury
             $custody->update([
                 'status' => 'rejected',
+                'amount' => 0,  // Reset amount to 0 since custody was never accepted
                 'notes' => $reason,
             ]);
 
@@ -535,8 +538,11 @@ class TreasuryService
                 throw new \Exception('غير مصرح لك برفض هذه العهدة');
             }
 
+            // When rejecting a custody, set amount to 0 since no funds were actually disbursed
+            // This custody request had no value as no money left any treasury
             $custody->update([
                 'status' => 'rejected',
+                'amount' => 0,  // Reset amount to 0 since custody was never accepted
                 'notes' => $reason ? "رفض من المندوب: {$reason}" : "رفض من المندوب",
             ]);
 
@@ -544,7 +550,7 @@ class TreasuryService
             $notifiedUsers = [];
             $this->notifyAccountants(
                 'رفض العهدة من المندوب',
-                "المندوب {$custody->agent->name} رفض العهدة بقيمة {$custody->amount} ج.م. السبب: " . ($reason ?? 'غير محدد'),
+                "المندوب {$custody->agent->name} رفض العهدة. السبب: " . ($reason ?? 'غير محدد'),
                 'error',
                 $custody->id,
                 'custody',
@@ -552,7 +558,7 @@ class TreasuryService
             );
             $this->notifyManagers(
                 'رفض العهدة من المندوب',
-                "المندوب {$custody->agent->name} رفض العهدة بقيمة {$custody->amount} ج.م. السبب: " . ($reason ?? 'غير محدد'),
+                "المندوب {$custody->agent->name} رفض العهدة. السبب: " . ($reason ?? 'غير محدد'),
                 'error',
                 $custody->id,
                 'custody',
