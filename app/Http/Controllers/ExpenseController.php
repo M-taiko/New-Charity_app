@@ -531,7 +531,7 @@ class ExpenseController extends Controller
                 ]);
             }
 
-            ActivityLogService::log('created', 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
+            ActivityLogService::created($expense, 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
 
             return response()->json(['success' => true, 'message' => 'تم تسجيل المصروف بنجاح']);
         } catch (\Exception $e) {
