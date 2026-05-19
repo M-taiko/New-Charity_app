@@ -643,12 +643,17 @@ class TreasuryService
         });
     }
 
-    public function approveCustodyReturn($custody)
+    public function approveCustodyReturn($custody, $treasuryId = null)
     {
-        return DB::transaction(function () use ($custody) {
-            // Lock the custody and treasury for update
+        // Use provided treasury or fall back to custody's original treasury
+        if (!$treasuryId) {
+            $treasuryId = $custody->treasury_id;
+        }
+
+        return DB::transaction(function () use ($custody, $treasuryId) {
+            // Lock the custody and both treasuries for update
             $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
-            $treasury = Treasury::where('id', $custody->treasury_id)->lockForUpdate()->first();
+            $treasury = Treasury::where('id', $treasuryId)->lockForUpdate()->first();
 
             $returnedAmount = $custody->pending_return;
 
@@ -658,12 +663,12 @@ class TreasuryService
                 'pending_return' => 0,
             ]);
 
-            // Add to treasury
+            // Add to selected treasury
             $treasury->increment('balance', $returnedAmount);
 
             // Create transaction
             TreasuryTransaction::create([
-                'treasury_id' => $custody->treasury_id,
+                'treasury_id' => $treasuryId,
                 'type' => 'custody_return',
                 'amount' => $returnedAmount,
                 'description' => "إرجاع عهدة من المندوب {$custody->agent->name}",

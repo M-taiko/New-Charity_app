@@ -360,7 +360,7 @@ class CustodyController extends Controller
         }
     }
 
-    public function approveReturn(Custody $custody)
+    public function approveReturn(Request $request, Custody $custody)
     {
         $this->authorize('approve_custody');
 
@@ -368,10 +368,19 @@ class CustodyController extends Controller
             return back()->with('error', 'لا يوجد مبلغ معلق للموافقة عليه');
         }
 
+        $request->validate([
+            'treasury_id' => 'required|exists:treasuries,id',
+        ], [
+            'treasury_id.required' => 'يرجى اختيار خزينة',
+            'treasury_id.exists' => 'الخزينة المختارة غير موجودة',
+        ]);
+
         $pendingAmount = $custody->pending_return;
-        $this->service->approveCustodyReturn($custody);
-        ActivityLogService::approved($custody, 'تم قبول رد ' . number_format($pendingAmount, 2) . ' ج.م من العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
-        return back()->with('success', 'تم قبول رد العهدة والتحويل للخزينة');
+        $treasuryId = $request->input('treasury_id');
+
+        $this->service->approveCustodyReturn($custody, $treasuryId);
+        ActivityLogService::approved($custody, 'تم قبول رد ' . number_format($pendingAmount, 2) . ' ج.م من العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name . ' وإضافتها إلى الخزينة');
+        return back()->with('success', 'تم قبول رد العهدة والتحويل للخزينة المختارة');
     }
 
     /**

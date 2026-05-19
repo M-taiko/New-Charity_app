@@ -941,11 +941,38 @@ function updateAcceptTreasuryInfo() {
                             <span style="color: #ffa726; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->pending_return, 2) }} ج.م</span></p>
                         </div>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اختر الخزينة لإضافة الرد</strong></label>
+                        <select name="treasury_id" id="returnTreasurySelect" class="form-select @error('treasury_id') is-invalid @enderror" required onchange="updateReturnTreasuryBalance()">
+                            <option value="">-- اختر الخزينة --</option>
+                            @foreach(\App\Models\Treasury::all() as $treasury)
+                                <option value="{{ $treasury->id }}"
+                                    data-balance="{{ $treasury->balance }}"
+                                    {{ $custody->treasury_id == $treasury->id ? 'selected' : '' }}>
+                                    {{ $treasury->name }} (الرصيد الحالي: {{ number_format($treasury->balance, 2) }} ج.م)
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('treasury_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div id="treasuryInfo" style="background: #f5f5f5; padding: 12px; border-radius: 4px; margin-bottom: 15px; display: none;">
+                        <p style="margin: 0; font-size: 0.9rem; color: #666;">
+                            <strong>الرصيد الحالي:</strong> <span id="currentBalance" style="color: #667eea; font-weight: bold;">0</span> ج.م
+                        </p>
+                        <p style="margin: 8px 0 0; font-size: 0.9rem; color: #666;">
+                            <strong>بعد الإضافة:</strong> <span id="newBalance" style="color: #4caf50; font-weight: bold;">0</span> ج.م
+                        </p>
+                    </div>
+
                     <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
                         <i class="fas fa-arrow-right"></i> عند الموافقة، سيتم:
                     </p>
                     <ul style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
-                        <li>إضافة {{ number_format($custody->pending_return, 2) }} ج.م إلى رصيد الخزينة</li>
+                        <li>إضافة {{ number_format($custody->pending_return, 2) }} ج.م إلى الخزينة المختارة</li>
                         <li>تحديث حالة العهدة</li>
                         <li>إرسال إشعار للمندوب بقبول الرد</li>
                         <li>تسجيل العملية في السجل</li>
@@ -1051,6 +1078,33 @@ function updateAgentAcceptTreasuryInfo() {
         submitBtn.disabled = true;
     }
 }
+
+function updateReturnTreasuryBalance() {
+    const select = document.getElementById('returnTreasurySelect');
+    const infoDiv = document.getElementById('treasuryInfo');
+    const currentBalanceSpan = document.getElementById('currentBalance');
+    const newBalanceSpan = document.getElementById('newBalance');
+    const returnAmount = {{ $custody->pending_return ?? 0 }};
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const currentBalance = parseFloat(option.dataset.balance) || 0;
+        const newBalance = currentBalance + returnAmount;
+
+        currentBalanceSpan.textContent = currentBalance.toFixed(2);
+        newBalanceSpan.textContent = newBalance.toFixed(2);
+        infoDiv.style.display = 'block';
+    } else {
+        infoDiv.style.display = 'none';
+    }
+}
+
+// Initialize on modal open
+document.addEventListener('shown.bs.modal', function (event) {
+    if (event.target.id === 'approveReturnModal') {
+        updateReturnTreasuryBalance();
+    }
+});
 </script>
 
 {{-- Agent Reject Modal (Workflow 2) --}}
