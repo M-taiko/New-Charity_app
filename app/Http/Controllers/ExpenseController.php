@@ -138,7 +138,7 @@ class ExpenseController extends Controller
 
                 // Get all active custodies for the user
                 $availableCustodies = Custody::where('agent_id', auth()->id())
-                    ->whereIn('status', ['accepted', 'active'])
+                    ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
                     ->get()
                     ->filter(function($custody) {
                         return $custody->getRemainingBalance() > 0;
