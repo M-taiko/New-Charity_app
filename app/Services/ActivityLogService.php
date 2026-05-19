@@ -68,6 +68,19 @@ class ActivityLogService
         return self::log('returned', $description, $subject, $props);
     }
 
+    public static function logged(string $description, string $subjectType, ?int $subjectId = null, ?array $props = null): ActivityLog
+    {
+        return ActivityLog::create([
+            'user_id'      => auth()->id(),
+            'event'        => 'logged',
+            'subject_type' => $subjectType,
+            'subject_id'   => $subjectId,
+            'description'  => $description,
+            'properties'   => $props,
+            'ip_address'   => request()?->ip(),
+        ]);
+    }
+
     public static function login(?int $userId = null): ActivityLog
     {
         return ActivityLog::create([
