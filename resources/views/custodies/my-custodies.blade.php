@@ -139,7 +139,7 @@
                     <h5 style="margin: 0; color: white;">
                         <i class="fas fa-list"></i> جميع العهدات
                     </h5>
-                    @if($myCustodies->whereIn('status', ['accepted', 'active'])->isNotEmpty())
+                    @if($myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])->isNotEmpty())
                     <div class="btn-group" role="group" style="gap: 0.5rem;">
                         <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickDonationModal" title="إضافة تبرع خارجي سريع">
                             <i class="fas fa-gift"></i> تبرع خارجي
@@ -430,97 +430,133 @@
                     </div>
                 @else
                     <div class="timeline">
-                        <!-- Custody created -->
-                        <div class="timeline-item">
-                            <div class="timeline-marker bg-primary"></div>
-                            <div class="timeline-content">
-                                <div class="d-flex justify-content-between">
-                                    <h6>إنشاء العهدة</h6>
-                                    <small class="text-muted">{{ $custody->created_at->format('Y-m-d H:i') }}</small>
-                                </div>
-                                <p class="mb-0">تم إنشاء عهدة بقيمة {{ number_format($custody->amount, 2) }} ج.م</p>
-                            </div>
-                        </div>
+                        @php
+                            // Combine all events
+                            $allEvents = [];
 
-                        <!-- Transactions -->
-                        @foreach($custody->transactions->sortBy('transaction_date') as $transaction)
-                        <div class="timeline-item">
-                            <div class="timeline-marker
-                                @if($transaction->type === 'custody_out') bg-danger
-                                @elseif($transaction->type === 'custody_return') bg-success
-                                @elseif($transaction->type === 'donation') bg-success
-                                @elseif($transaction->type === 'expense') bg-warning
-                                @else bg-info
-                                @endif
-                            "></div>
-                            <div class="timeline-content">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <h6>
-                                            @if($transaction->type === 'custody_out')
-                                                <i class="fas fa-arrow-down text-danger"></i> صرف عهدة
-                                            @elseif($transaction->type === 'custody_return')
-                                                <i class="fas fa-arrow-up text-success"></i> رد عهدة
-                                            @elseif($transaction->type === 'recovery')
-                                                <i class="fas fa-arrow-left text-info"></i> استرداد
-                                            @elseif($transaction->type === 'donation')
-                                                @if(str_contains($transaction->description, 'استرداد مصروف'))
-                                                    <i class="fas fa-undo text-success"></i> استرداد مصروف
-                                                @elseif(str_contains($transaction->description, 'تبرع خارجي'))
-                                                    <i class="fas fa-gift text-success"></i> تبرع خارجي
-                                                @else
-                                                    <i class="fas fa-gift text-success"></i> {{ $transaction->description }}
-                                                @endif
-                                            @elseif($transaction->type === 'expense')
-                                                <i class="fas fa-shopping-cart text-warning"></i> مصروف
-                                            @else
-                                                <i class="fas fa-exchange-alt text-muted"></i> {{ $transaction->type }}
-                                            @endif
-                                        </h6>
-                                        <p class="mb-0">{{ $transaction->description }}</p>
-                                        <strong>المبلغ: {{ number_format($transaction->amount, 2) }} ج.م</strong>
+                            // Add creation event
+                            $allEvents[] = [
+                                'type' => 'creation',
+                                'date' => $custody->created_at,
+                                'object' => null
+                            ];
 
-                                        {{-- Link to related resource if available --}}
-                                        @if($transaction->expense_id)
-                                            <div class="mt-2">
-                                                <a href="{{ route('expenses.show', $transaction->expense_id) }}" class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-eye"></i> عرض المصروف
-                                                </a>
-                                            </div>
-                                        @elseif($transaction->custody_id && $transaction->type === 'custody_return')
-                                            <div class="mt-2">
-                                                <a href="{{ route('custodies.show', $transaction->custody_id) }}" class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-eye"></i> عرض العهدة
-                                                </a>
-                                            </div>
-                                        @endif
+                            // Add transactions
+                            foreach($custody->transactions as $trans) {
+                                $allEvents[] = [
+                                    'type' => 'transaction',
+                                    'date' => $trans->transaction_date,
+                                    'object' => $trans
+                                ];
+                            }
+
+                            // Add expenses
+                            foreach($custody->expenses as $exp) {
+                                $allEvents[] = [
+                                    'type' => 'expense',
+                                    'date' => $exp->created_at,
+                                    'object' => $exp
+                                ];
+                            }
+
+                            // Sort by date descending (newest first)
+                            usort($allEvents, function($a, $b) {
+                                return $b['date']->timestamp - $a['date']->timestamp;
+                            });
+                        @endphp
+
+                        @foreach($allEvents as $event)
+                            @if($event['type'] === 'creation')
+                                <!-- Custody created -->
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-primary"></div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between">
+                                            <h6>إنشاء العهدة</h6>
+                                            <small class="text-muted">{{ $custody->created_at->format('Y-m-d H:i') }}</small>
+                                        </div>
+                                        <p class="mb-0">تم إنشاء عهدة بقيمة {{ number_format($custody->amount, 2) }} ج.م</p>
                                     </div>
-                                    <small class="text-muted ms-2" style="white-space: nowrap;">{{ $transaction->transaction_date->format('Y-m-d H:i:s') }}</small>
                                 </div>
-                            </div>
-                        </div>
-                        @endforeach
+                            @elseif($event['type'] === 'transaction')
+                                @php $transaction = $event['object']; @endphp
+                                <div class="timeline-item">
+                                    <div class="timeline-marker
+                                        @if($transaction->type === 'custody_out') bg-danger
+                                        @elseif($transaction->type === 'custody_return') bg-success
+                                        @elseif($transaction->type === 'donation') bg-success
+                                        @elseif($transaction->type === 'expense') bg-warning
+                                        @else bg-info
+                                        @endif
+                                    "></div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6>
+                                                    @if($transaction->type === 'custody_out')
+                                                        <i class="fas fa-arrow-down text-danger"></i> صرف عهدة
+                                                    @elseif($transaction->type === 'custody_return')
+                                                        <i class="fas fa-arrow-up text-success"></i> رد عهدة
+                                                    @elseif($transaction->type === 'recovery')
+                                                        <i class="fas fa-arrow-left text-info"></i> استرداد
+                                                    @elseif($transaction->type === 'donation')
+                                                        @if(str_contains($transaction->description, 'استرداد مصروف'))
+                                                            <i class="fas fa-undo text-success"></i> استرداد مصروف
+                                                        @elseif(str_contains($transaction->description, 'تبرع خارجي'))
+                                                            <i class="fas fa-gift text-success"></i> تبرع خارجي
+                                                        @else
+                                                            <i class="fas fa-gift text-success"></i> {{ $transaction->description }}
+                                                        @endif
+                                                    @elseif($transaction->type === 'expense')
+                                                        <i class="fas fa-shopping-cart text-warning"></i> مصروف
+                                                    @else
+                                                        <i class="fas fa-exchange-alt text-muted"></i> {{ $transaction->type }}
+                                                    @endif
+                                                </h6>
+                                                <p class="mb-0">{{ $transaction->description }}</p>
+                                                <strong>المبلغ: {{ number_format($transaction->amount, 2) }} ج.م</strong>
 
-                        <!-- Expenses -->
-                        @foreach($custody->expenses->sortBy('created_at') as $expense)
-                        <div class="timeline-item">
-                            <div class="timeline-marker bg-warning"></div>
-                            <div class="timeline-content">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div class="flex-grow-1">
-                                        <h6><i class="fas fa-shopping-cart text-warning"></i> مصروف</h6>
-                                        <p class="mb-1">{{ $expense->category->name ?? 'غير محدد' }} - {{ $expense->description }}</p>
-                                        <strong>المبلغ: {{ number_format($expense->amount, 2) }} ج.م</strong>
-                                        <div class="mt-2">
-                                            <a href="{{ route('expenses.show', $expense->id) }}" class="btn btn-sm btn-outline-warning">
-                                                <i class="fas fa-eye"></i> عرض المصروف
-                                            </a>
+                                                {{-- Link to related resource if available --}}
+                                                @if($transaction->expense_id)
+                                                    <div class="mt-2">
+                                                        <a href="{{ route('expenses.show', $transaction->expense_id) }}" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-eye"></i> عرض المصروف
+                                                        </a>
+                                                    </div>
+                                                @elseif($transaction->custody_id && $transaction->type === 'custody_return')
+                                                    <div class="mt-2">
+                                                        <a href="{{ route('custodies.show', $transaction->custody_id) }}" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-eye"></i> عرض العهدة
+                                                        </a>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                            <small class="text-muted ms-2" style="white-space: nowrap;">{{ $transaction->transaction_date->format('Y-m-d H:i:s') }}</small>
                                         </div>
                                     </div>
-                                    <small class="text-muted ms-2" style="white-space: nowrap;">{{ $expense->created_at->format('Y-m-d H:i') }}</small>
                                 </div>
-                            </div>
-                        </div>
+                            @else
+                                @php $expense = $event['object']; @endphp
+                                <!-- Expense -->
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-warning"></div>
+                                    <div class="timeline-content">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <h6><i class="fas fa-shopping-cart text-warning"></i> مصروف</h6>
+                                                <p class="mb-1">{{ $expense->category->name ?? 'غير محدد' }} - {{ $expense->description }}</p>
+                                                <strong>المبلغ: {{ number_format($expense->amount, 2) }} ج.م</strong>
+                                                <div class="mt-2">
+                                                    <a href="{{ route('expenses.show', $expense->id) }}" class="btn btn-sm btn-outline-warning">
+                                                        <i class="fas fa-eye"></i> عرض المصروف
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <small class="text-muted ms-2" style="white-space: nowrap;">{{ $expense->created_at->format('Y-m-d H:i') }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
                         @endforeach
                     </div>
                 @endif
@@ -593,41 +629,46 @@
         <div class="modal-content">
             <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
                 <h5 class="modal-title" style="color: white;">
-                    <i class="fas fa-undo"></i> استرجاع أموال للخزينة
+                    <i class="fas fa-undo"></i> طلب رد للخزينة
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.requestReturn') }}" method="POST">
                 @csrf
                 <div class="modal-body">
+                    <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); border: 1px solid rgba(79, 172, 254, 0.3);">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>ملاحظة:</strong> سيتم إرسال طلب رد للمحاسب الذي سيختار الخزينة المناسبة
+                    </div>
+
                     <p class="text-muted mb-3">
                         <strong>العهدة:</strong> #{{ $custody->id }}<br>
-                        <strong>الرصيد المتاح للاسترجاع:</strong> {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                        <strong>الرصيد المتاح:</strong> {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
                     </p>
 
                     <div class="mb-3">
-                        <label class="form-label"><strong>المبلغ المسترجع (ج.م)</strong></label>
+                        <label class="form-label"><strong>المبلغ المراد رده (ج.م) *</strong></label>
                         <input type="number"
                                name="amount"
                                class="form-control"
                                step="0.01"
                                min="0.01"
                                max="{{ $custody->getRemainingBalance() }}"
-                               placeholder="أدخل المبلغ المراد استرجاعه"
+                               placeholder="أدخل المبلغ المراد رده"
                                required>
                         <small class="text-muted">الحد الأقصى: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م</small>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label"><strong>سبب الاسترجاع</strong></label>
+                        <label class="form-label"><strong>السبب *</strong></label>
                         <textarea name="description"
                                   class="form-control"
                                   rows="3"
-                                  placeholder="مثل: استرجاع أموال غير مستخدمة، انتهاء الحملة..."
+                                  placeholder="مثل: أموال غير مستخدمة، انتهاء الحملة، إلغاء المشروع..."
                                   required></textarea>
                     </div>
 
-                    <input type="hidden" name="type" value="expense_refund">
+                    <input type="hidden" name="custody_id" value="{{ $custody->id }}">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -658,7 +699,7 @@
                         <label class="form-label"><strong>اختر العهدة</strong></label>
                         <select id="donationCustodySelect" class="form-select" required onchange="updateDonationBalance()">
                             <option value="">-- اختر العهدة --</option>
-                            @foreach($myCustodies->whereIn('status', ['accepted', 'active']) as $custody)
+                            @foreach($myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']) as $custody)
                                 <option value="{{ $custody->id }}" data-balance="{{ $custody->getRemainingBalance() }}">
                                     #{{ $custody->id }} - الرصيد: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
                                 </option>
@@ -715,7 +756,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="quickRecoveryForm" method="POST">
+            <form id="quickRecoveryForm" method="POST" action="{{ route('custodies.addRecovery') }}">
                 @csrf
                 <div class="modal-body">
                     <p class="text-muted mb-3">
@@ -724,15 +765,16 @@
                     </p>
 
                     <div class="mb-3">
-                        <label class="form-label"><strong>اختر العهدة</strong></label>
-                        <select id="recoveryCustodySelect" class="form-select" required onchange="updateRecoveryBalance()">
-                            <option value="">-- اختر العهدة --</option>
-                            @foreach($myCustodies->whereIn('status', ['accepted', 'active']) as $custody)
+                        <label class="form-label"><strong>اختر العهدة (اختياري)</strong></label>
+                        <select id="recoveryCustodySelect" class="form-select" onchange="updateRecoveryBalance()" data-allow-empty="true">
+                            <option value="">-- عدم التحديد (سيتم إنشاء عهدة جديدة) --</option>
+                            @foreach($myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']) as $custody)
                                 <option value="{{ $custody->id }}" data-balance="{{ $custody->getRemainingBalance() }}">
                                     #{{ $custody->id }} - الرصيد: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
                                 </option>
                             @endforeach
                         </select>
+                        <small class="text-muted">اختر عهدة موجودة أو اترك فارغ لإنشاء عهدة جديدة</small>
                     </div>
 
                     <div class="alert alert-info" id="recoveryBalanceInfo" style="display: none;">
@@ -740,7 +782,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label"><strong>المبلغ المسترجع (ج.م)</strong></label>
+                        <label class="form-label"><strong>المبلغ المسترجع (ج.م) *</strong></label>
                         <input type="number"
                                id="recoveryAmount"
                                name="amount"
@@ -752,7 +794,7 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label"><strong>سبب الاسترجاع</strong></label>
+                        <label class="form-label"><strong>سبب الاسترجاع *</strong></label>
                         <textarea name="description"
                                   class="form-control"
                                   rows="3"
@@ -761,7 +803,6 @@
                     </div>
 
                     <input type="hidden" id="recoveryCustodyId" name="custody_id">
-                    <input type="hidden" name="type" value="recovery">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -774,24 +815,29 @@
     </div>
 </div>
 
-<!-- Quick Refund Modal (Select Custody) -->
+<!-- Quick Refund Modal - Agent submits return request -->
 <div class="modal fade" id="quickRefundModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
                 <h5 class="modal-title" style="color: white;">
-                    <i class="fas fa-undo"></i> استرجاع أموال للخزينة
+                    <i class="fas fa-undo"></i> طلب رد للخزينة
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="quickRefundForm" method="POST">
+            <form id="quickRefundForm" method="POST" action="{{ route('custodies.requestReturn') }}">
                 @csrf
                 <div class="modal-body">
+                    <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); border: 1px solid rgba(79, 172, 254, 0.3);">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>ملاحظة:</strong> سيتم إرسال طلب رد للمحاسب الذي سيختار الخزينة المناسبة
+                    </div>
+
                     <div class="mb-3">
-                        <label class="form-label"><strong>اختر العهدة</strong></label>
+                        <label class="form-label"><strong>اختر العهدة *</strong></label>
                         <select id="refundCustodySelect" class="form-select" required onchange="updateRefundBalance()">
                             <option value="">-- اختر العهدة --</option>
-                            @foreach($myCustodies->whereIn('status', ['accepted', 'active']) as $custody)
+                            @foreach($myCustodies->whereIn('status', ['accepted', 'partially_returned', 'closed']) as $custody)
                                 <option value="{{ $custody->id }}" data-balance="{{ $custody->getRemainingBalance() }}">
                                     #{{ $custody->id }} - الرصيد: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
                                 </option>
@@ -804,29 +850,28 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label"><strong>المبلغ المسترجع (ج.م)</strong></label>
+                        <label class="form-label"><strong>المبلغ المراد رده (ج.م) *</strong></label>
                         <input type="number"
                                id="refundAmount"
                                name="amount"
                                class="form-control"
                                step="0.01"
                                min="0.01"
-                               placeholder="أدخل المبلغ المراد استرجاعه"
+                               placeholder="أدخل المبلغ المراد رده"
                                required>
                         <small class="text-muted" id="refundMaxHint">الحد الأقصى: 0.00 ج.م</small>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label"><strong>سبب الاسترجاع</strong></label>
+                        <label class="form-label"><strong>السبب *</strong></label>
                         <textarea name="description"
                                   class="form-control"
                                   rows="3"
-                                  placeholder="مثل: استرجاع أموال غير مستخدمة، انتهاء الحملة..."
+                                  placeholder="مثل: أموال غير مستخدمة، انتهاء الحملة، إلغاء المشروع..."
                                   required></textarea>
                     </div>
 
                     <input type="hidden" id="refundCustodyId" name="custody_id">
-                    <input type="hidden" name="type" value="expense_refund">
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
@@ -912,15 +957,10 @@ document.getElementById('quickDonationForm').addEventListener('submit', function
 });
 
 // Handle form submission for quick recovery
+// Recovery form - no custody ID required
 document.getElementById('quickRecoveryForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const custodyId = document.getElementById('recoveryCustodyId').value;
-    if (!custodyId) {
-        alert('يرجى اختيار عهدة');
-        return;
-    }
-    this.action = `/custodies/${custodyId}/external-donation`;
-    this.submit();
+    // Allow form to submit normally to custodies.addRecovery route
+    // custody_id is optional (will create new custody if not provided)
 });
 
 // Handle form submission for quick refund
@@ -931,7 +971,7 @@ document.getElementById('quickRefundForm').addEventListener('submit', function(e
         alert('يرجى اختيار عهدة');
         return;
     }
-    this.action = `/custodies/${custodyId}/external-donation`;
+    // Form will submit to custodies.requestReturn which handles custody_id
     this.submit();
 });
 </script>

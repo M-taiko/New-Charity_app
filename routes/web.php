@@ -48,13 +48,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/custodies/{custody}/return', [CustodyController::class, 'return'])->name('custodies.return');
     Route::post('/custodies/{custody}/approve-return', [CustodyController::class, 'approveReturn'])->name('custodies.approveReturn');
     Route::post('/custodies/{custody}/direct-return', [CustodyController::class, 'directReturn'])->name('custodies.directReturn');
+    Route::post('/custodies/request-return', [CustodyController::class, 'requestReturnTreasury'])->name('custodies.requestReturn');
+    Route::post('/custody-return-requests/{returnRequest}/approve-with-treasury', [CustodyController::class, 'approveReturnRequestWithTreasury'])->name('custodies.approveReturnWithTreasury');
+    Route::post('/custodies/add-recovery', [CustodyController::class, 'addRecovery'])->name('custodies.addRecovery');
     Route::post('/custodies/{custody}/external-donation', [CustodyController::class, 'addExternalDonation'])->name('custodies.external-donation');
     Route::post('/custodies/{custody}/agent-accept', [CustodyController::class, 'agentAccept'])->name('custodies.agent-accept');
     Route::post('/custodies/{custody}/agent-reject', [CustodyController::class, 'agentReject'])->name('custodies.agent-reject');
     Route::get('/agent/transactions', [CustodyController::class, 'agentTransactions'])->name('agent.transactions');
     Route::get('/api/agent/transactions', [CustodyController::class, 'agentTransactionsData'])->name('api.agent.transactions');
     Route::get('/api/agent/returned', [CustodyController::class, 'agentReturnedData'])->name('api.agent.returned');
-    Route::post('/custodies/{custody}/request-return', [CustodyController::class, 'requestReturn'])->name('custodies.requestReturn');
     Route::post('/custody-return-requests/{returnRequest}/approve', [CustodyController::class, 'approveReturnRequest'])->name('custody-return-requests.approve');
     Route::post('/custody-return-requests/{returnRequest}/reject', [CustodyController::class, 'rejectReturnRequest'])->name('custody-return-requests.reject');
     Route::get('/custody-return-requests', [CustodyReturnRequestController::class, 'index'])->name('custody-return-requests.index');

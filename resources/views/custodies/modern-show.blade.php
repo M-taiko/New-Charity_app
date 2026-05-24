@@ -204,7 +204,7 @@
                             @endif
 
                             {{-- Transfer and return buttons for active custodies --}}
-                            @if(auth()->user()->id === $custody->agent_id && in_array($custody->status, ['accepted', 'active']))
+                            @if(auth()->user()->id === $custody->agent_id && in_array($custody->status, ['accepted', 'active', 'partially_returned']))
                                 @if($custody->status === 'active' || ($custody->status === 'accepted' && $custody->initiated_by === 'accountant'))
                                     <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
                                         <i class="fas fa-exchange-alt"></i> تحويل إلى مندوب آخر
@@ -219,11 +219,18 @@
                             @endif
                         @endrole
 
-                        @can('approve_custody')
-                            @if($custody->pending_return > 0)
-                                <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#approveReturnModal">
-                                    <i class="fas fa-check-circle"></i> الموافقة على الرد
-                                </button>
+                        @can('manage_treasury')
+                            @php
+                                $pendingReturnRequests = \App\Models\CustodyReturnRequest::where('custody_id', $custody->id)
+                                    ->where('status', 'pending')
+                                    ->get();
+                            @endphp
+                            @if($pendingReturnRequests->isNotEmpty())
+                                @foreach($pendingReturnRequests as $returnRequest)
+                                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#approveReturnRequestModal{{ $returnRequest->id }}">
+                                        <i class="fas fa-check-circle"></i> موافقة على طلب رد ({{ number_format($returnRequest->amount, 2) }} ج.م)
+                                    </button>
+                                @endforeach
                             @endif
                         @endcan
 
@@ -390,27 +397,16 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <!-- Starting balance row -->
-                                    <tr style="background-color: #f0f9ff; font-weight: bold;">
-                                        <td style="text-align: right;">{{ $custody->created_at->format('Y-m-d H:i:s') }}</td>
-                                        <td style="text-align: right;">
-                                            <span class="badge bg-primary">
-                                                <i class="fas fa-plus-circle"></i> إنشاء العهدة
-                                            </span>
-                                        </td>
-                                        <td style="text-align: center; color: #059669;">
-                                            <strong>{{ number_format($custody->amount, 2) }}</strong>
-                                        </td>
-                                        <td style="text-align: center;">-</td>
-                                        <td style="text-align: center; color: #0369a1;">
-                                            <strong>{{ number_format($custody->amount, 2) }}</strong>
-                                        </td>
-                                        <td style="text-align: right;">العهدة الأولية</td>
-                                    </tr>
-
                                     <!-- Transactions, Expenses, and Return Requests combined and sorted -->
                                     @php
                                         $allEvents = [];
+
+                                        // Add starting balance
+                                        $allEvents[] = [
+                                            'type' => 'starting_balance',
+                                            'date' => $custody->created_at,
+                                            'object' => $custody
+                                        ];
 
                                         // Add transactions
                                         foreach($transactions as $trans) {
@@ -439,14 +435,52 @@
                                             ];
                                         }
 
-                                        // Sort by date descending
+                                        // Sort by date descending (newest first)
                                         usort($allEvents, function($a, $b) {
                                             return $b['date']->timestamp - $a['date']->timestamp;
                                         });
+
+                                        // Calculate running balances in ascending order (for display in descending order)
+                                        $balancesMap = [];
+                                        $tempBalance = $custody->amount;
+                                        $eventsAscending = array_reverse($allEvents);
+
+                                        foreach ($eventsAscending as $idx => $event) {
+                                            if ($event['type'] === 'transaction') {
+                                                $trans = $event['object'];
+                                                $isIncome = in_array($trans->type, ['donation', 'recovery', 'transfer_in']);
+                                                $tempBalance += $isIncome ? $trans->amount : -$trans->amount;
+                                            } elseif ($event['type'] === 'expense') {
+                                                $exp = $event['object'];
+                                                $tempBalance -= $exp->amount;
+                                            }
+                                            $balancesMap[$idx] = $tempBalance;
+                                        }
+                                        $balancesMap = array_reverse($balancesMap);
                                     @endphp
 
-                                    @forelse($allEvents as $event)
-                                        @if($event['type'] === 'return_request')
+                                    @forelse($allEvents as $idx => $event)
+                                        @if($event['type'] === 'starting_balance')
+                                            @php
+                                                $startingCustody = $event['object'];
+                                            @endphp
+                                            <tr style="background-color: #f0f9ff; font-weight: bold;">
+                                                <td style="text-align: right;">{{ $startingCustody->created_at->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right;">
+                                                    <span class="badge bg-primary">
+                                                        <i class="fas fa-plus-circle"></i> إنشاء العهدة
+                                                    </span>
+                                                </td>
+                                                <td style="text-align: center; color: #059669;">
+                                                    <strong>{{ number_format($startingCustody->amount, 2) }}</strong>
+                                                </td>
+                                                <td style="text-align: center;">-</td>
+                                                <td style="text-align: center; color: #0369a1;">
+                                                    <strong>{{ number_format($startingCustody->amount, 2) }}</strong>
+                                                </td>
+                                                <td style="text-align: right;">العهدة الأولية</td>
+                                            </tr>
+                                        @elseif($event['type'] === 'return_request')
                                             @php
                                                 $returnReq = $event['object'];
                                             @endphp
@@ -490,7 +524,7 @@
                                                 // Outgoing: custody_out, custody_return (returns reduce the custody amount)
                                                 $isIncome = in_array($trans->type, ['donation', 'recovery', 'transfer_in']);
                                                 $amount = $trans->amount;
-                                                $runningBalance += $isIncome ? $amount : -$amount;
+                                                $displayBalance = isset($balancesMap[$idx]) ? $balancesMap[$idx] : 0;
                                             @endphp
                                             <tr style="border-bottom: 1px solid #e5e7eb;">
                                                 <td style="text-align: right; font-family: monospace;">{{ $trans->transaction_date->format('Y-m-d H:i:s') }}</td>
@@ -520,14 +554,14 @@
                                                     {{ !$isIncome ? number_format($amount, 2) : '-' }}
                                                 </td>
                                                 <td style="text-align: center; color: #0369a1; font-weight: bold;">
-                                                    {{ number_format($runningBalance, 2) }}
+                                                    {{ number_format($displayBalance, 2) }}
                                                 </td>
                                                 <td style="text-align: right; font-size: 0.85rem;">{{ $trans->description }}</td>
                                             </tr>
                                         @else
                                             @php
                                                 $exp = $event['object'];
-                                                $runningBalance -= $exp->amount;
+                                                $displayBalance = isset($balancesMap[$idx]) ? $balancesMap[$idx] : 0;
                                             @endphp
                                             <tr style="border-bottom: 1px solid #e5e7eb; background-color: #fef2f2;">
                                                 <td style="text-align: right; font-family: monospace;">{{ $exp->created_at->format('Y-m-d H:i:s') }}</td>
@@ -539,7 +573,7 @@
                                                     {{ number_format($exp->amount, 2) }}
                                                 </td>
                                                 <td style="text-align: center; color: #0369a1; font-weight: bold;">
-                                                    {{ number_format($runningBalance, 2) }}
+                                                    {{ number_format($displayBalance, 2) }}
                                                 </td>
                                                 <td style="text-align: right; font-size: 0.85rem;">
                                                     {{ $exp->category?->name ?? 'غير محدد' }} - {{ $exp->description }}
@@ -913,20 +947,22 @@ function updateAcceptTreasuryInfo() {
     </div>
 </div>
 
-<!-- Return Custody Modal -->
+<!-- Return Custody Request Modal -->
 <div class="modal fade" id="returnModal" tabindex="-1" aria-labelledby="returnModalLabel" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog" style="z-index: 1070;">
         <div class="modal-content">
             <div class="modal-header" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); border: none;">
-                <h5 class="modal-title" style="color: white;" id="returnModalLabel"><i class="fas fa-undo"></i> رد العهدة</h5>
+                <h5 class="modal-title" style="color: white;" id="returnModalLabel"><i class="fas fa-undo"></i> طلب رد العهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('custodies.return', $custody->id) }}" method="POST">
+            <form id="returnForm" action="{{ route('custodies.requestReturn') }}" method="POST">
                 @csrf
+                <input type="hidden" name="custody_id" value="{{ $custody->id }}">
                 <div class="modal-body">
                     <div class="alert alert-info">
-                        <i class="fas fa-info-circle"></i> أدخل المبلغ المراد رده من العهدة
+                        <i class="fas fa-info-circle"></i> سيتم إرسال طلب رد للمحاسب للموافقة عليه واختيار الخزينة المناسبة
                     </div>
+
                     <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -942,24 +978,37 @@ function updateAcceptTreasuryInfo() {
                         <p><strong>المتبقي من العهدة:</strong><br>
                         <span style="color: #4caf50; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</span></p>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label"><strong>المبلغ المراد رده</strong></label>
-                        <input type="number" name="returned_amount" class="form-control" step="0.01" min="0.01" max="{{ $custody->getRemainingBalance() }}" required placeholder="أدخل المبلغ...">
+                        <label class="form-label"><strong>المبلغ المراد رده <span class="text-danger">*</span></strong></label>
+                        <input type="number" name="amount" class="form-control @error('amount') is-invalid @enderror" step="0.01" min="0.01" max="{{ $custody->getRemainingBalance() }}" required placeholder="أدخل المبلغ...">
                         <small class="text-muted">يجب ألا يتجاوز {{ number_format($custody->getRemainingBalance(), 2) }} ج.م</small>
+                        @error('amount')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
                     </div>
-                    <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
-                        <i class="fas fa-arrow-left"></i> عند الرد، سيتم:
-                    </p>
-                    <ul style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
-                        <li>إضافة المبلغ إلى رصيد الخزينة</li>
-                        <li>تحديث حالة العهدة</li>
-                        <li>تسجيل عملية الرد</li>
-                    </ul>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>سبب الرد <span class="text-danger">*</span></strong></label>
+                        <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3" required placeholder="أدخل سبب الرد..."></textarea>
+                        @error('description')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="alert alert-warning" style="margin-bottom: 0;">
+                        <i class="fas fa-info-circle"></i> ملاحظة:
+                        <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.9rem;">
+                            <li>سيتم إرسال الطلب للمحاسب للمراجعة</li>
+                            <li>المحاسب سيختار الخزينة المناسبة لإضافة المبلغ</li>
+                            <li>سيتم تحديث حالة العهدة بعد الموافقة</li>
+                        </ul>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-info">
-                        <i class="fas fa-check"></i> تأكيد الرد
+                        <i class="fas fa-paper-plane"></i> إرسال طلب الرد
                     </button>
                 </div>
             </form>
@@ -967,7 +1016,7 @@ function updateAcceptTreasuryInfo() {
     </div>
 </div>
 
-<!-- Approve Return Modal -->
+<!-- Approve Return Modal (Old - Deprecated) -->
 <div class="modal fade" id="approveReturnModal" tabindex="-1" aria-labelledby="approveReturnModalLabel" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog" style="z-index: 1070;">
         <div class="modal-content">
@@ -1039,6 +1088,110 @@ function updateAcceptTreasuryInfo() {
         </div>
     </div>
 </div>
+
+<!-- Approve Return Request Modals (New - For pending CustodyReturnRequest records) -->
+@php
+    $pendingReturnRequests = \App\Models\CustodyReturnRequest::where('custody_id', $custody->id)
+        ->where('status', 'pending')
+        ->get();
+@endphp
+
+@foreach($pendingReturnRequests as $returnRequest)
+<div class="modal fade" id="approveReturnRequestModal{{ $returnRequest->id }}" tabindex="-1" aria-labelledby="approveReturnRequestLabel{{ $returnRequest->id }}" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog" style="z-index: 1070;">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                <h5 class="modal-title" style="color: white;" id="approveReturnRequestLabel{{ $returnRequest->id }}">
+                    <i class="fas fa-check-double"></i> موافقة على طلب الرد
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('custodies.approveReturnWithTreasury', $returnRequest->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> اختر الخزينة التي سيتم إضافة المبلغ المرد إليها
+                    </div>
+
+                    <div class="mb-3" style="background: #f9fafb; padding: 12px; border-radius: 6px;">
+                        <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9rem;"><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                        <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9rem;"><strong>المبلغ المطلوب رده:</strong> <span style="color: #dc2626; font-weight: bold;">{{ number_format($returnRequest->amount, 2) }} ج.م</span></p>
+                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>تاريخ الطلب:</strong> {{ $returnRequest->created_at->format('Y-m-d H:i') }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اختر الخزينة المستقبلة</strong></label>
+                        <select name="treasury_id" class="form-select @error('treasury_id') is-invalid @enderror" required onchange="updateTreasuryBalance{{ $returnRequest->id }}()">
+                            <option value="">-- اختر الخزينة --</option>
+                            @foreach(\App\Models\Treasury::all() as $treasury)
+                                <option value="{{ $treasury->id }}"
+                                    data-balance="{{ $treasury->balance }}"
+                                    data-name="{{ $treasury->name }}">
+                                    {{ $treasury->name }} (الرصيد الحالي: {{ number_format($treasury->balance, 2) }} ج.م)
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('treasury_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div id="treasuryInfo{{ $returnRequest->id }}" style="background: #f0fdf4; padding: 12px; border-radius: 4px; border-left: 4px solid #10b981; margin-bottom: 15px; display: none;">
+                        <p style="margin: 0 0 8px 0; font-size: 0.9rem; color: #166534;">
+                            <strong>الخزينة المختارة:</strong> <span id="treasuryName{{ $returnRequest->id }}">-</span>
+                        </p>
+                        <p style="margin: 0 0 8px 0; font-size: 0.9rem; color: #166534;">
+                            <strong>الرصيد الحالي:</strong> <span id="currentBalance{{ $returnRequest->id }}" style="font-weight: bold;">0</span> ج.م
+                        </p>
+                        <p style="margin: 0; font-size: 0.9rem; color: #166534;">
+                            <strong>الرصيد بعد الإضافة:</strong> <span id="newBalance{{ $returnRequest->id }}" style="color: #059669; font-weight: bold;">0</span> ج.م
+                        </p>
+                    </div>
+
+                    <div class="alert alert-warning" style="margin-bottom: 0;">
+                        <i class="fas fa-exclamation-triangle"></i> ملخص العملية:
+                        <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.9rem;">
+                            <li>سيتم خصم <strong>{{ number_format($returnRequest->amount, 2) }} ج.م</strong> من العهدة</li>
+                            <li>سيتم إضافة المبلغ للخزينة المختارة</li>
+                            @if($custody->getRemainingBalance() <= $returnRequest->amount)
+                                <li style="color: #dc2626;"><strong>العهدة ستُغلق وتُسوّى لأنها ستصبح فارغة</strong></li>
+                            @endif
+                            <li>سيتم إرسال إشعار للمندوب بالموافقة</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> الموافقة على الرد
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateTreasuryBalance{{ $returnRequest->id }}() {
+    const select = document.querySelector('#approveReturnRequestModal{{ $returnRequest->id }} select[name="treasury_id"]');
+    const option = select.options[select.selectedIndex];
+    const returnAmount = {{ $returnRequest->amount }};
+
+    if (option.value) {
+        const currentBalance = parseFloat(option.getAttribute('data-balance'));
+        const newBalance = currentBalance + returnAmount;
+        const treasuryName = option.getAttribute('data-name');
+
+        document.getElementById('treasuryName{{ $returnRequest->id }}').textContent = treasuryName;
+        document.getElementById('currentBalance{{ $returnRequest->id }}').textContent = currentBalance.toFixed(2);
+        document.getElementById('newBalance{{ $returnRequest->id }}').textContent = newBalance.toFixed(2);
+        document.getElementById('treasuryInfo{{ $returnRequest->id }}').style.display = 'block';
+    } else {
+        document.getElementById('treasuryInfo{{ $returnRequest->id }}').style.display = 'none';
+    }
+}
+</script>
+@endforeach
 
 {{-- Agent Accept Modal (Workflow 2) --}}
 <div class="modal fade" id="agentAcceptModal" tabindex="-1">

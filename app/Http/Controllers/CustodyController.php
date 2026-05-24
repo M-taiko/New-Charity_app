@@ -7,8 +7,10 @@ use App\Models\Treasury;
 use App\Models\User;
 use App\Models\CustodyReturnRequest;
 use App\Models\Notification;
+use App\Models\TreasuryTransaction;
 use App\Services\TreasuryService;
 use App\Services\ActivityLogService;
+use App\Services\NotificationService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -360,6 +362,138 @@ class CustodyController extends Controller
         }
     }
 
+    public function addRecovery(Request $request)
+    {
+        // Allow agent to add recovery funds
+        if (!auth()->user()->hasRole('مندوب')) {
+            return back()->with('error', 'غير مصرح لك بتسجيل استرجاع');
+        }
+
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'description' => 'required|string|max:500',
+            'custody_id' => 'nullable|exists:custodies,id|sometimes',
+        ]);
+
+        try {
+            DB::transaction(function () use ($request) {
+                $user = auth()->user();
+                $custody = null;
+
+                if ($request->filled('custody_id')) {
+                    // Add to existing custody
+                    $custody = Custody::findOrFail($request->custody_id);
+
+                    // Verify ownership
+                    if ($custody->agent_id !== $user->id) {
+                        throw new \Exception('غير مصرح لك بإضافة أموال لهذه العهدة');
+                    }
+
+                    $custody->increment('amount', $request->amount);
+                } else {
+                    // Create new custody for recovery
+                    $treasuries = Treasury::all();
+                    $defaultTreasury = $treasuries->first();
+
+                    if (!$defaultTreasury) {
+                        throw new \Exception('لا توجد خزائن متاحة');
+                    }
+
+                    $custody = Custody::create([
+                        'agent_id' => $user->id,
+                        'accountant_id' => null,
+                        'treasury_id' => $defaultTreasury->id,
+                        'amount' => $request->amount,
+                        'spent' => 0,
+                        'returned' => 0,
+                        'status' => 'accepted',
+                        'reason' => 'استرجاع: ' . $request->description,
+                    ]);
+                }
+
+                // Create transaction
+                TreasuryTransaction::create([
+                    'treasury_id' => $custody->treasury_id,
+                    'type' => 'recovery',
+                    'amount' => $request->amount,
+                    'description' => "استرجاع أموال للمندوب {$user->name}: {$request->description}",
+                    'user_id' => $user->id,
+                    'custody_id' => $custody->id,
+                    'transaction_date' => now(),
+                ]);
+
+                ActivityLogService::logged(
+                    "تم تسجيل استرجاع بمبلغ " . number_format($request->amount, 2) . " ج.م",
+                    'Custody',
+                    $custody->id
+                );
+
+                // Send notifications to accountants and managers
+                $notificationMessage = "المندوب: {$user->name} - استرجع " . number_format($request->amount, 2) . " ج.م - السبب: {$request->description}";
+                NotificationService::notifyByRole('محاسب', 'استرجاع أموال جديد', $notificationMessage, 'info', $custody->id, 'custody');
+                NotificationService::notifyByRole('مدير', 'استرجاع أموال جديد', $notificationMessage, 'info', $custody->id, 'custody');
+            });
+
+            return back()->with('success', 'تم تسجيل الاسترجاع بنجاح وإرسال إشعار للمحاسب والمدير');
+        } catch (\Exception $e) {
+            \Log::error('Recovery error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+        }
+    }
+
+    public function requestReturnTreasury(Request $request)
+    {
+        // Agent requesting to return funds to treasury
+        if (!auth()->user()->hasRole('مندوب')) {
+            return back()->with('error', 'غير مصرح لك بتقديم طلب رد');
+        }
+
+        $request->validate([
+            'custody_id' => 'required|exists:custodies,id',
+            'amount' => 'required|numeric|min:0.01',
+            'description' => 'required|string|max:500',
+        ]);
+
+        $custody = Custody::findOrFail($request->custody_id);
+
+        if (auth()->id() !== $custody->agent_id) {
+            return back()->with('error', 'غير مصرح لك برد من هذه العهدة');
+        }
+
+        $remainingBalance = $custody->getRemainingBalance();
+        if ($request->amount > $remainingBalance) {
+            return back()->withInput()->with('error', 'المبلغ يتجاوز الرصيد المتاح (' . number_format($remainingBalance, 2) . ' ج.م)');
+        }
+
+        try {
+            // Create a return request that accountant will review and process
+            CustodyReturnRequest::create([
+                'custody_id' => $custody->id,
+                'requested_by' => auth()->id(),
+                'amount' => $request->amount,
+                'reason' => $request->description,
+                'status' => 'pending',
+            ]);
+
+            ActivityLogService::logged(
+                "تم تقديم طلب رد " . number_format($request->amount, 2) . " ج.م من العهدة",
+                'Custody',
+                $custody->id
+            );
+
+            // Notify accountants and managers about the return request
+            $user = auth()->user();
+            $notificationMessage = "المندوب: {$user->name} - طلب رد " . number_format($request->amount, 2) . " ج.م من العهدة #" . $custody->id . " - السبب: " . $request->description;
+            NotificationService::notifyByRole('محاسب', 'طلب رد عهدة جديد', $notificationMessage, 'warning', $custody->id, 'custody');
+            NotificationService::notifyByRole('مدير', 'طلب رد عهدة جديد', $notificationMessage, 'warning', $custody->id, 'custody');
+
+            return back()->with('success', 'تم تقديم طلب الرد بنجاح. سيقوم المحاسب بمراجعة الطلب واختيار الخزينة المناسبة');
+        } catch (\Exception $e) {
+            \Log::error('Return request error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+        }
+    }
+
     public function approveReturn(Request $request, Custody $custody)
     {
         $this->authorize('approve_custody');
@@ -471,7 +605,7 @@ class CustodyController extends Controller
                 // Execute the return
                 $this->service->returnCustody($custody, $returnRequest->amount);
 
-                // Notify requester
+                // Notify requester (the agent who requested the return)
                 Notification::create([
                     'user_id' => $returnRequest->requested_by,
                     'title' => 'موافقة على طلب الرد',
@@ -481,10 +615,109 @@ class CustodyController extends Controller
                     'reference_type' => 'custody_return_request',
                 ]);
 
+                // Notify accountants and managers about the approved return
+                $user = auth()->user();
+                $notificationMessage = "المستخدم: {$user->name} - وافق على رد " . number_format($returnRequest->amount, 2) . " ج.م من العهدة #" . $custody->id . " للمندوب " . $custody->agent->name;
+                NotificationService::notifyByRole('محاسب', 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
+                NotificationService::notifyByRole('مدير', 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
+
                 ActivityLogService::returned($custody, 'رد مقبول ' . number_format($returnRequest->amount, 2) . ' ج.م من العهدة #' . $custody->id . ' بموافقة من المدير');
             });
 
             return back()->with('success', 'تمت الموافقة على طلب الرد وتنفيذه بنجاح');
+        } catch (\Exception $e) {
+            return back()->with('error', 'خطأ: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Approve return request and select treasury (accountant action)
+     */
+    public function approveReturnRequestWithTreasury(Request $request, CustodyReturnRequest $returnRequest)
+    {
+        // Check authorization: accountant or manager
+        if (!auth()->user()->can('manage_treasury')) {
+            abort(403, 'غير مصرح لك بالموافقة على طلبات الرد');
+        }
+
+        if (!$returnRequest->isPending()) {
+            return back()->with('error', 'لا يمكن الموافقة على طلب تم البت فيه بالفعل');
+        }
+
+        $request->validate([
+            'treasury_id' => 'required|exists:treasuries,id',
+            'approval_notes' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            DB::transaction(function () use ($request, $returnRequest) {
+                $custody = $returnRequest->custody;
+                $treasury = Treasury::findOrFail($request->treasury_id);
+
+                // Update request status
+                $returnRequest->update([
+                    'status' => 'approved',
+                    'approved_by' => auth()->id(),
+                    'approved_at' => now(),
+                    'approval_notes' => $request->approval_notes,
+                ]);
+
+                // Deduct from custody
+                $custody->increment('returned', $returnRequest->amount);
+
+                // Add to selected treasury
+                $treasury->increment('balance', $returnRequest->amount);
+
+                // Create transaction in selected treasury
+                TreasuryTransaction::create([
+                    'treasury_id' => $request->treasury_id,
+                    'type' => 'custody_return',
+                    'amount' => $returnRequest->amount,
+                    'description' => "رد عهدة من المندوب {$custody->agent->name} - {$returnRequest->reason}",
+                    'user_id' => auth()->id(),
+                    'custody_id' => $custody->id,
+                    'transaction_date' => now(),
+                ]);
+
+                // Update custody status if fully returned
+                if ($custody->returned >= $custody->amount) {
+                    $custody->update(['status' => 'closed']);
+
+                    TreasuryTransaction::create([
+                        'treasury_id' => $request->treasury_id,
+                        'type' => 'custody_close',
+                        'amount' => 0,
+                        'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} - تم رد المبلغ بالكامل",
+                        'user_id' => auth()->id(),
+                        'custody_id' => $custody->id,
+                        'transaction_date' => now(),
+                    ]);
+                } elseif ($custody->returned > 0) {
+                    $custody->update(['status' => 'partially_returned']);
+                }
+
+                ActivityLogService::returned(
+                    $custody,
+                    'رد موافق عليه ' . number_format($returnRequest->amount, 2) . ' ج.م من العهدة #' . $custody->id . ' إلى خزينة ' . $treasury->name
+                );
+
+                // Notify agent about approval
+                NotificationService::notifyUser(
+                    $returnRequest->requested_by,
+                    'موافقة على طلب الرد',
+                    'تم الموافقة على رد ' . number_format($returnRequest->amount, 2) . ' ج.م من العهدة #' . $custody->id . ' إلى خزينة ' . $treasury->name,
+                    'success',
+                    $custody->id,
+                    'custody'
+                );
+
+                // Notify other managers
+                $user = auth()->user();
+                $notificationMessage = "المحاسب: {$user->name} - وافق على رد " . number_format($returnRequest->amount, 2) . " ج.م من العهدة #" . $custody->id . " إلى خزينة " . $treasury->name;
+                NotificationService::notifyByRole('مدير', 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
+            });
+
+            return back()->with('success', 'تمت الموافقة على طلب الرد وتحويل المبلغ للخزينة المختارة بنجاح');
         } catch (\Exception $e) {
             return back()->with('error', 'خطأ: ' . $e->getMessage());
         }
@@ -688,11 +921,15 @@ class CustodyController extends Controller
             'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
         ];
 
+        // Get all treasuries for refund modal
+        $treasuries = Treasury::all();
+
         return view('custodies.my-custodies', compact(
             'myCustodies',
             'sentTransfers',
             'receivedTransfers',
-            'stats'
+            'stats',
+            'treasuries'
         ));
     }
 
