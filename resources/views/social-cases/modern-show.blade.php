@@ -41,14 +41,14 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><strong>الباحث:</strong></label>
-                            <p>{{ $socialCase->researcher->name }}</p>
+                            <p>{{ $socialCase->researcher?->name ?? '-' }}</p>
                         </div>
                     </div>
 
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label"><strong>نوع المساعدة:</strong></label>
-                            <p>{{ $socialCase->assistance_type }}</p>
+                            <p>{{ $socialCase->assistance_type ?? $socialCase->case_type ?? '-' }}</p>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><strong>الحالة:</strong></label>
@@ -66,15 +66,127 @@
                                     @case('completed')
                                         <span class="badge bg-secondary">مكتمل</span>
                                         @break
+                                    @default
+                                        <span class="badge bg-secondary">جديد</span>
                                 @endswitch
                             </p>
                         </div>
                     </div>
 
+                    <!-- Row 3 -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>العنوان:</strong></label>
+                            <p>{{ $socialCase->address ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>المحافظة:</strong></label>
+                            <p>{{ $socialCase->city ?? '-' }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Row 4 -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>المركز/الحي:</strong></label>
+                            <p>{{ $socialCase->district ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>الحالة الإجتماعية:</strong></label>
+                            <p>{{ $socialCase->marital_status ?? '-' }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Row 5 -->
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label"><strong>الحالة الاجتماعية/الملخص:</strong></label>
+                            <p>{{ $socialCase->marital_status ?? '-' }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>الدخل والعمل:</strong></label>
+                            <p>{{ Str::limit($socialCase->monthly_income ?? '-', 100) }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>وصف المسكن:</strong></label>
+                            <p>{{ Str::limit($socialCase->house_description ?? '-', 80) }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Row 6 -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>المساعدة المطلوبة:</strong></label>
+                            <p>{{ $socialCase->assistance_required ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>قيمة المساعدة المطلوبة:</strong></label>
+                            <p>
+                                @if($socialCase->requested_amount)
+                                    <strong style="color: #ff9800;">{{ number_format($socialCase->requested_amount, 2) }} ج.م</strong>
+                                @else
+                                    -
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <h6 class="mt-4 mb-3" style="color: #4facfe;">
+                        <i class="fas fa-info-circle"></i> معلومات تفصيلية
+                    </h6>
+
                     @if($socialCase->description)
                     <div class="mt-3 mb-3">
-                        <label class="form-label"><strong>الوصف:</strong></label>
-                        <p>{{ $socialCase->description }}</p>
+                        <label class="form-label"><strong>وصف الحالة:</strong></label>
+                        <p style="background: #f9f9f9; padding: 12px; border-radius: 5px; border-right: 4px solid #4facfe; line-height: 1.6;">
+                            {{ $socialCase->description }}
+                        </p>
+                    </div>
+                    @endif
+
+                    @if($socialCase->assistance_required)
+                    <div class="mt-3 mb-3">
+                        <label class="form-label"><strong>تفاصيل المساعدة المطلوبة:</strong></label>
+                        <p style="background: #f9f9f9; padding: 12px; border-radius: 5px; border-right: 4px solid #ff9800; line-height: 1.6;">
+                            {{ $socialCase->assistance_required }}
+                        </p>
+                    </div>
+                    @endif
+
+                    @if($socialCase->case_outcome)
+                    <div class="mt-3 mb-3">
+                        <label class="form-label"><strong>ما وصلت إليه الحالة:</strong></label>
+                        <p style="background: #f9f9f9; padding: 12px; border-radius: 5px; border-right: 4px solid #4caf50; line-height: 1.6;">
+                            {{ $socialCase->case_outcome }}
+                        </p>
+                    </div>
+                    @endif
+
+                    <div class="row mb-3 mt-3">
+                        @if($socialCase->dependent_on)
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>يعتمد على:</strong></label>
+                            <p>{{ $socialCase->dependent_on }}</p>
+                        </div>
+                        @endif
+
+                        @if($socialCase->affiliated_to)
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>تابعة ل:</strong></label>
+                            <p>{{ $socialCase->affiliated_to }}</p>
+                        </div>
+                        @endif
+                    </div>
+
+                    @if($socialCase->case_intake_date)
+                    <div class="mt-3 mb-3">
+                        <label class="form-label"><strong>تاريخ استلام الحالة:</strong></label>
+                        <p>{{ $socialCase->case_intake_date }}</p>
                     </div>
                     @endif
 
@@ -269,7 +381,7 @@
                         </div>
                         <div class="mb-3">
                             <strong>الباحث:</strong><br>
-                            {{ $socialCase->researcher->name }}
+                            {{ $socialCase->researcher?->name ?? '-' }}
                         </div>
                         @if($socialCase->reviewer)
                         <div class="mb-3">
@@ -281,6 +393,20 @@
                         <div class="mb-3">
                             <strong>تاريخ المراجعة:</strong><br>
                             {{ $socialCase->reviewed_at->format('Y-m-d H:i') }}
+                        </div>
+                        @endif
+                        @if($socialCase->case_type)
+                        <div class="mb-3">
+                            <strong>نوع الحالة:</strong><br>
+                            <span class="badge bg-info">{{ $socialCase->case_type }}</span>
+                        </div>
+                        @endif
+                        @if($socialCase->requested_amount)
+                        <div class="mb-3">
+                            <strong>المبلغ المطلوب:</strong><br>
+                            <span style="color: #ff9800; font-weight: bold; font-size: 1.1rem;">
+                                {{ number_format($socialCase->requested_amount, 2) }} ج.م
+                            </span>
                         </div>
                         @endif
                     </div>

@@ -50,6 +50,54 @@
         </div>
     </div>
 
+    <!-- Search Bar -->
+    <div class="row g-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+        <div class="col-12">
+            <form method="GET" action="{{ route('social_cases.researcher') }}" class="card">
+                <div class="card-body">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-8">
+                            <label class="form-label"><strong>البحث عن حالة:</strong></label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="background: white; border-right: none;">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    name="search"
+                                    class="form-control"
+                                    placeholder="ابحث بالاسم أو رقم الهاتف..."
+                                    value="{{ $search }}"
+                                    style="border-left: none;">
+                            </div>
+                            <small class="text-muted">البحث في الاسم والهاتف والوصف</small>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label"><strong>العدد بالصفحة:</strong></label>
+                            <select name="per_page" class="form-select" onchange="this.form.submit()">
+                                <option value="10" @selected($perPage == 10)>10</option>
+                                <option value="15" @selected($perPage == 15)>15</option>
+                                <option value="25" @selected($perPage == 25)>25</option>
+                                <option value="50" @selected($perPage == 50)>50</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search"></i> بحث
+                            </button>
+                        </div>
+                    </div>
+                    @if($search)
+                    <div class="mt-2">
+                        <span class="badge bg-info">نتائج البحث عن: "{{ $search }}"</span>
+                        <a href="{{ route('social_cases.researcher') }}" class="badge bg-secondary ms-2">مسح البحث</a>
+                    </div>
+                    @endif
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Tabs for different case statuses -->
     <div class="row g-4" data-aos="fade-up" data-aos-delay="400">
         <div class="col-12">
@@ -65,32 +113,6 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    <!-- Tabs Navigation -->
-                    <ul class="nav nav-tabs" role="tablist" style="border-bottom: 2px solid #e5e7eb;">
-                        <li class="nav-item">
-                            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-cases" type="button" role="tab">
-                                <i class="fas fa-list"></i> جميع الحالات
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" id="pending-tab" data-bs-toggle="tab" data-bs-target="#pending-cases" type="button" role="tab">
-                                <i class="fas fa-hourglass"></i> قيد الانتظار
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" id="approved-tab" data-bs-toggle="tab" data-bs-target="#approved-cases" type="button" role="tab">
-                                <i class="fas fa-check-circle"></i> موافق عليها
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" id="rejected-tab" data-bs-toggle="tab" data-bs-target="#rejected-cases" type="button" role="tab">
-                                <i class="fas fa-times-circle"></i> مرفوضة
-                            </button>
-                        </li>
-                    </ul>
-
-                    <!-- Tab Content -->
-                    <div class="tab-content">
                         <!-- All Cases Tab -->
                         <div class="tab-pane fade show active" id="all-cases" role="tabpanel">
                             <div class="table-responsive">
@@ -102,7 +124,6 @@
                                             <th><i class="fas fa-phone"></i> الهاتف</th>
                                             <th><i class="fas fa-hands-helping"></i> نوع المساعدة</th>
                                             <th><i class="fas fa-signal"></i> الحالة</th>
-                                            <th><i class="fas fa-users"></i> الأقارب</th>
                                             <th><i class="fas fa-calendar"></i> التاريخ</th>
                                             <th><i class="fas fa-cog"></i> الإجراءات</th>
                                         </tr>
@@ -115,9 +136,9 @@
                                                         #{{ $case->id }}
                                                     </a>
                                                 </td>
-                                                <td>{{ $case->name }}</td>
+                                                <td><strong>{{ $case->name }}</strong></td>
                                                 <td>{{ $case->phone ?? '-' }}</td>
-                                                <td>{{ $case->assistance_type }}</td>
+                                                <td>{{ $case->case_type ?? $case->assistance_type ?? '-' }}</td>
                                                 <td>
                                                     @switch($case->status)
                                                         @case('pending')
@@ -132,16 +153,9 @@
                                                         @case('completed')
                                                             <span class="badge bg-secondary">مكتمل</span>
                                                             @break
+                                                        @default
+                                                            <span class="badge bg-secondary">جديد</span>
                                                     @endswitch
-                                                </td>
-                                                <td>
-                                                    @if($case->familyMembers && $case->familyMembers->count() > 0)
-                                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#familyModal{{ $case->id }}" title="عرض الأقارب">
-                                                            <i class="fas fa-users"></i> ({{ $case->familyMembers->count() }})
-                                                        </button>
-                                                    @else
-                                                        <span class="text-muted">-</span>
-                                                    @endif
                                                 </td>
                                                 <td>{{ $case->created_at->format('Y-m-d') }}</td>
                                                 <td>
@@ -157,12 +171,12 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="8" class="text-center py-5">
+                                                <td colspan="7" class="text-center py-5">
                                                     <div class="empty-state">
                                                         <div class="empty-state-icon">
                                                             <i class="fas fa-inbox"></i>
                                                         </div>
-                                                        <div class="empty-state-title">لا توجد حالات</div>
+                                                        <div class="empty-state-title">{{ $search ? 'لا توجد نتائج مطابقة' : 'لا توجد حالات' }}</div>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -170,158 +184,21 @@
                                     </tbody>
                                 </table>
                             </div>
-                        </div>
-
-                        <!-- Pending Cases Tab -->
-                        <div class="tab-pane fade" id="pending-cases" role="tabpanel">
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th><i class="fas fa-hashtag"></i> المعرف</th>
-                                            <th><i class="fas fa-user"></i> الاسم</th>
-                                            <th><i class="fas fa-phone"></i> الهاتف</th>
-                                            <th><i class="fas fa-hands-helping"></i> نوع المساعدة</th>
-                                            <th><i class="fas fa-calendar"></i> التاريخ</th>
-                                            <th><i class="fas fa-cog"></i> الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($cases->where('status', 'pending') as $case)
-                                            <tr>
-                                                <td>
-                                                    <a href="{{ route('social_cases.show', $case->id) }}" style="text-decoration: none; color: var(--primary); font-weight: 600;">
-                                                        #{{ $case->id }}
-                                                    </a>
-                                                </td>
-                                                <td>{{ $case->name }}</td>
-                                                <td>{{ $case->phone ?? '-' }}</td>
-                                                <td>{{ $case->assistance_type }}</td>
-                                                <td>{{ $case->created_at->format('Y-m-d') }}</td>
-                                                <td>
-                                                    <div class="btn-group btn-group-sm" role="group">
-                                                        <a href="{{ route('social_cases.show', $case->id) }}" class="btn btn-outline-primary" title="عرض التفاصيل">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
-                                                        <a href="{{ route('social_cases.edit', $case->id) }}" class="btn btn-outline-warning" title="تعديل">
-                                                            <i class="fas fa-edit"></i>
-                                                        </a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="6" class="text-center py-5">
-                                                    <div style="color: #6b7280;">لا توجد حالات قيد الانتظار</div>
-                                                </td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Approved Cases Tab -->
-                        <div class="tab-pane fade" id="approved-cases" role="tabpanel">
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th><i class="fas fa-hashtag"></i> المعرف</th>
-                                            <th><i class="fas fa-user"></i> الاسم</th>
-                                            <th><i class="fas fa-phone"></i> الهاتف</th>
-                                            <th><i class="fas fa-hands-helping"></i> نوع المساعدة</th>
-                                            <th><i class="fas fa-money-bill"></i> المبلغ المصروف</th>
-                                            <th><i class="fas fa-cog"></i> الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($cases->where('status', 'approved') as $case)
-                                            <tr>
-                                                <td>
-                                                    <a href="{{ route('social_cases.show', $case->id) }}" style="text-decoration: none; color: var(--primary); font-weight: 600;">
-                                                        #{{ $case->id }}
-                                                    </a>
-                                                </td>
-                                                <td>{{ $case->name }}</td>
-                                                <td>{{ $case->phone ?? '-' }}</td>
-                                                <td>{{ $case->assistance_type }}</td>
-                                                <td>
-                                                    <strong style="color: #4caf50;">{{ number_format($case->getTotalSpent(), 2) }} ج.م</strong>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group btn-group-sm" role="group">
-                                                        <a href="{{ route('social_cases.show', $case->id) }}" class="btn btn-outline-primary" title="عرض التفاصيل">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
-                                                        <a href="{{ route('social_cases.edit', $case->id) }}" class="btn btn-outline-warning" title="تعديل">
-                                                            <i class="fas fa-edit"></i>
-                                                        </a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="6" class="text-center py-5">
-                                                    <div style="color: #6b7280;">لا توجد حالات موافق عليها</div>
-                                                </td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Rejected Cases Tab -->
-                        <div class="tab-pane fade" id="rejected-cases" role="tabpanel">
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th><i class="fas fa-hashtag"></i> المعرف</th>
-                                            <th><i class="fas fa-user"></i> الاسم</th>
-                                            <th><i class="fas fa-phone"></i> الهاتف</th>
-                                            <th><i class="fas fa-hands-helping"></i> نوع المساعدة</th>
-                                            <th><i class="fas fa-comment"></i> ملاحظات الرفض</th>
-                                            <th><i class="fas fa-cog"></i> الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse($cases->where('status', 'rejected') as $case)
-                                            <tr>
-                                                <td>
-                                                    <a href="{{ route('social_cases.show', $case->id) }}" style="text-decoration: none; color: var(--primary); font-weight: 600;">
-                                                        #{{ $case->id }}
-                                                    </a>
-                                                </td>
-                                                <td>{{ $case->name }}</td>
-                                                <td>{{ $case->phone ?? '-' }}</td>
-                                                <td>{{ $case->assistance_type }}</td>
-                                                <td>{{ $case->internal_notes ?? '-' }}</td>
-                                                <td>
-                                                    <div class="btn-group btn-group-sm" role="group">
-                                                        <a href="{{ route('social_cases.show', $case->id) }}" class="btn btn-outline-primary" title="عرض التفاصيل">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
-                                                        <a href="{{ route('social_cases.edit', $case->id) }}" class="btn btn-outline-warning" title="تعديل">
-                                                            <i class="fas fa-edit"></i>
-                                                        </a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="6" class="text-center py-5">
-                                                    <div style="color: #6b7280;">لا توجد حالات مرفوضة</div>
-                                                </td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
                 </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div>
+                    <small class="text-muted">
+                        عرض <strong>{{ $cases->firstItem() ?? 0 }}</strong> إلى <strong>{{ $cases->lastItem() ?? 0 }}</strong> من <strong>{{ $cases->total() }}</strong> حالة
+                    </small>
+                </div>
+            </div>
+
+            <!-- Pagination Links -->
+            <div class="mt-3">
+                {{ $cases->appends(request()->query())->links('pagination::bootstrap-4') }}
             </div>
         </div>
     </div>

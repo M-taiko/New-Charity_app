@@ -401,24 +401,50 @@ class SocialCaseController extends Controller
         return $labels[$status] ?? '';
     }
 
-    public function researcherCases()
+    public function researcherCases(Request $request)
     {
         $user = auth()->user();
+        $search = $request->input('search', '');
+        $perPage = $request->input('per_page', 15);
 
-        // Get researcher's cases with family members loaded
-        $cases = SocialCase::where('researcher_id', $user->id)->with('familyMembers')->get();
+        // Base query
+        $query = SocialCase::where('researcher_id', $user->id);
 
-        $totalCases = $cases->count();
-        $pendingCases = $cases->where('status', 'pending')->count();
-        $approvedCases = $cases->where('status', 'approved')->count();
-        $rejectedCases = $cases->where('status', 'rejected')->count();
+        // Apply search filter
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('phone', 'like', "%$search%")
+                  ->orWhere('description', 'like', "%$search%");
+            });
+        }
+
+        // Get stats before pagination
+        $allCases = SocialCase::where('researcher_id', $user->id);
+        if ($search) {
+            $allCases->where(function($q) use ($search) {
+                $q->where('name', 'like', "%$search%")
+                  ->orWhere('phone', 'like', "%$search%")
+                  ->orWhere('description', 'like', "%$search%");
+            });
+        }
+
+        $totalCases = $allCases->count();
+        $pendingCases = (clone $allCases)->where('status', 'pending')->count();
+        $approvedCases = (clone $allCases)->where('status', 'approved')->count();
+        $rejectedCases = (clone $allCases)->where('status', 'rejected')->count();
+
+        // Paginate the results
+        $cases = $query->with('familyMembers')->paginate($perPage);
 
         return view('social-cases.researcher-cases', compact(
             'cases',
             'totalCases',
             'pendingCases',
             'approvedCases',
-            'rejectedCases'
+            'rejectedCases',
+            'search',
+            'perPage'
         ));
     }
 
