@@ -145,7 +145,7 @@ class DashboardController extends Controller
             usort($researchersStats, fn($a, $b) => $b['rating'] <=> $a['rating']);
         }
 
-        return view('dashboard.modern', compact(
+        return view('dashboard.modern-shortcuts', compact(
             'treasury', 'activeCustodies', 'pendingCases', 'todayExpenses', 'totalSpent',
             'totalCustodiesAmount', 'totalAssets',
             'agentsStats', 'researchersStats', 'yearStats', 'selectedYear', 'availableYears',
