@@ -36,16 +36,24 @@ class ExpenseController extends Controller
     {
         $this->authorize('spend_money');
 
-        // Get custodies for current user only (agent_id) that are active/accepted
-        $custodies = Custody::where('agent_id', auth()->id())
-            ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
-            ->get();
+        // Get custodies based on user role
+        $user = auth()->user();
+        if ($user->hasRole('مندوب')) {
+            // Agents see only their own custodies
+            $custodies = Custody::where('agent_id', $user->id)
+                ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
+                ->get();
+        } else {
+            // Managers and accountants see ALL custodies that are active
+            $custodies = Custody::whereIn('status', ['accepted', 'partially_returned', 'closed'])
+                ->get();
+        }
 
         $cases = SocialCase::where('status', 'approved')->get();
         $categoryRoots = ExpenseCategory::roots()->active()->ordered()->get();
 
         // Check if current user is accountant (محاسب) - can spend from treasury
-        $canSpendFromTreasury = auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير');
+        $canSpendFromTreasury = $user->hasRole('محاسب') || $user->hasRole('مدير');
 
         // Get treasuries for display when spending from treasury
         $treasuries = [];
@@ -137,9 +145,13 @@ class ExpenseController extends Controller
                 $maxAmount = 1000000;
                 if ($request->filled('custody_id')) {
                     $custody = Custody::findOrFail($request->custody_id);
-                    if ($custody->agent_id !== auth()->id()) {
+
+                    // Agents can only spend from their own custodies
+                    if (auth()->user()->hasRole('مندوب') && $custody->agent_id !== auth()->id()) {
                         return back()->withInput()->with('error', 'غير مصرح لك بالصرف من هذه العهدة');
                     }
+                    // Managers and accountants can spend from any custody
+
                     $maxAmount = $custody->getRemainingBalance();
                 } else {
                     // If no custody specified, calculate total available across all custodies
@@ -495,11 +507,16 @@ class ExpenseController extends Controller
                 'is_quick_expense' => 'required|boolean',
             ]);
 
-            // Verify custody belongs to user
+            // Verify custody access
             $custody = Custody::findOrFail($validated['custody_id']);
-            if ($custody->agent_id !== auth()->id()) {
+            $user = auth()->user();
+
+            // Agents can only spend from their own custodies
+            if ($user->hasRole('مندوب') && $custody->agent_id !== $user->id) {
                 return response()->json(['success' => false, 'message' => 'غير مصرح لك بصرف من هذه العهدة'], 403);
             }
+            // Managers and accountants can spend from any custody
+
 
             // Check custody has enough balance
             $remaining = $custody->getRemainingBalance();
