@@ -476,7 +476,7 @@
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 20 } }
                 }
@@ -506,6 +506,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 plugins: {
                     legend: { display: false }
@@ -543,6 +544,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: true, position: 'top' }
                 },
@@ -591,6 +593,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 plugins: {
                     legend: { display: false }
@@ -627,6 +630,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false }
                 },
@@ -671,6 +675,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { display: true, position: 'top' }
                 },
@@ -700,6 +705,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 20 } }
                 }
@@ -753,6 +759,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     y: { beginAtZero: true }
                 }
@@ -788,6 +795,7 @@
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 plugins: {
                     legend: { display: false }
