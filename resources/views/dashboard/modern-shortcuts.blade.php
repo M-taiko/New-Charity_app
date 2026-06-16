@@ -166,6 +166,125 @@
         @endif
     </div>
 
+    <!-- Charts Section (للمحاسب والمدير فقط) -->
+    @if(auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير'))
+    <div class="row mb-5" data-aos="fade-up">
+        <div class="col-12">
+            <h2 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 1.5rem;">
+                <i class="fas fa-chart-bar"></i> إحصائيات عامة
+            </h2>
+        </div>
+
+        <!-- Expense vs Income Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-chart-pie" style="color: #667eea;"></i> توزيع المصروفات
+                    </h5>
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custody Status Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-tasks" style="color: #f5576c;"></i> حالة العهد
+                    </h5>
+                    <canvas id="custodyStatusChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Expenses Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-line-chart" style="color: #43e97b;"></i> المصروفات الشهرية
+                    </h5>
+                    <canvas id="monthlyExpenseChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Agents Performance -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-users" style="color: #fa709a;"></i> أفضل المناديب
+                    </h5>
+                    <canvas id="agentsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Treasury Balances Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-building" style="color: #4caf50;"></i> أرصدة الخزائن
+                    </h5>
+                    <canvas id="treasuryChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Cases Expenses Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-heart" style="color: #e91e63;"></i> مصروفات الحالات الاجتماعية
+                    </h5>
+                    <canvas id="socialCasesChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense Type Distribution Chart -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-sitemap" style="color: #ff9800;"></i> توزيع أنواع المصروفات
+                    </h5>
+                    <canvas id="expenseTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Cases vs Other Expenses -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-balance-scale" style="color: #2196f3;"></i> حالات اجتماعية vs مصروفات أخرى
+                    </h5>
+                    <canvas id="socialVsOtherChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Cases Breakdown -->
+        <div class="col-lg-6 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">
+                        <i class="fas fa-pie-chart" style="color: #9c27b0;"></i> توزيع الحالات الاجتماعية
+                    </h5>
+                    <canvas id="socialCasesBreakdownChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Quick Shortcuts Section -->
     <div class="row mb-5">
         <div class="col-12">
@@ -300,5 +419,349 @@
         color: #6b7280;
     }
 </style>
+
+@if(auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير'))
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // Expense Chart
+    const expenseCtx = document.getElementById('expenseChart');
+    if (expenseCtx) {
+        new Chart(expenseCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['المصروفات', 'الرصيد المتبقي'],
+                datasets: [{
+                    data: [
+                        {{ $totalSpent ?? 0 }},
+                        {{ ($totalAssets ?? 0) - ($totalSpent ?? 0) }}
+                    ],
+                    backgroundColor: ['#f5576c', '#43e97b'],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 20 } }
+                }
+            }
+        });
+    }
+
+    // Custody Status Chart
+    const custodyCtx = document.getElementById('custodyStatusChart');
+    if (custodyCtx) {
+        new Chart(custodyCtx, {
+            type: 'bar',
+            data: {
+                labels: ['نشطة', 'معلقة', 'مرفوضة', 'مغلقة'],
+                datasets: [{
+                    label: 'عدد العهد',
+                    data: [
+                        {{ \App\Models\Custody::whereIn('status', ['accepted', 'active'])->count() }},
+                        {{ \App\Models\Custody::where('status', 'pending')->count() }},
+                        {{ \App\Models\Custody::where('status', 'rejected')->count() }},
+                        {{ \App\Models\Custody::where('status', 'closed')->count() }}
+                    ],
+                    backgroundColor: ['#4caf50', '#ff9800', '#f44336', '#9e9e9e'],
+                    borderColor: '#fff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+    // Monthly Expenses Chart
+    const monthlyCtx = document.getElementById('monthlyExpenseChart');
+    if (monthlyCtx) {
+        const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'];
+        const data = [
+            {{ \App\Models\Expense::whereMonth('created_at', 1)->sum('amount') }},
+            {{ \App\Models\Expense::whereMonth('created_at', 2)->sum('amount') }},
+            {{ \App\Models\Expense::whereMonth('created_at', 3)->sum('amount') }},
+            {{ \App\Models\Expense::whereMonth('created_at', 4)->sum('amount') }},
+            {{ \App\Models\Expense::whereMonth('created_at', 5)->sum('amount') }},
+            {{ \App\Models\Expense::whereMonth('created_at', 6)->sum('amount') }}
+        ];
+
+        new Chart(monthlyCtx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'المصروفات',
+                    data: data,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true, position: 'top' }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Top Agents Chart
+    const agentsCtx = document.getElementById('agentsChart');
+    if (agentsCtx) {
+        @php
+            $topAgents = \App\Models\User::role('مندوب')
+                ->get()
+                ->map(function($agent) {
+                    return (object)[
+                        'name' => $agent->name,
+                        'custody_count' => \App\Models\Custody::where('agent_id', $agent->id)->count()
+                    ];
+                })
+                ->sortByDesc('custody_count')
+                ->take(5);
+        @endphp
+
+        new Chart(agentsCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    @foreach($topAgents as $agent)
+                        '{{ $agent->name }}',
+                    @endforeach
+                ],
+                datasets: [{
+                    label: 'عدد العهد',
+                    data: [
+                        @foreach($topAgents as $agent)
+                            {{ $agent->custody_count }},
+                        @endforeach
+                    ],
+                    backgroundColor: '#667eea',
+                    borderColor: '#fff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+
+    // Treasury Balances Chart
+    const treasuryCtx = document.getElementById('treasuryChart');
+    if (treasuryCtx) {
+        @php
+            $treasuries = \App\Models\Treasury::all();
+        @endphp
+        new Chart(treasuryCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    @foreach($treasuries as $treasury)
+                        '{{ $treasury->name }}',
+                    @endforeach
+                ],
+                datasets: [{
+                    label: 'الرصيد',
+                    data: [
+                        @foreach($treasuries as $treasury)
+                            {{ $treasury->balance }},
+                        @endforeach
+                    ],
+                    backgroundColor: ['#4caf50', '#2196f3', '#ff9800', '#9c27b0', '#f44336'],
+                    borderColor: '#fff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Social Cases Expenses Chart (Monthly)
+    const socialCasesCtx = document.getElementById('socialCasesChart');
+    if (socialCasesCtx) {
+        @php
+            $monthsAr = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            $currentMonth = now()->month;
+        @endphp
+        const months = [
+            @for($i = 1; $i <= $currentMonth; $i++)
+                '{{ $monthsAr[$i-1] }}',
+            @endfor
+        ];
+        const data = [
+            @for($i = 1; $i <= $currentMonth; $i++)
+                {{ \App\Models\Expense::whereMonth('created_at', $i)->whereYear('created_at', now()->year)->where('type', 'social_case')->sum('amount') }},
+            @endfor
+        ];
+
+        new Chart(socialCasesCtx, {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'مصروفات الحالات الاجتماعية',
+                    data: data,
+                    borderColor: '#e91e63',
+                    backgroundColor: 'rgba(233, 30, 99, 0.1)',
+                    tension: 0.4,
+                    fill: true,
+                    borderWidth: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: true, position: 'top' }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Expense Type Distribution
+    const expenseTypeCtx = document.getElementById('expenseTypeChart');
+    if (expenseTypeCtx) {
+        new Chart(expenseTypeCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['حالات اجتماعية', 'مصروفات عامة'],
+                datasets: [{
+                    data: [
+                        {{ \App\Models\Expense::where('type', 'social_case')->sum('amount') }},
+                        {{ \App\Models\Expense::where('type', 'general')->sum('amount') }}
+                    ],
+                    backgroundColor: ['#e91e63', '#2196f3'],
+                    borderColor: '#fff',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 20 } }
+                }
+            }
+        });
+    }
+
+    // Social Cases vs Other Expenses
+    const socialVsOtherCtx = document.getElementById('socialVsOtherChart');
+    if (socialVsOtherCtx) {
+        @php
+            $monthsAr = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+            $currentMonth = now()->month;
+        @endphp
+        const months = [
+            @for($i = 1; $i <= $currentMonth; $i++)
+                '{{ $monthsAr[$i-1] }}',
+            @endfor
+        ];
+        const socialData = [
+            @for($i = 1; $i <= $currentMonth; $i++)
+                {{ \App\Models\Expense::whereMonth('created_at', $i)->whereYear('created_at', now()->year)->where('type', 'social_case')->sum('amount') }},
+            @endfor
+        ];
+        const otherData = [
+            @for($i = 1; $i <= $currentMonth; $i++)
+                {{ \App\Models\Expense::whereMonth('created_at', $i)->whereYear('created_at', now()->year)->where('type', 'general')->sum('amount') }},
+            @endfor
+        ];
+
+        new Chart(socialVsOtherCtx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [
+                    {
+                        label: 'حالات اجتماعية',
+                        data: socialData,
+                        backgroundColor: '#e91e63',
+                        borderColor: '#fff',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'مصروفات أخرى',
+                        data: otherData,
+                        backgroundColor: '#2196f3',
+                        borderColor: '#fff',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    // Social Cases Breakdown
+    const socialBreakdownCtx = document.getElementById('socialCasesBreakdownChart');
+    if (socialBreakdownCtx) {
+        @php
+            $socialCases = \App\Models\SocialCase::withCount('expenses')->orderByDesc('expenses_count')->take(5)->get();
+        @endphp
+        new Chart(socialBreakdownCtx, {
+            type: 'bar',
+            data: {
+                labels: [
+                    @foreach($socialCases as $case)
+                        '{{ $case->name }}',
+                    @endforeach
+                ],
+                datasets: [{
+                    label: 'عدد المصروفات',
+                    data: [
+                        @foreach($socialCases as $case)
+                            {{ $case->expenses_count }},
+                        @endforeach
+                    ],
+                    backgroundColor: '#9c27b0',
+                    borderColor: '#fff',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                indexAxis: 'y',
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
+</script>
+@endif
 
 @endsection
