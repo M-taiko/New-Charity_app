@@ -173,11 +173,24 @@
             <i class="fas fa-chart-bar"></i> إحصائيات عامة
         </h2>
 
+        <style>
+            .chart-card {
+                border-radius: 12px !important;
+                overflow: hidden;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+                cursor: pointer;
+            }
+            .chart-card:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15) !important;
+            }
+        </style>
+
         <div class="row g-3">
             <!-- Row 1: First 3 Charts -->
             <!-- Expense Distribution Chart -->
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-4">
                         <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
                             <i class="fas fa-chart-pie" style="color: #667eea; margin-left: 0.5rem;"></i> توزيع المصروفات
@@ -191,7 +204,7 @@
 
             <!-- Custody Status Chart -->
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-4">
                         <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
                             <i class="fas fa-tasks" style="color: #f5576c; margin-left: 0.5rem;"></i> حالة العهد
@@ -205,7 +218,7 @@
 
             <!-- Treasury Balances Chart -->
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-4">
                         <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
                             <i class="fas fa-building" style="color: #4caf50; margin-left: 0.5rem;"></i> أرصدة الخزائن
@@ -220,7 +233,7 @@
             <!-- Row 2: Next 3 Charts -->
             <!-- Monthly Expenses Chart -->
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-4">
                         <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
                             <i class="fas fa-line-chart" style="color: #43e97b; margin-left: 0.5rem;"></i> المصروفات الشهرية
@@ -234,7 +247,7 @@
 
             <!-- Social Cases Expenses Chart -->
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-4">
                         <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
                             <i class="fas fa-heart" style="color: #e91e63; margin-left: 0.5rem;"></i> الحالات الاجتماعية
@@ -248,7 +261,7 @@
 
             <!-- Social Cases vs Other Expenses -->
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-4">
                         <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
                             <i class="fas fa-balance-scale" style="color: #2196f3; margin-left: 0.5rem;"></i> مقارنة المصروفات
@@ -263,7 +276,7 @@
             <!-- Row 3: Last 2 Charts -->
             <!-- Expense Type Distribution Chart -->
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-4">
                         <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
                             <i class="fas fa-sitemap" style="color: #ff9800; margin-left: 0.5rem;"></i> أنواع المصروفات
@@ -277,7 +290,7 @@
 
             <!-- Top Agents Performance -->
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-4">
                         <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
                             <i class="fas fa-users" style="color: #fa709a; margin-left: 0.5rem;"></i> أفضل المناديب
@@ -291,7 +304,7 @@
 
             <!-- Social Cases Breakdown -->
             <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-4">
                         <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
                             <i class="fas fa-pie-chart" style="color: #9c27b0; margin-left: 0.5rem;"></i> توزيع الحالات
