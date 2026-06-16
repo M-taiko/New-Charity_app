@@ -168,117 +168,138 @@
 
     <!-- Charts Section (للمحاسب والمدير فقط) -->
     @if(auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير'))
-    <div class="row mb-5" data-aos="fade-up">
-        <div class="col-12">
-            <h2 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 1.5rem;">
-                <i class="fas fa-chart-bar"></i> إحصائيات عامة
-            </h2>
-        </div>
+    <div class="mb-5" data-aos="fade-up">
+        <h2 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 2rem;">
+            <i class="fas fa-chart-bar"></i> إحصائيات عامة
+        </h2>
 
-        <!-- Expense vs Income Chart -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">
-                        <i class="fas fa-chart-pie" style="color: #667eea;"></i> توزيع المصروفات
-                    </h5>
-                    <canvas id="expenseChart"></canvas>
+        <div class="row g-3">
+            <!-- Row 1: First 3 Charts -->
+            <!-- Expense Distribution Chart -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
+                            <i class="fas fa-chart-pie" style="color: #667eea; margin-left: 0.5rem;"></i> توزيع المصروفات
+                        </h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="expenseChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Custody Status Chart -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">
-                        <i class="fas fa-tasks" style="color: #f5576c;"></i> حالة العهد
-                    </h5>
-                    <canvas id="custodyStatusChart"></canvas>
+            <!-- Custody Status Chart -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
+                            <i class="fas fa-tasks" style="color: #f5576c; margin-left: 0.5rem;"></i> حالة العهد
+                        </h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="custodyStatusChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Monthly Expenses Chart -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">
-                        <i class="fas fa-line-chart" style="color: #43e97b;"></i> المصروفات الشهرية
-                    </h5>
-                    <canvas id="monthlyExpenseChart"></canvas>
+            <!-- Treasury Balances Chart -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
+                            <i class="fas fa-building" style="color: #4caf50; margin-left: 0.5rem;"></i> أرصدة الخزائن
+                        </h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="treasuryChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Top Agents Performance -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">
-                        <i class="fas fa-users" style="color: #fa709a;"></i> أفضل المناديب
-                    </h5>
-                    <canvas id="agentsChart"></canvas>
+            <!-- Row 2: Next 3 Charts -->
+            <!-- Monthly Expenses Chart -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
+                            <i class="fas fa-line-chart" style="color: #43e97b; margin-left: 0.5rem;"></i> المصروفات الشهرية
+                        </h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="monthlyExpenseChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Treasury Balances Chart -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">
-                        <i class="fas fa-building" style="color: #4caf50;"></i> أرصدة الخزائن
-                    </h5>
-                    <canvas id="treasuryChart"></canvas>
+            <!-- Social Cases Expenses Chart -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
+                            <i class="fas fa-heart" style="color: #e91e63; margin-left: 0.5rem;"></i> الحالات الاجتماعية
+                        </h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="socialCasesChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Social Cases Expenses Chart -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">
-                        <i class="fas fa-heart" style="color: #e91e63;"></i> مصروفات الحالات الاجتماعية
-                    </h5>
-                    <canvas id="socialCasesChart"></canvas>
+            <!-- Social Cases vs Other Expenses -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
+                            <i class="fas fa-balance-scale" style="color: #2196f3; margin-left: 0.5rem;"></i> مقارنة المصروفات
+                        </h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="socialVsOtherChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Expense Type Distribution Chart -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">
-                        <i class="fas fa-sitemap" style="color: #ff9800;"></i> توزيع أنواع المصروفات
-                    </h5>
-                    <canvas id="expenseTypeChart"></canvas>
+            <!-- Row 3: Last 2 Charts -->
+            <!-- Expense Type Distribution Chart -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
+                            <i class="fas fa-sitemap" style="color: #ff9800; margin-left: 0.5rem;"></i> أنواع المصروفات
+                        </h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="expenseTypeChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Social Cases vs Other Expenses -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">
-                        <i class="fas fa-balance-scale" style="color: #2196f3;"></i> حالات اجتماعية vs مصروفات أخرى
-                    </h5>
-                    <canvas id="socialVsOtherChart"></canvas>
+            <!-- Top Agents Performance -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
+                            <i class="fas fa-users" style="color: #fa709a; margin-left: 0.5rem;"></i> أفضل المناديب
+                        </h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="agentsChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Social Cases Breakdown -->
-        <div class="col-lg-6 mb-4">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <h5 class="card-title mb-4">
-                        <i class="fas fa-pie-chart" style="color: #9c27b0;"></i> توزيع الحالات الاجتماعية
-                    </h5>
-                    <canvas id="socialCasesBreakdownChart"></canvas>
+            <!-- Social Cases Breakdown -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100" style="border-radius: 12px; overflow: hidden;">
+                    <div class="card-body p-4">
+                        <h6 class="card-title mb-3 fw-bold" style="font-size: 0.95rem;">
+                            <i class="fas fa-pie-chart" style="color: #9c27b0; margin-left: 0.5rem;"></i> توزيع الحالات
+                        </h6>
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="socialCasesBreakdownChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
