@@ -998,6 +998,12 @@
                         <span>رصيد المندوبين</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('reports.categories-analytics') }}" class="@if(Route::current()->getName() == 'reports.categories-analytics') active @endif">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>تحليل التوجيهات</span>
+                    </a>
+                </li>
                 @endcan
 
                 @can('view_all_records')
