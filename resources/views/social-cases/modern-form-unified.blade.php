@@ -241,6 +241,22 @@
                                     @enderror
                                 </div>
                             </div>
+
+                            <!-- Family Members Section -->
+                            <div class="row mt-4">
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label"><strong>عدد أفراد الأسرة (تفصيلي) <span class="text-danger">*</span></strong></label>
+                                    <input type="number" id="familyMembersCount" name="family_members_count" class="form-control @error('family_members_count') is-invalid @enderror"
+                                           value="{{ old('family_members_count', isset($socialCase) && $socialCase->familyMembers ? count($socialCase->familyMembers) : 1) }}"
+                                           min="0" max="20" placeholder="عدد أفراد الأسرة" onchange="generateFamilyMembersInputs()">
+                                    @error('family_members_count')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <!-- Family Members Container -->
+                            <div id="familyMembersContainer" class="row mt-3"></div>
                         </div>
 
                         <!-- SECTION 6: Health Information -->
@@ -487,11 +503,84 @@
         renderDocuments();
     }
 
+    function generateFamilyMembersInputs() {
+        const familyMembersCount = document.getElementById('familyMembersCount');
+        const familyMembersContainer = document.getElementById('familyMembersContainer');
+
+        if (!familyMembersCount || !familyMembersContainer) {
+            return;
+        }
+
+        const count = parseInt(familyMembersCount.value) || 0;
+        familyMembersContainer.innerHTML = '';
+
+        for (let i = 0; i < count; i++) {
+            const memberDiv = document.createElement('div');
+            memberDiv.className = 'col-md-12 mb-3';
+            memberDiv.innerHTML = `
+                <div class="card" style="border-left: 4px solid ${i === 0 ? '#4facfe' : '#e0e0e0'}; border-radius: 8px;">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3" style="color: ${i === 0 ? '#4facfe' : '#666'};">
+                            <i class="fas fa-${i === 0 ? 'home' : 'user'}"></i> ${i === 0 ? 'رب الأسرة (الفرد الأول)' : `الفرد #${i}`}
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>الاسم</strong></label>
+                                <input type="text" name="family_members[${i}][name]" class="form-control" placeholder="أدخل الاسم">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>صلة القرابة</strong></label>
+                                <select name="family_members[${i}][relationship]" class="form-select">
+                                    <option value="">-- اختر --</option>
+                                    <option value="father" ${i === 0 ? 'selected' : ''}>أب / رب أسرة</option>
+                                    <option value="mother">أم</option>
+                                    <option value="son">ابن</option>
+                                    <option value="daughter">ابنة</option>
+                                    <option value="brother">أخ</option>
+                                    <option value="sister">أخت</option>
+                                    <option value="wife">زوجة</option>
+                                    <option value="husband">زوج</option>
+                                    <option value="grandfather">جد</option>
+                                    <option value="grandmother">جدة</option>
+                                    <option value="other">أخرى</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label"><strong>النوع</strong></label>
+                                <select name="family_members[${i}][gender]" class="form-select">
+                                    <option value="">-- اختر --</option>
+                                    <option value="male">ذكر</option>
+                                    <option value="female">أنثى</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label"><strong>الحالة الصحية</strong></label>
+                                <select name="family_members[${i}][status]" class="form-select">
+                                    <option value="healthy" selected>سليم</option>
+                                    <option value="sick">مريض</option>
+                                    <option value="disabled">معاق</option>
+                                    <option value="deceased">متوفى</option>
+                                    <option value="unknown">غير معروف</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label"><strong>رقم الهاتف (اختياري)</strong></label>
+                                <input type="tel" name="family_members[${i}][phone]" class="form-control" placeholder="رقم الهاتف">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            familyMembersContainer.appendChild(memberDiv);
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         toggleNationalityField();
         toggleDisabilityField();
         toggleOtherAssistance();
         renderDocuments();
+        generateFamilyMembersInputs();
     });
 </script>
 
