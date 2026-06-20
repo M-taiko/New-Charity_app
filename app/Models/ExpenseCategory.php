@@ -94,4 +94,19 @@ class ExpenseCategory extends Model
         }
         return implode(' > ', $parts);
     }
+
+    /** الحصول على السلف في مستوى معين */
+    public function getAncestorAtLevel(int $targetLevel): ?self
+    {
+        if ($this->level === $targetLevel) {
+            return $this;
+        }
+
+        $current = $this;
+        while ($current->parent_id && $current->level > $targetLevel) {
+            $current = $current->parent;
+        }
+
+        return $current->level === $targetLevel ? $current : null;
+    }
 }

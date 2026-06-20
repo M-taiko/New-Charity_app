@@ -161,7 +161,7 @@ class ExpenseEditRequestController extends Controller
         try {
             $this->service->approveEdit($editRequest, auth()->user());
 
-            return redirect()->route('expense-edit-requests.show', $editRequest)
+            return redirect()->route('expenses.show', $editRequest->expense_id)
                 ->with('success', 'تمت الموافقة على التعديل بنجاح');
         } catch (\Exception $e) {
             return back()->with('error', 'حدث خطأ: ' . $e->getMessage());

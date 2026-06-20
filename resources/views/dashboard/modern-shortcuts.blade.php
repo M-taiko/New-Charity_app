@@ -36,7 +36,7 @@
         @if(auth()->user()->hasRole('محاسب'))
             <!-- Stats للمحاسب -->
             <div class="col-12 col-sm-6 col-lg-3">
-                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #36befd65 100%); color: rgb(0, 0, 0);">
                     <div class="stat-icon"><i class="fas fa-wallet"></i></div>
                     <div class="stat-label">الرصيد الحالي</div>
                     <div class="stat-number">{{ number_format($treasury?->balance ?? 0, 2) }} ج.م</div>

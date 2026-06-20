@@ -155,11 +155,17 @@
             </form>
         </div>
     </div>
-</div>
 
-@push('scripts')
 <script>
-    $(document).ready(function() {
+    // Wait for jQuery to be available
+    function initializeExpensesPage() {
+        if (typeof $ === 'undefined') {
+            setTimeout(initializeExpensesPage, 100);
+            return;
+        }
+
+        $(document).ready(function() {
+
         // Show toast if expense was just registered
         @if (session('success'))
             showAlert('success', '{{ session('success') }}');
@@ -171,6 +177,11 @@
 
         // Load custodies for quick expense form
         loadQuickExpenseCustodies();
+
+        // Reload custodies when modal is shown
+        $('#quickExpenseModal').on('show.bs.modal', function() {
+            loadQuickExpenseCustodies();
+        });
 
         // Quick expense form submission
         $('#quickExpenseForm').on('submit', function(e) {
@@ -234,24 +245,27 @@
                     searchable: false
                 }
             ],
-            order: [[1, 'desc']],
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
-            }
+            order: [[1, 'desc']]
         });
-    });
+        });
+    }
+
+    // Call initialization function
+    initializeExpensesPage();
 
     // Load custodies for quick expense modal
     function loadQuickExpenseCustodies() {
+        const select = $('#quick_custody_id');
+        select.find('option:not(:first)').remove();
+
         $.ajax({
             url: '{{ route("api.user-custodies") }}',
             type: 'GET',
+            dataType: 'json',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            },
             success: function(data) {
-                const select = $('#quick_custody_id');
-                select.find('option:not(:first)').remove();
-
-                console.log('Custodies data:', data);
-
                 if (!data || data.length === 0) {
                     select.append('<option disabled>لا توجد عهد متاحة</option>');
                     return;
@@ -260,7 +274,7 @@
                 data.forEach(function(custody) {
                     const remaining = parseFloat(custody.remaining || 0);
                     const reason = custody.reason || 'عهدة #' + custody.id;
-                    console.log('Custody:', reason, 'Amount:', custody.amount, 'Spent:', custody.spent, 'Remaining:', remaining);
+
                     if (remaining > 0) {
                         select.append(`
                             <option value="${custody.id}" data-balance="${remaining}">
@@ -274,9 +288,8 @@
                     select.append('<option disabled>لا توجد عهد بها رصيد متاح</option>');
                 }
             },
-            error: function(xhr) {
-                console.error('Error loading custodies:', xhr);
-                alert('حدث خطأ في تحميل العهد: ' + xhr.statusText);
+            error: function(xhr, status, error) {
+                select.append('<option disabled>خطأ في تحميل العهد</option>');
             }
         });
     }
@@ -358,5 +371,6 @@
         }, 5000);
     }
 </script>
-@endpush
+</div>
+
 @endsection

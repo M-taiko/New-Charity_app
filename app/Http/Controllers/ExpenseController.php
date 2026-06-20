@@ -41,11 +41,11 @@ class ExpenseController extends Controller
         if ($user->hasRole('مندوب')) {
             // Agents see only their own custodies
             $custodies = Custody::where('agent_id', $user->id)
-                ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
+                ->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
                 ->get();
         } else {
             // Managers and accountants see ALL custodies that are active
-            $custodies = Custody::whereIn('status', ['accepted', 'partially_returned', 'closed'])
+            $custodies = Custody::whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
                 ->get();
         }
 
@@ -473,24 +473,39 @@ class ExpenseController extends Controller
             abort(403);
         }
 
+        $isQuickExpense = $expense->is_quick_expense;
+
         $expense->update([
             'reviewed_by' => $user->id,
             'reviewed_at' => now(),
+            'is_quick_expense' => false, // Convert quick expense to regular
         ]);
 
         // إشعار المندوب
+        $notificationMessage = $isQuickExpense
+            ? 'قام ' . $user->name . ' بمراجعة المصروف السريع رقم #' . $expense->id . ' وتحويله إلى مصروف عادي وتم قفل التعديل'
+            : 'قام ' . $user->name . ' بمراجعة المصروف رقم #' . $expense->id . ' وتم قفل التعديل';
+
         \App\Services\NotificationService::notifyUser(
             $expense->user_id,
             'تمت مراجعة مصروفك',
-            'قام ' . $user->name . ' بمراجعة المصروف رقم #' . $expense->id . ' وتم قفل التعديل',
+            $notificationMessage,
             'info',
             $expense->id,
             'expense'
         );
 
-        ActivityLogService::reviewed($expense, 'تمت مراجعة المصروف #' . $expense->id . ' بواسطة ' . $user->name);
+        $logMessage = $isQuickExpense
+            ? 'تمت مراجعة المصروف السريع #' . $expense->id . ' وتحويله إلى مصروف عادي بواسطة ' . $user->name
+            : 'تمت مراجعة المصروف #' . $expense->id . ' بواسطة ' . $user->name;
 
-        return back()->with('success', 'تمت مراجعة المصروف وتم قفل التعديل');
+        ActivityLogService::reviewed($expense, $logMessage);
+
+        $message = $isQuickExpense
+            ? 'تمت مراجعة المصروف وتحويله من مصروف سريع إلى مصروف عادي وتم قفل التعديل'
+            : 'تمت مراجعة المصروف وتم قفل التعديل';
+
+        return back()->with('success', $message);
     }
 
     public function quickStore(Request $request)
@@ -582,12 +597,11 @@ class ExpenseController extends Controller
     {
         $this->authorize('spend_money');
 
-        // Check authorization: only the creator, accountants, and managers can delete
+        // Check authorization: only accountants and managers can delete
         $user = auth()->user();
-        $isCreator = $expense->user_id === $user->id;
         $isAccountantOrManager = $user->hasRole('محاسب') || $user->hasRole('مدير');
 
-        if (!$isCreator && !$isAccountantOrManager) {
+        if (!$isAccountantOrManager) {
             abort(403, 'غير مصرح لك بحذف هذا المصروف');
         }
 

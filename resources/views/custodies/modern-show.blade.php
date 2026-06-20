@@ -161,7 +161,7 @@
                                 <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
                             </a>
                         @endrole
-                        {{-- Workflow 1: Accountant approves agent request --}}
+                        {{-- Workflow 1: Accountant approves agent request (agent-initiated custodies) --}}
                         @can('approve_custody')
                             @if($custody->status === 'pending' && $custody->initiated_by === 'agent')
                                 <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#acceptModal">
@@ -171,16 +171,9 @@
                                     <i class="fas fa-times-circle"></i> رفض الطلب
                                 </button>
                             @elseif($custody->status === 'pending' && $custody->initiated_by === 'accountant')
-                                {{-- Auto-approve accountant-created custodies --}}
-                                <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" style="display:inline;">
-                                    @csrf
-                                    <input type="hidden" name="auto_approve" value="1">
-                                    <button type="submit" class="btn btn-success" onclick="return confirm('هل تريد الموافقة على هذه العهدة؟')">
-                                        <i class="fas fa-check-circle"></i> الموافقة
-                                    </button>
-                                </form>
-                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
-                                    <i class="fas fa-times-circle"></i> رفض
+                                {{-- Cancel button for accountant-initiated pending custodies that haven't been accepted yet --}}
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelCustodyModal">
+                                    <i class="fas fa-ban"></i> إلغاء العهدة
                                 </button>
                             @endif
                         @endcan
@@ -216,6 +209,19 @@
                                         <i class="fas fa-undo"></i> رد العهدة
                                     </button>
                                 @endif
+                            @elseif(!auth()->user()->hasRole('مندوب'))
+                                {{-- Show return request button only for accountants/managers when agent is not viewing --}}
+                                @if(in_array($custody->status, ['active', 'accepted', 'partially_returned']) && $custody->getRemainingBalance() > 0)
+                                    @if($custody->hasPendingReturnRequest())
+                                        <button type="button" class="btn btn-warning" disabled>
+                                            <i class="fas fa-hourglass-half"></i> طلب رد معلق
+                                        </button>
+                                    @else
+                                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#requestReturnModal">
+                                            <i class="fas fa-file-invoice-dollar"></i> طلب رد للخزينة
+                                        </button>
+                                    @endif
+                                @endif
                             @endif
                         @endrole
 
@@ -242,19 +248,6 @@
                             @endif
                         @endcan
 
-                        @can('approve_custody')
-                            @if(in_array($custody->status, ['active', 'accepted', 'partially_returned']) && $custody->getRemainingBalance() > 0)
-                                @if($custody->hasPendingReturnRequest())
-                                    <button type="button" class="btn btn-warning" disabled>
-                                        <i class="fas fa-hourglass-half"></i> طلب رد معلق
-                                    </button>
-                                @else
-                                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#requestReturnModal">
-                                        <i class="fas fa-file-invoice-dollar"></i> طلب رد للخزينة
-                                    </button>
-                                @endif
-                            @endif
-                        @endcan
                     </div>
                 </div>
             </div>
@@ -294,6 +287,9 @@
                                         @break
                                     @case('closed')
                                         <span class="badge bg-secondary">عهدة مغلقة</span>
+                                        @break
+                                    @case('cancelled')
+                                        <span class="badge bg-dark">عهدة ملغاة</span>
                                         @break
                                     @default
                                         <span class="badge bg-secondary">{{ $custody->status }}</span>
@@ -1204,48 +1200,24 @@ function updateTreasuryBalance{{ $returnRequest->id }}() {
             <form action="{{ route('custodies.agent-accept', $custody->id) }}" method="POST">
                 @csrf
                 <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>تنبيه:</strong> الخزينة تم تحديدها مسبقاً من قبل المحاسب/المدير ولا يمكن تغييرها
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>تأكيد:</strong> هل تقبل هذه العهدة؟
                     </div>
                     <p>العهدة بقيمة <strong>{{ number_format($custody->amount, 2) }} ج.م</strong></p>
-
-                    @php
-                        $custodyTreasury = $custody->treasury;
-                    @endphp
-
-                    <div class="card" style="background: linear-gradient(135deg, rgba(100, 200, 100, 0.1), rgba(139, 195, 74, 0.1)); border: 2px solid rgba(76, 175, 80, 0.5); border-radius: 8px;">
-                        <div class="card-body">
-                            <h6 class="text-muted mb-2">الخزينة المحددة:</h6>
-                            <h4 style="margin: 0.5rem 0; color: #4caf50;">{{ $custodyTreasury->name ?? 'لم يتم تحديد خزينة' }}</h4>
-                            <p style="margin: 0.5rem 0; color: #666; font-size: 0.95rem;">
-                                <strong>الرصيد الحالي:</strong> {{ number_format($custodyTreasury->balance ?? 0, 2) }} ج.م
-                            </p>
-                            @if($custodyTreasury && $custodyTreasury->balance >= $custody->amount)
-                                <p style="margin-top: 0.5rem; color: #28a745; font-size: 0.9rem;">
-                                    <i class="fas fa-check-circle"></i> الرصيد كافي للعهدة
-                                </p>
-                            @elseif($custodyTreasury)
-                                <p style="margin-top: 0.5rem; color: #dc3545; font-size: 0.9rem;">
-                                    <i class="fas fa-times-circle"></i> الرصيد غير كافي!
-                                </p>
-                            @endif
-                        </div>
-                    </div>
 
                     <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
                         <i class="fas fa-info-circle"></i> عند القبول، سيتم:
                     </p>
                     <ul style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
-                        <li>خصم {{ number_format($custody->amount, 2) }} ج.م من خزينة "{{ $custodyTreasury->name ?? 'غير محددة' }}"</li>
                         <li>استقبال العهدة في حسابك</li>
                         <li>صرف الأموال فوراً</li>
                     </ul>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-success" {{ $custodyTreasury && $custodyTreasury->balance >= $custody->amount ? '' : 'disabled' }}>
-                        <i class="fas fa-check"></i> قبول وصرف
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> قبول
                     </button>
                 </div>
             </form>
@@ -1456,6 +1428,49 @@ document.addEventListener('shown.bs.modal', function (event) {
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-warning">
                         <i class="fas fa-paper-plane"></i> إرسال الطلب
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endcan
+
+{{-- Cancel Custody Modal (Accountant/Manager initiated) --}}
+@can('approve_custody')
+<div class="modal fade" id="cancelCustodyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none;">
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-ban"></i> إلغاء العهدة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.cancel', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>تحذير:</strong> هل تريد إلغاء هذه العهدة بشكل نهائي؟
+                    </div>
+                    <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                    <p><strong>المبلغ:</strong> {{ number_format($custody->amount, 2) }} ج.م</p>
+                    <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle"></i> عند الإلغاء:
+                    </p>
+                    <ul style="font-size: 0.9rem; color: #666;">
+                        <li>سيتم إلغاء العهدة بشكل كامل</li>
+                        <li>سيتم إلغاء جميع الإشعارات المرسلة للمندوب</li>
+                        <li>لا يمكن التراجع عن هذه العملية</li>
+                    </ul>
+                    <div class="mb-3" style="margin-top: 1rem;">
+                        <label class="form-label"><strong>سبب الإلغاء (اختياري)</strong></label>
+                        <textarea name="cancel_reason" class="form-control" rows="2" placeholder="أدخل سبب الإلغاء..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">رجوع</button>
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من رغبتك في إلغاء العهدة؟')">
+                        <i class="fas fa-trash"></i> إلغاء العهدة
                     </button>
                 </div>
             </form>

@@ -152,6 +152,8 @@
                             <span class="badge bg-success"><i class="fas fa-check"></i> معتمد</span>
                         @elseif($expense->hasPendingEdit())
                             <span class="badge bg-warning"><i class="fas fa-clock"></i> في انتظار الموافقة على التعديل</span>
+                        @elseif($expense->hasApprovedEdit())
+                            <span class="badge bg-success"><i class="fas fa-check-double"></i> تم الموافقة على التعديل</span>
                         @endif
 
                         @if($expense->isReviewed())
@@ -194,8 +196,8 @@
                             </a>
                         @endif
 
-                        <!-- زر الحذف -->
-                        @if(auth()->user()->id === $expense->user_id || auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير'))
+                        <!-- زر الحذف (للمحاسب والمدير فقط) -->
+                        @if(auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير'))
                             <form action="{{ route('expenses.destroy', $expense) }}" method="POST" style="display: inline;">
                                 @csrf
                                 @method('DELETE')
@@ -229,7 +231,7 @@
                             </div>
                             <div class="col-md-6 text-end">
                                 <span class="badge {{ $editRequest->status === 'approved' ? 'bg-success' : ($editRequest->status === 'rejected' ? 'bg-danger' : 'bg-warning') }}">
-                                    {{ $editRequest->status === 'approved' ? 'تم الموافقة' : ($editRequest->status === 'rejected' ? 'تم الرفض' : 'قيد الانتظار') }}
+                                    {{ $editRequest->status === 'approved' ? 'تم الموافقة على التعديل' : ($editRequest->status === 'rejected' ? 'تم الرفض' : 'قيد الانتظار') }}
                                 </span>
                             </div>
                         </div>

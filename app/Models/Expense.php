@@ -127,6 +127,17 @@ class Expense extends Model
         }
     }
 
+    public function hasApprovedEdit(): bool
+    {
+        try {
+            return $this->editRequests()
+                ->where('status', 'approved')
+                ->exists();
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
     /**
      * هل يقدر المستخدم تعديل هذا المصروف؟
      */

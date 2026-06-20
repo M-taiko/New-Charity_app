@@ -236,25 +236,94 @@ function openAddRoot() {
 }
 
 function openAddChild(parentId, parentName, level) {
-    document.getElementById('modalParentId').value = parentId;
-    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-sitemap"></i> إضافة مستوى ' + level;
+    const modal = document.getElementById('addCategoryModal');
+    if (!modal) return;
+
+    const form = modal.querySelector('form');
+    if (form) {
+        form.reset();
+    }
+
+    const parentIdInput = document.getElementById('modalParentId');
+    if (parentIdInput) {
+        parentIdInput.value = parentId;
+    }
+
+    const titleElement = document.getElementById('modalTitle');
+    if (titleElement) {
+        titleElement.innerHTML = '<i class="fas fa-sitemap"></i> إضافة مستوى ' + level;
+    }
+
     const info = document.getElementById('parentInfo');
-    info.classList.remove('d-none');
-    info.innerHTML = '<i class="fas fa-level-down-alt"></i> سيُضاف تحت: <strong>' + parentName + '</strong>';
-    new bootstrap.Modal(document.getElementById('addCategoryModal')).show();
+    if (info) {
+        info.classList.remove('d-none');
+        info.innerHTML = '<i class="fas fa-level-down-alt"></i> سيُضاف تحت: <strong>' + parentName + '</strong>';
+    }
+
+    new bootstrap.Modal(modal).show();
 }
 
 function openAddItem(categoryId, categoryName) {
-    document.getElementById('itemCategoryId').value = categoryId;
-    document.getElementById('itemParentInfo').innerHTML = '<i class="fas fa-sitemap"></i> سيُضاف تحت: <strong>' + categoryName + '</strong>';
-    new bootstrap.Modal(document.getElementById('addItemModal')).show();
+    const itemCategoryId = document.getElementById('itemCategoryId');
+    if (itemCategoryId) {
+        itemCategoryId.value = categoryId;
+    }
+
+    const itemParentInfo = document.getElementById('itemParentInfo');
+    if (itemParentInfo) {
+        itemParentInfo.innerHTML = '<i class="fas fa-sitemap"></i> سيُضاف تحت: <strong>' + categoryName + '</strong>';
+    }
+
+    const itemModal = document.getElementById('addItemModal');
+    if (itemModal) {
+        // Close any open modals first
+        const openModals = document.querySelectorAll('.modal.show');
+        openModals.forEach(function(modal) {
+            bootstrap.Modal.getInstance(modal)?.hide();
+        });
+
+        // Then open the item modal
+        setTimeout(function() {
+            new bootstrap.Modal(itemModal).show();
+        }, 300);
+    }
 }
 
-document.getElementById('addCategoryModal').addEventListener('hidden.bs.modal', function() {
-    this.querySelector('form').reset();
-    document.getElementById('modalParentId').value = '';
-    document.getElementById('parentInfo').classList.add('d-none');
-});
+const addCategoryModal = document.getElementById('addCategoryModal');
+if (addCategoryModal) {
+    addCategoryModal.addEventListener('hidden.bs.modal', function() {
+        const form = this.querySelector('form');
+        if (form) {
+            form.reset();
+        }
+        const parentIdInput = document.getElementById('modalParentId');
+        if (parentIdInput) {
+            parentIdInput.value = '';
+        }
+        const parentInfo = document.getElementById('parentInfo');
+        if (parentInfo) {
+            parentInfo.classList.add('d-none');
+        }
+    });
+}
+
+const addItemModal = document.getElementById('addItemModal');
+if (addItemModal) {
+    addItemModal.addEventListener('hidden.bs.modal', function() {
+        const form = this.querySelector('form');
+        if (form) {
+            form.reset();
+        }
+        const itemCategoryId = document.getElementById('itemCategoryId');
+        if (itemCategoryId) {
+            itemCategoryId.value = '';
+        }
+        const itemParentInfo = document.getElementById('itemParentInfo');
+        if (itemParentInfo) {
+            itemParentInfo.innerHTML = '';
+        }
+    });
+}
 </script>
 @endpush
 @endsection

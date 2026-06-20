@@ -518,6 +518,9 @@
                                             @case('closed')
                                                 <span class="badge bg-secondary">مغلقة</span>
                                                 @break
+                                            @case('cancelled')
+                                                <span class="badge bg-dark">ملغاة</span>
+                                                @break
                                         @endswitch
                                     </td>
                                     <td>
@@ -540,6 +543,44 @@
                                 @endforeach
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Summary Card -->
+                    <div style="border-top: 2px solid #e5e7eb; padding-top: 1.5rem; margin-top: 1.5rem;">
+                        <div class="row g-3">
+                            <div class="col-12 col-md-3">
+                                <div class="card border-0" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));">
+                                    <div class="card-body">
+                                        <div class="text-muted small mb-2">إجمالي العهدات المعروضة</div>
+                                        <div class="h5 mb-0" id="totalCustodiesCount" style="color: #667eea; font-weight: 700;">0</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <div class="card border-0" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1));">
+                                    <div class="card-body">
+                                        <div class="text-muted small mb-2">إجمالي المبالغ</div>
+                                        <div class="h5 mb-0" id="totalAmount" style="color: #4caf50; font-weight: 700;">0.00 ج.م</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <div class="card border-0" style="background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(211, 47, 47, 0.1));">
+                                    <div class="card-body">
+                                        <div class="text-muted small mb-2">إجمالي المصروفات</div>
+                                        <div class="h5 mb-0" id="totalSpent" style="color: #f44336; font-weight: 700;">0.00 ج.م</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <div class="card border-0" style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(13, 71, 161, 0.1));">
+                                    <div class="card-body">
+                                        <div class="text-muted small mb-2">إجمالي المتبقي</div>
+                                        <div class="h5 mb-0" id="totalRemaining" style="color: #2196f3; font-weight: 700;">0.00 ج.م</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -997,6 +1038,43 @@ function toggleAgentDetail(agentId) {
     }
 }
 
+// Calculate custody summary
+function updateCustodySummary() {
+    const visibleRows = document.querySelectorAll('#custodiesTable tbody tr:not([style*="display: none"])');
+
+    let count = 0;
+    let totalAmount = 0;
+    let totalSpent = 0;
+    let totalRemaining = 0;
+
+    visibleRows.forEach(row => {
+        // Skip if row is hidden by filter
+        if (row.style.display === 'none') return;
+
+        count++;
+
+        // Extract values from cells
+        const amountCell = row.querySelector('td:nth-child(4)').textContent;
+        const spentCell = row.querySelector('td:nth-child(5)').textContent;
+        const remainingCell = row.querySelector('td:nth-child(7)').textContent;
+
+        // Parse numbers (remove "ج.م" and extra spaces)
+        const amount = parseFloat(amountCell.replace('ج.م', '').trim());
+        const spent = parseFloat(spentCell.replace('ج.م', '').trim());
+        const remaining = parseFloat(remainingCell.replace('ج.م', '').trim());
+
+        totalAmount += amount || 0;
+        totalSpent += spent || 0;
+        totalRemaining += remaining || 0;
+    });
+
+    // Update summary cards
+    document.getElementById('totalCustodiesCount').textContent = count;
+    document.getElementById('totalAmount').textContent = totalAmount.toLocaleString('ar-SA', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج.م';
+    document.getElementById('totalSpent').textContent = totalSpent.toLocaleString('ar-SA', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج.م';
+    document.getElementById('totalRemaining').textContent = totalRemaining.toLocaleString('ar-SA', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج.م';
+}
+
 // Prevent event bubbling for expand/collapse
 document.addEventListener('DOMContentLoaded', function() {
     const detailRows = document.querySelectorAll('tr[id^="agentDetail"]');
@@ -1005,6 +1083,27 @@ document.addEventListener('DOMContentLoaded', function() {
             e.stopPropagation();
         });
     });
+
+    // Calculate summary on page load
+    updateCustodySummary();
+
+    // Update summary when filters change
+    const agentFilter = document.getElementById('agentFilter');
+    const statusFilter = document.getElementById('statusFilter');
+
+    if (agentFilter) {
+        agentFilter.addEventListener('change', function() {
+            filterTable();
+            setTimeout(updateCustodySummary, 100);
+        });
+    }
+
+    if (statusFilter) {
+        statusFilter.addEventListener('change', function() {
+            filterTable();
+            setTimeout(updateCustodySummary, 100);
+        });
+    }
 });
 </script>
 @endsection

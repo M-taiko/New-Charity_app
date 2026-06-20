@@ -1022,12 +1022,10 @@ class CustodyController extends Controller
     public function userCustodiesApi()
     {
         $custodies = Custody::where('agent_id', auth()->id())
-            // Only show custodies that are active (accepted, partially_returned) or closed but with remaining balance
-            ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
+            ->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
             ->get()
             ->map(function ($custody) {
                 $remaining = $custody->getRemainingBalance();
-                // Only include if there's still balance to spend or return
                 if ($remaining > 0) {
                     return [
                         'id' => $custody->id,
@@ -1047,6 +1045,60 @@ class CustodyController extends Controller
             ->values();
 
         return response()->json($custodies);
+    }
+
+    /**
+     * Cancel a pending custody (accountant/manager initiated only)
+     */
+    public function cancel(Request $request, Custody $custody)
+    {
+        $this->authorize('approve_custody');
+
+        // Only allow cancelling pending custodies that were initiated by accountant/manager
+        if ($custody->status !== 'pending' || $custody->initiated_by !== 'accountant') {
+            return redirect()->route('custodies.show', $custody->id)
+                ->with('error', 'لا يمكن إلغاء هذه العهدة في الوقت الحالي.');
+        }
+
+        $validated = $request->validate([
+            'cancel_reason' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Get the agent who was supposed to receive the custody
+            $agent = $custody->agent;
+
+            // Delete any pending notifications for this custody
+            Notification::where('notifiable_id', $agent->id)
+                ->where('notifiable_type', User::class)
+                ->where('data', 'like', '%"custody_id":' . $custody->id . '%')
+                ->delete();
+
+            // Create activity log
+            $cancelReason = $validated['cancel_reason'] ?? 'بدون سبب محدد';
+            ActivityLogService::log(
+                auth()->user()->id,
+                'cancel_custody',
+                'custodies',
+                $custody->id,
+                'تم إلغاء العهدة: ' . $cancelReason
+            );
+
+            // Change status to cancelled (or delete)
+            $custody->status = 'cancelled';
+            $custody->save();
+
+            DB::commit();
+
+            return redirect()->route('custodies.show', $custody->id)
+                ->with('success', 'تم إلغاء العهدة بنجاح والإشعارات المرسلة للمندوب.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->route('custodies.show', $custody->id)
+                ->with('error', 'حدث خطأ أثناء إلغاء العهدة: ' . $e->getMessage());
+        }
     }
 
     /**
