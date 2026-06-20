@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ExpenseItem;
 use App\Models\ExpenseCategory;
+use App\Models\Expense;
 use Illuminate\Http\Request;
 use Yajra\DataTables\DataTables;
 
