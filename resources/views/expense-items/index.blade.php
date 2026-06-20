@@ -49,6 +49,11 @@
                         <span class="badge bg-primary me-2">م1</span>
                         <strong style="font-size:1rem;">{{ $root->name }}</strong>
                         <code class="ms-2 text-muted" style="font-size:.8rem;">{{ $root->code }}</code>
+                        @if($root->total_amount > 0)
+                            <span class="badge bg-success ms-2" style="font-size:.75rem;">
+                                <i class="fas fa-money-bill-wave"></i> {{ number_format($root->total_amount, 2) }} ج.م
+                            </span>
+                        @endif
                     </div>
                     <div class="d-flex gap-1">
                         <button class="btn btn-sm btn-outline-success"
@@ -74,6 +79,11 @@
                             <span class="badge bg-info me-2">م2</span>
                             <strong>{{ $level2->name }}</strong>
                             <code class="ms-2 text-muted" style="font-size:.75rem;">{{ $level2->code }}</code>
+                            @if($level2->total_amount > 0)
+                                <span class="badge bg-info ms-2" style="font-size:.75rem;">
+                                    <i class="fas fa-money-bill-wave"></i> {{ number_format($level2->total_amount, 2) }} ج.م
+                                </span>
+                            @endif
                         </div>
                         <div class="d-flex gap-1">
                             <button class="btn btn-sm btn-outline-warning"
@@ -100,6 +110,11 @@
                                 <span class="badge bg-warning text-dark me-2">م3</span>
                                 <strong>{{ $level3->name }}</strong>
                                 <code class="ms-2 text-muted" style="font-size:.75rem;">{{ $level3->code }}</code>
+                                @if($level3->total_amount > 0)
+                                    <span class="badge bg-warning text-dark ms-2" style="font-size:.75rem;">
+                                        <i class="fas fa-money-bill-wave"></i> {{ number_format($level3->total_amount, 2) }} ج.م
+                                    </span>
+                                @endif
                             </div>
                             <div class="d-flex gap-1">
                                 <button class="btn btn-sm btn-outline-primary"

@@ -6,11 +6,20 @@
         <code class="ms-1 text-muted" style="font-size:.72rem;">{{ $item->code }}</code>
         @if($item->default_amount)
         <span class="badge bg-light text-dark ms-1" style="font-size:.7rem; border:1px solid #ddd;">
-            {{ number_format($item->default_amount, 2) }} ج.م
+            افتراضي: {{ number_format($item->default_amount, 2) }} ج.م
+        </span>
+        @endif
+        @if($item->total_amount > 0)
+        <span class="badge bg-success ms-1" style="font-size:.7rem;">
+            <i class="fas fa-money-bill-wave"></i> صُرف: {{ number_format($item->total_amount, 2) }} ج.م
+        </span>
+        @else
+        <span class="badge bg-secondary ms-1" style="font-size:.7rem;">
+            <i class="fas fa-ban"></i> لم يتم الصرف
         </span>
         @endif
         @if(!$item->is_active)
-        <span class="badge bg-secondary ms-1" style="font-size:.7rem;">غير نشط</span>
+        <span class="badge bg-warning text-dark ms-1" style="font-size:.7rem;">غير نشط</span>
         @endif
     </div>
     <div class="d-flex gap-1">

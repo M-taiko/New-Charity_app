@@ -15,6 +15,33 @@ class ExpenseItemController extends Controller
         // المستوى الأول فقط (جذور الشجرة)
         $roots = ExpenseCategory::with('children.children.items')
             ->roots()->active()->ordered()->get();
+
+        // إضافة المبالغ المصروفة لكل مستوى
+        $roots = $roots->map(function ($root) {
+            $root->total_amount = Expense::where('expense_category_id', $root->id)->sum('amount');
+            $root->children = $root->children->map(function ($level2) {
+                $level2->total_amount = Expense::where('expense_category_id', $level2->id)->sum('amount');
+                $level2->children = $level2->children->map(function ($level3) {
+                    $level3->total_amount = Expense::where('expense_category_id', $level3->id)->sum('amount');
+                    $level3->items = $level3->items->map(function ($item) {
+                        $item->total_amount = Expense::where('expense_item_id', $item->id)->sum('amount');
+                        return $item;
+                    });
+                    return $level3;
+                });
+                $level2->items = $level2->items->map(function ($item) {
+                    $item->total_amount = Expense::where('expense_item_id', $item->id)->sum('amount');
+                    return $item;
+                });
+                return $level2;
+            });
+            $root->items = $root->items->map(function ($item) {
+                $item->total_amount = Expense::where('expense_item_id', $item->id)->sum('amount');
+                return $item;
+            });
+            return $root;
+        });
+
         return view('expense-items.index', compact('roots'));
     }
 
