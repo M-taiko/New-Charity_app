@@ -141,8 +141,10 @@
             const fileInput = document.getElementById('fileInput');
             const fileList = document.getElementById('fileList');
 
-            // Click to open file dialog
-            dropZone.addEventListener('click', () => fileInput.click());
+            // Only initialize if elements exist
+            if (dropZone && fileInput && fileList) {
+                // Click to open file dialog
+                dropZone.addEventListener('click', () => fileInput.click());
 
             // Drag and drop
             dropZone.addEventListener('dragover', (e) => {
@@ -242,11 +244,19 @@
                 fileList.appendChild(ul);
             }
 
+            }
+
             // Generate family members inputs
             function generateFamilyMembersInputs() {
-                const count = parseInt(document.getElementById('familyMembersCount').value) || 0;
-                const container = document.getElementById('familyMembersContainer');
-                container.innerHTML = '';
+                const familyMembersCount = document.getElementById('familyMembersCount');
+                const familyMembersContainer = document.getElementById('familyMembersContainer');
+
+                if (!familyMembersCount || !familyMembersContainer) {
+                    return;
+                }
+
+                const count = parseInt(familyMembersCount.value) || 0;
+                familyMembersContainer.innerHTML = '';
 
                 for (let i = 0; i < count; i++) {
                     const memberDiv = document.createElement('div');
@@ -304,7 +314,7 @@
                             </div>
                         </div>
                     `;
-                    container.appendChild(memberDiv);
+                    familyMembersContainer.appendChild(memberDiv);
                 }
             }
 
@@ -312,6 +322,7 @@
             document.addEventListener('DOMContentLoaded', function() {
                 generateFamilyMembersInputs();
             });
+            }
         </script>
 
         <div class="col-lg-4">
