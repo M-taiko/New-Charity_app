@@ -54,6 +54,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/custodies/{custody}/external-donation', [CustodyController::class, 'addExternalDonation'])->name('custodies.external-donation');
     Route::post('/custodies/{custody}/agent-accept', [CustodyController::class, 'agentAccept'])->name('custodies.agent-accept');
     Route::post('/custodies/{custody}/agent-reject', [CustodyController::class, 'agentReject'])->name('custodies.agent-reject');
+    Route::post('/custodies/{custody}/cancel', [CustodyController::class, 'cancel'])->name('custodies.cancel');
     Route::get('/agent/transactions', [CustodyController::class, 'agentTransactions'])->name('agent.transactions');
     Route::get('/api/agent/transactions', [CustodyController::class, 'agentTransactionsData'])->name('api.agent.transactions');
     Route::get('/api/agent/returned', [CustodyController::class, 'agentReturnedData'])->name('api.agent.returned');
@@ -117,6 +118,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/reports/social-case-expenses', [ReportController::class, 'socialCaseExpensesReport'])->name('reports.social-case-expenses');
     Route::get('/reports/agents-balance', [ReportController::class, 'agentsBalanceReport'])->name('reports.agents-balance');
     Route::get('/reports/expense-items', [ReportController::class, 'expenseItemsReport'])->name('reports.expense-items');
+    Route::get('/reports/categories-analytics', [ReportController::class, 'expenseCategoriesAnalytics'])->name('reports.categories-analytics');
     Route::get('/reports/reconciliation', [ReportController::class, 'reconciliation'])->name('reports.reconciliation');
 
     // Expense Category Hierarchy API

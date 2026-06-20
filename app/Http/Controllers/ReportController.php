@@ -284,4 +284,60 @@ class ReportController extends Controller
 
         return view('reports.reconciliation', compact('reconciliation'));
     }
+
+    public function expenseCategoriesAnalytics(Request $request): View
+    {
+        $this->authorize('manage_treasury');
+
+        // Get filter parameters
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+
+        // Get all expense categories with their items and expenses
+        $query = ExpenseCategory::roots()->active()->with('children', 'items');
+
+        $categoriesData = $query->ordered()->get()->map(function ($category) use ($dateFrom, $dateTo) {
+            $expensesQuery = Expense::where('expense_category_id', $category->id);
+
+            if ($dateFrom) {
+                $expensesQuery->whereDate('created_at', '>=', $dateFrom);
+            }
+
+            if ($dateTo) {
+                $expensesQuery->whereDate('created_at', '<=', $dateTo);
+            }
+
+            $expenses = $expensesQuery->get();
+            $totalAmount = $expenses->sum('amount');
+
+            return [
+                'category' => $category,
+                'total_amount' => $totalAmount,
+                'expense_count' => $expenses->count(),
+                'average_amount' => $expenses->count() > 0 ? $expenses->avg('amount') : 0,
+                'percentage' => 0, // Will be calculated after
+            ];
+        });
+
+        // Calculate percentages
+        $grandTotal = $categoriesData->sum('total_amount');
+        if ($grandTotal > 0) {
+            $categoriesData = $categoriesData->map(function ($data) use ($grandTotal) {
+                $data['percentage'] = round(($data['total_amount'] / $grandTotal) * 100, 2);
+                return $data;
+            });
+        }
+
+        // Filter out categories with no expenses
+        $categoriesData = $categoriesData->filter(function ($data) {
+            return $data['expense_count'] > 0;
+        })->values();
+
+        return view('reports.expense-categories-analytics', compact(
+            'categoriesData',
+            'dateFrom',
+            'dateTo',
+            'grandTotal'
+        ));
+    }
 }
