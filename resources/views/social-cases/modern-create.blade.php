@@ -86,6 +86,23 @@
                             @enderror
                         </div>
 
+                        <!-- Family Members Section -->
+                        <div class="mb-4">
+                            <h6 class="mb-3" style="border-bottom: 2px solid #4facfe; padding-bottom: 0.5rem;">
+                                <i class="fas fa-users" style="color: #4facfe;"></i> تكوين الأسرة
+                            </h6>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>عدد أفراد الأسرة</strong></label>
+                                    <input type="number" id="familyMembersCount" name="family_members_count" class="form-control" min="1" max="20" value="{{ old('family_members_count', 1) }}" onchange="generateFamilyMembersInputs()">
+                                    <small class="text-muted">أدخل عدد الأفراد وسيتم إنشاء نماذج الإدخال تلقائياً</small>
+                                </div>
+                            </div>
+
+                            <div id="familyMembersContainer"></div>
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label"><strong>رفع ملفات (صور، مستندات، إلخ)</strong></label>
                             <div class="border-2 border-dashed rounded p-4" style="border-color: #4facfe; background: rgba(79, 172, 254, 0.05); cursor: pointer;" id="dropZone">
@@ -224,6 +241,77 @@
 
                 fileList.appendChild(ul);
             }
+
+            // Generate family members inputs
+            function generateFamilyMembersInputs() {
+                const count = parseInt(document.getElementById('familyMembersCount').value) || 0;
+                const container = document.getElementById('familyMembersContainer');
+                container.innerHTML = '';
+
+                for (let i = 0; i < count; i++) {
+                    const memberDiv = document.createElement('div');
+                    memberDiv.className = 'card mb-3 border-start border-4';
+                    memberDiv.style.borderColor = i === 0 ? '#4facfe' : '#e0e0e0';
+                    memberDiv.innerHTML = `
+                        <div class="card-body">
+                            <h6 class="card-title mb-3" style="color: ${i === 0 ? '#4facfe' : '#666'};">
+                                <i class="fas fa-${i === 0 ? 'home' : 'user'}"></i> ${i === 0 ? 'رب الأسرة' : `الفرد #${i}`}
+                            </h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>الاسم</strong></label>
+                                    <input type="text" name="family_members[${i}][name]" class="form-control" placeholder="أدخل الاسم" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>صلة القرابة</strong></label>
+                                    <select name="family_members[${i}][relationship]" class="form-select" required>
+                                        <option value="">-- اختر صلة القرابة --</option>
+                                        <option value="father" ${i === 0 ? 'selected' : ''}>أب / رب أسرة</option>
+                                        <option value="mother">أم</option>
+                                        <option value="son">ابن</option>
+                                        <option value="daughter">ابنة</option>
+                                        <option value="brother">أخ</option>
+                                        <option value="sister">أخت</option>
+                                        <option value="wife">زوجة</option>
+                                        <option value="husband">زوج</option>
+                                        <option value="grandfather">جد</option>
+                                        <option value="grandmother">جدة</option>
+                                        <option value="other">أخرى</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label"><strong>النوع</strong></label>
+                                    <select name="family_members[${i}][gender]" class="form-select" required>
+                                        <option value="">-- اختر --</option>
+                                        <option value="male">ذكر</option>
+                                        <option value="female">أنثى</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label"><strong>الحالة الصحية</strong></label>
+                                    <select name="family_members[${i}][status]" class="form-select" required>
+                                        <option value="healthy" selected>سليم</option>
+                                        <option value="sick">مريض</option>
+                                        <option value="disabled">معاق</option>
+                                        <option value="deceased">متوفى</option>
+                                        <option value="unknown">غير معروف</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label"><strong>رقم الهاتف (اختياري)</strong></label>
+                                    <input type="tel" name="family_members[${i}][phone]" class="form-control" placeholder="رقم الهاتف">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(memberDiv);
+                }
+            }
+
+            // Initialize on page load
+            document.addEventListener('DOMContentLoaded', function() {
+                generateFamilyMembersInputs();
+            });
         </script>
 
         <div class="col-lg-4">
