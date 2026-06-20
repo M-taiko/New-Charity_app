@@ -835,11 +835,19 @@
                 <i class="fas fa-compass"></i> القائمة الرئيسية
             </h6>
             <ul class="sidebar-nav">
+                <!-- Dashboard -->
                 <li>
                     <a href="{{ route('dashboard') }}" class="@if(Route::current()->getName() == 'dashboard') active @endif">
                         <i class="fas fa-chart-line"></i>
                         <span>لوحة التحكم</span>
                     </a>
+                </li>
+
+                <!-- Accounting Module -->
+                <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
+                        <i class="fas fa-calculator"></i> الحسابات
+                    </span>
                 </li>
 
                 @can('manage_treasury')
@@ -919,26 +927,36 @@
                 </li>
                 @endrole
 
-                <li>
-                    <a href="{{ route('tasks.index') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'tasks')) active @endif">
-                        <i class="fas fa-tasks"></i>
-                        <span>المهام</span>
-                    </a>
-                </li>
-
-                <li>
-                    <a href="{{ route('chat.index') }}" class="@if(Route::current()->getName() == 'chat.index') active @endif">
-                        <i class="fas fa-comments"></i>
-                        <span>المحادثة الجماعية</span>
-                    </a>
-                </li>
-
-                {{-- Procurement Section --}}
+                <!-- Social Cases Module -->
                 <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
                     <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
-                        المشتريات والصيانة
+                        <i class="fas fa-heart"></i> الحالات الاجتماعية
                     </span>
                 </li>
+
+                <li>
+                    <a href="{{ route('social_cases.index') }}" class="@if(Route::current()->getName() == 'social_cases.index') active @endif">
+                        <i class="fas fa-people-group"></i>
+                        <span>الحالات الاجتماعية</span>
+                    </a>
+                </li>
+
+                @can('create_social_case')
+                <li>
+                    <a href="{{ route('social_cases.researcher') }}" class="@if(Route::current()->getName() == 'social_cases.researcher') active @endif">
+                        <i class="fas fa-file-alt"></i>
+                        <span>حالاتي الاجتماعية</span>
+                    </a>
+                </li>
+                @endcan
+
+                <!-- Procurement & Maintenance Module -->
+                <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
+                        <i class="fas fa-tools"></i> المشتريات والصيانة
+                    </span>
+                </li>
+
                 <li>
                     <a href="{{ route('purchase-requests.index') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'purchase-requests')) active @endif">
                         <i class="fas fa-shopping-cart"></i>
@@ -960,23 +978,14 @@
                 </li>
                 @endcan
 
-                <li>
-                    <a href="{{ route('social_cases.index') }}" class="@if(Route::current()->getName() == 'social_cases.index') active @endif">
-                        <i class="fas fa-people-group"></i>
-                        <span>الحالات الاجتماعية</span>
-                    </a>
-                </li>
-
-                @can('create_social_case')
-                <li>
-                    <a href="{{ route('social_cases.researcher') }}" class="@if(Route::current()->getName() == 'social_cases.researcher') active @endif">
-                        <i class="fas fa-file-alt"></i>
-                        <span>حالاتي الاجتماعية</span>
-                    </a>
-                </li>
-                @endcan
-
+                <!-- Reports & Analytics Module -->
                 @can('view_reports')
+                <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
+                        <i class="fas fa-chart-bar"></i> التقارير والإحصائيات
+                    </span>
+                </li>
+
                 <li>
                     <a href="{{ route('reports.dashboard') }}" class="@if(Route::current()->getName() == 'reports.dashboard') active @endif">
                         <i class="fas fa-chart-bar"></i>
@@ -1006,28 +1015,14 @@
                 </li>
                 @endcan
 
-                @can('view_all_records')
-                <li>
-                    <a href="{{ route('activity-logs.index') }}" class="@if(Route::current()->getName() == 'activity-logs.index') active @endif">
-                        <i class="fas fa-history"></i>
-                        <span>سجل النشاط</span>
-                    </a>
-                </li>
-                @endcan
-
-                <li>
-                    <a href="{{ route('my-activity.index') }}" class="@if(Route::current()->getName() == 'my-activity.index') active @endif">
-                        <i class="fas fa-user-clock"></i>
-                        <span>سجل نشاطي</span>
-                    </a>
-                </li>
-
+                <!-- Human Resources Module -->
                 @if(auth()->user()->hasRole('مدير') || auth()->user()->hasRole('محاسب'))
-                <li style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
                     <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
-                        الموارد البشرية
+                        <i class="fas fa-building"></i> الموارد البشرية
                     </span>
                 </li>
+
                 <li>
                     <a href="{{ route('hr.dashboard') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'hr.')) active @endif">
                         <i class="fas fa-users"></i>
@@ -1060,8 +1055,52 @@
                 </li>
                 @endif
 
+                <!-- Common Features -->
+                <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
+                        <i class="fas fa-list-check"></i> أدوات
+                    </span>
+                </li>
+
+                <li>
+                    <a href="{{ route('tasks.index') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'tasks')) active @endif">
+                        <i class="fas fa-tasks"></i>
+                        <span>المهام</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{{ route('chat.index') }}" class="@if(Route::current()->getName() == 'chat.index') active @endif">
+                        <i class="fas fa-comments"></i>
+                        <span>المحادثة الجماعية</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a href="{{ route('my-activity.index') }}" class="@if(Route::current()->getName() == 'my-activity.index') active @endif">
+                        <i class="fas fa-user-clock"></i>
+                        <span>سجل نشاطي</span>
+                    </a>
+                </li>
+
+                @can('view_all_records')
+                <li>
+                    <a href="{{ route('activity-logs.index') }}" class="@if(Route::current()->getName() == 'activity-logs.index') active @endif">
+                        <i class="fas fa-history"></i>
+                        <span>سجل النشاط</span>
+                    </a>
+                </li>
+                @endcan
+
+                <!-- Administration Module -->
                 @can('manage_users')
-                <li style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
+                        <i class="fas fa-cog"></i> الإدارة
+                    </span>
+                </li>
+
+                <li>
                     <a href="{{ route('users.index') }}" class="@if(Route::current()->getName() == 'users.index') active @endif">
                         <i class="fas fa-users"></i>
                         <span>المستخدمون</span>
@@ -1070,6 +1109,14 @@
                 @endcan
 
                 @can('manage_settings')
+                @if(!auth()->user()->can('manage_users'))
+                <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
+                    <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
+                        <i class="fas fa-cog"></i> الإدارة
+                    </span>
+                </li>
+                @endif
+
                 <li>
                     <a href="{{ route('broadcasts.index') }}" class="@if(Route::current()->getName() == 'broadcasts.index') active @endif">
                         <i class="fas fa-bullhorn"></i>
