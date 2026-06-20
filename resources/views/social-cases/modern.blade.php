@@ -61,13 +61,15 @@
                         <table class="table table-hover mb-0 table-sm" id="casesTable">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width: 30%;"><i class="fas fa-user"></i> الاسم</th>
-                                    <th style="width: 15%;"><i class="fas fa-phone"></i> الهاتف</th>
-                                    <th style="width: 15%;"><i class="fas fa-user-tie"></i> الباحث</th>
-                                    <th style="width: 12%;"><i class="fas fa-hands-helping"></i> المساعدة</th>
+                                    <th style="width: 20%;"><i class="fas fa-user"></i> الاسم</th>
+                                    <th style="width: 12%;"><i class="fas fa-phone"></i> الهاتف</th>
+                                    <th style="width: 12%;"><i class="fas fa-user-tie"></i> الباحث</th>
+                                    <th style="width: 10%;"><i class="fas fa-hands-helping"></i> المساعدة</th>
                                     <th style="width: 10%;"><i class="fas fa-info-circle"></i> الحالة</th>
+                                    <th style="width: 10%;"><i class="fas fa-money-bill-wave"></i> المصروف</th>
+                                    <th style="width: 12%;"><i class="fas fa-calendar"></i> آخر صرف</th>
                                     <th style="width: 8%;"><i class="fas fa-users"></i> الأقارب</th>
-                                    <th style="width: 10%;">الإجراءات</th>
+                                    <th style="width: 6%;">الإجراءات</th>
                                 </tr>
                             </thead>
                         </table>
@@ -329,6 +331,32 @@
                     render: function(data) {
                         return data;
                     }
+                },
+                {
+                    data: 'total_spent',
+                    render: function(data) {
+                        if (data && data !== '0.00 ج.م') {
+                            return `<span style="background: #27ae6020; color: #27ae60; padding: 6px 10px; border-radius: 6px; font-weight: 600; display: inline-block;">
+                                        <i class="fas fa-money-bill-wave" style="margin-left: 4px;"></i>${data}
+                                    </span>`;
+                        }
+                        return '<span class="text-muted" style="font-size: 0.85rem;">لم يتم الصرف</span>';
+                    },
+                    orderable: false,
+                    searchable: false
+                },
+                {
+                    data: 'last_expense_date',
+                    render: function(data) {
+                        if (data && data !== '-') {
+                            return `<span style="background: #3498db20; color: #3498db; padding: 6px 10px; border-radius: 6px; font-weight: 500; display: inline-block;">
+                                        <i class="fas fa-clock" style="margin-left: 4px;"></i>${data}
+                                    </span>`;
+                        }
+                        return '<span class="text-muted" style="font-size: 0.85rem;">-</span>';
+                    },
+                    orderable: false,
+                    searchable: false
                 },
                 {
                     data: 'family_count',

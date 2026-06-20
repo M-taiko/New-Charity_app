@@ -379,12 +379,20 @@ class SocialCaseController extends Controller
 
     public function tableData()
     {
-        $cases = SocialCase::with(['researcher', 'familyMembers'])->get();
+        $cases = SocialCase::with(['researcher', 'familyMembers', 'expenses'])->get();
 
         return DataTables::of($cases)
             ->addColumn('researcher_name', fn($row) => $row->researcher->name)
             ->addColumn('status_label', fn($row) => $this->getStatusLabel($row->status))
             ->addColumn('family_count', fn($row) => $row->familyMembers->count())
+            ->addColumn('total_spent', fn($row) => number_format($row->expenses->sum('amount'), 2) . ' ج.م')
+            ->addColumn('last_expense_date', function($row) {
+                $lastExpense = $row->expenses->sortByDesc('created_at')->first();
+                if ($lastExpense) {
+                    return $lastExpense->created_at->format('Y-m-d H:i');
+                }
+                return '-';
+            })
             ->addColumn('is_active', fn($row) => $row->is_active)
             ->rawColumns(['status_label'])
             ->toJson();
