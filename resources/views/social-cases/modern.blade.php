@@ -224,22 +224,35 @@
 
     // Display family members modal
     function displayFamilyMembersModal(familyMembers, caseName) {
+        const statusLabels = {
+            'healthy': { label: 'سليم', color: '#27ae60', icon: 'fa-heart' },
+            'sick': { label: 'مريض', color: '#e74c3c', icon: 'fa-heartbeat' },
+            'disabled': { label: 'معاق', color: '#f39c12', icon: 'fa-wheelchair' },
+            'deceased': { label: 'متوفى', color: '#95a5a6', icon: 'fa-cross' },
+            'unknown': { label: 'غير معروف', color: '#34495e', icon: 'fa-question-circle' }
+        };
+
         let tableRows = '';
         if (familyMembers && familyMembers.length > 0) {
             familyMembers.forEach((member, index) => {
                 const gender = member.gender === 'male' ? '<i class="fas fa-male text-primary"></i> ذكر' : '<i class="fas fa-female text-danger"></i> أنثى';
+                const status = statusLabels[member.status] || statusLabels['unknown'];
+                const statusBadge = `<span style="background: ${status.color}20; color: ${status.color}; padding: 6px 10px; border-radius: 6px; font-weight: 500; display: inline-block;">
+                                    <i class="fas ${status.icon}" style="margin-left: 4px;"></i>${status.label}
+                                </span>`;
                 tableRows += `
                     <tr>
                         <td>${index + 1}</td>
                         <td><strong>${member.name}</strong></td>
                         <td><span class="badge bg-primary">${member.relationship}</span></td>
                         <td>${gender}</td>
+                        <td>${statusBadge}</td>
                         <td>${member.phone || '-'}</td>
                     </tr>
                 `;
             });
         } else {
-            tableRows = '<tr><td colspan="5" class="text-center">لا توجد بيانات</td></tr>';
+            tableRows = '<tr><td colspan="6" class="text-center">لا توجد بيانات</td></tr>';
         }
 
         const modalHtml = `
@@ -258,6 +271,7 @@
                                 <th>الاسم</th>
                                 <th>صلة القرابة</th>
                                 <th>النوع</th>
+                                <th><i class="fas fa-heart"></i> الحالة الصحية</th>
                                 <th>رقم الهاتف</th>
                             </tr>
                         </thead>

@@ -15,6 +15,7 @@ class FamilyMember extends Model
         'relationship',
         'gender',
         'phone',
+        'status',
     ];
 
     protected $casts = [
