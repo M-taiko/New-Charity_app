@@ -1,6 +1,22 @@
 @extends('layouts.modern')
 
 @section('content')
+@if(!auth()->user()->hasRole('محاسب') && !auth()->user()->hasRole('مدير'))
+    <div class="container-fluid">
+        <div class="row mt-5">
+            <div class="col-12 text-center">
+                <div style="padding: 3rem;">
+                    <i class="fas fa-lock fa-5x mb-3 d-block" style="color: #ccc;"></i>
+                    <h2 style="color: #666; margin-bottom: 1rem;">الوصول مرفوض</h2>
+                    <p style="color: #999; margin-bottom: 2rem;">هذه الصفحة متاحة فقط للمحاسب والمدير</p>
+                    <a href="{{ route('dashboard') }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-right"></i> العودة للداشبورد
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+@else
 <div class="container-fluid">
     <!-- Header -->
     <div class="row mb-4" data-aos="fade-down">
@@ -252,4 +268,5 @@
         });
     }
 </script>
+@endif
 @endsection
