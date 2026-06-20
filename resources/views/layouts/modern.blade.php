@@ -927,6 +927,43 @@
                 </li>
                 @endrole
 
+                <!-- Reports & Analytics Sub-Section Under Accounting -->
+                @can('view_reports')
+                <li style="margin-top:1rem;padding-top:0.5rem;border-top:1px solid rgba(255,255,255,0.05);">
+                    <span style="font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.3);padding:0 1rem;display:block;margin-bottom:.5rem;margin-top:.5rem;">
+                        التقارير والإحصائيات
+                    </span>
+                </li>
+
+                <li>
+                    <a href="{{ route('reports.dashboard') }}" class="@if(Route::current()->getName() == 'reports.dashboard') active @endif">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>التقارير</span>
+                    </a>
+                </li>
+                @endcan
+
+                @can('manage_treasury')
+                <li>
+                    <a href="{{ route('analytics.researcher') }}" class="@if(Route::current()->getName() == 'analytics.researcher') active @endif">
+                        <i class="fas fa-chart-line"></i>
+                        <span>إحصائيات الباحثين</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('reports.agents-balance') }}" class="@if(Route::current()->getName() == 'reports.agents-balance') active @endif">
+                        <i class="fas fa-wallet"></i>
+                        <span>رصيد المندوبين</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ route('reports.categories-analytics') }}" class="@if(Route::current()->getName() == 'reports.categories-analytics') active @endif">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>تحليل التوجيهات</span>
+                    </a>
+                </li>
+                @endcan
+
                 <!-- Social Cases Module -->
                 <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
                     <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
@@ -974,43 +1011,6 @@
                     <a href="{{ route('suppliers.index') }}" class="@if(Route::current()->getName() == 'suppliers.index') active @endif">
                         <i class="fas fa-truck"></i>
                         <span>الموردون</span>
-                    </a>
-                </li>
-                @endcan
-
-                <!-- Reports & Analytics Module -->
-                @can('view_reports')
-                <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
-                    <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
-                        <i class="fas fa-chart-bar"></i> التقارير والإحصائيات
-                    </span>
-                </li>
-
-                <li>
-                    <a href="{{ route('reports.dashboard') }}" class="@if(Route::current()->getName() == 'reports.dashboard') active @endif">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>التقارير</span>
-                    </a>
-                </li>
-                @endcan
-
-                @can('manage_treasury')
-                <li>
-                    <a href="{{ route('analytics.researcher') }}" class="@if(Route::current()->getName() == 'analytics.researcher') active @endif">
-                        <i class="fas fa-chart-line"></i>
-                        <span>إحصائيات الباحثين</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ route('reports.agents-balance') }}" class="@if(Route::current()->getName() == 'reports.agents-balance') active @endif">
-                        <i class="fas fa-wallet"></i>
-                        <span>رصيد المندوبين</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ route('reports.categories-analytics') }}" class="@if(Route::current()->getName() == 'reports.categories-analytics') active @endif">
-                        <i class="fas fa-chart-pie"></i>
-                        <span>تحليل التوجيهات</span>
                     </a>
                 </li>
                 @endcan
