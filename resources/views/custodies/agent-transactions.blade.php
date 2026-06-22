@@ -218,6 +218,29 @@
     </div>
 </div>
 
+@push('styles')
+<style>
+    /* Fix DataTable width issues */
+    .dataTables_wrapper {
+        width: 100% !important;
+    }
+
+    #allTransactionsTable,
+    #expensesTable,
+    #returnedTable,
+    #transfersTable {
+        width: 100% !important;
+    }
+
+    #allTransactionsTable thead th,
+    #expensesTable thead th,
+    #returnedTable thead th,
+    #transfersTable thead th {
+        width: auto !important;
+    }
+</style>
+@endpush
+
 @push('scripts')
 <script>
     $(document).ready(function() {
@@ -225,6 +248,7 @@
         $('#allTransactionsTable').DataTable({
             processing: true,
             serverSide: true,
+            autoWidth: false,
             ajax: '{{ route("api.agent.transactions") }}',
             columns: [
                 {
@@ -297,6 +321,7 @@
         $('#expensesTable').DataTable({
             processing: true,
             serverSide: true,
+            autoWidth: false,
             ajax: '{{ route("api.agent-expenses.data") }}',
             columns: [
                 {
@@ -337,6 +362,7 @@
         $('#returnedTable').DataTable({
             processing: true,
             serverSide: true,
+            autoWidth: false,
             ajax: '{{ route("api.agent.returned") }}',
             columns: [
                 {
@@ -369,6 +395,7 @@
         $('#transfersTable').DataTable({
             processing: true,
             serverSide: true,
+            autoWidth: false,
             ajax: '{{ route("api.agent.transfers") }}',
             columns: [
                 {
