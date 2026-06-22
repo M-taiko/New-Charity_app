@@ -434,6 +434,15 @@ class ExpenseController extends Controller
             ->get();
 
         return DataTables::of($expenses)
+            ->addColumn('type_label', function($row) {
+                if ($row->is_quick_expense) {
+                    return 'مصروف سريع';
+                } elseif ($row->social_case_id) {
+                    return 'حالة اجتماعية';
+                } else {
+                    return 'مصروف عام';
+                }
+            })
             ->addColumn('category_path', function($row) {
                 if (!$row->item) {
                     $category = $row->category;
