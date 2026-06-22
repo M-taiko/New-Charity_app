@@ -928,7 +928,7 @@
                 @endrole
 
                 <!-- Reports & Analytics Sub-Section Under Accounting (Manager & Accountant Only) -->
-                @if(auth()->user()->hasRole('مدير') || auth()->user()->hasRole('محاسب'))
+                @if(auth()->check() && (auth()->user()->hasRole('مدير') || auth()->user()->hasRole('محاسب')))
                 <li style="margin-top:1rem;padding-top:0.5rem;border-top:1px solid rgba(255,255,255,0.05);">
                     <span style="font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.3);padding:0 1rem;display:block;margin-bottom:.5rem;margin-top:.5rem;">
                         التقارير والإحصائيات
@@ -1014,7 +1014,7 @@
                 @endcan
 
                 <!-- Human Resources Module -->
-                @if(auth()->user()->hasRole('مدير') || auth()->user()->hasRole('محاسب'))
+                @if(auth()->check() && (auth()->user()->hasRole('مدير') || auth()->user()->hasRole('محاسب')))
                 <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
                     <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
                         <i class="fas fa-building"></i> الموارد البشرية
@@ -1107,7 +1107,7 @@
                 @endcan
 
                 @can('manage_settings')
-                @if(!auth()->user()->can('manage_users'))
+                @if(auth()->check() && !auth()->user()->can('manage_users'))
                 <li style="margin-top:1.5rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,0.1);">
                     <span style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:rgba(255,255,255,.4);padding:0 1rem;display:block;margin-bottom:.5rem;">
                         <i class="fas fa-cog"></i> الإدارة
