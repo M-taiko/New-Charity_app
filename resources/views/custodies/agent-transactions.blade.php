@@ -239,7 +239,15 @@
                         let typeLabel = {
                             'custody_out': 'عهدة مستلمة',
                             'expense': 'مصروف',
-                            'custody_return': 'مبلغ مردود'
+                            'custody_return': 'مبلغ مردود',
+                            'custody_transfer_in': 'تحويل واصل',
+                            'custody_transfer_out': 'تحويل مرسل',
+                            'transfer_in': 'تحويل واصل',
+                            'transfer_out': 'تحويل مرسل',
+                            'donation': 'تبرع',
+                            'custody_close': 'إغلاق عهدة',
+                            'purchase_request': 'طلب شراء',
+                            'recovery': 'استرجاع'
                         };
                         return typeLabel[data] || data;
                     }
@@ -247,7 +255,14 @@
                 {
                     data: 'amount',
                     render: function(data, type, row) {
-                        let color = row.type === 'custody_out' ? 'var(--success)' : row.type === 'expense' ? 'var(--danger)' : 'var(--warning)';
+                        let color = 'var(--text)';
+                        if (row.type === 'custody_out' || row.type === 'donation' || row.type === 'recovery' || row.type === 'transfer_in' || row.type === 'custody_transfer_in') {
+                            color = 'var(--success)'; // دخول
+                        } else if (row.type === 'expense' || row.type === 'transfer_out' || row.type === 'custody_transfer_out') {
+                            color = 'var(--danger)'; // خروج
+                        } else if (row.type === 'custody_return') {
+                            color = 'var(--warning)'; // رد
+                        }
                         return `<strong style="color: ${color};">${parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ج.م</strong>`;
                     }
                 },
@@ -258,9 +273,17 @@
                         let status = {
                             'custody_out': '<span class="badge bg-success">دخول</span>',
                             'expense': '<span class="badge bg-danger">خروج</span>',
-                            'custody_return': '<span class="badge bg-warning">رد</span>'
+                            'custody_return': '<span class="badge bg-warning">رد</span>',
+                            'custody_transfer_in': '<span class="badge bg-info">تحويل واصل</span>',
+                            'custody_transfer_out': '<span class="badge bg-secondary">تحويل مرسل</span>',
+                            'transfer_in': '<span class="badge bg-info">تحويل واصل</span>',
+                            'transfer_out': '<span class="badge bg-secondary">تحويل مرسل</span>',
+                            'donation': '<span class="badge bg-success">تبرع</span>',
+                            'custody_close': '<span class="badge bg-dark">إغلاق</span>',
+                            'purchase_request': '<span class="badge bg-primary">شراء</span>',
+                            'recovery': '<span class="badge bg-success">استرجاع</span>'
                         };
-                        return status[data] || data;
+                        return status[data] || `<span class="badge bg-secondary">${data}</span>`;
                     }
                 }
             ],
