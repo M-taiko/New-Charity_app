@@ -336,7 +336,7 @@
                         };
                         const type = types[data] || types['other'];
                         return `<span style="background: ${type.color}20; color: ${type.color}; padding: 6px 10px; border-radius: 20px; font-weight: 500;">
-                                    <i class="fas ${type.icon}" style="margin-left: 4px;"></i>${type.label}
+                                    <i class="fas ${type.icon}" style="margin-left: 4px; font-size: 0.9rem;"></i>${type.label}
                                 </span>`;
                     }
                 },
