@@ -521,6 +521,12 @@ class ReportController extends Controller
             $rootExpenses = $getExpensesForCategory($root->id);
             $rootTotal = $rootExpenses->sum('amount');
 
+            // Get the last user who approved an expense in this category
+            $lastReviewer = $rootExpenses
+                ->where('reviewed_by_id', '!=', null)
+                ->sortByDesc('reviewed_at')
+                ->first()?->reviewed_by_user?->name;
+
             $rootData = [
                 'id' => $root->id,
                 'name' => $root->name,
@@ -529,6 +535,7 @@ class ReportController extends Controller
                 'total_amount' => $rootTotal,
                 'expense_count' => $rootExpenses->count(),
                 'average_amount' => $rootExpenses->count() > 0 ? $rootExpenses->avg('amount') : 0,
+                'reviewed_by' => $lastReviewer,
             ];
             $allData->push($rootData);
             $categoriesData->push($rootData);
@@ -537,6 +544,12 @@ class ReportController extends Controller
             foreach ($root->children as $level2) {
                 $level2Expenses = $getExpensesForCategory($level2->id);
                 $level2Total = $level2Expenses->sum('amount');
+
+                // Get the last reviewer for this level
+                $level2Reviewer = $level2Expenses
+                    ->where('reviewed_by_id', '!=', null)
+                    ->sortByDesc('reviewed_at')
+                    ->first()?->reviewed_by_user?->name;
 
                 $level2Data = [
                     'id' => $level2->id,
@@ -547,6 +560,7 @@ class ReportController extends Controller
                     'total_amount' => $level2Total,
                     'expense_count' => $level2Expenses->count(),
                     'average_amount' => $level2Expenses->count() > 0 ? $level2Expenses->avg('amount') : 0,
+                    'reviewed_by' => $level2Reviewer,
                 ];
                 $allData->push($level2Data);
 
@@ -554,6 +568,12 @@ class ReportController extends Controller
                 foreach ($level2->children as $level3) {
                     $level3Expenses = $getExpensesForCategory($level3->id);
                     $level3Total = $level3Expenses->sum('amount');
+
+                    // Get the last reviewer for this level
+                    $level3Reviewer = $level3Expenses
+                        ->where('reviewed_by_id', '!=', null)
+                        ->sortByDesc('reviewed_at')
+                        ->first()?->reviewed_by_user?->name;
 
                     $level3Data = [
                         'id' => $level3->id,
@@ -564,6 +584,7 @@ class ReportController extends Controller
                         'total_amount' => $level3Total,
                         'expense_count' => $level3Expenses->count(),
                         'average_amount' => $level3Expenses->count() > 0 ? $level3Expenses->avg('amount') : 0,
+                        'reviewed_by' => $level3Reviewer,
                     ];
                     $allData->push($level3Data);
                 }
@@ -577,6 +598,12 @@ class ReportController extends Controller
 
                     $itemTotal = $itemExpenses->sum('amount');
                     if ($itemTotal > 0) {
+                        // Get the last reviewer for this item
+                        $itemReviewer = $itemExpenses
+                            ->where('reviewed_by_id', '!=', null)
+                            ->sortByDesc('reviewed_at')
+                            ->first()?->reviewed_by_user?->name;
+
                         $allData->push([
                             'id' => $item->id,
                             'name' => $item->name,
@@ -586,6 +613,7 @@ class ReportController extends Controller
                             'total_amount' => $itemTotal,
                             'expense_count' => $itemExpenses->count(),
                             'average_amount' => $itemExpenses->count() > 0 ? $itemExpenses->avg('amount') : 0,
+                            'reviewed_by' => $itemReviewer,
                         ]);
                     }
                 }
@@ -600,6 +628,12 @@ class ReportController extends Controller
 
                 $itemTotal = $itemExpenses->sum('amount');
                 if ($itemTotal > 0) {
+                    // Get the last reviewer for this item
+                    $itemReviewer = $itemExpenses
+                        ->where('reviewed_by_id', '!=', null)
+                        ->sortByDesc('reviewed_at')
+                        ->first()?->reviewed_by_user?->name;
+
                     $allData->push([
                         'id' => $item->id,
                         'name' => $item->name,
@@ -609,6 +643,7 @@ class ReportController extends Controller
                         'total_amount' => $itemTotal,
                         'expense_count' => $itemExpenses->count(),
                         'average_amount' => $itemExpenses->count() > 0 ? $itemExpenses->avg('amount') : 0,
+                        'reviewed_by' => $itemReviewer,
                     ]);
                 }
             }

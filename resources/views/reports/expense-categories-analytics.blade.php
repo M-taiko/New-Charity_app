@@ -179,6 +179,7 @@
                                 <th style="padding: 1rem; text-align: center;">إجمالي المصروفات</th>
                                 <th style="padding: 1rem; text-align: center;">عدد العمليات</th>
                                 <th style="padding: 1rem; text-align: center;">المتوسط</th>
+                                <th style="padding: 1rem; text-align: center;">المعتمد من قبل</th>
                                 <th style="padding: 1rem; text-align: center;">النسبة</th>
                             </tr>
                         </thead>
@@ -209,6 +210,17 @@
                                 <td style="padding: 1rem; text-align: center;">{{ $data['expense_count'] }}</td>
                                 <td style="padding: 1rem; text-align: center;">{{ number_format($data['average_amount'], 2) }} ج.م</td>
                                 <td style="padding: 1rem; text-align: center;">
+                                    @if($data['reviewed_by'])
+                                        <small class="badge bg-success">
+                                            <i class="fas fa-check-circle"></i> {{ $data['reviewed_by'] }}
+                                        </small>
+                                    @else
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock"></i> قيد المراجعة
+                                        </small>
+                                    @endif
+                                </td>
+                                <td style="padding: 1rem; text-align: center;">
                                     <span class="badge" style="background: rgba(103, 126, 234, 0.2); color: #667eea;">
                                         {{ $data['percentage'] }}%
                                     </span>
@@ -216,7 +228,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="6" style="padding: 2rem; text-align: center; color: #999;">
+                                <td colspan="7" style="padding: 2rem; text-align: center; color: #999;">
                                     <i class="fas fa-chart-line fa-3x mb-2 d-block" style="opacity: 0.2;"></i>
                                     لا توجد بيانات للعرض
                                 </td>
