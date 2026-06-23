@@ -494,20 +494,19 @@ class ReportController extends Controller
             })->get();
         };
 
+        // Get category name if filtering
+        $selectedCategory = null;
+
         // Get all roots with their hierarchy (or specific category if filtered)
         $query = ExpenseCategory::active()->with('children.children.items', 'items')->ordered();
 
         if ($categoryId) {
             // If specific category is selected, show that category and its descendants
-            $roots = $query->where('id', $categoryId)->orWhere('parent_id', $categoryId)->get();
-            if ($roots->isEmpty()) {
-                // If not found at root level, fetch by ID (could be level 2 or 3)
-                $category = ExpenseCategory::find($categoryId);
-                if ($category) {
-                    $roots = collect([$category]);
-                } else {
-                    $roots = collect([]);
-                }
+            $selectedCategory = ExpenseCategory::find($categoryId);
+            if ($selectedCategory) {
+                $roots = collect([$selectedCategory]);
+            } else {
+                $roots = collect([]);
             }
         } else {
             // Get all roots (no filtering)
@@ -631,7 +630,8 @@ class ReportController extends Controller
             'dateFrom',
             'dateTo',
             'grandTotal',
-            'categoryId'
+            'categoryId',
+            'selectedCategory'
         ));
     }
 }

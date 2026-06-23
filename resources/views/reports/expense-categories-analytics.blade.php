@@ -22,9 +22,27 @@
     <div class="row mb-4" data-aos="fade-down">
         <div class="col-12">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <h1 style="margin:0; font-size:2rem; font-weight:700;">
-                    <i class="fas fa-chart-bar"></i> تحليل التوجيهات المحاسبية
-                </h1>
+                <div>
+                    <h1 style="margin:0; font-size:2rem; font-weight:700;">
+                        <i class="fas fa-chart-bar"></i>
+                        @if($selectedCategory)
+                            تحليل {{ $selectedCategory->name }}
+                        @else
+                            تحليل التوجيهات المحاسبية
+                        @endif
+                    </h1>
+                    @if($selectedCategory)
+                        <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.95rem;">
+                            <span class="badge bg-primary">{{ $selectedCategory->code }}</span>
+                            إجمالي المصروف: <strong style="color: #27ae60;">{{ number_format($grandTotal, 2) }} ج.م</strong>
+                        </p>
+                    @endif
+                </div>
+                @if($selectedCategory)
+                    <a href="{{ route('reports.categories-analytics') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> عودة
+                    </a>
+                @endif
             </div>
         </div>
     </div>
@@ -232,6 +250,14 @@
         console.log('Labels:', labels);
         console.log('Amounts:', amounts);
 
+        // Only show charts if we have data
+        if (labels.length === 0) {
+            console.warn('No chart data - hiding charts');
+            document.getElementById('expenseDistributionChart')?.parentElement?.parentElement?.style.display = 'none';
+            document.getElementById('expenseAmountChart')?.parentElement?.parentElement?.style.display = 'none';
+            return;
+        }
+
         // Distribution Chart (Doughnut)
         const ctx1 = document.getElementById('expenseDistributionChart');
         if (!ctx1) {
@@ -240,14 +266,16 @@
         }
 
         new Chart(ctx1, {
-            type: 'doughnut',
+            type: chartData.length === 1 ? 'bar' : 'doughnut',  // Use bar for single item
             data: {
                 labels: labels,
                 datasets: [{
+                    label: 'المبلغ المصروف (ج.م)',
                     data: amounts,
                     backgroundColor: colors.slice(0, labels.length),
                     borderColor: 'white',
-                    borderWidth: 2
+                    borderWidth: 2,
+                    borderRadius: chartData.length === 1 ? 6 : 0
                 }]
             },
             options: {
@@ -258,7 +286,10 @@
                         position: 'bottom',
                         labels: { font: { family: "'Cairo', sans-serif", size: 11 } }
                     }
-                }
+                },
+                scales: chartData.length === 1 ? {
+                    y: { beginAtZero: true }
+                } : undefined
             }
         });
 
