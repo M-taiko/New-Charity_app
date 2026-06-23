@@ -1067,19 +1067,24 @@ function updateCustodySummary() {
 
         count++;
 
-        // Extract values from cells
-        const amountCell = row.querySelector('td:nth-child(4)').textContent;
-        const spentCell = row.querySelector('td:nth-child(5)').textContent;
-        const remainingCell = row.querySelector('td:nth-child(7)').textContent;
+        // Extract values from cells (1-indexed: # / المندوب / التاريخ / المبلغ / المصروف / المرتجع / المتبقي / الحالة / الإجراءات)
+        const cells = row.querySelectorAll('td');
+
+        // Cell indices: 0=# | 1=المندوب | 2=التاريخ | 3=المبلغ | 4=المصروف | 5=المرتجع | 6=المتبقي | 7=الحالة | 8=الإجراءات
+        const amountCell = cells[3]?.textContent || '0';
+        const spentCell = cells[4]?.textContent || '0';
+        const returnedCell = cells[5]?.textContent || '0';
+        const remainingCell = cells[6]?.textContent || '0';
 
         // Parse numbers (remove "ج.م" and extra spaces)
-        const amount = parseFloat(amountCell.replace('ج.م', '').trim());
-        const spent = parseFloat(spentCell.replace('ج.م', '').trim());
-        const remaining = parseFloat(remainingCell.replace('ج.م', '').trim());
+        const amount = parseFloat(amountCell.replace('ج.م', '').replace(/,/g, '').trim()) || 0;
+        const spent = parseFloat(spentCell.replace('ج.م', '').replace(/,/g, '').trim()) || 0;
+        const returned = parseFloat(returnedCell.replace('ج.م', '').replace(/,/g, '').trim()) || 0;
+        const remaining = parseFloat(remainingCell.replace('ج.م', '').replace(/,/g, '').trim()) || 0;
 
-        totalAmount += amount || 0;
-        totalSpent += spent || 0;
-        totalRemaining += remaining || 0;
+        totalAmount += amount;
+        totalSpent += spent;
+        totalRemaining += remaining;
     });
 
     // Update summary cards
