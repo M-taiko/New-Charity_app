@@ -92,11 +92,62 @@ class ReportController extends Controller
                 $amount = Expense::whereDate('created_at', $date)->sum('amount');
                 $expensesByDate->push([
                     'date' => now()->subDays($i)->format('d-m'),
+                    'fullDate' => now()->subDays($i)->format('Y-m-d'),
                     'amount' => $amount,
                 ]);
             }
         } catch (\Exception $e) {
             $expensesByDate = collect([]);
+        }
+
+        // Custodies by agents (top 10)
+        try {
+            $custodiesByAgents = Custody::with('agent')
+                ->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
+                ->get()
+                ->groupBy('agent_id')
+                ->map(function($custodies) {
+                    $agent = $custodies->first()?->agent;
+                    return [
+                        'agent_id' => $agent?->id,
+                        'agent_name' => $agent?->name ?? 'غير معروف',
+                        'amount' => $custodies->sum('amount'),
+                        'spent' => $custodies->sum('spent'),
+                        'remaining' => $custodies->sum(fn($c) => $c->getRemainingBalance()),
+                        'count' => $custodies->count(),
+                    ];
+                })
+                ->sortByDesc('amount')
+                ->take(10)
+                ->values();
+        } catch (\Exception $e) {
+            $custodiesByAgents = collect([]);
+        }
+
+        // Social cases by researchers (top 10)
+        try {
+            $casesByResearchers = SocialCase::with('researcher')
+                ->where('status', 'approved')
+                ->get()
+                ->groupBy('researcher_id')
+                ->map(function($cases) {
+                    $researcher = $cases->first()?->researcher;
+                    $spent = Expense::where('type', 'social_case')
+                        ->whereIn('social_case_id', $cases->pluck('id')->toArray())
+                        ->sum('amount');
+                    return [
+                        'researcher_id' => $researcher?->id,
+                        'researcher_name' => $researcher?->name ?? 'غير معروف',
+                        'cases_count' => $cases->count(),
+                        'spent' => $spent,
+                        'avg_spent' => $cases->count() > 0 ? $spent / $cases->count() : 0,
+                    ];
+                })
+                ->sortByDesc('spent')
+                ->take(10)
+                ->values();
+        } catch (\Exception $e) {
+            $casesByResearchers = collect([]);
         }
 
         // Agents statistics
@@ -131,7 +182,9 @@ class ReportController extends Controller
             'expensesByCategory',
             'expensesByDate',
             'agentsWithCustodies',
-            'averageCustodyAmount'
+            'averageCustodyAmount',
+            'custodiesByAgents',
+            'casesByResearchers'
         ));
     }
 

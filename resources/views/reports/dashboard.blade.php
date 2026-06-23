@@ -102,6 +102,41 @@
         </div>
     </div>
 
+    <!-- Custodies and Cases Charts -->
+    <div class="row g-4 mb-4">
+        <!-- Custodies by Agents Chart -->
+        <div class="col-12 col-lg-6" data-aos="fade-up" data-aos-delay="600">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-hand-holding-heart"></i> العهدات حسب المندوبين
+                    </h5>
+                </div>
+                <div class="card-body p-3">
+                    <div style="position: relative; height: 300px;">
+                        <canvas id="custodiesByAgentsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cases by Researchers Chart -->
+        <div class="col-12 col-lg-6" data-aos="fade-up" data-aos-delay="700">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-people-group"></i> الحالات حسب الباحثين
+                    </h5>
+                </div>
+                <div class="card-body p-3">
+                    <div style="position: relative; height: 300px;">
+                        <canvas id="casesByResearchersChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Detailed Reports Section -->
     <div class="row g-4">
         <!-- Custody Report -->
@@ -299,6 +334,7 @@
         const dateChartData = @json($expensesByDate);
         const dateLabels = dateChartData.map(d => d.date);
         const dateAmounts = dateChartData.map(d => d.amount);
+        const dateFullDates = dateChartData.map(d => d.fullDate);
 
         new Chart(document.getElementById('expensesByDateChart'), {
             type: 'line',
@@ -321,6 +357,15 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                onClick: function(event, elements) {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const date = dateFullDates[index];
+                        if (date) {
+                            window.location.href = `{{ route('expenses.index') }}?date=${date}`;
+                        }
+                    }
+                },
                 plugins: {
                     legend: {
                         display: true,
@@ -332,6 +377,9 @@
                 }
             }
         });
+
+        // Change cursor for date chart
+        document.getElementById('expensesByDateChart').style.cursor = 'pointer';
 
         // Expenses by Category Chart
         const categoryChartData = @json($expensesByCategory);
@@ -376,6 +424,113 @@
 
         // Change cursor on hover
         document.getElementById('expensesByCategoryChart').style.cursor = 'pointer';
+
+        // Custodies by Agents Chart
+        const agentsData = @json($custodiesByAgents);
+        const agentLabels = agentsData.map(d => d.agent_name);
+        const agentAmounts = agentsData.map(d => d.amount);
+        const agentIds = agentsData.map(d => d.agent_id);
+
+        new Chart(document.getElementById('custodiesByAgentsChart'), {
+            type: 'bar',
+            data: {
+                labels: agentLabels,
+                datasets: [{
+                    label: 'إجمالي العهدات (ج.م)',
+                    data: agentAmounts,
+                    backgroundColor: '#f093fb',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                onClick: function(event, elements) {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const agentId = agentIds[index];
+                        if (agentId) {
+                            window.location.href = `{{ route('accountant.all-custodies') }}?agent_filter=${agentId}`;
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { beginAtZero: true }
+                }
+            }
+        });
+
+        document.getElementById('custodiesByAgentsChart').style.cursor = 'pointer';
+
+        // Cases by Researchers Chart
+        const researchersData = @json($casesByResearchers);
+        const researcherLabels = researchersData.map(d => d.researcher_name);
+        const researcherCounts = researchersData.map(d => d.cases_count);
+        const researcherSpent = researchersData.map(d => d.spent);
+        const researcherIds = researchersData.map(d => d.researcher_id);
+
+        new Chart(document.getElementById('casesByResearchersChart'), {
+            type: 'bar',
+            data: {
+                labels: researcherLabels,
+                datasets: [
+                    {
+                        label: 'عدد الحالات',
+                        data: researcherCounts,
+                        backgroundColor: '#4facfe',
+                        borderRadius: 6,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'المبلغ المصروف (ج.م)',
+                        data: researcherSpent,
+                        backgroundColor: '#00f2fe',
+                        borderRadius: 6,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                onClick: function(event, elements) {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const researcherId = researcherIds[index];
+                        if (researcherId) {
+                            window.location.href = `{{ route('social_cases.index') }}?researcher_id=${researcherId}`;
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { font: { family: "'Cairo', sans-serif" } }
+                    }
+                },
+                scales: {
+                    x: { beginAtZero: true },
+                    y: {
+                        type: 'linear',
+                        position: 'left',
+                        title: { display: true, text: 'العدد' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        position: 'right',
+                        title: { display: true, text: 'المبلغ (ج.م)' },
+                        grid: { drawOnChartArea: false }
+                    }
+                }
+            }
+        });
+
+        document.getElementById('casesByResearchersChart').style.cursor = 'pointer';
     });
 </script>
 @endpush
