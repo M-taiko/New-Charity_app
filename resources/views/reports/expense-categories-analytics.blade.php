@@ -233,7 +233,9 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        const chartData = @json($allData->sortByDesc('total_amount')->take(10));
+        try {
+            const allDataRaw = @json($allData);
+            const chartData = allDataRaw ? allDataRaw.sort((a, b) => parseFloat(b.total_amount) - parseFloat(a.total_amount)).slice(0, 10) : [];
 
         if (!chartData || chartData.length === 0) {
             console.warn('No chart data available');
@@ -337,7 +339,7 @@
         });
 
         // Levels Comparison Chart
-        const allChartData = @json($allData);
+        const allChartData = allDataRaw || [];
         const levelGroups = {
             'م1': allChartData.filter(d => d.level == 1),
             'م2': allChartData.filter(d => d.level == 2),
@@ -415,6 +417,11 @@
                     }
                 }
             });
+        }
+        } catch (error) {
+            console.error('Chart initialization error:', error);
+            console.error('Error details:', error.message);
+            console.error('Stack:', error.stack);
         }
     });
 </script>
