@@ -203,14 +203,29 @@
     $(document).ready(function() {
         const chartData = @json($allData->sortByDesc('total_amount')->take(10));
 
+        if (!chartData || chartData.length === 0) {
+            console.warn('No chart data available');
+            return;
+        }
+
         const labels = chartData.map(d => d.name);
         const amounts = chartData.map(d => parseFloat(d.total_amount));
         const colors = [
             '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140'
         ];
 
+        console.log('Chart Data:', chartData);
+        console.log('Labels:', labels);
+        console.log('Amounts:', amounts);
+
         // Distribution Chart (Doughnut)
-        new Chart(document.getElementById('expenseDistributionChart'), {
+        const ctx1 = document.getElementById('expenseDistributionChart');
+        if (!ctx1) {
+            console.error('expenseDistributionChart element not found');
+            return;
+        }
+
+        new Chart(ctx1, {
             type: 'doughnut',
             data: {
                 labels: labels,
@@ -234,7 +249,13 @@
         });
 
         // Amount Chart (Bar)
-        new Chart(document.getElementById('expenseAmountChart'), {
+        const ctx2 = document.getElementById('expenseAmountChart');
+        if (!ctx2) {
+            console.error('expenseAmountChart element not found');
+            return;
+        }
+
+        new Chart(ctx2, {
             type: 'bar',
             data: {
                 labels: labels,

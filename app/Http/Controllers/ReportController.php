@@ -414,14 +414,14 @@ class ReportController extends Controller
         }
 
         // Filter out zero amounts
-        $allData = $allData->filter(fn($d) => $d['total_amount'] > 0);
+        $allData = $allData->filter(fn($d) => $d['total_amount'] > 0)->values();
 
         // Calculate grand total and percentages
         $grandTotal = $allData->sum('total_amount');
         $allData = $allData->map(function($data) use ($grandTotal) {
             $data['percentage'] = $grandTotal > 0 ? round(($data['total_amount'] / $grandTotal) * 100, 2) : 0;
             return $data;
-        });
+        })->values();
 
         return view('reports.expense-categories-analytics', compact(
             'allData',
