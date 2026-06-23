@@ -72,6 +72,9 @@
         </div>
     </div>
 
+    <!-- Hidden data container for JavaScript -->
+    <div id="chart-data" style="display: none;" data-all-data="{{ base64_encode(json_encode($allData)) }}"></div>
+
     <!-- Summary Statistics -->
     <div class="row mb-4 g-3">
         <div class="col-12 col-sm-6 col-lg-3">
@@ -234,8 +237,23 @@
 <script>
     $(document).ready(function() {
         try {
-            const allDataRaw = @json($allData);
-            const chartData = allDataRaw ? allDataRaw.sort((a, b) => parseFloat(b.total_amount) - parseFloat(a.total_amount)).slice(0, 10) : [];
+            // Get data from data attribute
+            const encodedData = document.getElementById('chart-data')?.dataset.allData;
+            let allDataRaw = [];
+
+            if (encodedData) {
+                try {
+                    const decodedJson = atob(encodedData);
+                    allDataRaw = JSON.parse(decodedJson);
+                } catch (e) {
+                    console.error('Failed to decode chart data:', e);
+                    allDataRaw = [];
+                }
+            }
+
+            const chartData = allDataRaw && allDataRaw.length > 0 ?
+                allDataRaw.sort((a, b) => parseFloat(b.total_amount) - parseFloat(a.total_amount)).slice(0, 10)
+                : [];
 
         if (!chartData || chartData.length === 0) {
             console.warn('No chart data available');
