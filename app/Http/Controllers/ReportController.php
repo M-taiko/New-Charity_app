@@ -293,47 +293,138 @@ class ReportController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
-        // Get all expense categories with their items and expenses
-        $query = ExpenseCategory::roots()->active()->with('children', 'items');
-
-        $categoriesData = $query->ordered()->get()->map(function ($category) use ($dateFrom, $dateTo) {
-            $expensesQuery = Expense::where('expense_category_id', $category->id);
+        // Helper function to calculate expenses for a category and get all child items
+        $getExpensesForCategory = function($categoryId) use ($dateFrom, $dateTo) {
+            $query = Expense::query();
 
             if ($dateFrom) {
-                $expensesQuery->whereDate('created_at', '>=', $dateFrom);
+                $query->whereDate('created_at', '>=', $dateFrom);
             }
-
             if ($dateTo) {
-                $expensesQuery->whereDate('created_at', '<=', $dateTo);
+                $query->whereDate('created_at', '<=', $dateTo);
             }
 
-            $expenses = $expensesQuery->get();
-            $totalAmount = $expenses->sum('amount');
+            return $query->where(function($q) use ($categoryId) {
+                $q->where('expense_category_id', $categoryId);
+            })->get();
+        };
 
-            return [
-                'category' => $category,
-                'total_amount' => $totalAmount,
-                'expense_count' => $expenses->count(),
-                'average_amount' => $expenses->count() > 0 ? $expenses->avg('amount') : 0,
-                'percentage' => 0, // Will be calculated after
+        // Get all roots with their hierarchy
+        $roots = ExpenseCategory::roots()->active()->with('children.children.items', 'items')->ordered()->get();
+
+        // Process all data hierarchically
+        $allData = collect(); // All items for charts
+        $categoriesData = collect(); // Root categories only
+
+        foreach ($roots as $root) {
+            $rootExpenses = $getExpensesForCategory($root->id);
+            $rootTotal = $rootExpenses->sum('amount');
+
+            $rootData = [
+                'id' => $root->id,
+                'name' => $root->name,
+                'level' => 1,
+                'code' => $root->code,
+                'total_amount' => $rootTotal,
+                'expense_count' => $rootExpenses->count(),
+                'average_amount' => $rootExpenses->count() > 0 ? $rootExpenses->avg('amount') : 0,
             ];
-        });
+            $allData->push($rootData);
+            $categoriesData->push($rootData);
 
-        // Calculate percentages
-        $grandTotal = $categoriesData->sum('total_amount');
-        if ($grandTotal > 0) {
-            $categoriesData = $categoriesData->map(function ($data) use ($grandTotal) {
-                $data['percentage'] = round(($data['total_amount'] / $grandTotal) * 100, 2);
-                return $data;
-            });
+            // Process Level 2
+            foreach ($root->children as $level2) {
+                $level2Expenses = $getExpensesForCategory($level2->id);
+                $level2Total = $level2Expenses->sum('amount');
+
+                $level2Data = [
+                    'id' => $level2->id,
+                    'name' => $level2->name,
+                    'level' => 2,
+                    'code' => $level2->code,
+                    'parent_name' => $root->name,
+                    'total_amount' => $level2Total,
+                    'expense_count' => $level2Expenses->count(),
+                    'average_amount' => $level2Expenses->count() > 0 ? $level2Expenses->avg('amount') : 0,
+                ];
+                $allData->push($level2Data);
+
+                // Process Level 3
+                foreach ($level2->children as $level3) {
+                    $level3Expenses = $getExpensesForCategory($level3->id);
+                    $level3Total = $level3Expenses->sum('amount');
+
+                    $level3Data = [
+                        'id' => $level3->id,
+                        'name' => $level3->name,
+                        'level' => 3,
+                        'code' => $level3->code,
+                        'parent_name' => $level2->name,
+                        'total_amount' => $level3Total,
+                        'expense_count' => $level3Expenses->count(),
+                        'average_amount' => $level3Expenses->count() > 0 ? $level3Expenses->avg('amount') : 0,
+                    ];
+                    $allData->push($level3Data);
+                }
+
+                // Process Items under level 2
+                foreach ($level2->items as $item) {
+                    $itemExpenses = Expense::where('expense_item_id', $item->id)
+                        ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
+                        ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
+                        ->get();
+
+                    $itemTotal = $itemExpenses->sum('amount');
+                    if ($itemTotal > 0) {
+                        $allData->push([
+                            'id' => $item->id,
+                            'name' => $item->name,
+                            'level' => 'item',
+                            'code' => $item->code,
+                            'parent_name' => $level2->name,
+                            'total_amount' => $itemTotal,
+                            'expense_count' => $itemExpenses->count(),
+                            'average_amount' => $itemExpenses->count() > 0 ? $itemExpenses->avg('amount') : 0,
+                        ]);
+                    }
+                }
+            }
+
+            // Process items directly under root
+            foreach ($root->items as $item) {
+                $itemExpenses = Expense::where('expense_item_id', $item->id)
+                    ->when($dateFrom, fn($q) => $q->whereDate('created_at', '>=', $dateFrom))
+                    ->when($dateTo, fn($q) => $q->whereDate('created_at', '<=', $dateTo))
+                    ->get();
+
+                $itemTotal = $itemExpenses->sum('amount');
+                if ($itemTotal > 0) {
+                    $allData->push([
+                        'id' => $item->id,
+                        'name' => $item->name,
+                        'level' => 'item',
+                        'code' => $item->code,
+                        'parent_name' => $root->name,
+                        'total_amount' => $itemTotal,
+                        'expense_count' => $itemExpenses->count(),
+                        'average_amount' => $itemExpenses->count() > 0 ? $itemExpenses->avg('amount') : 0,
+                    ]);
+                }
+            }
         }
 
-        // Filter out categories with no expenses
-        $categoriesData = $categoriesData->filter(function ($data) {
-            return $data['expense_count'] > 0;
-        })->values();
+        // Filter out zero amounts
+        $allData = $allData->filter(fn($d) => $d['total_amount'] > 0);
+
+        // Calculate grand total and percentages
+        $grandTotal = $allData->sum('total_amount');
+        $allData = $allData->map(function($data) use ($grandTotal) {
+            $data['percentage'] = $grandTotal > 0 ? round(($data['total_amount'] / $grandTotal) * 100, 2) : 0;
+            return $data;
+        });
 
         return view('reports.expense-categories-analytics', compact(
+            'allData',
             'categoriesData',
             'dateFrom',
             'dateTo',
