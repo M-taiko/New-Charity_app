@@ -51,35 +51,46 @@ class ReportController extends Controller
         $socialCaseSpent = Expense::where('type', 'social_case')->sum('amount');
 
         // Expenses by category
-        $expensesByCategory = Expense::select('expense_category_id', 'expense_item_id')
-            ->with('category', 'item')
-            ->get()
-            ->groupBy('expense_category_id')
-            ->map(function($expenses) {
-                $amount = $expenses->sum('amount');
-                $category = $expenses->first()?->category;
-                return [
-                    'name' => $category?->name ?? 'أخرى',
-                    'amount' => $amount,
-                    'count' => $expenses->count(),
-                ];
-            })
-            ->sortByDesc('amount')
-            ->values();
+        try {
+            $expensesByCategory = Expense::with('category')
+                ->get()
+                ->groupBy('expense_category_id')
+                ->map(function($expenses) {
+                    $amount = $expenses->sum('amount');
+                    $category = $expenses->first()?->category;
+                    return [
+                        'name' => $category?->name ?? 'أخرى',
+                        'amount' => $amount,
+                        'count' => $expenses->count(),
+                    ];
+                })
+                ->sortByDesc('amount')
+                ->values();
+        } catch (\Exception $e) {
+            $expensesByCategory = collect([]);
+        }
 
         // Expenses by date (last 7 days)
-        $expensesByDate = collect();
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i)->format('Y-m-d');
-            $amount = Expense::whereDate('created_at', $date)->sum('amount');
-            $expensesByDate->push([
-                'date' => now()->subDays($i)->format('d-m'),
-                'amount' => $amount,
-            ]);
+        try {
+            $expensesByDate = collect();
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i)->format('Y-m-d');
+                $amount = Expense::whereDate('created_at', $date)->sum('amount');
+                $expensesByDate->push([
+                    'date' => now()->subDays($i)->format('d-m'),
+                    'amount' => $amount,
+                ]);
+            }
+        } catch (\Exception $e) {
+            $expensesByDate = collect([]);
         }
 
         // Agents statistics
-        $agentsWithCustodies = User::whereHas('custodies')->count();
+        try {
+            $agentsWithCustodies = User::whereHas('custodies')->count();
+        } catch (\Exception $e) {
+            $agentsWithCustodies = 0;
+        }
         $averageCustodyAmount = $totalCustodies > 0 ? $custodyAmount / $totalCustodies : 0;
 
         return view('reports.dashboard', compact(
