@@ -265,8 +265,10 @@
             return;
         }
 
-        new Chart(ctx1, {
-            type: chartData.length === 1 ? 'bar' : 'doughnut',  // Use bar for single item
+        const isSingleItem = chartData.length === 1;
+
+        const chart1Config = {
+            type: isSingleItem ? 'bar' : 'doughnut',
             data: {
                 labels: labels,
                 datasets: [{
@@ -275,7 +277,7 @@
                     backgroundColor: colors.slice(0, labels.length),
                     borderColor: 'white',
                     borderWidth: 2,
-                    borderRadius: chartData.length === 1 ? 6 : 0
+                    borderRadius: isSingleItem ? 6 : 0
                 }]
             },
             options: {
@@ -286,12 +288,18 @@
                         position: 'bottom',
                         labels: { font: { family: "'Cairo', sans-serif", size: 11 } }
                     }
-                },
-                scales: chartData.length === 1 ? {
-                    y: { beginAtZero: true }
-                } : undefined
+                }
             }
-        });
+        };
+
+        // Add scales only for bar chart
+        if (isSingleItem) {
+            chart1Config.options.scales = {
+                y: { beginAtZero: true }
+            };
+        }
+
+        new Chart(ctx1, chart1Config);
 
         // Amount Chart (Bar)
         const ctx2 = document.getElementById('expenseAmountChart');
