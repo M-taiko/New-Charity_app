@@ -337,11 +337,12 @@
         const categoryChartData = @json($expensesByCategory);
         const categoryLabels = categoryChartData.map(d => d.name);
         const categoryAmounts = categoryChartData.map(d => d.amount);
+        const categoryIds = categoryChartData.map(d => d.id);
         const colors = [
             '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140'
         ];
 
-        new Chart(document.getElementById('expensesByCategoryChart'), {
+        const categoryChart = new Chart(document.getElementById('expensesByCategoryChart'), {
             type: 'doughnut',
             data: {
                 labels: categoryLabels,
@@ -355,6 +356,15 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                onClick: function(event, elements) {
+                    if (elements.length > 0) {
+                        const index = elements[0].index;
+                        const categoryId = categoryIds[index];
+                        if (categoryId) {
+                            window.location.href = `{{ route('reports.categories-analytics') }}?category_id=${categoryId}`;
+                        }
+                    }
+                },
                 plugins: {
                     legend: {
                         position: 'bottom',
@@ -363,6 +373,9 @@
                 }
             }
         });
+
+        // Change cursor on hover
+        document.getElementById('expensesByCategoryChart').style.cursor = 'pointer';
     });
 </script>
 @endpush

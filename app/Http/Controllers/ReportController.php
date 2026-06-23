@@ -50,20 +50,34 @@ class ReportController extends Controller
         $rejectedCases = SocialCase::where('status', 'rejected')->count();
         $socialCaseSpent = Expense::where('type', 'social_case')->sum('amount');
 
-        // Expenses by category
+        // Expenses by main category (root level only)
         try {
-            $expensesByCategory = Expense::with('category')
+            $expensesByCategory = ExpenseCategory::roots()
+                ->with('children.children.items')
                 ->get()
-                ->groupBy('expense_category_id')
-                ->map(function($expenses) {
-                    $amount = $expenses->sum('amount');
-                    $category = $expenses->first()?->category;
+                ->map(function($root) {
+                    // Get all items under this root (including nested items)
+                    $allItemIds = collect();
+                    $allItemIds = $allItemIds->merge($root->items->pluck('id'));
+
+                    foreach ($root->children as $level2) {
+                        $allItemIds = $allItemIds->merge($level2->items->pluck('id'));
+                        foreach ($level2->children as $level3) {
+                            $allItemIds = $allItemIds->merge($level3->items->pluck('id'));
+                        }
+                    }
+
+                    // Sum expenses for all items under this root
+                    $amount = Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount');
+
                     return [
-                        'name' => $category?->name ?? 'أخرى',
+                        'id' => $root->id,
+                        'name' => $root->name,
                         'amount' => $amount,
-                        'count' => $expenses->count(),
+                        'count' => Expense::whereIn('expense_item_id', $allItemIds->toArray())->count(),
                     ];
                 })
+                ->filter(fn($cat) => $cat['amount'] > 0)
                 ->sortByDesc('amount')
                 ->values();
         } catch (\Exception $e) {
