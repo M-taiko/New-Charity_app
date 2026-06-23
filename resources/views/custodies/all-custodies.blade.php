@@ -930,6 +930,17 @@ document.addEventListener('DOMContentLoaded', function() {
     agentFilter.addEventListener('change', filterTable);
     statusFilter.addEventListener('change', filterTable);
 
+    // Prevent event bubbling for expand/collapse
+    const detailRows = document.querySelectorAll('tr[id^="agentDetail"]');
+    detailRows.forEach(row => {
+        row.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+
+    // Calculate summary on page load
+    updateCustodySummary();
+
     // Auto-refresh is disabled by default - users can enable it if they want
     // This avoids clearing the initial table data on page load
 });
@@ -1078,29 +1089,6 @@ function updateCustodySummary() {
     document.getElementById('totalRemaining').textContent = totalRemaining.toLocaleString('ar-SA', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج.م';
 }
 
-// Prevent event bubbling for expand/collapse
-document.addEventListener('DOMContentLoaded', function() {
-    const detailRows = document.querySelectorAll('tr[id^="agentDetail"]');
-    detailRows.forEach(row => {
-        row.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-    });
-
-    // Calculate summary on page load
-    updateCustodySummary();
-
-    // Update summary when filters change - filterTable now calls updateCustodySummary
-    const agentFilter = document.getElementById('agentFilter');
-    const statusFilter = document.getElementById('statusFilter');
-
-    if (agentFilter) {
-        agentFilter.addEventListener('change', filterTable);
-    }
-
-    if (statusFilter) {
-        statusFilter.addEventListener('change', filterTable);
-    }
-});
+// Prevent event bubbling for expand/collapse - moved inside first DOMContentLoaded
 </script>
 @endsection
