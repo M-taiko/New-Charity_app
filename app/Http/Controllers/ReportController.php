@@ -53,38 +53,50 @@ class ReportController extends Controller
         // Expenses by main category (root level only)
         try {
             $expensesByCategory = ExpenseCategory::roots()
-                ->with('children.children.items')
+                ->active()
                 ->get()
                 ->map(function($root) {
-                    // Get all items under this root (including nested items)
-                    $allItemIds = collect();
-                    $allItemIds = $allItemIds->merge($root->items->pluck('id'));
+                    // Get all child category IDs recursively
+                    $childCategoryIds = collect([$root->id]);
 
-                    foreach ($root->children as $level2) {
-                        $allItemIds = $allItemIds->merge($level2->items->pluck('id'));
-                        foreach ($level2->children as $level3) {
-                            $allItemIds = $allItemIds->merge($level3->items->pluck('id'));
+                    // Helper function to get all descendants
+                    $getDescendants = function($category) use (&$getDescendants) {
+                        $ids = collect();
+                        foreach ($category->children as $child) {
+                            $ids->push($child->id);
+                            $ids = $ids->merge($getDescendants($child));
                         }
-                    }
+                        return $ids;
+                    };
 
-                    // Sum expenses from items OR from category directly
-                    $itemAmount = Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount');
-                    $categoryAmount = Expense::where('expense_category_id', $root->id)->sum('amount');
-                    $totalAmount = $itemAmount + $categoryAmount;
+                    $childCategoryIds = $childCategoryIds->merge($getDescendants($root));
+
+                    // Sum expenses from items under this category tree + direct category expenses
+                    $expenses = Expense::query()
+                        ->where(function($q) use ($childCategoryIds) {
+                            // Expenses directly on categories in this tree
+                            $q->whereIn('expense_category_id', $childCategoryIds->toArray())
+                              // OR expenses on items under categories in this tree
+                              ->orWhereHas('item', function($q) use ($childCategoryIds) {
+                                  $q->whereIn('expense_category_id', $childCategoryIds->toArray());
+                              });
+                        })
+                        ->get();
+
+                    $totalAmount = $expenses->sum('amount');
 
                     return [
                         'id' => $root->id,
                         'name' => $root->name,
                         'amount' => $totalAmount,
-                        'count' => Expense::whereIn('expense_item_id', $allItemIds->toArray())
-                            ->orWhere('expense_category_id', $root->id)
-                            ->count(),
+                        'count' => $expenses->count(),
                     ];
                 })
                 ->filter(fn($cat) => $cat['amount'] > 0)
                 ->sortByDesc('amount')
                 ->values();
         } catch (\Exception $e) {
+            \Log::error('Category expenses error: ' . $e->getMessage());
             $expensesByCategory = collect([]);
         }
 

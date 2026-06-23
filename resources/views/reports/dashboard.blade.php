@@ -383,12 +383,22 @@
 
         // Expenses by Category Chart
         const categoryChartData = @json($expensesByCategory);
+        console.log('Category Chart Data:', categoryChartData);
+
         const categoryLabels = categoryChartData.map(d => d.name);
         const categoryAmounts = categoryChartData.map(d => d.amount);
         const categoryIds = categoryChartData.map(d => d.id);
+
+        console.log('Category Labels:', categoryLabels);
+        console.log('Category Amounts:', categoryAmounts);
+
         const colors = [
             '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140'
         ];
+
+        if (categoryLabels.length === 0) {
+            console.warn('No category data available for chart');
+        }
 
         const categoryChart = new Chart(document.getElementById('expensesByCategoryChart'), {
             type: 'doughnut',
