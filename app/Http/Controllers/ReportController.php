@@ -18,7 +18,96 @@ class ReportController extends Controller
     {
         $this->authorize('manage_treasury');
 
-        return view('reports.dashboard');
+        // Treasury data
+        $treasury = Treasury::first();
+        $treasuryBalance = $treasury?->balance ?? 0;
+
+        // Custody statistics
+        $totalCustodies = Custody::count();
+        $activeCustodies = Custody::whereIn('status', ['accepted', 'active'])->count();
+        $closedCustodies = Custody::where('status', 'closed')->count();
+        $rejectedCustodies = Custody::where('status', 'rejected')->count();
+
+        $custodyAmount = Custody::sum('amount');
+        $custodySpent = Custody::sum('spent');
+        $custodyReturned = Custody::sum('returned');
+
+        // Expense statistics
+        $totalExpenses = Expense::sum('amount');
+        $expensesToday = Expense::whereDate('created_at', now()->today())->sum('amount');
+        $expensesThisMonth = Expense::whereMonth('created_at', now()->month)
+            ->whereYear('created_at', now()->year)->sum('amount');
+        $expensesThisYear = Expense::whereYear('created_at', now()->year)->sum('amount');
+
+        $socialCaseExpenses = Expense::where('type', 'social_case')->sum('amount');
+        $custodyExpenses = Expense::where('source', 'custody')->sum('amount');
+        $treasuryExpenses = Expense::where('source', 'treasury')->sum('amount');
+
+        // Social cases statistics
+        $totalSocialCases = SocialCase::count();
+        $approvedCases = SocialCase::where('status', 'approved')->count();
+        $pendingCases = SocialCase::where('status', 'pending')->count();
+        $rejectedCases = SocialCase::where('status', 'rejected')->count();
+        $socialCaseSpent = Expense::where('type', 'social_case')->sum('amount');
+
+        // Expenses by category
+        $expensesByCategory = Expense::select('expense_category_id', 'expense_item_id')
+            ->with('category', 'item')
+            ->get()
+            ->groupBy('expense_category_id')
+            ->map(function($expenses) {
+                $amount = $expenses->sum('amount');
+                $category = $expenses->first()?->category;
+                return [
+                    'name' => $category?->name ?? 'أخرى',
+                    'amount' => $amount,
+                    'count' => $expenses->count(),
+                ];
+            })
+            ->sortByDesc('amount')
+            ->values();
+
+        // Expenses by date (last 7 days)
+        $expensesByDate = collect();
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i)->format('Y-m-d');
+            $amount = Expense::whereDate('created_at', $date)->sum('amount');
+            $expensesByDate->push([
+                'date' => now()->subDays($i)->format('d-m'),
+                'amount' => $amount,
+            ]);
+        }
+
+        // Agents statistics
+        $agentsWithCustodies = User::whereHas('custodies')->count();
+        $averageCustodyAmount = $totalCustodies > 0 ? $custodyAmount / $totalCustodies : 0;
+
+        return view('reports.dashboard', compact(
+            'treasuryBalance',
+            'totalCustodies',
+            'activeCustodies',
+            'closedCustodies',
+            'rejectedCustodies',
+            'custodyAmount',
+            'custodySpent',
+            'custodyReturned',
+            'totalExpenses',
+            'expensesToday',
+            'expensesThisMonth',
+            'expensesThisYear',
+            'socialCaseExpenses',
+            'custodyExpenses',
+            'treasuryExpenses',
+            'totalSocialCases',
+            'approvedCases',
+            'pendingCases',
+            'rejectedCases',
+            'socialCaseSpent',
+            'expensesByCategory',
+            'expensesByDate',
+            'agentsWithCustodies',
+            'averageCustodyAmount'
+        ));
     }
 
     public function researcherStats(): View

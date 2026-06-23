@@ -67,10 +67,45 @@
         </div>
     </div>
 
+    <!-- Charts Section -->
+    <div class="row g-4 mb-4">
+        <!-- Expenses by Date Chart -->
+        <div class="col-12 col-lg-6" data-aos="fade-up" data-aos-delay="400">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-chart-line"></i> المصروفات آخر 7 أيام
+                    </h5>
+                </div>
+                <div class="card-body p-3">
+                    <div style="position: relative; height: 300px;">
+                        <canvas id="expensesByDateChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Expenses by Category Chart -->
+        <div class="col-12 col-lg-6" data-aos="fade-up" data-aos-delay="500">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-pie-chart"></i> المصروفات حسب الفئة
+                    </h5>
+                </div>
+                <div class="card-body p-3">
+                    <div style="position: relative; height: 300px;">
+                        <canvas id="expensesByCategoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Detailed Reports Section -->
     <div class="row g-4">
         <!-- Custody Report -->
-        <div class="col-12 col-lg-6" data-aos="fade-up" data-aos-delay="400">
+        <div class="col-12 col-lg-6" data-aos="fade-up" data-aos-delay="600">
             <div class="card">
                 <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
                     <h5 style="margin: 0; color: white;">
@@ -83,7 +118,7 @@
                             <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
                                 <small style="color: #666;">إجمالي العهد الصادرة</small>
                                 <h4 style="margin: 0.5rem 0 0 0; color: #667eea;">
-                                    {{ number_format(\App\Models\Custody::sum('amount'), 0) }}
+                                    {{ number_format($custodyAmount, 0) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -92,18 +127,45 @@
                             <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
                                 <small style="color: #666;">إجمالي المصروف</small>
                                 <h4 style="margin: 0.5rem 0 0 0; color: #f57c00;">
-                                    {{ number_format(\App\Models\Custody::sum('spent'), 0) }}
+                                    {{ number_format($custodySpent, 0) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
                         </div>
                     </div>
-                    <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
-                        <small style="color: #666;">إجمالي المردود</small>
-                        <h4 style="margin: 0.5rem 0 0 0; color: #4caf50;">
-                            {{ number_format(\App\Models\Custody::sum('returned'), 0) }}
-                        </h4>
-                        <small style="color: #999;">ج.م</small>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
+                                <small style="color: #666;">إجمالي المردود</small>
+                                <h4 style="margin: 0.5rem 0 0 0; color: #4caf50;">
+                                    {{ number_format($custodyReturned, 0) }}
+                                </h4>
+                                <small style="color: #999;">ج.م</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
+                                <small style="color: #666;">المتبقي</small>
+                                <h4 style="margin: 0.5rem 0 0 0; color: #2196f3;">
+                                    {{ number_format($custodyAmount - $custodySpent, 0) }}
+                                </h4>
+                                <small style="color: #999;">ج.م</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12 col-md-6">
+                            <div style="text-align: center; padding: 10px; background: #e3f2fd; border-radius: 4px; margin-bottom: 10px;">
+                                <small style="color: #1565c0;">إجمالي العهد</small>
+                                <h5 style="margin: 0.3rem 0; color: #0d47a1;">{{ $totalCustodies }}</h5>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div style="text-align: center; padding: 10px; background: #f3e5f5; border-radius: 4px; margin-bottom: 10px;">
+                                <small style="color: #7b1fa2;">المغلقة</small>
+                                <h5 style="margin: 0.3rem 0; color: #4a148c;">{{ $closedCustodies }}</h5>
+                            </div>
+                        </div>
                     </div>
                     <div style="margin-top: 1rem;">
                         <a href="{{ route('custodies.index') }}" class="btn btn-sm btn-outline-primary">
@@ -115,7 +177,7 @@
         </div>
 
         <!-- Social Cases Report -->
-        <div class="col-12 col-lg-6" data-aos="fade-up" data-aos-delay="500">
+        <div class="col-12 col-lg-6" data-aos="fade-up" data-aos-delay="700">
             <div class="card">
                 <div class="card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none;">
                     <h5 style="margin: 0; color: white;">
@@ -128,25 +190,43 @@
                             <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
                                 <small style="color: #666;">حالات موافق عليها</small>
                                 <h4 style="margin: 0.5rem 0 0 0; color: #4caf50;">
-                                    {{ \App\Models\SocialCase::where('status', 'approved')->count() }}
+                                    {{ $approvedCases }}
                                 </h4>
                             </div>
                         </div>
                         <div class="col-6">
                             <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
-                                <small style="color: #666;">حالات قيد الانتظار</small>
+                                <small style="color: #666;">قيد الانتظار</small>
                                 <h4 style="margin: 0.5rem 0 0 0; color: #ff9800;">
-                                    {{ \App\Models\SocialCase::where('status', 'pending')->count() }}
+                                    {{ $pendingCases }}
                                 </h4>
                             </div>
                         </div>
                     </div>
-                    <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
-                        <small style="color: #666;">إجمالي المبلغ المصروف</small>
-                        <h4 style="margin: 0.5rem 0 0 0; color: #2196f3;">
-                            {{ number_format(\App\Models\Expense::where('type', 'social_case')->sum('amount'), 0) }}
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
+                                <small style="color: #666;">إجمالي المصروف</small>
+                                <h4 style="margin: 0.5rem 0 0 0; color: #2196f3;">
+                                    {{ number_format($socialCaseSpent, 0) }}
+                                </h4>
+                                <small style="color: #999;">ج.م</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
+                                <small style="color: #666;">المرفوضة</small>
+                                <h4 style="margin: 0.5rem 0 0 0; color: #f44336;">
+                                    {{ $rejectedCases }}
+                                </h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding: 15px; background: #f5f5f5; border-radius: 4px; text-align: center;">
+                        <small style="color: #666;">إجمالي الحالات</small>
+                        <h4 style="margin: 0.5rem 0 0 0; color: #4facfe;">
+                            {{ $totalSocialCases }}
                         </h4>
-                        <small style="color: #999;">ج.م</small>
                     </div>
                     <div style="margin-top: 1rem;">
                         <a href="{{ route('social_cases.index') }}" class="btn btn-sm btn-outline-primary">
@@ -160,7 +240,7 @@
 
     <!-- Expenses Summary -->
     <div class="row g-4 mt-2">
-        <div class="col-12" data-aos="fade-up" data-aos-delay="600">
+        <div class="col-12" data-aos="fade-up" data-aos-delay="800">
             <div class="card">
                 <div class="card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none;">
                     <h5 style="margin: 0; color: white;">
@@ -173,7 +253,7 @@
                             <div style="text-align: center; padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
                                 <small style="color: #666; display: block; margin-bottom: 0.5rem;">مصروفات اليوم</small>
                                 <h4 style="margin: 0; color: #f5576c;">
-                                    {{ number_format(\App\Models\Expense::whereDate('created_at', \Carbon\Carbon::today())->sum('amount'), 0) }}
+                                    {{ number_format($expensesToday, 0) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -182,7 +262,7 @@
                             <div style="text-align: center; padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
                                 <small style="color: #666; display: block; margin-bottom: 0.5rem;">مصروفات هذا الشهر</small>
                                 <h4 style="margin: 0; color: #f5576c;">
-                                    {{ number_format(\App\Models\Expense::whereMonth('created_at', \Carbon\Carbon::now()->month)->sum('amount'), 0) }}
+                                    {{ number_format($expensesThisMonth, 0) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -191,7 +271,7 @@
                             <div style="text-align: center; padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
                                 <small style="color: #666; display: block; margin-bottom: 0.5rem;">مصروفات هذه السنة</small>
                                 <h4 style="margin: 0; color: #f5576c;">
-                                    {{ number_format(\App\Models\Expense::whereYear('created_at', \Carbon\Carbon::now()->year)->sum('amount'), 0) }}
+                                    {{ number_format($expensesThisYear, 0) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -200,7 +280,7 @@
                             <div style="text-align: center; padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
                                 <small style="color: #666; display: block; margin-bottom: 0.5rem;">إجمالي جميع المصروفات</small>
                                 <h4 style="margin: 0; color: #f5576c;">
-                                    {{ number_format(\App\Models\Expense::sum('amount'), 0) }}
+                                    {{ number_format($totalExpenses, 0) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -211,4 +291,79 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    $(document).ready(function() {
+        // Expenses by Date Chart
+        const dateChartData = @json($expensesByDate);
+        const dateLabels = dateChartData.map(d => d.date);
+        const dateAmounts = dateChartData.map(d => d.amount);
+
+        new Chart(document.getElementById('expensesByDateChart'), {
+            type: 'line',
+            data: {
+                labels: dateLabels,
+                datasets: [{
+                    label: 'المصروفات (ج.م)',
+                    data: dateAmounts,
+                    borderColor: '#667eea',
+                    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 5,
+                    pointBackgroundColor: '#667eea',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { font: { family: "'Cairo', sans-serif" } }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+
+        // Expenses by Category Chart
+        const categoryChartData = @json($expensesByCategory);
+        const categoryLabels = categoryChartData.map(d => d.name);
+        const categoryAmounts = categoryChartData.map(d => d.amount);
+        const colors = [
+            '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140'
+        ];
+
+        new Chart(document.getElementById('expensesByCategoryChart'), {
+            type: 'doughnut',
+            data: {
+                labels: categoryLabels,
+                datasets: [{
+                    data: categoryAmounts,
+                    backgroundColor: colors.slice(0, categoryLabels.length),
+                    borderColor: 'white',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { font: { family: "'Cairo', sans-serif", size: 11 } }
+                    }
+                }
+            }
+        });
+    });
+</script>
+@endpush
 @endsection
