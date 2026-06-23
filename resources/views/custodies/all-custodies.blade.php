@@ -796,6 +796,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.style.display = 'none';
             }
         });
+
+        // Update summary after filtering
+        updateCustodySummary();
     }
 
     function updateLastUpdateTime() {
@@ -1087,22 +1090,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Calculate summary on page load
     updateCustodySummary();
 
-    // Update summary when filters change
+    // Update summary when filters change - filterTable now calls updateCustodySummary
     const agentFilter = document.getElementById('agentFilter');
     const statusFilter = document.getElementById('statusFilter');
 
     if (agentFilter) {
-        agentFilter.addEventListener('change', function() {
-            filterTable();
-            setTimeout(updateCustodySummary, 100);
-        });
+        agentFilter.addEventListener('change', filterTable);
     }
 
     if (statusFilter) {
-        statusFilter.addEventListener('change', function() {
-            filterTable();
-            setTimeout(updateCustodySummary, 100);
-        });
+        statusFilter.addEventListener('change', filterTable);
     }
 });
 </script>
