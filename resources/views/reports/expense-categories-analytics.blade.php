@@ -128,6 +128,20 @@
                 </div>
             </div>
         </div>
+
+        <!-- Levels Comparison Bar Chart -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+                <div class="card-body p-3">
+                    <h6 class="card-title mb-2 fw-bold" style="font-size: 0.95rem;">
+                        <i class="fas fa-sitemap" style="color: #667eea; margin-left: 0.5rem;"></i> مقارنة المصروفات حسب المستويات
+                    </h6>
+                    <div style="position: relative; height: 350px;">
+                        <canvas id="levelsComparisonChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Detailed Statistics Table -->
@@ -282,6 +296,87 @@
                 }
             }
         });
+
+        // Levels Comparison Chart
+        const allChartData = @json($allData);
+        const levelGroups = {
+            'م1': allChartData.filter(d => d.level == 1),
+            'م2': allChartData.filter(d => d.level == 2),
+            'م3': allChartData.filter(d => d.level == 3),
+            'بند': allChartData.filter(d => d.level === 'item')
+        };
+
+        const levelLabels = Object.keys(levelGroups);
+        const levelCounts = levelLabels.map(level => levelGroups[level].length);
+        const levelTotals = levelLabels.map(level =>
+            levelGroups[level].reduce((sum, item) => sum + parseFloat(item.total_amount), 0)
+        );
+        const levelAverages = levelLabels.map(level =>
+            levelGroups[level].length > 0 ? levelTotals[levelLabels.indexOf(level)] / levelGroups[level].length : 0
+        );
+
+        const ctx3 = document.getElementById('levelsComparisonChart');
+        if (ctx3) {
+            new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: levelLabels,
+                    datasets: [
+                        {
+                            label: 'الإجمالي (ج.م)',
+                            data: levelTotals,
+                            backgroundColor: '#667eea',
+                            borderRadius: 6,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'المتوسط (ج.م)',
+                            data: levelAverages,
+                            backgroundColor: '#f5576c',
+                            borderRadius: 6,
+                            yAxisID: 'y1'
+                        },
+                        {
+                            label: 'العدد',
+                            data: levelCounts,
+                            backgroundColor: '#43e97b',
+                            borderRadius: 6,
+                            yAxisID: 'y2'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { font: { family: "'Cairo', sans-serif", size: 11 } }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: 'الإجمالي (ج.م)' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: 'المتوسط (ج.م)' },
+                            grid: { drawOnChartArea: false }
+                        },
+                        y2: {
+                            type: 'linear',
+                            display: false,
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
     });
 </script>
 @endpush
