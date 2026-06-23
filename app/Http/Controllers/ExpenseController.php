@@ -347,8 +347,11 @@ class ExpenseController extends Controller
         // Get agent's custodies
         $custodies = Custody::where('agent_id', $user->id)->pluck('id');
 
-        // Get all expenses for agent's custodies
-        $expenses = Expense::whereIn('custody_id', $custodies)->get();
+        // Get all expenses for agent's custodies OR expenses created by this agent
+        $expenses = Expense::where(function($q) use ($custodies, $user) {
+            $q->whereIn('custody_id', $custodies)
+              ->orWhere('user_id', $user->id);  // Include expenses created by this user
+        })->get();
 
         $totalExpenses = $expenses->sum('amount');
         $expenseCount = $expenses->count();

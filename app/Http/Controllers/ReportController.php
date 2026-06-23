@@ -67,14 +67,18 @@ class ReportController extends Controller
                         }
                     }
 
-                    // Sum expenses for all items under this root
-                    $amount = Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount');
+                    // Sum expenses from items OR from category directly
+                    $itemAmount = Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount');
+                    $categoryAmount = Expense::where('expense_category_id', $root->id)->sum('amount');
+                    $totalAmount = $itemAmount + $categoryAmount;
 
                     return [
                         'id' => $root->id,
                         'name' => $root->name,
-                        'amount' => $amount,
-                        'count' => Expense::whereIn('expense_item_id', $allItemIds->toArray())->count(),
+                        'amount' => $totalAmount,
+                        'count' => Expense::whereIn('expense_item_id', $allItemIds->toArray())
+                            ->orWhere('expense_category_id', $root->id)
+                            ->count(),
                     ];
                 })
                 ->filter(fn($cat) => $cat['amount'] > 0)
