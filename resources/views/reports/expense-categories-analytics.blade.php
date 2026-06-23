@@ -521,7 +521,7 @@
                         <td>${expense.description || 'بدون وصف'}</td>
                         <td class="text-end fw-bold" style="color: #27ae60;">${parseFloat(expense.amount).toLocaleString('ar')} ج.م</td>
                         <td class="text-center">
-                            <a href="{{ route('expenses.show', ':id') }}".replace(':id', expense.id) class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
+                            <a href="/expenses/${expense.id}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
                                 <i class="fas fa-eye"></i>
                             </a>
                         </td>
