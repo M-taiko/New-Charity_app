@@ -506,6 +506,8 @@
                             <tr>
                                 <th>التاريخ</th>
                                 <th>الوصف</th>
+                                <th>من قبل</th>
+                                <th>الحالة</th>
                                 <th class="text-end">المبلغ</th>
                                 <th class="text-center">إجراء</th>
                             </tr>
@@ -515,11 +517,40 @@
 
             expenses.forEach(function(expense) {
                 totalAmount += parseFloat(expense.amount);
+
+                // Status badge
+                let statusBadge = '';
+                if (expense.status === 'approved' || expense.approved_by) {
+                    statusBadge = '<span class="badge bg-success">معتمد</span>';
+                } else if (expense.status === 'pending') {
+                    statusBadge = '<span class="badge bg-warning">قيد المراجعة</span>';
+                } else {
+                    statusBadge = '<span class="badge bg-info">مسجل</span>';
+                }
+
+                // Approval info
+                let approvalInfo = expense.approved_by ?
+                    `<small class="d-block text-muted">${expense.approved_by}</small>` :
+                    '<small class="d-block text-muted">لم يتم الاعتماد</small>';
+
                 html += `
                     <tr>
-                        <td>${new Date(expense.created_at).toLocaleDateString('ar-EG')}</td>
-                        <td>${expense.description || 'بدون وصف'}</td>
-                        <td class="text-end fw-bold" style="color: #27ae60;">${parseFloat(expense.amount).toLocaleString('ar')} ج.م</td>
+                        <td>
+                            <small>${new Date(expense.created_at).toLocaleDateString('ar-EG')}</small>
+                        </td>
+                        <td>
+                            <small>${expense.description || 'بدون وصف'}</small>
+                        </td>
+                        <td>
+                            <small><strong>${expense.created_by || 'غير معروف'}</strong></small>
+                        </td>
+                        <td>
+                            ${statusBadge}
+                            ${approvalInfo}
+                        </td>
+                        <td class="text-end fw-bold" style="color: #27ae60;">
+                            <small>${parseFloat(expense.amount).toLocaleString('ar')} ج.م</small>
+                        </td>
                         <td class="text-center">
                             <a href="/expenses/${expense.id}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
                                 <i class="fas fa-eye"></i>
@@ -535,9 +566,10 @@
                 </div>
                 <div class="alert alert-light border border-top-0 mt-3" style="border-top: 3px solid #667eea !important;">
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold">الإجمالي:</span>
+                        <span class="fw-bold"><i class="fas fa-sum"></i> الإجمالي:</span>
                         <span class="fs-5 fw-bold" style="color: #27ae60;">${totalAmount.toLocaleString('ar')} ج.م</span>
                     </div>
+                    <small class="text-muted d-block mt-2">عدد المصروفات: ${expenses.length}</small>
                 </div>
             `;
 

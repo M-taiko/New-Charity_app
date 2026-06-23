@@ -675,9 +675,15 @@ class ReportController extends Controller
                 'description' => $expense->description,
                 'amount' => (float)$expense->amount,
                 'created_at' => $expense->created_at,
-                'user' => $expense->user?->name,
+                'created_by' => $expense->user?->name,
+                'created_by_id' => $expense->user_id,
+                'approved_by' => $expense->reviewed_by_user?->name,
+                'approved_at' => $expense->reviewed_at,
                 'custody' => $expense->custody?->notes,
+                'category' => $expense->category?->name,
+                'item' => $expense->item?->name,
                 'status' => $expense->status ?? 'completed',
+                'source' => $expense->source ?? 'treasury',
             ];
         }));
     }
