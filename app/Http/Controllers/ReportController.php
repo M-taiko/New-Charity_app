@@ -474,6 +474,7 @@ class ReportController extends Controller
         $this->authorize('manage_treasury');
 
         // Get filter parameters
+        $categoryId = $request->input('category_id');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
@@ -493,8 +494,25 @@ class ReportController extends Controller
             })->get();
         };
 
-        // Get all roots with their hierarchy
-        $roots = ExpenseCategory::roots()->active()->with('children.children.items', 'items')->ordered()->get();
+        // Get all roots with their hierarchy (or specific category if filtered)
+        $query = ExpenseCategory::active()->with('children.children.items', 'items')->ordered();
+
+        if ($categoryId) {
+            // If specific category is selected, show that category and its descendants
+            $roots = $query->where('id', $categoryId)->orWhere('parent_id', $categoryId)->get();
+            if ($roots->isEmpty()) {
+                // If not found at root level, fetch by ID (could be level 2 or 3)
+                $category = ExpenseCategory::find($categoryId);
+                if ($category) {
+                    $roots = collect([$category]);
+                } else {
+                    $roots = collect([]);
+                }
+            }
+        } else {
+            // Get all roots (no filtering)
+            $roots = ExpenseCategory::roots()->active()->with('children.children.items', 'items')->ordered()->get();
+        }
 
         // Process all data hierarchically
         $allData = collect(); // All items for charts
@@ -612,7 +630,8 @@ class ReportController extends Controller
             'categoriesData',
             'dateFrom',
             'dateTo',
-            'grandTotal'
+            'grandTotal',
+            'categoryId'
         ));
     }
 }
