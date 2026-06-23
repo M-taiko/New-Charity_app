@@ -634,4 +634,63 @@ class ReportController extends Controller
             'selectedCategory'
         ));
     }
+
+    /**
+     * Get expenses for a specific category item (API endpoint)
+     */
+    public function categoryItemExpenses(Request $request)
+    {
+        $this->authorize('manage_treasury');
+
+        $itemId = $request->input('item_id');
+        $itemType = $request->input('item_type');
+
+        $expenses = collect();
+
+        if ($itemType === 'item') {
+            // Get expenses for specific item
+            $expenses = Expense::where('expense_item_id', $itemId)
+                ->with(['user', 'category', 'item'])
+                ->orderByDesc('created_at')
+                ->get();
+        } else {
+            // Get expenses for category (all items under this category)
+            $category = ExpenseCategory::find($itemId);
+            if ($category) {
+                // Get all items under this category recursively
+                $itemIds = collect();
+                $this->collectCategoryItemIds($category, $itemIds);
+
+                $expenses = Expense::whereIn('expense_item_id', $itemIds->toArray())
+                    ->orWhere('expense_category_id', $itemId)
+                    ->with(['user', 'category', 'item'])
+                    ->orderByDesc('created_at')
+                    ->get();
+            }
+        }
+
+        return response()->json($expenses->map(function($expense) {
+            return [
+                'id' => $expense->id,
+                'description' => $expense->description,
+                'amount' => (float)$expense->amount,
+                'created_at' => $expense->created_at,
+                'user' => $expense->user?->name,
+                'custody' => $expense->custody?->notes,
+                'status' => $expense->status ?? 'completed',
+            ];
+        }));
+    }
+
+    /**
+     * Recursively collect all item IDs under a category
+     */
+    private function collectCategoryItemIds(ExpenseCategory $category, $ids)
+    {
+        // Add items directly under this category
+        $category->items->each(fn($item) => $ids->push($item->id));
+
+        // Add items from children recursively
+        $category->children->each(fn($child) => $this->collectCategoryItemIds($child, $ids));
+    }
 }

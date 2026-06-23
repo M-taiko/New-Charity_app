@@ -184,7 +184,7 @@
                         </thead>
                         <tbody>
                             @forelse($allData->sortByDesc('total_amount') as $data)
-                            <tr>
+                            <tr style="cursor: pointer;" class="expense-row" data-item-id="{{ $data['id'] }}" data-item-type="{{ $data['level'] }}" data-item-name="{{ $data['name'] }}" data-bs-toggle="modal" data-bs-target="#expenseDetailsModal">
                                 <td style="padding: 1rem;">
                                     @if($data['level'] == 1)
                                         <span class="badge bg-primary me-2">م1</span>
@@ -224,6 +224,27 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Expense Details Modal -->
+<div class="modal fade" id="expenseDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                <h5 class="modal-title">تفاصيل المصروفات</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="expenseDetailsContent" style="padding: 1.5rem;">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -434,6 +455,93 @@
             console.error('Chart initialization error:', error);
             console.error('Error details:', error.message);
             console.error('Stack:', error.stack);
+        }
+
+        // Handle expense row click
+        $(document).on('click', '.expense-row', function() {
+            const itemId = $(this).data('item-id');
+            const itemType = $(this).data('item-type');
+            const itemName = $(this).data('item-name');
+
+            // Load expenses for this item
+            $.ajax({
+                url: '{{ route("api.category-item-expenses") }}',
+                type: 'GET',
+                data: {
+                    item_id: itemId,
+                    item_type: itemType
+                },
+                success: function(response) {
+                    displayExpenseDetails(response, itemName);
+                },
+                error: function(error) {
+                    $('#expenseDetailsContent').html(`
+                        <div class="alert alert-danger" role="alert">
+                            <i class="fas fa-exclamation-circle"></i> حدث خطأ في تحميل البيانات
+                        </div>
+                    `);
+                    console.error('Error:', error);
+                }
+            });
+        });
+
+        function displayExpenseDetails(expenses, itemName) {
+            if (!expenses || expenses.length === 0) {
+                $('#expenseDetailsContent').html(`
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i> لا توجد مصروفات لهذا البند
+                    </div>
+                `);
+                return;
+            }
+
+            let totalAmount = 0;
+            let html = `
+                <h6 class="mb-3 fw-bold">
+                    <i class="fas fa-receipt"></i> المصروفات - ${itemName}
+                </h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead style="background: #f8f9fa;">
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>الوصف</th>
+                                <th class="text-end">المبلغ</th>
+                                <th class="text-center">إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            expenses.forEach(function(expense) {
+                totalAmount += parseFloat(expense.amount);
+                html += `
+                    <tr>
+                        <td>${new Date(expense.created_at).toLocaleDateString('ar-EG')}</td>
+                        <td>${expense.description || 'بدون وصف'}</td>
+                        <td class="text-end fw-bold" style="color: #27ae60;">${parseFloat(expense.amount).toLocaleString('ar')} ج.م</td>
+                        <td class="text-center">
+                            <a href="{{ route('expenses.show', ':id') }}".replace(':id', expense.id) class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+                <div class="alert alert-light border border-top-0 mt-3" style="border-top: 3px solid #667eea !important;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">الإجمالي:</span>
+                        <span class="fs-5 fw-bold" style="color: #27ae60;">${totalAmount.toLocaleString('ar')} ج.م</span>
+                    </div>
+                </div>
+            `;
+
+            $('#expenseDetailsContent').html(html);
         }
     });
 </script>

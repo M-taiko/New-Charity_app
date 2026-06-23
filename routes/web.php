@@ -134,6 +134,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/api/custodies/data', [CustodyController::class, 'tableData'])->name('api.custodies.data');
     Route::get('/api/user-custodies', [CustodyController::class, 'userCustodiesApi'])->name('api.user-custodies');
     Route::get('/api/expenses', [ExpenseController::class, 'tableData'])->name('api.expenses.data');
+    Route::get('/api/category-item-expenses', [ReportController::class, 'categoryItemExpenses'])->name('api.category-item-expenses');
     Route::get('/api/social-cases', [SocialCaseController::class, 'tableData'])->name('api.social_cases.data');
     Route::get('/api/users', [UserController::class, 'tableData'])->name('api.users.data');
 
