@@ -938,6 +938,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Handle URL query parameters - auto-select filters from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const agentParam = urlParams.get('agent_filter');
+    const statusParam = urlParams.get('status_filter');
+
+    if (agentParam) {
+        agentFilter.value = agentParam;
+        filterTable();
+    }
+    if (statusParam) {
+        statusFilter.value = statusParam;
+        filterTable();
+    }
+
     // Calculate summary on page load
     updateCustodySummary();
 
