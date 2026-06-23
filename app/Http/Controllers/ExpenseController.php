@@ -364,12 +364,12 @@ class ExpenseController extends Controller
 
         $query = Expense::with(['user', 'custody', 'socialCase', 'category', 'item.category.parent.parent']);
 
-        // Date range filter
+        // Date range filter - use created_at to match reports page
         if ($request->filled('date_from')) {
-            $query->whereDate('expense_date', '>=', $request->date_from);
+            $query->whereDate('created_at', '>=', $request->date_from);
         }
         if ($request->filled('date_to')) {
-            $query->whereDate('expense_date', '<=', $request->date_to);
+            $query->whereDate('created_at', '<=', $request->date_to);
         }
 
         // Type filter
