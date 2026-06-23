@@ -100,7 +100,7 @@ class ReportController extends Controller
             $expensesByDate = collect([]);
         }
 
-        // Custodies by agents (top 10)
+        // Custodies by agents (top 10) - showing remaining balance after spending
         try {
             $custodiesByAgents = Custody::with('agent')
                 ->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
@@ -108,16 +108,17 @@ class ReportController extends Controller
                 ->groupBy('agent_id')
                 ->map(function($custodies) {
                     $agent = $custodies->first()?->agent;
+                    $remaining = $custodies->sum(fn($c) => $c->getRemainingBalance());
                     return [
                         'agent_id' => $agent?->id,
                         'agent_name' => $agent?->name ?? 'غير معروف',
                         'amount' => $custodies->sum('amount'),
                         'spent' => $custodies->sum('spent'),
-                        'remaining' => $custodies->sum(fn($c) => $c->getRemainingBalance()),
+                        'remaining' => $remaining,
                         'count' => $custodies->count(),
                     ];
                 })
-                ->sortByDesc('amount')
+                ->sortByDesc('remaining')  // Sort by remaining balance (after spending)
                 ->take(10)
                 ->values();
         } catch (\Exception $e) {

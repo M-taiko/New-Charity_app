@@ -425,10 +425,10 @@
         // Change cursor on hover
         document.getElementById('expensesByCategoryChart').style.cursor = 'pointer';
 
-        // Custodies by Agents Chart
+        // Custodies by Agents Chart - showing remaining balance after spending
         const agentsData = @json($custodiesByAgents);
         const agentLabels = agentsData.map(d => d.agent_name);
-        const agentAmounts = agentsData.map(d => d.amount);
+        const agentRemaining = agentsData.map(d => d.remaining);  // Show remaining after spending
         const agentIds = agentsData.map(d => d.agent_id);
 
         new Chart(document.getElementById('custodiesByAgentsChart'), {
@@ -436,8 +436,8 @@
             data: {
                 labels: agentLabels,
                 datasets: [{
-                    label: 'إجمالي العهدات (ج.م)',
-                    data: agentAmounts,
+                    label: 'المبلغ المتبقي بعد الصرف (ج.م)',
+                    data: agentRemaining,
                     backgroundColor: '#f093fb',
                     borderRadius: 6
                 }]
@@ -456,7 +456,7 @@
                     }
                 },
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: true }
                 },
                 scales: {
                     x: { beginAtZero: true }
