@@ -261,8 +261,14 @@
         // Only show charts if we have data
         if (labels.length === 0) {
             console.warn('No chart data - hiding charts');
-            document.getElementById('expenseDistributionChart')?.parentElement?.parentElement?.style.display = 'none';
-            document.getElementById('expenseAmountChart')?.parentElement?.parentElement?.style.display = 'none';
+            const chart1 = document.getElementById('expenseDistributionChart');
+            if (chart1 && chart1.parentElement && chart1.parentElement.parentElement) {
+                chart1.parentElement.parentElement.style.display = 'none';
+            }
+            const chart2 = document.getElementById('expenseAmountChart');
+            if (chart2 && chart2.parentElement && chart2.parentElement.parentElement) {
+                chart2.parentElement.parentElement.style.display = 'none';
+            }
             return;
         }
 
