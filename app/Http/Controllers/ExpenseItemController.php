@@ -17,42 +17,39 @@ class ExpenseItemController extends Controller
         $roots = ExpenseCategory::with('children.children.items')
             ->roots()->active()->ordered()->get();
 
-        // إضافة المبالغ المصروفة لكل مستوى (شامل المستوى + جميع البنود التي تحته)
+        // إضافة المبالغ المصروفة لكل مستوى (شامل جميع البنود التي تحته)
         $roots = $roots->map(function ($root) {
-            // Get all item IDs that belong to this category (directly or through children)
-            $allItemIds = $root->items->pluck('id')->merge(
-                $root->children->flatMap(function ($level2) {
-                    return $level2->items->pluck('id')->merge(
-                        $level2->children->flatMap(function ($level3) {
-                            return $level3->items->pluck('id');
-                        })
-                    );
-                })
-            )->toArray();
+            // Get all item IDs that belong to this root (directly or through children at any level)
+            $allItemIds = collect();
 
-            // Also get expenses directly on category
-            $directAmount = Expense::where('expense_category_id', $root->id)->sum('amount');
-            $itemsAmount = count($allItemIds) > 0 ? Expense::whereIn('expense_item_id', $allItemIds)->sum('amount') : 0;
-            $root->total_amount = $directAmount + $itemsAmount;
+            // Add direct items of root
+            $allItemIds = $allItemIds->merge($root->items->pluck('id'));
+
+            // Add items from all level 2 and their children
+            foreach ($root->children as $level2) {
+                $allItemIds = $allItemIds->merge($level2->items->pluck('id'));
+                foreach ($level2->children as $level3) {
+                    $allItemIds = $allItemIds->merge($level3->items->pluck('id'));
+                }
+            }
+
+            $root->total_amount = $allItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount') : 0;
 
             $root->children = $root->children->map(function ($level2) {
                 // Get all item IDs under level2
-                $allItemIds = $level2->items->pluck('id')->merge(
-                    $level2->children->flatMap(function ($level3) {
-                        return $level3->items->pluck('id');
-                    })
-                )->toArray();
+                $allItemIds = collect();
+                $allItemIds = $allItemIds->merge($level2->items->pluck('id'));
 
-                $directAmount = Expense::where('expense_category_id', $level2->id)->sum('amount');
-                $itemsAmount = count($allItemIds) > 0 ? Expense::whereIn('expense_item_id', $allItemIds)->sum('amount') : 0;
-                $level2->total_amount = $directAmount + $itemsAmount;
+                foreach ($level2->children as $level3) {
+                    $allItemIds = $allItemIds->merge($level3->items->pluck('id'));
+                }
+
+                $level2->total_amount = $allItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount') : 0;
 
                 $level2->children = $level2->children->map(function ($level3) {
-                    // Level 3 total
-                    $allItemIds = $level3->items->pluck('id')->toArray();
-                    $directAmount = Expense::where('expense_category_id', $level3->id)->sum('amount');
-                    $itemsAmount = count($allItemIds) > 0 ? Expense::whereIn('expense_item_id', $allItemIds)->sum('amount') : 0;
-                    $level3->total_amount = $directAmount + $itemsAmount;
+                    // Level 3 total - sum all items under it
+                    $allItemIds = $level3->items->pluck('id');
+                    $level3->total_amount = $allItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount') : 0;
 
                     $level3->items = $level3->items->map(function ($item) {
                         $item->total_amount = Expense::where('expense_item_id', $item->id)->sum('amount');
