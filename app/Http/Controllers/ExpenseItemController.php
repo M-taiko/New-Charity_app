@@ -17,37 +17,12 @@ class ExpenseItemController extends Controller
         $roots = ExpenseCategory::with('children.children.items')
             ->roots()->active()->ordered()->get();
 
-        // إضافة المبالغ المصروفة لكل مستوى (شامل جميع البنود التي تحته)
+        // إضافة المبالغ المصروفة لكل مستوى (تراكمي: شامل نفسه وجميع الأطفال)
         $roots = $roots->map(function ($root) {
-            // Get all item IDs that belong to this root (directly or through children at any level)
-            $allItemIds = collect();
-
-            // Add direct items of root
-            $allItemIds = $allItemIds->merge($root->items->pluck('id'));
-
-            // Add items from all level 2 and their children
-            foreach ($root->children as $level2) {
-                $allItemIds = $allItemIds->merge($level2->items->pluck('id'));
-                foreach ($level2->children as $level3) {
-                    $allItemIds = $allItemIds->merge($level3->items->pluck('id'));
-                }
-            }
-
-            $root->total_amount = $allItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount') : 0;
-
             $root->children = $root->children->map(function ($level2) {
-                // Get all item IDs under level2
-                $allItemIds = collect();
-                $allItemIds = $allItemIds->merge($level2->items->pluck('id'));
-
-                foreach ($level2->children as $level3) {
-                    $allItemIds = $allItemIds->merge($level3->items->pluck('id'));
-                }
-
-                $level2->total_amount = $allItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount') : 0;
-
+                // Level 2: Calculate totals for each Level 3 first
                 $level2->children = $level2->children->map(function ($level3) {
-                    // Level 3 total - sum all items under it
+                    // Level 3: Sum all items directly under it
                     $allItemIds = $level3->items->pluck('id');
                     $level3->total_amount = $allItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount') : 0;
 
@@ -58,12 +33,26 @@ class ExpenseItemController extends Controller
                     return $level3;
                 });
 
+                // Level 2: Sum its items + all level 3 totals
+                $directItemIds = $level2->items->pluck('id');
+                $directAmount = $directItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $directItemIds->toArray())->sum('amount') : 0;
+
+                $childrenTotal = $level2->children->sum('total_amount');
+                $level2->total_amount = $directAmount + $childrenTotal;
+
                 $level2->items = $level2->items->map(function ($item) {
                     $item->total_amount = Expense::where('expense_item_id', $item->id)->sum('amount');
                     return $item;
                 });
                 return $level2;
             });
+
+            // Level 1: Sum its items + all level 2 totals
+            $directItemIds = $root->items->pluck('id');
+            $directAmount = $directItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $directItemIds->toArray())->sum('amount') : 0;
+
+            $childrenTotal = $root->children->sum('total_amount');
+            $root->total_amount = $directAmount + $childrenTotal;
 
             $root->items = $root->items->map(function ($item) {
                 $item->total_amount = Expense::where('expense_item_id', $item->id)->sum('amount');
