@@ -321,6 +321,11 @@
         // Load custodies for quick expense form
         loadQuickExpenseCustodies();
 
+        // Reload custodies when modal is shown
+        document.getElementById('quickExpenseModal')?.addEventListener('show.bs.modal', function() {
+            loadQuickExpenseCustodies();
+        });
+
         // Quick expense form submission
         $('#quickExpenseForm').on('submit', function(e) {
             e.preventDefault();
@@ -576,9 +581,10 @@
                 }
 
                 data.forEach(function(custody) {
-                    const balance = parseFloat(custody.balance) - parseFloat(custody.spent);
+                    // Use remaining balance from API (already calculated correctly)
+                    const balance = parseFloat(custody.remaining);
                     if (balance > 0) {
-                        const reason = custody.reason || 'عهدة بدون وصف';
+                        const reason = custody.reason || 'عهدة #' + custody.id;
                         select.append(`
                             <option value="${custody.id}" data-balance="${balance}">
                                 ${reason} (الرصيد: ${balance.toLocaleString('ar')} ج.م)
@@ -592,7 +598,8 @@
                 }
             },
             error: function() {
-                alert('حدث خطأ في تحميل العهد');
+                console.error('خطأ في تحميل العهد');
+                $('#quick_custody_id').append('<option disabled>خطأ في تحميل العهد</option>');
             }
         });
     }
