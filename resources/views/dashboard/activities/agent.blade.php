@@ -7,7 +7,7 @@
         ->limit(5)
         ->get();
 
-    $activeCustodies = auth()->user()->custodies()
+    $activeCustodies = auth()->user()->custodiesAsAgent()
         ->whereIn('status', ['accepted', 'active', 'partially_returned'])
         ->with('treasury')
         ->orderBy('updated_at', 'desc')

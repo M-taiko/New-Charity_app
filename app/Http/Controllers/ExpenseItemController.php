@@ -6,6 +6,7 @@ use App\Models\ExpenseItem;
 use App\Models\ExpenseCategory;
 use App\Models\Expense;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Yajra\DataTables\DataTables;
 
 class ExpenseItemController extends Controller
@@ -96,9 +97,14 @@ class ExpenseItemController extends Controller
         $request->validate([
             'expense_category_id' => 'required|exists:expense_categories,id',
             'name'                => 'required|string|max:255',
-            'code'                => 'required|string|max:50|unique:expense_items,code',
+            'code'                => [
+                'required', 'string', 'max:50',
+                Rule::unique('expense_items', 'code')->where('expense_category_id', $request->expense_category_id),
+            ],
             'default_amount'      => 'nullable|numeric|min:0',
             'order'               => 'required|integer|min:1',
+        ], [], [
+            'code' => 'الكود',
         ]);
 
         ExpenseItem::create($request->only(['expense_category_id', 'name', 'code', 'default_amount', 'order']));
@@ -119,10 +125,17 @@ class ExpenseItemController extends Controller
         $request->validate([
             'expense_category_id' => 'required|exists:expense_categories,id',
             'name'                => 'required|string|max:255',
-            'code'                => 'required|string|max:50|unique:expense_items,code,' . $expenseItem->id,
+            'code'                => [
+                'required', 'string', 'max:50',
+                Rule::unique('expense_items', 'code')
+                    ->where('expense_category_id', $request->expense_category_id)
+                    ->ignore($expenseItem->id),
+            ],
             'default_amount'      => 'nullable|numeric|min:0',
             'order'               => 'required|integer|min:1',
             'is_active'           => 'boolean',
+        ], [], [
+            'code' => 'الكود',
         ]);
 
         $expenseItem->update($request->only(['expense_category_id', 'name', 'code', 'default_amount', 'order', 'is_active']));

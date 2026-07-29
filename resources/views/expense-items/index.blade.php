@@ -24,6 +24,18 @@
     </div>
     @endif
 
+    @if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="fas fa-exclamation-circle"></i>
+        <ul class="mb-0">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    @endif
+
     <!-- Hierarchy Legend -->
     <div class="row mb-3">
         <div class="col-12">
@@ -243,6 +255,39 @@
 
 @push('scripts')
 <script>
+@if($errors->any())
+document.addEventListener('DOMContentLoaded', function() {
+    @if(old('expense_category_id') !== null)
+        // Item form failed validation - reopen with entered values restored
+        const itemModal = document.getElementById('addItemModal');
+        if (itemModal) {
+            const form = itemModal.querySelector('form');
+            if (form) {
+                form.querySelector('[name="name"]').value = @json(old('name', ''));
+                form.querySelector('[name="code"]').value = @json(old('code', ''));
+                form.querySelector('[name="default_amount"]').value = @json(old('default_amount', ''));
+                form.querySelector('[name="order"]').value = @json(old('order', '1'));
+            }
+            document.getElementById('itemCategoryId').value = @json(old('expense_category_id', ''));
+            new bootstrap.Modal(itemModal).show();
+        }
+    @elseif(old('parent_id') !== null)
+        // Category form failed validation - reopen with entered values restored
+        const categoryModal = document.getElementById('addCategoryModal');
+        if (categoryModal) {
+            const form = categoryModal.querySelector('form');
+            if (form) {
+                form.querySelector('[name="name"]').value = @json(old('name', ''));
+                form.querySelector('[name="code"]').value = @json(old('code', ''));
+                form.querySelector('[name="order"]').value = @json(old('order', '1'));
+            }
+            document.getElementById('modalParentId').value = @json(old('parent_id', ''));
+            new bootstrap.Modal(categoryModal).show();
+        }
+    @endif
+});
+@endif
+
 function openAddRoot() {
     document.getElementById('modalParentId').value = '';
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-sitemap"></i> إضافة مستوى أول';

@@ -129,7 +129,7 @@
         @elseif(auth()->user()->hasRole('مندوب'))
             <!-- Stats للمندوب -->
             @php
-                $agentCustodies = auth()->user()->custodies()->whereIn('status', ['accepted', 'active', 'partially_returned'])->get();
+                $agentCustodies = auth()->user()->custodiesAsAgent()->whereIn('status', ['accepted', 'active', 'partially_returned'])->get();
                 $totalReceived = $agentCustodies->sum('amount');
                 $totalSpent = $agentCustodies->sum('spent');
                 $totalReturned = $agentCustodies->sum('returned');
