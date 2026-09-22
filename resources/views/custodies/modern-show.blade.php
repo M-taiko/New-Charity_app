@@ -1,0 +1,1676 @@
+@extends('layouts.modern')
+
+@section('content')
+<div class="container-fluid">
+    <div class="row mb-4" data-aos="fade-down">
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
+                <i class="fas fa-hand-holding-heart"></i> تفاصيل العهدة
+            </h1>
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm no-print">
+                <i class="fas fa-print"></i> طباعة
+            </button>
+        </div>
+    </div>
+
+    <div class="row" data-aos="fade-up">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-info-circle"></i> بيانات العهدة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>اسم الوكيل:</strong></label>
+                            <p>{{ $custody->agent->name ?? '-' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>رقم الهاتف:</strong></label>
+                            <p>{{ $custody->agent->phone ?? '-' }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>المبلغ:</strong></label>
+                        <p class="text-primary" style="font-size: 1.2rem; font-weight: bold;">{{ number_format($custody->amount, 2) }} ج.م</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الخزينة:</strong></label>
+                        <p>
+                            <span class="badge bg-primary" style="font-size: 0.95rem; padding: 0.5rem 0.8rem;">
+                                <i class="fas fa-vault"></i> {{ $custody->treasury->name ?? 'غير محددة' }}
+                            </span>
+                        </p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الملاحظات:</strong></label>
+                        <p>{{ $custody->notes ?? '-' }}</p>
+                    </div>
+
+                    @php
+                        $pendingTransfers = \App\Models\CustodyTransfer::where('custody_id', $custody->id)
+                            ->where('status', 'pending')
+                            ->with('fromAgent', 'toAgent')
+                            ->get();
+                    @endphp
+
+                    @if($pendingTransfers->isNotEmpty())
+                    <div class="alert alert-warning" style="margin-bottom: 1.5rem;">
+                        <i class="fas fa-exchange-alt"></i> <strong>تحويلات معلقة:</strong>
+                        <div style="margin-top: 10px;">
+                            @foreach($pendingTransfers as $transfer)
+                            <div style="background: white; padding: 10px; border-radius: 4px; margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <strong>من:</strong> {{ $transfer->fromAgent->name }}<br>
+                                        <strong>إلى:</strong> {{ $transfer->toAgent->name }}<br>
+                                        <strong>المبلغ:</strong> {{ number_format($transfer->amount, 2) }} ج.م
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-warning">قيد الانتظار</span><br>
+                                        <small class="text-muted">{{ $transfer->created_at->diffForHumans() }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                    @endif
+
+                    <hr>
+
+                    @php
+                        $totalSpent = $custody->getTotalSpent();
+                        $remaining = $custody->getRemainingBalance();
+                        $spendingPercent = $custody->amount > 0 ? round(($totalSpent / $custody->amount) * 100) : 0;
+                        $returnedPercent = $custody->amount > 0 ? round(($custody->returned / $custody->amount) * 100) : 0;
+                    @endphp
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-left: 4px solid #667eea; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">إجمالي المصروفات</p>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #667eea;">{{ number_format($totalSpent, 2) }} ج.م</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(251, 140, 0, 0.1)); border-left: 4px solid #ff9800; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">المبالغ المردودة</p>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #ff9800;">{{ number_format($custody->returned, 2) }} ج.م</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1)); border-left: 4px solid #4caf50; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">المبلغ المتبقي</p>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #4caf50;">{{ number_format($remaining, 2) }} ج.م</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Spending and Return Percentages -->
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <div style="background: white; border: 1px solid #e5e7eb; padding: 15px; border-radius: 4px;">
+                                <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">
+                                    <strong>نسبة الإنفاق:</strong> {{ $spendingPercent }}%
+                                </p>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar" style="width: {{ $spendingPercent }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div style="background: white; border: 1px solid #e5e7eb; padding: 15px; border-radius: 4px;">
+                                <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: #666;">
+                                    <strong>نسبة المردود:</strong> {{ $returnedPercent }}%
+                                </p>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar" style="width: {{ $returnedPercent }}%; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2" style="margin-top: 2rem; flex-wrap: wrap;">
+                        @if(auth()->user()->hasRole('مندوب'))
+                            <a href="{{ route('agent.transactions') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> رجوع
+                            </a>
+                        @else
+                            <a href="{{ route('custodies.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> رجوع
+                            </a>
+                        @endif
+                        @can('manage_custodies')
+                            <a href="{{ route('custodies.edit', $custody->id) }}" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                <i class="fas fa-edit"></i> تعديل
+                            </a>
+                        @endcan
+                        @role('مندوب')
+                            @if(auth()->user()->id === $custody->agent_id && $custody->status === 'accepted')
+                                <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
+                                    <i class="fas fa-exchange-alt"></i> تحويل إلى مندوب آخر
+                                </a>
+                            @endif
+                            <a href="{{ route('custodies.create') }}" class="btn btn-success">
+                                <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
+                            </a>
+                        @endrole
+                        {{-- Workflow 1: Accountant approves agent request (agent-initiated custodies) --}}
+                        @can('approve_custody')
+                            @if($custody->status === 'pending' && $custody->initiated_by === 'agent')
+                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#acceptModal">
+                                    <i class="fas fa-check-circle"></i> الموافقة على الطلب
+                                </button>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+                                    <i class="fas fa-times-circle"></i> رفض الطلب
+                                </button>
+                            @elseif($custody->status === 'pending' && $custody->initiated_by === 'accountant')
+                                {{-- Cancel button for accountant-initiated pending custodies that haven't been accepted yet --}}
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelCustodyModal">
+                                    <i class="fas fa-ban"></i> إلغاء العهدة
+                                </button>
+                            @endif
+                        @endcan
+
+                        {{-- Workflow 2: Agent accepts/rejects accountant-sent custody --}}
+                        @role('مندوب')
+                            @if(auth()->user()->id === $custody->agent_id && $custody->status === 'pending' && $custody->initiated_by === 'accountant')
+                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#agentAcceptModal">
+                                    <i class="fas fa-check-circle"></i> قبول العهدة
+                                </button>
+                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#agentRejectModal">
+                                    <i class="fas fa-times-circle"></i> رفض العهدة
+                                </button>
+                            @endif
+
+                            {{-- Confirm receipt button for agent-initiated accepted custodies --}}
+                            @if(auth()->user()->id === $custody->agent_id && $custody->status === 'accepted' && $custody->initiated_by === 'agent')
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#receiveModal">
+                                    <i class="fas fa-hand-holding-usd"></i> تأكيد استقبال العهدة
+                                </button>
+                            @endif
+
+                            {{-- Transfer and return buttons for active custodies --}}
+                            @if(auth()->user()->id === $custody->agent_id && in_array($custody->status, ['accepted', 'active', 'partially_returned']))
+                                @if($custody->status === 'active' || ($custody->status === 'accepted' && $custody->initiated_by === 'accountant'))
+                                    <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
+                                        <i class="fas fa-exchange-alt"></i> تحويل إلى مندوب آخر
+                                    </a>
+                                @endif
+
+                                @if($custody->getRemainingBalance() > 0)
+                                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#returnModal">
+                                        <i class="fas fa-undo"></i> رد العهدة
+                                    </button>
+                                @endif
+                            @elseif(!auth()->user()->hasRole('مندوب'))
+                                {{-- Show return request button only for accountants/managers when agent is not viewing --}}
+                                @if(in_array($custody->status, ['active', 'accepted', 'partially_returned']) && $custody->getRemainingBalance() > 0)
+                                    @if($custody->hasPendingReturnRequest())
+                                        <button type="button" class="btn btn-warning" disabled>
+                                            <i class="fas fa-hourglass-half"></i> طلب رد معلق
+                                        </button>
+                                    @else
+                                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#requestReturnModal">
+                                            <i class="fas fa-file-invoice-dollar"></i> طلب رد للخزينة
+                                        </button>
+                                    @endif
+                                @endif
+                            @endif
+                        @endrole
+
+                        @can('manage_treasury')
+                            @php
+                                $pendingReturnRequests = \App\Models\CustodyReturnRequest::where('custody_id', $custody->id)
+                                    ->where('status', 'pending')
+                                    ->get();
+                            @endphp
+                            @if($pendingReturnRequests->isNotEmpty())
+                                @foreach($pendingReturnRequests as $returnRequest)
+                                    <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#approveReturnRequestModal{{ $returnRequest->id }}">
+                                        <i class="fas fa-check-circle"></i> موافقة على طلب رد ({{ number_format($returnRequest->amount, 2) }} ج.م)
+                                    </button>
+                                @endforeach
+                            @endif
+                        @endcan
+
+                        @can('manage_treasury')
+                            @if(in_array($custody->status, ['active', 'accepted', 'partially_returned']))
+                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#externalDonationModal">
+                                    <i class="fas fa-plus-circle"></i> إضافة تبرع / استرداد
+                                </button>
+                            @endif
+                        @endcan
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Status Card -->
+            <div class="card mb-3" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border: 1px solid rgba(102, 126, 234, 0.3);">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <i class="fas fa-chart-pie" style="color: #667eea;"></i> معلومات الحالة
+                    </h6>
+                    <div style="font-size: 0.9rem; line-height: 2;">
+                        <div class="mb-3">
+                            <strong>الحالة:</strong><br>
+                            @php
+                                $custodyRemaining = $custody->getRemainingBalance();
+                            @endphp
+                            @if($custodyRemaining <= 0 && $custody->status === 'accepted')
+                                <span class="badge bg-dark">عهدة مستوفاة</span>
+                            @else
+                                @switch($custody->status)
+                                    @case('pending')
+                                        <span class="badge bg-warning">قيد الانتظار</span>
+                                        @break
+                                    @case('accepted')
+                                        <span class="badge bg-success">عهدة نشطة</span>
+                                        @break
+                                    @case('rejected')
+                                        <span class="badge bg-danger">مرفوض</span>
+                                        @break
+                                    @case('pending_return')
+                                        <span class="badge bg-info">انتظار موافقة رد العهدة</span>
+                                        @break
+                                    @case('partially_returned')
+                                        <span class="badge bg-primary">تم رد جزء من العهدة</span>
+                                        @break
+                                    @case('closed')
+                                        <span class="badge bg-secondary">عهدة مغلقة</span>
+                                        @break
+                                    @case('cancelled')
+                                        <span class="badge bg-dark">عهدة ملغاة</span>
+                                        @break
+                                    @default
+                                        <span class="badge bg-secondary">{{ $custody->status }}</span>
+                                @endswitch
+                            @endif
+                            <br><small style="color: #666;">{{ $custody->status_detail }}</small>
+                        </div>
+                        <div class="mb-3">
+                            <strong>نسبة الإنفاق:</strong><br>
+                            <div class="progress" style="height: 8px; margin-top: 5px;">
+                                <div class="progress-bar" style="width: {{ ($custody->getTotalSpent() / $custody->amount) * 100 }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                            </div>
+                            <small style="color: #666;">{{ round(($custody->getTotalSpent() / $custody->amount) * 100) }}%</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent Summary Card (Only for agents) -->
+            @if(auth()->user()->hasRole('مندوب') && auth()->user()->id === $custody->agent_id)
+                <div class="card" style="background: linear-gradient(135deg, #fff5e1 0%, #ffe0b2 100%); border: 1px solid #ffcc80;">
+                    <div class="card-body">
+                        <h6 class="card-title mb-3">
+                            <i class="fas fa-briefcase" style="color: #f57c00;"></i> ملخص عهدتك
+                        </h6>
+                        <div style="font-size: 0.9rem;">
+                            <!-- Total Custody -->
+                            <div class="mb-3" style="padding-bottom: 1rem; border-bottom: 1px solid rgba(245, 124, 0, 0.2);">
+                                <p style="margin: 0; color: #666; font-size: 0.8rem;">إجمالي العهدة</p>
+                                <h4 style="margin: 0.5rem 0 0; color: #f57c00; font-weight: 700;">{{ number_format($custody->amount, 2) }} ج.م</h4>
+                            </div>
+
+                            <!-- Total Expenses -->
+                            <div class="mb-3" style="padding-bottom: 1rem; border-bottom: 1px solid rgba(245, 124, 0, 0.2);">
+                                <p style="margin: 0; color: #666; font-size: 0.8rem;">إجمالي المصروفات</p>
+                                <h4 style="margin: 0.5rem 0 0; color: #e53935; font-weight: 700;">{{ number_format($custody->getTotalSpent(), 2) }} ج.م</h4>
+                            </div>
+
+                            <!-- Remaining Balance -->
+                            <div class="mb-3" style="padding-bottom: 1rem; border-bottom: 1px solid rgba(245, 124, 0, 0.2);">
+                                <p style="margin: 0; color: #666; font-size: 0.8rem;">المبلغ المتبقي</p>
+                                <h4 style="margin: 0.5rem 0 0; color: #43a047; font-weight: 700;">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</h4>
+                            </div>
+
+                            <!-- Spending Percentage -->
+                            <div>
+                                <p style="margin: 0; color: #666; font-size: 0.8rem;">نسبة الإنفاق</p>
+                                <div style="margin-top: 0.5rem;">
+                                    <div class="progress" style="height: 10px; margin-bottom: 0.5rem;">
+                                        @php
+                                            $spendingPercentage = ($custody->getTotalSpent() / $custody->amount) * 100;
+                                        @endphp
+                                        <div class="progress-bar" style="width: {{ $spendingPercentage }}%; background: linear-gradient(135deg, #f57c00 0%, #ff6f00 100%);"></div>
+                                    </div>
+                                    <p style="margin: 0; font-weight: bold; color: #f57c00;">{{ round($spendingPercentage) }}%</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </div>
+    </div>
+
+    <!-- Journal/Ledger Section - دفتر اليومية -->
+    <div class="row mt-5" data-aos="fade-up">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header" style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-book"></i> دفتر اليومية - سجل جميع الحركات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @php
+                        // Get all transactions and expenses for this custody
+                        $transactions = $custody->transactions()->orderBy('transaction_date', 'desc')->get();
+                        $expenses = $custody->expenses()->orderBy('created_at', 'desc')->get();
+                        $returnRequests = \App\Models\CustodyReturnRequest::where('custody_id', $custody->id)
+                            ->orderBy('created_at', 'desc')
+                            ->get();
+
+                        // Calculate running balance
+                        $runningBalance = $custody->amount;
+                    @endphp
+
+                    @if($transactions->isEmpty() && $expenses->isEmpty())
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> لم يتم تسجيل أي حركات على هذه العهدة حتى الآن
+                        </div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm" style="font-size: 0.9rem;">
+                                <thead style="background-color: #f3f4f6;">
+                                    <tr style="border-bottom: 2px solid #d1d5db;">
+                                        <th style="width: 15%; text-align: right;">التاريخ والوقت</th>
+                                        <th style="width: 20%; text-align: right;">نوع الحركة</th>
+                                        <th style="width: 15%; text-align: center;">المبلغ الداخل</th>
+                                        <th style="width: 15%; text-align: center;">المبلغ الخارج</th>
+                                        <th style="width: 15%; text-align: center;">الرصيد</th>
+                                        <th style="width: 20%; text-align: right;">البيان</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Transactions, Expenses, and Return Requests combined and sorted -->
+                                    @php
+                                        $allEvents = [];
+
+                                        // Add starting balance
+                                        $allEvents[] = [
+                                            'type' => 'starting_balance',
+                                            'date' => $custody->created_at,
+                                            'object' => $custody
+                                        ];
+
+                                        // Add transactions
+                                        foreach($transactions as $trans) {
+                                            $allEvents[] = [
+                                                'type' => 'transaction',
+                                                'date' => $trans->transaction_date,
+                                                'object' => $trans
+                                            ];
+                                        }
+
+                                        // Add expenses
+                                        foreach($expenses as $exp) {
+                                            $allEvents[] = [
+                                                'type' => 'expense',
+                                                'date' => $exp->created_at,
+                                                'object' => $exp
+                                            ];
+                                        }
+
+                                        // Add return requests
+                                        foreach($returnRequests as $request) {
+                                            $allEvents[] = [
+                                                'type' => 'return_request',
+                                                'date' => $request->created_at,
+                                                'object' => $request
+                                            ];
+                                        }
+
+                                        // Sort by date descending (newest first)
+                                        usort($allEvents, function($a, $b) {
+                                            return $b['date']->timestamp - $a['date']->timestamp;
+                                        });
+
+                                        // Calculate running balances in ascending order (for display in descending order)
+                                        $balancesMap = [];
+                                        $tempBalance = $custody->amount;
+                                        $eventsAscending = array_reverse($allEvents);
+
+                                        foreach ($eventsAscending as $idx => $event) {
+                                            if ($event['type'] === 'transaction') {
+                                                $trans = $event['object'];
+                                                $isIncome = in_array($trans->type, ['donation', 'recovery', 'transfer_in']);
+                                                $tempBalance += $isIncome ? $trans->amount : -$trans->amount;
+                                            } elseif ($event['type'] === 'expense') {
+                                                $exp = $event['object'];
+                                                $tempBalance -= $exp->amount;
+                                            }
+                                            $balancesMap[$idx] = $tempBalance;
+                                        }
+                                        $balancesMap = array_reverse($balancesMap);
+                                    @endphp
+
+                                    @forelse($allEvents as $idx => $event)
+                                        @if($event['type'] === 'starting_balance')
+                                            @php
+                                                $startingCustody = $event['object'];
+                                            @endphp
+                                            <tr style="background-color: #f0f9ff; font-weight: bold;">
+                                                <td style="text-align: right;">{{ $startingCustody->created_at->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right;">
+                                                    <span class="badge bg-primary">
+                                                        <i class="fas fa-plus-circle"></i> إنشاء العهدة
+                                                    </span>
+                                                </td>
+                                                <td style="text-align: center; color: #059669;">
+                                                    <strong>{{ number_format($startingCustody->amount, 2) }}</strong>
+                                                </td>
+                                                <td style="text-align: center;">-</td>
+                                                <td style="text-align: center; color: #0369a1;">
+                                                    <strong>{{ number_format($startingCustody->amount, 2) }}</strong>
+                                                </td>
+                                                <td style="text-align: right;">العهدة الأولية</td>
+                                            </tr>
+                                        @elseif($event['type'] === 'return_request')
+                                            @php
+                                                $returnReq = $event['object'];
+                                            @endphp
+                                            <tr style="border-bottom: 1px solid #e5e7eb; background-color: #fef3c7;">
+                                                <td style="text-align: right; font-family: monospace;">{{ $returnReq->created_at->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right;">
+                                                    @if($returnReq->status === 'pending')
+                                                        <span class="badge" style="background-color: #f59e0b;"><i class="fas fa-hourglass-half"></i> طلب رد معلق</span>
+                                                    @elseif($returnReq->status === 'approved')
+                                                        <span class="badge bg-success"><i class="fas fa-check-circle"></i> موافقة على رد</span>
+                                                    @elseif($returnReq->status === 'rejected')
+                                                        <span class="badge bg-danger"><i class="fas fa-times-circle"></i> رفض الرد</span>
+                                                    @endif
+                                                </td>
+                                                <td style="text-align: center;">-</td>
+                                                <td style="text-align: center; color: #dc2626; font-weight: bold;">
+                                                    @if($returnReq->status !== 'rejected')
+                                                        {{ number_format($returnReq->amount, 2) }}
+                                                    @else
+                                                        -
+                                                    @endif
+                                                </td>
+                                                <td style="text-align: center; color: #0369a1; font-weight: bold;">
+                                                    -
+                                                </td>
+                                                <td style="text-align: right; font-size: 0.85rem;">
+                                                    @if($returnReq->reason)
+                                                        {{ $returnReq->reason }}
+                                                    @else
+                                                        طلب رد العهدة
+                                                    @endif
+                                                    @if($returnReq->status === 'approved')
+                                                        <br><small style="color: #059669;"><i class="fas fa-check"></i> تمت الموافقة بواسطة {{ $returnReq->approver?->name ?? 'نظام' }}</small>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @elseif($event['type'] === 'transaction')
+                                            @php
+                                                $trans = $event['object'];
+                                                // Income: donation, recovery, transfer_in
+                                                // Outgoing: custody_out, custody_return (returns reduce the custody amount)
+                                                $isIncome = in_array($trans->type, ['donation', 'recovery', 'transfer_in']);
+                                                $amount = $trans->amount;
+                                                $displayBalance = isset($balancesMap[$idx]) ? $balancesMap[$idx] : 0;
+                                            @endphp
+                                            <tr style="border-bottom: 1px solid #e5e7eb;">
+                                                <td style="text-align: right; font-family: monospace;">{{ $trans->transaction_date->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right;">
+                                                    @if($trans->type === 'donation')
+                                                        @if(str_contains($trans->description, 'استرداد مصروف'))
+                                                            <span class="badge bg-info"><i class="fas fa-undo"></i> استرداد مصروف</span>
+                                                        @elseif(str_contains($trans->description, 'استرداد'))
+                                                            <span class="badge bg-cyan" style="background-color: #06b6d4;"><i class="fas fa-arrow-left"></i> استرداد</span>
+                                                        @else
+                                                            <span class="badge bg-success"><i class="fas fa-gift"></i> تبرع خارجي</span>
+                                                        @endif
+                                                    @elseif($trans->type === 'recovery')
+                                                        <span class="badge" style="background-color: #06b6d4;"><i class="fas fa-arrow-left"></i> استرداد</span>
+                                                    @elseif($trans->type === 'custody_out')
+                                                        <span class="badge bg-danger"><i class="fas fa-arrow-down"></i> صرف</span>
+                                                    @elseif($trans->type === 'custody_return')
+                                                        <span class="badge bg-success"><i class="fas fa-arrow-up"></i> رد</span>
+                                                    @else
+                                                        <span class="badge bg-secondary">{{ $trans->type }}</span>
+                                                    @endif
+                                                </td>
+                                                <td style="text-align: center; color: #059669; font-weight: bold;">
+                                                    {{ $isIncome ? number_format($amount, 2) : '-' }}
+                                                </td>
+                                                <td style="text-align: center; color: #dc2626; font-weight: bold;">
+                                                    {{ !$isIncome ? number_format($amount, 2) : '-' }}
+                                                </td>
+                                                <td style="text-align: center; color: #0369a1; font-weight: bold;">
+                                                    {{ number_format($displayBalance, 2) }}
+                                                </td>
+                                                <td style="text-align: right; font-size: 0.85rem;">{{ $trans->description }}</td>
+                                            </tr>
+                                        @else
+                                            @php
+                                                $exp = $event['object'];
+                                                $displayBalance = isset($balancesMap[$idx]) ? $balancesMap[$idx] : 0;
+                                            @endphp
+                                            <tr style="border-bottom: 1px solid #e5e7eb; background-color: #fef2f2;">
+                                                <td style="text-align: right; font-family: monospace;">{{ $exp->created_at->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right;">
+                                                    <span class="badge bg-warning"><i class="fas fa-shopping-cart"></i> مصروف</span>
+                                                </td>
+                                                <td style="text-align: center;">-</td>
+                                                <td style="text-align: center; color: #dc2626; font-weight: bold;">
+                                                    {{ number_format($exp->amount, 2) }}
+                                                </td>
+                                                <td style="text-align: center; color: #0369a1; font-weight: bold;">
+                                                    {{ number_format($displayBalance, 2) }}
+                                                </td>
+                                                <td style="text-align: right; font-size: 0.85rem;">
+                                                    {{ $exp->category?->name ?? 'غير محدد' }} - {{ $exp->description }}
+                                                </td>
+                                            </tr>
+                                        @endif
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">لا توجد حركات</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                                <tfoot style="background-color: #f0f9ff; font-weight: bold; border-top: 2px solid #d1d5db;">
+                                    <tr>
+                                        <td colspan="2" style="text-align: right;">الرصيد الحالي</td>
+                                        <td style="text-align: center; color: #059669;">{{ number_format($custody->getRemainingBalance(), 2) }}</td>
+                                        <td colspan="3"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <!-- Summary Statistics -->
+                        <div class="row mt-4 pt-3 border-top">
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي الدخل</p>
+                                    <h4 style="margin: 0.5rem 0; color: #059669; font-weight: bold;">
+                                        {{ number_format($transactions->whereIn('type', ['donation', 'recovery', 'custody_return'])->sum('amount'), 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي الصرف</p>
+                                    <h4 style="margin: 0.5rem 0; color: #dc2626; font-weight: bold;">
+                                        {{ number_format($custody->spent, 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي المسترجع</p>
+                                    <h4 style="margin: 0.5rem 0; color: #0369a1; font-weight: bold;">
+                                        {{ number_format($custody->returned, 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">الرصيد المتبقي</p>
+                                    <h4 style="margin: 0.5rem 0; color: #0369a1; font-weight: bold;">
+                                        {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Accept Custody Modal -->
+<div class="modal fade" id="acceptModal" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg" style="z-index: 1070;">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-check-circle"></i>
+                    @if($custody->treasury_id === null)
+                        قبول العهدة الشخصية واختيار الخزينة
+                    @else
+                        قبول العهدة وتوزيع الأموال
+                    @endif
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" onsubmit="return @if($custody->treasury_id === null) validateSingleTreasury() @else validateTreasuryDistribution() @endif">
+                @csrf
+                <div class="modal-body">
+                    @if($custody->treasury_id === null)
+                        {{-- Personal Custody: Select Single Treasury --}}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> هذه عهدة شخصية. اختر خزينة واحدة لصرف الأموال منها
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label"><strong>بيانات العهدة:</strong></label>
+                            <p><strong>الموظف:</strong> {{ $custody->agent->name }}</p>
+                            <p><strong>المبلغ الإجمالي:</strong> <span class="text-primary fw-bold" style="font-size: 1.1rem;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
+                        </div>
+
+                        @php
+                            $treasuries = \App\Models\Treasury::all();
+                        @endphp
+
+                        <div class="mb-3">
+                            <label class="form-label"><strong>اختر الخزينة:</strong></label>
+                            <select name="treasury_id" id="singleTreasurySelect" class="form-control" required onchange="updatePersonalCustodyBalance()">
+                                <option value="">-- اختر خزينة --</option>
+                                @foreach($treasuries as $treasury)
+                                <option value="{{ $treasury->id }}" data-balance="{{ $treasury->balance }}">
+                                    {{ $treasury->name }} (الرصيد: {{ number_format($treasury->balance, 2) }} ج.م)
+                                </option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted d-block mt-2" id="selectedTreasuryBalance"></small>
+                        </div>
+
+                        <div class="alert alert-warning mt-3">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>تنبيه:</strong> تأكد من أن الخزينة المختارة بها رصيد كافي ({{ number_format($custody->amount, 2) }} ج.م على الأقل)
+                        </div>
+                    @else
+                        {{-- Regular Custody: Distribute across treasuries --}}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> حدد من أي خزائن سيتم الصرف والمبالغ من كل خزينة
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label"><strong>بيانات العهدة:</strong></label>
+                            <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                            <p><strong>المبلغ الإجمالي:</strong> <span class="text-primary fw-bold" style="font-size: 1.1rem;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
+                        </div>
+
+                        @php
+                            $treasuries = \App\Models\Treasury::all();
+                            $requiredAmount = $custody->amount;
+                        @endphp
+
+                        <div class="mb-3">
+                            <label class="form-label"><strong>توزيع الصرف على الخزائن:</strong></label>
+                            <div id="treasuriesDistributionContainer" style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 15px;">
+                                @foreach($treasuries as $treasury)
+                                <div class="treasury-item mb-3" data-treasury-id="{{ $treasury->id }}" data-balance="{{ $treasury->balance }}">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-6">
+                                            <label class="form-label mb-2" style="font-weight: 600;">{{ $treasury->name }}</label>
+                                            <small class="d-block text-muted mb-2">الرصيد المتاح: <span class="fw-bold text-info">{{ number_format($treasury->balance, 2) }} ج.م</span></small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="number"
+                                                   name="treasury_amounts[{{ $treasury->id }}]"
+                                                   class="form-control treasury-amount"
+                                                   data-treasury-id="{{ $treasury->id }}"
+                                                   min="0"
+                                                   step="0.01"
+                                                   value="0"
+                                                   oninput="updateDistributionTotal()"
+                                                   placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div class="card" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border: 1px solid rgba(102, 126, 234, 0.3);" id="distributionSummary">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ الإجمالي المطلوب:</p>
+                                        <h5 style="margin: 5px 0 0; color: #667eea;">{{ number_format($custody->amount, 2) }} ج.م</h5>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ المدخل:</p>
+                                        <h5 id="totalEnteredAmount" style="margin: 5px 0 0; color: #4caf50;">0.00 ج.م</h5>
+                                    </div>
+                                </div>
+                                <div id="distributionStatus" style="margin-top: 15px; padding: 10px; border-radius: 4px; background: white; text-align: center;">
+                                    <span class="text-warning"><i class="fas fa-exclamation-circle"></i> لم تدخل المبالغ بعد</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                            <i class="fas fa-info-circle"></i> ملاحظات:
+                        </p>
+                        <ul style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                            <li>يجب أن يساوي مجموع الصرف المبلغ الإجمالي للعهدة</li>
+                            <li>لا يمكن الصرف أكثر من رصيد الخزينة</li>
+                            <li>كل صرف سيتم تسجيله بشكل منفصل في السجل</li>
+                        </ul>
+                    @endif
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success" id="acceptSubmitBtn" disabled>
+                        <i class="fas fa-check"></i> تأكيد القبول والصرف
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// For Personal Custodies - Single Treasury Selection
+function updatePersonalCustodyBalance() {
+    const select = document.getElementById('singleTreasurySelect');
+    const balanceDiv = document.getElementById('selectedTreasuryBalance');
+    const submitBtn = document.getElementById('acceptSubmitBtn');
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const balance = parseFloat(option.dataset.balance);
+        const requiredAmount = {{ $custody->amount }};
+
+        if (balance >= requiredAmount) {
+            balanceDiv.textContent = '✓ رصيد الخزينة كافي (' + balance.toFixed(2) + ' ج.م)';
+            balanceDiv.style.color = '#4caf50';
+            submitBtn.disabled = false;
+        } else {
+            balanceDiv.textContent = '✗ رصيد الخزينة غير كافي (متوفر: ' + balance.toFixed(2) + ' ج.م، مطلوب: ' + requiredAmount.toFixed(2) + ' ج.م)';
+            balanceDiv.style.color = '#dc2626';
+            submitBtn.disabled = true;
+        }
+    } else {
+        balanceDiv.textContent = '';
+        submitBtn.disabled = true;
+    }
+}
+
+function validateSingleTreasury() {
+    const select = document.getElementById('singleTreasurySelect');
+    if (!select.value) {
+        alert('يرجى اختيار خزينة');
+        return false;
+    }
+    return true;
+}
+
+function updateDistributionTotal() {
+    const inputs = document.querySelectorAll('.treasury-amount');
+    let total = 0;
+    let hasError = false;
+    const requiredAmount = {{ $custody->amount }};
+    const submitBtn = document.getElementById('acceptSubmitBtn');
+    const statusDiv = document.getElementById('distributionStatus');
+    const totalDisplay = document.getElementById('totalEnteredAmount');
+
+    // Calculate total
+    inputs.forEach(input => {
+        const amount = parseFloat(input.value) || 0;
+        const treasuryId = input.dataset.treasuryId;
+        const treasuryItem = document.querySelector(`[data-treasury-id="${treasuryId}"]`);
+        const balance = parseFloat(treasuryItem.dataset.balance);
+
+        // Check if exceeds treasury balance
+        if (amount > balance) {
+            input.classList.add('is-invalid');
+            hasError = true;
+        } else {
+            input.classList.remove('is-invalid');
+        }
+
+        total += amount;
+    });
+
+    totalDisplay.textContent = total.toFixed(2) + ' ج.م';
+
+    // Check if total matches required amount
+    if (hasError) {
+        statusDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle"></i> يوجد خزينة بمبلغ أكبر من رصيدها</span>';
+        submitBtn.disabled = true;
+    } else if (Math.abs(total - requiredAmount) < 0.01) {
+        statusDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle"></i> المبالغ صحيحة وجاهزة للموافقة</span>';
+        submitBtn.disabled = false;
+    } else if (total < requiredAmount) {
+        const remaining = (requiredAmount - total).toFixed(2);
+        statusDiv.innerHTML = `<span class="text-warning"><i class="fas fa-exclamation-circle"></i> ينقص ${remaining} ج.م</span>`;
+        submitBtn.disabled = true;
+    } else {
+        statusDiv.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle"></i> المبلغ المدخل أكثر من المطلوب</span>';
+        submitBtn.disabled = true;
+    }
+}
+
+function validateTreasuryDistribution() {
+    const inputs = document.querySelectorAll('.treasury-amount');
+    let total = 0;
+    const requiredAmount = {{ $custody->amount }};
+
+    inputs.forEach(input => {
+        const amount = parseFloat(input.value) || 0;
+        const treasuryId = input.dataset.treasuryId;
+        const treasuryItem = document.querySelector(`[data-treasury-id="${treasuryId}"]`);
+        const balance = parseFloat(treasuryItem.dataset.balance);
+
+        if (amount > balance) {
+            alert(`المبلغ المدخل في خزينة يتجاوز الرصيد المتاح`);
+            return false;
+        }
+        total += amount;
+    });
+
+    if (Math.abs(total - requiredAmount) > 0.01) {
+        alert(`مجموع المبالغ المدخلة يجب أن يساوي ${requiredAmount.toFixed(2)} ج.م`);
+        return false;
+    }
+
+    return true;
+}
+
+// Initialize on modal open
+document.getElementById('acceptModal').addEventListener('shown.bs.modal', function() {
+    updateDistributionTotal();
+});
+</script>
+
+<script>
+function updateAcceptTreasuryInfo() {
+    const select = document.getElementById('acceptTreasurySelect');
+    const infoCard = document.getElementById('treasuryInfoCard');
+    const balanceDisplay = document.getElementById('selectedTreasuryBalance');
+    const statusMessage = document.getElementById('treasuryStatusMessage');
+    const submitBtn = document.getElementById('acceptSubmitBtn');
+    const requiredAmount = {{ $custody->amount }};
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const balance = parseFloat(option.dataset.balance) || 0;
+
+        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+        infoCard.style.display = 'block';
+
+        if (balance >= requiredAmount) {
+            statusMessage.innerHTML = '<span style="color: #4caf50;"><i class="fas fa-check-circle"></i> رصيد كافي لقبول العهدة</span>';
+            submitBtn.disabled = false;
+        } else {
+            const shortfall = requiredAmount - balance;
+            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + shortfall.toFixed(2) + ' ج.م</span>';
+            submitBtn.disabled = true;
+        }
+    } else {
+        infoCard.style.display = 'none';
+        submitBtn.disabled = true;
+    }
+}
+</script>
+
+<!-- Reject Custody Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f5576c 0%, #ff6b6b 100%); border: none;">
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-times-circle"></i> رفض العهدة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.reject', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> هل تريد رفض هذه العهدة؟
+                    </div>
+                    <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                    <p><strong>المبلغ:</strong> {{ number_format($custody->amount, 2) }} ج.م</p>
+                    <div class="mb-3">
+                        <label class="form-label"><strong>سبب الرفض</strong></label>
+                        <textarea name="reason" class="form-control" rows="3" required placeholder="أدخل سبب الرفض..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times"></i> تأكيد الرفض
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Return Custody Request Modal -->
+<div class="modal fade" id="returnModal" tabindex="-1" aria-labelledby="returnModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog" style="z-index: 1070;">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); border: none;">
+                <h5 class="modal-title" style="color: white;" id="returnModalLabel"><i class="fas fa-undo"></i> طلب رد العهدة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="returnForm" action="{{ route('custodies.requestReturn') }}" method="POST">
+                @csrf
+                <input type="hidden" name="custody_id" value="{{ $custody->id }}">
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> سيتم إرسال طلب رد للمحاسب للموافقة عليه واختيار الخزينة المناسبة
+                    </div>
+
+                    <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>إجمالي العهدة:</strong><br>
+                            <span style="color: #667eea; font-weight: bold;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>تم صرفه:</strong><br>
+                            <span style="color: #e53935; font-weight: bold;">{{ number_format($custody->getTotalSpent(), 2) }} ج.م</span></p>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <p><strong>المتبقي من العهدة:</strong><br>
+                        <span style="color: #4caf50; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</span></p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>المبلغ المراد رده <span class="text-danger">*</span></strong></label>
+                        <input type="number" name="amount" class="form-control @error('amount') is-invalid @enderror" step="0.01" min="0.01" max="{{ $custody->getRemainingBalance() }}" required placeholder="أدخل المبلغ...">
+                        <small class="text-muted">يجب ألا يتجاوز {{ number_format($custody->getRemainingBalance(), 2) }} ج.م</small>
+                        @error('amount')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>سبب الرد <span class="text-danger">*</span></strong></label>
+                        <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3" required placeholder="أدخل سبب الرد..."></textarea>
+                        @error('description')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="alert alert-warning" style="margin-bottom: 0;">
+                        <i class="fas fa-info-circle"></i> ملاحظة:
+                        <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.9rem;">
+                            <li>سيتم إرسال الطلب للمحاسب للمراجعة</li>
+                            <li>المحاسب سيختار الخزينة المناسبة لإضافة المبلغ</li>
+                            <li>سيتم تحديث حالة العهدة بعد الموافقة</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-info">
+                        <i class="fas fa-paper-plane"></i> إرسال طلب الرد
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Return Modal (Old - Deprecated) -->
+<div class="modal fade" id="approveReturnModal" tabindex="-1" aria-labelledby="approveReturnModalLabel" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog" style="z-index: 1070;">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #ffa726 0%, #ff9800 100%); border: none;">
+                <h5 class="modal-title" style="color: white;" id="approveReturnModalLabel"><i class="fas fa-check-double"></i> الموافقة على رد العهدة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('custodies.approveReturn', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> هل تواافق على رد المبلغ المعلق من العهدة؟
+                    </div>
+                    <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>إجمالي العهدة:</strong><br>
+                            <span style="color: #667eea; font-weight: bold;">{{ number_format($custody->amount, 2) }} ج.م</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>المبلغ المعلق:</strong><br>
+                            <span style="color: #ffa726; font-weight: bold; font-size: 1.1rem;">{{ number_format($custody->pending_return, 2) }} ج.م</span></p>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اختر الخزينة لإضافة الرد</strong></label>
+                        <select name="treasury_id" id="returnTreasurySelect" class="form-select @error('treasury_id') is-invalid @enderror" required onchange="updateReturnTreasuryBalance()">
+                            <option value="">-- اختر الخزينة --</option>
+                            @foreach(\App\Models\Treasury::all() as $treasury)
+                                <option value="{{ $treasury->id }}"
+                                    data-balance="{{ $treasury->balance }}"
+                                    {{ $custody->treasury_id == $treasury->id ? 'selected' : '' }}>
+                                    {{ $treasury->name }} (الرصيد الحالي: {{ number_format($treasury->balance, 2) }} ج.م)
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('treasury_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div id="treasuryInfo" style="background: #f5f5f5; padding: 12px; border-radius: 4px; margin-bottom: 15px; display: none;">
+                        <p style="margin: 0; font-size: 0.9rem; color: #666;">
+                            <strong>الرصيد الحالي:</strong> <span id="currentBalance" style="color: #667eea; font-weight: bold;">0</span> ج.م
+                        </p>
+                        <p style="margin: 8px 0 0; font-size: 0.9rem; color: #666;">
+                            <strong>بعد الإضافة:</strong> <span id="newBalance" style="color: #4caf50; font-weight: bold;">0</span> ج.م
+                        </p>
+                    </div>
+
+                    <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                        <i class="fas fa-arrow-right"></i> عند الموافقة، سيتم:
+                    </p>
+                    <ul style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
+                        <li>إضافة {{ number_format($custody->pending_return, 2) }} ج.م إلى الخزينة المختارة</li>
+                        <li>تحديث حالة العهدة</li>
+                        <li>إرسال إشعار للمندوب بقبول الرد</li>
+                        <li>تسجيل العملية في السجل</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-check"></i> الموافقة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Approve Return Request Modals (New - For pending CustodyReturnRequest records) -->
+@php
+    $pendingReturnRequests = \App\Models\CustodyReturnRequest::where('custody_id', $custody->id)
+        ->where('status', 'pending')
+        ->get();
+@endphp
+
+@foreach($pendingReturnRequests as $returnRequest)
+<div class="modal fade" id="approveReturnRequestModal{{ $returnRequest->id }}" tabindex="-1" aria-labelledby="approveReturnRequestLabel{{ $returnRequest->id }}" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog" style="z-index: 1070;">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                <h5 class="modal-title" style="color: white;" id="approveReturnRequestLabel{{ $returnRequest->id }}">
+                    <i class="fas fa-check-double"></i> موافقة على طلب الرد
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{{ route('custodies.approveReturnWithTreasury', $returnRequest->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> اختر الخزينة التي سيتم إضافة المبلغ المرد إليها
+                    </div>
+
+                    <div class="mb-3" style="background: #f9fafb; padding: 12px; border-radius: 6px;">
+                        <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9rem;"><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                        <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9rem;"><strong>المبلغ المطلوب رده:</strong> <span style="color: #dc2626; font-weight: bold;">{{ number_format($returnRequest->amount, 2) }} ج.م</span></p>
+                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>تاريخ الطلب:</strong> {{ $returnRequest->created_at->format('Y-m-d H:i') }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اختر الخزينة المستقبلة</strong></label>
+                        <select name="treasury_id" class="form-select @error('treasury_id') is-invalid @enderror" required onchange="updateTreasuryBalance{{ $returnRequest->id }}()">
+                            <option value="">-- اختر الخزينة --</option>
+                            @foreach(\App\Models\Treasury::all() as $treasury)
+                                <option value="{{ $treasury->id }}"
+                                    data-balance="{{ $treasury->balance }}"
+                                    data-name="{{ $treasury->name }}">
+                                    {{ $treasury->name }} (الرصيد الحالي: {{ number_format($treasury->balance, 2) }} ج.م)
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('treasury_id')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div id="treasuryInfo{{ $returnRequest->id }}" style="background: #f0fdf4; padding: 12px; border-radius: 4px; border-left: 4px solid #10b981; margin-bottom: 15px; display: none;">
+                        <p style="margin: 0 0 8px 0; font-size: 0.9rem; color: #166534;">
+                            <strong>الخزينة المختارة:</strong> <span id="treasuryName{{ $returnRequest->id }}">-</span>
+                        </p>
+                        <p style="margin: 0 0 8px 0; font-size: 0.9rem; color: #166534;">
+                            <strong>الرصيد الحالي:</strong> <span id="currentBalance{{ $returnRequest->id }}" style="font-weight: bold;">0</span> ج.م
+                        </p>
+                        <p style="margin: 0; font-size: 0.9rem; color: #166534;">
+                            <strong>الرصيد بعد الإضافة:</strong> <span id="newBalance{{ $returnRequest->id }}" style="color: #059669; font-weight: bold;">0</span> ج.م
+                        </p>
+                    </div>
+
+                    <div class="alert alert-warning" style="margin-bottom: 0;">
+                        <i class="fas fa-exclamation-triangle"></i> ملخص العملية:
+                        <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 0.9rem;">
+                            <li>سيتم خصم <strong>{{ number_format($returnRequest->amount, 2) }} ج.م</strong> من العهدة</li>
+                            <li>سيتم إضافة المبلغ للخزينة المختارة</li>
+                            @if($custody->getRemainingBalance() <= $returnRequest->amount)
+                                <li style="color: #dc2626;"><strong>العهدة ستُغلق وتُسوّى لأنها ستصبح فارغة</strong></li>
+                            @endif
+                            <li>سيتم إرسال إشعار للمندوب بالموافقة</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> الموافقة على الرد
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateTreasuryBalance{{ $returnRequest->id }}() {
+    const select = document.querySelector('#approveReturnRequestModal{{ $returnRequest->id }} select[name="treasury_id"]');
+    const option = select.options[select.selectedIndex];
+    const returnAmount = {{ $returnRequest->amount }};
+
+    if (option.value) {
+        const currentBalance = parseFloat(option.getAttribute('data-balance'));
+        const newBalance = currentBalance + returnAmount;
+        const treasuryName = option.getAttribute('data-name');
+
+        document.getElementById('treasuryName{{ $returnRequest->id }}').textContent = treasuryName;
+        document.getElementById('currentBalance{{ $returnRequest->id }}').textContent = currentBalance.toFixed(2);
+        document.getElementById('newBalance{{ $returnRequest->id }}').textContent = newBalance.toFixed(2);
+        document.getElementById('treasuryInfo{{ $returnRequest->id }}').style.display = 'block';
+    } else {
+        document.getElementById('treasuryInfo{{ $returnRequest->id }}').style.display = 'none';
+    }
+}
+</script>
+@endforeach
+
+{{-- Agent Accept Modal (Workflow 2) --}}
+<div class="modal fade" id="agentAcceptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);">
+                <h5 class="modal-title" style="color: white;">قبول العهدة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.agent-accept', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>تأكيد:</strong> هل تقبل هذه العهدة؟
+                    </div>
+                    <p>العهدة بقيمة <strong>{{ number_format($custody->amount, 2) }} ج.م</strong></p>
+
+                    <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle"></i> عند القبول، سيتم:
+                    </p>
+                    <ul style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">
+                        <li>استقبال العهدة في حسابك</li>
+                        <li>صرف الأموال فوراً</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> قبول
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateAgentAcceptTreasuryInfo() {
+    const select = document.getElementById('agentAcceptTreasurySelect');
+    const infoCard = document.getElementById('agentTreasuryInfoCard');
+    const balanceDisplay = document.getElementById('agentSelectedTreasuryBalance');
+    const statusMessage = document.getElementById('agentTreasuryStatusMessage');
+    const submitBtn = document.getElementById('agentAcceptSubmitBtn');
+    const requiredAmount = {{ $custody->amount }};
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const balance = parseFloat(option.dataset.balance) || 0;
+
+        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+        infoCard.style.display = 'block';
+
+        if (balance >= requiredAmount) {
+            statusMessage.innerHTML = '<span style="color: #4caf50;"><i class="fas fa-check-circle"></i> رصيد كافي لقبول العهدة</span>';
+            submitBtn.disabled = false;
+        } else {
+            const shortfall = requiredAmount - balance;
+            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + shortfall.toFixed(2) + ' ج.م</span>';
+            submitBtn.disabled = true;
+        }
+    } else {
+        infoCard.style.display = 'none';
+        submitBtn.disabled = true;
+    }
+}
+
+function updateReturnTreasuryBalance() {
+    const select = document.getElementById('returnTreasurySelect');
+    const infoDiv = document.getElementById('treasuryInfo');
+    const currentBalanceSpan = document.getElementById('currentBalance');
+    const newBalanceSpan = document.getElementById('newBalance');
+    const returnAmount = {{ $custody->pending_return ?? 0 }};
+
+    if (select.value) {
+        const option = select.options[select.selectedIndex];
+        const currentBalance = parseFloat(option.dataset.balance) || 0;
+        const newBalance = currentBalance + returnAmount;
+
+        currentBalanceSpan.textContent = currentBalance.toFixed(2);
+        newBalanceSpan.textContent = newBalance.toFixed(2);
+        infoDiv.style.display = 'block';
+    } else {
+        infoDiv.style.display = 'none';
+    }
+}
+
+// Initialize on modal open
+document.addEventListener('shown.bs.modal', function (event) {
+    if (event.target.id === 'approveReturnModal') {
+        updateReturnTreasuryBalance();
+    }
+});
+</script>
+
+{{-- Agent Reject Modal (Workflow 2) --}}
+<div class="modal fade" id="agentRejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f5576c 0%, #ff6b6b 100%);">
+                <h5 class="modal-title" style="color: white;">رفض العهدة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.agent-reject', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">السبب (اختياري)</label>
+                        <textarea name="reason" class="form-control" placeholder="يمكنك توضيح سبب الرفض..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger">رفض</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Agent Receive Modal (Workflow 1) --}}
+<div class="modal fade" id="receiveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                <h5 class="modal-title" style="color: white;">تأكيد استقبال العهدة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.receive', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <p>هل تؤكد استقبال العهدة بقيمة <strong>{{ number_format($custody->amount, 2) }} ج.م</strong>؟</p>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>ملاحظة:</strong> سيتم صرف الفلوس من الخزينة عند التأكيد.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-primary">تأكيد الاستقبال</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal-backdrop {
+        display: none !important;
+    }
+
+    .modal {
+        z-index: 1060 !important;
+    }
+
+    .modal.show {
+        z-index: 1060 !important;
+    }
+</style>
+
+{{-- External Donation / Expense Refund Modal --}}
+@can('manage_treasury')
+<div class="modal fade" id="externalDonationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border: none;">
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-plus-circle"></i> إضافة تبرع خارجي / استرداد</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info" style="font-size:.9rem;">
+                        <i class="fas fa-info-circle"></i>
+                        المبلغ المضاف سيزيد رصيد عهدة <strong>{{ $custody->agent->name }}</strong> مباشرة دون المرور بالخزينة
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">نوع العملية</label>
+                        <select name="type" class="form-select" required>
+                            <option value="external_donation">تبرع خارجي</option>
+                            <option value="expense_refund">استرداد مصروف</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">المبلغ (ج.م) <span class="text-danger">*</span></label>
+                        <input type="number" name="amount" class="form-control" step="0.01" min="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">الوصف / المصدر <span class="text-danger">*</span></label>
+                        <input type="text" name="description" class="form-control" required placeholder="مثال: تبرع من جمعية X">
+                    </div>
+                    <div class="mb-0">
+                        <small class="text-muted">رصيد العهدة الحالي: <strong>{{ number_format($custody->amount, 2) }} ج.م</strong></small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-plus"></i> إضافة المبلغ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endcan
+
+{{-- Direct Return to Treasury Modal --}}
+@can('approve_custody')
+<div class="modal fade" id="requestReturnModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none;">
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-file-invoice-dollar"></i> طلب رد عهدة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.requestReturn', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info" style="font-size:.9rem;">
+                        <i class="fas fa-info-circle"></i>
+                        سيتم إرسال طلب لصاحب العهدة <strong>{{ $custody->initiated_by === 'agent' ? $custody->agent->name : 'المحاسب' }}</strong> بالموافقة على رد المبلغ. لن يتم تنفيذ الرد إلا بعد موافقة صاحب العهدة.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">المبلغ المراد طلب رده (ج.م) <span class="text-danger">*</span></label>
+                        <input type="number" name="return_amount" class="form-control" step="0.01" min="0.01"
+                               max="{{ $custody->getRemainingBalance() }}" required placeholder="0.00">
+                        <small class="text-muted mt-1 d-block">
+                            الرصيد المتاح: <strong>{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</strong>
+                        </small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">السبب (اختياري)</label>
+                        <textarea name="reason" class="form-control" rows="3" placeholder="أدخل سبب الرد..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-paper-plane"></i> إرسال الطلب
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endcan
+
+{{-- Cancel Custody Modal (Accountant/Manager initiated) --}}
+@can('approve_custody')
+<div class="modal fade" id="cancelCustodyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border: none;">
+                <h5 class="modal-title" style="color: white;"><i class="fas fa-ban"></i> إلغاء العهدة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('custodies.cancel', $custody->id) }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>تحذير:</strong> هل تريد إلغاء هذه العهدة بشكل نهائي؟
+                    </div>
+                    <p><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
+                    <p><strong>المبلغ:</strong> {{ number_format($custody->amount, 2) }} ج.م</p>
+                    <p style="margin-top: 1rem; color: #666; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle"></i> عند الإلغاء:
+                    </p>
+                    <ul style="font-size: 0.9rem; color: #666;">
+                        <li>سيتم إلغاء العهدة بشكل كامل</li>
+                        <li>سيتم إلغاء جميع الإشعارات المرسلة للمندوب</li>
+                        <li>لا يمكن التراجع عن هذه العملية</li>
+                    </ul>
+                    <div class="mb-3" style="margin-top: 1rem;">
+                        <label class="form-label"><strong>سبب الإلغاء (اختياري)</strong></label>
+                        <textarea name="cancel_reason" class="form-control" rows="2" placeholder="أدخل سبب الإلغاء..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">رجوع</button>
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من رغبتك في إلغاء العهدة؟')">
+                        <i class="fas fa-trash"></i> إلغاء العهدة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endcan
+
+<style>
+    @media print {
+        /* Hide non-printable elements */
+        .btn, button, form, .no-print,
+        [data-bs-toggle="modal"],
+        .modal,
+        .alert-warning,
+        .d-flex.gap-2 > a:not(.no-print),
+        .d-flex.gap-2 > button:not(.no-print),
+        .dropdown,
+        nav,
+        .navbar {
+            display: none !important;
+        }
+
+        /* Keep the main content visible */
+        body {
+            background: white !important;
+            color: black !important;
+            font-size: 12pt;
+            line-height: 1.6;
+        }
+
+        .container-fluid {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .row {
+            margin: 0 !important;
+            break-inside: avoid;
+        }
+
+        .col-lg-8, .col-12 {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        /* Card styles for print */
+        .card {
+            border: 1px solid #333 !important;
+            box-shadow: none !important;
+            page-break-inside: avoid;
+            margin-bottom: 1cm !important;
+            padding: 0 !important;
+        }
+
+        .card-header {
+            background: #f0f0f0 !important;
+            color: black !important;
+            border-bottom: 2px solid #333 !important;
+            padding: 10pt !important;
+            page-break-inside: avoid;
+        }
+
+        .card-header h5 {
+            color: black !important;
+            margin: 0 !important;
+            font-size: 14pt !important;
+            font-weight: bold !important;
+        }
+
+        .card-body {
+            padding: 10pt !important;
+        }
+
+        /* Text and headings */
+        h1, h2, h3, h4, h5, h6 {
+            color: black !important;
+            page-break-after: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* Labels and values */
+        .form-label {
+            color: black !important;
+            font-weight: bold !important;
+            font-size: 11pt !important;
+            margin-bottom: 2pt !important;
+        }
+
+        p {
+            color: black !important;
+            margin: 0 0 5pt 0 !important;
+            page-break-inside: avoid;
+        }
+
+        /* Badge styles */
+        .badge {
+            border: 1px solid #333 !important;
+            background: white !important;
+            color: black !important;
+            padding: 2pt 4pt !important;
+        }
+
+        /* Table styles */
+        table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 10pt !important;
+            page-break-inside: avoid;
+        }
+
+        table thead {
+            background: #f0f0f0 !important;
+            border: 1px solid #333 !important;
+        }
+
+        table th {
+            border: 1px solid #333 !important;
+            padding: 5pt !important;
+            text-align: right !important;
+            font-weight: bold !important;
+            color: black !important;
+            background: #f0f0f0 !important;
+        }
+
+        table td {
+            border: 1px solid #ccc !important;
+            padding: 5pt !important;
+            text-align: right !important;
+            color: black !important;
+        }
+
+        table tbody tr:nth-child(even) {
+            background: #fafafa !important;
+        }
+
+        /* Progress bars */
+        .progress {
+            background: #e0e0e0 !important;
+            border: 1px solid #333 !important;
+        }
+
+        .progress-bar {
+            background: #666 !important;
+            color: white !important;
+        }
+
+        /* Timeline */
+        .timeline {
+            page-break-inside: avoid;
+        }
+
+        .timeline-item {
+            page-break-inside: avoid;
+            margin-bottom: 10pt !important;
+        }
+
+        /* Spacing for print */
+        .mb-3 { margin-bottom: 10pt !important; }
+        .mb-4 { margin-bottom: 15pt !important; }
+        .mt-3 { margin-top: 10pt !important; }
+
+        /* Links */
+        a {
+            color: black !important;
+            text-decoration: underline !important;
+        }
+
+        /* Page breaks */
+        @page {
+            margin: 1.5cm;
+            size: A4;
+        }
+
+        /* Avoid breaking content */
+        .card, .table, .timeline-item {
+            page-break-inside: avoid;
+        }
+
+        /* Print header with custody info */
+        .print-header {
+            display: block !important;
+            text-align: center;
+            border-bottom: 2px solid #333;
+            margin-bottom: 20pt;
+            padding-bottom: 10pt;
+        }
+
+        /* Make sure important data is visible */
+        .text-primary, .text-success, .text-danger, .text-warning {
+            color: black !important;
+        }
+
+        /* Ensure icons are not printed */
+        i.fas, i.far, i.fal {
+            display: none !important;
+        }
+    }
+</style>
+@endsection

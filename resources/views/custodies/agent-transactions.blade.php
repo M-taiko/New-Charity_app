@@ -1,0 +1,469 @@
+@extends('layouts.modern')
+
+@section('content')
+<div class="container-fluid">
+    <div class="row mb-4" data-aos="fade-down">
+        <div class="col-12">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
+                        <i class="fas fa-exchange-alt"></i> حركاتي من الخزينة
+                    </h1>
+                    <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.95rem;">
+                        جميع العمليات المالية والعهد المتعلقة بحسابك
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up">
+            <div class="stat-card primary">
+                <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                <div class="stat-label">عدد العهد</div>
+                <div class="stat-number" style="color: var(--primary);">{{ $custodiesCount }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+            <div class="stat-card success">
+                <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
+                <div class="stat-label">إجمالي العهد المستلمة</div>
+                <div class="stat-number" style="color: var(--success);">{{ number_format($totalReceived, 2) }}</div>
+                <small style="color: #6b7280;">ج.م</small>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+            <div class="stat-card danger">
+                <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+                <div class="stat-label">إجمالي المصروفات</div>
+                <div class="stat-number" style="color: var(--danger);">{{ number_format($totalSpent, 2) }}</div>
+                <small style="color: #6b7280;">ج.م</small>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+            <div class="stat-card warning">
+                <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
+                <div class="stat-label">إجمالي المبالغ المردودة</div>
+                <div class="stat-number" style="color: var(--warning);">{{ number_format($totalReturned, 2) }}</div>
+                <small style="color: #6b7280;">ج.م</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs for different transaction types -->
+    <div class="row" data-aos="fade-up" data-aos-delay="400">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 style="margin: 0;">
+                        <i class="fas fa-history"></i> سجل الحركات
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="nav nav-tabs" role="tablist" style="border-bottom: 2px solid #e5e7eb;">
+                        <li class="nav-item">
+                            <button class="nav-link active" id="all-tab" data-bs-toggle="tab" data-bs-target="#all-transactions" type="button" role="tab">
+                                <i class="fas fa-list"></i> جميع الحركات
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="received-tab" data-bs-toggle="tab" data-bs-target="#received-transactions" type="button" role="tab">
+                                <i class="fas fa-arrow-down"></i> عهد مستلمة
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expense-transactions" type="button" role="tab">
+                                <i class="fas fa-receipt"></i> مصروفات
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="returned-tab" data-bs-toggle="tab" data-bs-target="#returned-transactions" type="button" role="tab">
+                                <i class="fas fa-arrow-up"></i> مبالغ مردودة
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" id="transfers-tab" data-bs-toggle="tab" data-bs-target="#transfers-transactions" type="button" role="tab">
+                                <i class="fas fa-exchange-alt"></i> تحويلات
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- All Transactions Tab -->
+                        <div class="tab-pane fade show active" id="all-transactions" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="allTransactionsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>نوع العملية</th>
+                                            <th>المبلغ</th>
+                                            <th>الوصف</th>
+                                            <th>الحالة</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Received Custodies Tab -->
+                        <div class="tab-pane fade" id="received-transactions" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="receivedTable">
+                                    <thead>
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>المبلغ</th>
+                                            <th>الحالة</th>
+                                            <th>الملاحظات</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($custodies as $custody)
+                                        <tr>
+                                            <td>{{ $custody->created_at->toDateString() }}</td>
+                                            <td>
+                                                <strong style="color: var(--success);">{{ number_format($custody->amount, 2) }} ج.م</strong>
+                                            </td>
+                                            <td>
+                                                @switch($custody->status)
+                                                    @case('pending')
+                                                        <span class="badge bg-warning">قيد الانتظار</span>
+                                                        @break
+                                                    @case('accepted')
+                                                        <span class="badge bg-success">موافق عليه</span>
+                                                        @break
+                                                    @case('rejected')
+                                                        <span class="badge bg-danger">مرفوض</span>
+                                                        @break
+                                                    @case('active')
+                                                        <span class="badge bg-success">نشطة</span>
+                                                        @break
+                                                    @case('pending_return')
+                                                        <span class="badge bg-primary">في انتظار الإرجاع</span>
+                                                        @break
+                                                    @case('cancelled')
+                                                        <span class="badge bg-dark">ملغاة</span>
+                                                        @break
+                                                    @case('closed')
+                                                        <span class="badge bg-secondary">مغلق</span>
+                                                        @break
+                                                    @case('partially_returned')
+                                                        <span class="badge bg-info">مردود جزئي</span>
+                                                        @break
+                                                @endswitch
+                                            </td>
+                                            <td>{{ $custody->notes ? Str::limit($custody->notes, 30) : '-' }}</td>
+                                            <td>
+                                                <a href="{{ route('custodies.show', $custody->id) }}" class="btn btn-sm btn-info">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Expenses Tab -->
+                        <div class="tab-pane fade" id="expense-transactions" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="expensesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>النوع</th>
+                                            <th>المبلغ</th>
+                                            <th>الوصف</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Returned Amounts Tab -->
+                        <div class="tab-pane fade" id="returned-transactions" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="returnedTable">
+                                    <thead>
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>المبلغ المردود</th>
+                                            <th>العهدة</th>
+                                            <th>الوصف</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Transfers Tab -->
+                        <div class="tab-pane fade" id="transfers-transactions" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="transfersTable">
+                                    <thead>
+                                        <tr>
+                                            <th>التاريخ</th>
+                                            <th>النوع</th>
+                                            <th>من</th>
+                                            <th>إلى</th>
+                                            <th>المبلغ</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('styles')
+<style>
+    /* Fix DataTable width issues */
+    .dataTables_wrapper {
+        width: 100% !important;
+    }
+
+    #allTransactionsTable,
+    #expensesTable,
+    #returnedTable,
+    #transfersTable {
+        width: 100% !important;
+    }
+
+    #allTransactionsTable thead th,
+    #expensesTable thead th,
+    #returnedTable thead th,
+    #transfersTable thead th {
+        width: auto !important;
+    }
+</style>
+@endpush
+
+@push('scripts')
+<script>
+    $(document).ready(function() {
+        // All Transactions Table
+        $('#allTransactionsTable').DataTable({
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            ajax: '{{ route("api.agent.transactions") }}',
+            columns: [
+                {
+                    data: 'transaction_date',
+                    render: function(data) {
+                        return new Date(data).toLocaleDateString('ar-SA');
+                    }
+                },
+                {
+                    data: 'type',
+                    render: function(data) {
+                        let typeLabel = {
+                            'custody_out': 'عهدة مستلمة',
+                            'expense': 'مصروف',
+                            'custody_return': 'مبلغ مردود',
+                            'custody_transfer_in': 'تحويل واصل',
+                            'custody_transfer_out': 'تحويل مرسل',
+                            'transfer_in': 'تحويل واصل',
+                            'transfer_out': 'تحويل مرسل',
+                            'donation': 'تبرع',
+                            'custody_close': 'إغلاق عهدة',
+                            'purchase_request': 'طلب شراء',
+                            'recovery': 'استرجاع'
+                        };
+                        return typeLabel[data] || data;
+                    }
+                },
+                {
+                    data: 'amount',
+                    render: function(data, type, row) {
+                        let color = 'var(--text)';
+                        if (row.type === 'custody_out' || row.type === 'donation' || row.type === 'recovery' || row.type === 'transfer_in' || row.type === 'custody_transfer_in') {
+                            color = 'var(--success)'; // دخول
+                        } else if (row.type === 'expense' || row.type === 'transfer_out' || row.type === 'custody_transfer_out') {
+                            color = 'var(--danger)'; // خروج
+                        } else if (row.type === 'custody_return') {
+                            color = 'var(--warning)'; // رد
+                        }
+                        return `<strong style="color: ${color};">${parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ج.م</strong>`;
+                    }
+                },
+                { data: 'description' },
+                {
+                    data: 'type',
+                    render: function(data) {
+                        let status = {
+                            'custody_out': '<span class="badge bg-success">دخول</span>',
+                            'expense': '<span class="badge bg-danger">خروج</span>',
+                            'custody_return': '<span class="badge bg-warning">رد</span>',
+                            'custody_transfer_in': '<span class="badge bg-info">تحويل واصل</span>',
+                            'custody_transfer_out': '<span class="badge bg-secondary">تحويل مرسل</span>',
+                            'transfer_in': '<span class="badge bg-info">تحويل واصل</span>',
+                            'transfer_out': '<span class="badge bg-secondary">تحويل مرسل</span>',
+                            'donation': '<span class="badge bg-success">تبرع</span>',
+                            'custody_close': '<span class="badge bg-dark">إغلاق</span>',
+                            'purchase_request': '<span class="badge bg-primary">شراء</span>',
+                            'recovery': '<span class="badge bg-success">استرجاع</span>'
+                        };
+                        return status[data] || `<span class="badge bg-secondary">${data}</span>`;
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            },
+            order: [[0, 'asc']]
+        });
+
+        // Expenses Table
+        $('#expensesTable').DataTable({
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            ajax: '{{ route("api.agent-expenses.data") }}',
+            columns: [
+                {
+                    data: 'expense_date',
+                    render: function(data) {
+                        return new Date(data).toLocaleDateString('ar-SA');
+                    }
+                },
+                {
+                    data: 'type_label',
+                    render: function(data) {
+                        return data;
+                    }
+                },
+                {
+                    data: 'amount',
+                    render: function(data) {
+                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
+                    }
+                },
+                { data: 'description' },
+                {
+                    data: null,
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return `<a href="/expenses/${data.id}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>`;
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            },
+            order: [[0, 'asc']]
+        });
+
+        // Returned Amounts Table
+        $('#returnedTable').DataTable({
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            ajax: '{{ route("api.agent.returned") }}',
+            columns: [
+                {
+                    data: 'transaction_date',
+                    render: function(data) {
+                        return new Date(data).toLocaleDateString('ar-SA');
+                    }
+                },
+                {
+                    data: 'amount',
+                    render: function(data) {
+                        return '<strong style="color: var(--warning);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
+                    }
+                },
+                {
+                    data: 'custody_id',
+                    render: function(data, type, row) {
+                        return row.custody ? `<a href="/custodies/${data}" style="color: var(--primary); text-decoration: none;">عهدة #${data}</a>` : '-';
+                    }
+                },
+                { data: 'description' }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            },
+            order: [[0, 'asc']]
+        });
+
+        // Transfers Table
+        $('#transfersTable').DataTable({
+            processing: true,
+            serverSide: true,
+            autoWidth: false,
+            ajax: '{{ route("api.agent.transfers") }}',
+            columns: [
+                {
+                    data: 'created_at',
+                    render: function(data) {
+                        return new Date(data).toLocaleDateString('ar-SA');
+                    }
+                },
+                {
+                    data: 'transfer_type',
+                    render: function(data) {
+                        return data === 'sent' ? '<span class="badge bg-danger">مرسل</span>' : '<span class="badge bg-success">مستقبل</span>';
+                    }
+                },
+                {
+                    data: 'from_agent_name',
+                    render: function(data) {
+                        return data || '-';
+                    }
+                },
+                {
+                    data: 'to_agent_name',
+                    render: function(data) {
+                        return data || '-';
+                    }
+                },
+                {
+                    data: 'amount',
+                    render: function(data, type, row) {
+                        let color = row.transfer_type === 'sent' ? 'var(--danger)' : 'var(--success)';
+                        return '<strong style="color: ' + color + ';">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
+                    }
+                },
+                {
+                    data: 'status',
+                    render: function(data) {
+                        let statusBadge = {
+                            'pending': '<span class="badge bg-warning">قيد الانتظار</span>',
+                            'approved': '<span class="badge bg-success">تم القبول</span>',
+                            'rejected': '<span class="badge bg-danger">مرفوض</span>'
+                        };
+                        return statusBadge[data] || data;
+                    }
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return `<a href="/custody-transfers/${data}" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>`;
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            },
+            order: [[0, 'asc']]
+        });
+    });
+</script>
+@endpush
+@endsection

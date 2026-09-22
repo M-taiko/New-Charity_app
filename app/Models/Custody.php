@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Traits\HasStatusScopes;
+
+class Custody extends Model
+{
+    use SoftDeletes, HasStatusScopes;
+
+    protected $fillable = [
+        'treasury_id',
+        'agent_id',
+        'accountant_id',
+        'initiated_by',
+        'amount',
+        'spent',
+        'transferred_out',
+        'transferred_in',
+        'returned',
+        'pending_return',
+        'status',
+        'notes',
+        'accepted_at',
+        'received_at',
+        'returned_at',
+    ];
+
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'spent' => 'decimal:2',
+        'transferred_out' => 'decimal:2',
+        'transferred_in' => 'decimal:2',
+        'returned' => 'decimal:2',
+        'pending_return' => 'decimal:2',
+        'accepted_at' => 'datetime',
+        'received_at' => 'datetime',
+        'returned_at' => 'datetime',
+    ];
+
+    public function treasury(): BelongsTo
+    {
+        return $this->belongsTo(Treasury::class);
+    }
+
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'agent_id');
+    }
+
+    public function accountant(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'accountant_id');
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    public function transactions(): HasMany
+    {
+        return $this->hasMany(TreasuryTransaction::class);
+    }
+
+    public function getRemainingBalance()
+    {
+        // الرصيد = المبلغ الأصلي + المبالغ المستقبلة - المصروفات - المحولات - المرتجعات - المعلقة
+        return $this->amount
+            + $this->transferred_in
+            - $this->spent
+            - $this->transferred_out
+            - $this->returned
+            - $this->pending_return;
+    }
+
+    public function getTotalSpent()
+    {
+        return $this->spent;
+    }
+
+    public function getStatusDetailAttribute(): string
+    {
+        return match ($this->status) {
+            'pending' => $this->initiated_by === 'agent'
+                ? 'بانتظار موافقة المدير/المحاسب'
+                : 'بانتظار قبول المندوب',
+            'accepted' => $this->initiated_by === 'agent'
+                ? 'بانتظار تأكيد المندوب استلام العهدة'
+                : ($this->accepted_at ? 'تم القبول بتاريخ ' . $this->accepted_at->format('Y/m/d') : 'مقبولة'),
+            'active', 'partially_returned' => $this->received_at
+                ? 'تم الاستلام بتاريخ ' . $this->received_at->format('Y/m/d')
+                : ($this->accepted_at ? 'تم القبول بتاريخ ' . $this->accepted_at->format('Y/m/d') : 'نشطة'),
+            'pending_return' => 'في انتظار الموافقة على رد العهدة',
+            'rejected' => $this->notes ? 'سبب الرفض: ' . $this->notes : 'مرفوضة',
+            'closed' => 'مغلقة (رصيد صفري)',
+            'cancelled' => 'ملغاة',
+            default => (string) $this->status,
+        };
+    }
+
+    public function isAgentInitiated(): bool
+    {
+        return $this->initiated_by === 'agent';
+    }
+
+    public function isAccountantInitiated(): bool
+    {
+        return $this->initiated_by === 'accountant';
+    }
+
+    public function agentCanRespond(): bool
+    {
+        return $this->isAccountantInitiated()
+            && $this->status === 'pending'
+            && $this->agent_id === auth()->id();
+    }
+
+    public function accountantCanApprove(): bool
+    {
+        return $this->isAgentInitiated()
+            && $this->status === 'pending';
+    }
+
+    public function needsAgentConfirmation(): bool
+    {
+        return $this->isAgentInitiated()
+            && $this->status === 'accepted'
+            && $this->agent_id === auth()->id();
+    }
+
+    public function hasPendingTransfers(): bool
+    {
+        return \App\Models\CustodyTransfer::where('custody_id', $this->id)
+            ->where('status', 'pending')
+            ->exists();
+    }
+
+    public function pendingTransfers()
+    {
+        return $this->hasMany(\App\Models\CustodyTransfer::class);
+    }
+
+    public function returnRequests(): HasMany
+    {
+        return $this->hasMany(CustodyReturnRequest::class);
+    }
+
+    public function hasPendingReturnRequest(): bool
+    {
+        return $this->returnRequests()->where('status', 'pending')->exists();
+    }
+}

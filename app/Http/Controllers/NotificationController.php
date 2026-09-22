@@ -1,0 +1,105 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Notification;
+use Illuminate\Http\Request;
+
+class NotificationController extends Controller
+{
+    /**
+     * Show all notifications for the current user
+     */
+    public function index()
+    {
+        $notifications = Notification::where('user_id', auth()->id())
+            ->orderByDesc('created_at')
+            ->paginate(20);
+
+        $unreadCount = Notification::where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->count();
+
+        return view('notifications.index', compact('notifications', 'unreadCount'));
+    }
+
+    /**
+     * Mark a notification as read and redirect to related resource
+     */
+    public function markAsRead(Notification $notification)
+    {
+        if ($notification->user_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        $notification->markAsRead();
+
+        $url = $this->getRelatedUrl($notification);
+
+        return redirect($url);
+    }
+
+    /**
+     * Mark all notifications as read
+     */
+    public function markAllRead()
+    {
+        Notification::where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->update(['is_read' => true, 'read_at' => now()]);
+
+        return back()->with('success', 'تم تعليم جميع الإشعارات كمقروءة');
+    }
+
+    /**
+     * Poll notifications via AJAX
+     */
+    public function poll()
+    {
+        $unreadCount = Notification::where('user_id', auth()->id())
+            ->where('is_read', false)
+            ->count();
+
+        $latest = Notification::where('user_id', auth()->id())
+            ->latest('created_at')
+            ->limit(5)
+            ->get(['id', 'title', 'message', 'type', 'created_at', 'is_read']);
+
+        return response()->json([
+            'unread_count' => $unreadCount,
+            'latest' => $latest,
+        ]);
+    }
+
+    /**
+     * Get the URL for the related resource
+     */
+    private function getRelatedUrl(Notification $notification): string
+    {
+        $type = strtolower($notification->related_type ?? '');
+
+        if ($type === 'social_case' && $notification->related_id) {
+            return route('social_cases.show', $notification->related_id);
+        }
+        if ($type === 'custody' && $notification->related_id) {
+            return route('custodies.show', $notification->related_id);
+        }
+        if ($type === 'expense' && $notification->related_id) {
+            return route('expenses.show', $notification->related_id);
+        }
+        if ($type === 'custody_transfer' && $notification->related_id) {
+            return route('custody-transfers.show', $notification->related_id);
+        }
+        if ($type === 'task' && $notification->related_id) {
+            return route('tasks.show', $notification->related_id);
+        }
+        if ($type === 'purchase_request' && $notification->related_id) {
+            return route('purchase-requests.show', $notification->related_id);
+        }
+        if ($type === 'maintenance_request' && $notification->related_id) {
+            return route('maintenance-requests.show', $notification->related_id);
+        }
+
+        return route('notifications.index');
+    }
+}

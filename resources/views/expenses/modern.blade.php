@@ -1,0 +1,814 @@
+@extends('layouts.modern')
+
+@section('content')
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4" data-aos="fade-down">
+        <div class="col-12">
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
+                        <i class="fas fa-receipt"></i> المصروفات
+                    </h1>
+                </div>
+                <div class="d-flex gap-2">
+                    @can('spend_money')
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#quickExpenseModal">
+                        <i class="fas fa-bolt"></i> مصروف سريع
+                    </button>
+                    @endcan
+                    @can('view_all_expenses')
+                    <a href="{{ route('expenses.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle"></i> تسجيل مصروف جديد
+                    </a>
+                    @endcan
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense Stats -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up">
+            <div class="stat-card danger">
+                <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-label">إجمالي المصروفات</div>
+                <div class="stat-number" style="color: var(--danger);">
+                    {{ number_format(\App\Models\Expense::sum('amount') + \App\Models\PurchaseRequest::where('status', 'purchased')->sum('actual_cost') + (\App\Models\SalaryCalculation::approved()->sum('final_salary') ?? 0), 0) }}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+            <div class="stat-card primary">
+                <div class="stat-icon"><i class="fas fa-receipt"></i></div>
+                <div class="stat-label">مصروفات العهد</div>
+                <div class="stat-number" style="color: var(--primary);">{{ \App\Models\Expense::count() }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+            <div class="stat-card success">
+                <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
+                <div class="stat-label">طلبات الشراء</div>
+                <div class="stat-number" style="color: var(--success);">
+                    {{ \App\Models\PurchaseRequest::where('status', 'purchased')->count() }}
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+            <div class="stat-card warning">
+                <div class="stat-icon"><i class="fas fa-money-bill"></i></div>
+                <div class="stat-label">الرواتب والمرتبات</div>
+                <div class="stat-number" style="color: var(--warning);">
+                    {{ \App\Models\SalaryCalculation::approved()->count() ?? 0 }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Column Filters -->
+    <div class="row mb-3" data-aos="fade-up" data-aos-delay="350">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body py-3">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-sm-6 col-md-3">
+                            <label class="form-label small mb-1"><i class="fas fa-user"></i> المستخدم</label>
+                            <input type="text" id="filter_user" class="form-control form-control-sm" placeholder="ابحث بالاسم...">
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-2">
+                            <label class="form-label small mb-1"><i class="fas fa-tags"></i> النوع</label>
+                            <select id="filter_type" class="form-select form-select-sm">
+                                <option value="">الكل</option>
+                                <option value="general">مصروف عام</option>
+                                <option value="social_case">حالة اجتماعية</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-2">
+                            <label class="form-label small mb-1"><i class="fas fa-check-circle"></i> حالة المراجعة</label>
+                            <select id="filter_reviewed" class="form-select form-select-sm">
+                                <option value="">الكل</option>
+                                <option value="reviewed">مراجع</option>
+                                <option value="not_reviewed">غير مراجع</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-2">
+                            <label class="form-label small mb-1"><i class="fas fa-calendar"></i> من تاريخ</label>
+                            <input type="date" id="filter_date_from" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-2">
+                            <label class="form-label small mb-1"><i class="fas fa-calendar"></i> إلى تاريخ</label>
+                            <input type="date" id="filter_date_to" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-sm-6 col-md-1">
+                            <button type="button" id="filter_reset" class="btn btn-sm btn-outline-secondary w-100">
+                                <i class="fas fa-times"></i> إعادة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs for Different Expense Types -->
+    <div class="row mb-3" data-aos="fade-up" data-aos-delay="350">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="expenseTypeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expensesPanel" type="button" role="tab">
+                        <i class="fas fa-receipt"></i> مصروفات العهد
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="purchases-tab" data-bs-toggle="tab" data-bs-target="#purchasesPanel" type="button" role="tab">
+                        <i class="fas fa-shopping-cart"></i> طلبات الشراء
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="salaries-tab" data-bs-toggle="tab" data-bs-target="#salariesPanel" type="button" role="tab">
+                        <i class="fas fa-money-bill"></i> الرواتب والمرتبات
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="expenseTypeTabContent">
+        <!-- Expenses Tab -->
+        <div class="tab-pane fade show active" id="expensesPanel" role="tabpanel">
+    <!-- Expenses Table -->
+    <div class="row" data-aos="fade-up" data-aos-delay="400">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 style="margin: 0;">
+                        <i class="fas fa-table"></i> سجل مصروفات العهد
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="expensesTable">
+                            <thead>
+                                <tr>
+                                    <th>المستخدم</th>
+                                    <th>نوع المصروف</th>
+                                    <th>الحالة الاجتماعية</th>
+                                    <th>المبلغ</th>
+                                    <th>التاريخ والوقت</th>
+                                    <th>التوجيه المحاسبي</th>
+                                    <th>الحالة</th>
+                                    <th>المراجعة</th>
+                                    <th>المرفق</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        </div>
+
+        <!-- Purchase Requests Tab -->
+        <div class="tab-pane fade" id="purchasesPanel" role="tabpanel">
+            <div class="row" data-aos="fade-up" data-aos-delay="400">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 style="margin: 0;">
+                                <i class="fas fa-table"></i> سجل طلبات الشراء
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="purchasesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>العنوان</th>
+                                            <th>الفئة</th>
+                                            <th>المورد</th>
+                                            <th>التكلفة المقدرة</th>
+                                            <th>التكلفة الفعلية</th>
+                                            <th>الحالة</th>
+                                            <th>التاريخ</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Salaries Tab -->
+        <div class="tab-pane fade" id="salariesPanel" role="tabpanel">
+            <div class="row" data-aos="fade-up" data-aos-delay="400">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 style="margin: 0;">
+                                <i class="fas fa-table"></i> سجل الرواتب والمرتبات
+                            </h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0" id="salariesTable">
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>الموظف</th>
+                                            <th>الراتب الأساسي</th>
+                                            <th>البدلات</th>
+                                            <th>الخصومات</th>
+                                            <th>الراتب الصافي</th>
+                                            <th>الفترة</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Expense Modal -->
+<div class="modal fade" id="quickExpenseModal" tabindex="-1" aria-labelledby="quickExpenseModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none;">
+                <h5 class="modal-title" id="quickExpenseModalLabel" style="color: white;">
+                    <i class="fas fa-bolt"></i> إضافة مصروف سريع
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="quickExpenseForm">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="quick_custody_id" class="form-label">
+                            <i class="fas fa-box"></i> العهدة
+                        </label>
+                        <select id="quick_custody_id" name="custody_id" class="form-select" required>
+                            <option value="">اختر العهدة...</option>
+                        </select>
+                        <small class="text-muted d-block mt-1">الرصيد المتاح: <span id="custody_balance" class="fw-bold text-success">0</span></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_expense_date" class="form-label">
+                            <i class="fas fa-calendar"></i> تاريخ المصروف
+                        </label>
+                        <input type="date" id="quick_expense_date" name="expense_date" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_amount" class="form-label">
+                            <i class="fas fa-money-bill"></i> المبلغ
+                        </label>
+                        <input type="number" id="quick_amount" name="amount" class="form-control" placeholder="0.00" step="0.01" min="0.01" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_description" class="form-label">
+                            <i class="fas fa-file-alt"></i> وصف المصروف
+                        </label>
+                        <textarea id="quick_description" name="description" class="form-control" rows="3" placeholder="وصف المصروف..." required></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_line_items" class="form-label">
+                            <i class="fas fa-list"></i> تفاصيل البنود <span class="badge bg-secondary">اختياري</span>
+                        </label>
+                        <textarea id="quick_line_items" name="line_items" class="form-control" rows="2" placeholder="مثال: 2x قميص بـ 50 ج.م، 1x حذاء بـ 100 ج.م..."></textarea>
+                    </div>
+
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>ملاحظة:</strong> هذا المصروف سيُسجّل كمصروف سريع بدون تفاصيل كاملة. يمكنك تعديله لاحقاً لإضافة المزيد من التفاصيل.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> حفظ المصروف السريع
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    var expensesTable;
+
+    $(document).ready(function() {
+        // Set default expense date to today
+        const today = new Date().toISOString().split('T')[0];
+        $('#quick_expense_date').val(today);
+
+        // Load custodies for quick expense form
+        loadQuickExpenseCustodies();
+
+        // Reload custodies when modal is shown
+        document.getElementById('quickExpenseModal')?.addEventListener('show.bs.modal', function() {
+            loadQuickExpenseCustodies();
+        });
+
+        // Quick expense form submission
+        $('#quickExpenseForm').on('submit', function(e) {
+            e.preventDefault();
+            submitQuickExpense();
+        });
+
+        // Update custody balance when custody is selected
+        $('#quick_custody_id').on('change', function() {
+            updateQuickCustodyBalance();
+        });
+
+        expensesTable = $('#expensesTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '{{ route("api.expenses.data") }}',
+                data: function(d) {
+                    d.user_filter     = $('#filter_user').val();
+                    d.type_filter     = $('#filter_type').val();
+                    d.reviewed_filter = $('#filter_reviewed').val();
+                    d.date_from       = $('#filter_date_from').val();
+                    d.date_to         = $('#filter_date_to').val();
+                }
+            },
+            columns: [
+                { data: 'user_name' },
+                { data: 'type_label' },
+                { data: 'case_name' },
+                {
+                    data: 'amount',
+                    render: function(data) {
+                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
+                    }
+                },
+                {
+                    data: 'expense_datetime',
+                    render: function(data) {
+                        if (!data || data === '-') return '-';
+                        return data;
+                    }
+                },
+                {
+                    data: 'item_direction',
+                    render: function(data, type, row) {
+                        if (type !== 'display') return data;
+                        const esc = s => $('<div>').text(s ?? '').html();
+                        let html = '<small style="color: #666;" title="' + esc(data) + '">' + esc(data) + '</small>';
+                        if (row.items_count > 0) {
+                            const first = esc(row.first_item || '');
+                            const more = row.items_count > 1 ? ' +' + (row.items_count - 1) + ' بند' : '';
+                            html += '<div><small class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-list-ul"></i> ' + first + more + '</small></div>';
+                        }
+                        return html;
+                    }
+                },
+                {
+                    data: 'is_quick_expense',
+                    render: function(data, type, row) {
+                        if (data) {
+                            return `<span class="badge bg-warning" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important;">
+                                <i class="fas fa-bolt"></i> سريع - بحاجة تفاصيل
+                            </span>`;
+                        }
+                        return '';
+                    }
+                },
+                {
+                    data: 'reviewed_label',
+                    render: function(data, type, row) {
+                        if (data === 'مراجع') {
+                            const esc = s => $('<div>').text(s ?? '').html();
+                            const tip = row.reviewer_name ? ' بواسطة ' + esc(row.reviewer_name) + (row.reviewed_at_formatted ? ' (' + esc(row.reviewed_at_formatted) + ')' : '') : '';
+                            return '<span class="badge bg-success" title="' + tip + '"><i class="fas fa-check"></i> مراجع</span>';
+                        }
+                        return '<span class="badge bg-secondary"><i class="fas fa-hourglass-half"></i> غير مراجع</span>';
+                    }
+                },
+                {
+                    data: 'attachment',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data, type, row) {
+                        if (data) {
+                            return `<button type="button" class="btn btn-sm btn-primary" onclick="viewAttachment(${row.id}, '${data}')" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                <i class="fas fa-paperclip"></i> عرض
+                            </button>`;
+                        }
+                        return '<span class="text-muted">-</span>';
+                    }
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data, type, row) {
+                        let buttons = '<div class="btn-group btn-group-sm" role="group">';
+                        if (row.can_review) {
+                            buttons += `<button type="button" class="btn btn-success" onclick="quickReview(${row.id}, ${row.has_direction ? 'true' : 'false'})" title="مراجعة سريعة"><i class="fas fa-user-check"></i> مراجعة</button>`;
+                        }
+                        if (row.can_unreview) {
+                            buttons += `<button type="button" class="btn btn-outline-warning" onclick="quickUnreview(${row.id})" title="إلغاء المراجعة (مدير)"><i class="fas fa-undo"></i> إلغاء المراجعة</button>`;
+                        }
+                        if (row.can_edit) {
+                            buttons += `<a href="${row.edit_url}" class="btn btn-info" title="تعديل"><i class="fas fa-pencil"></i></a>`;
+                        }
+                        buttons += `<a href="${row.show_url}" class="btn btn-outline-primary" title="عرض"><i class="fas fa-eye"></i></a>`;
+                        buttons += '</div>';
+                        return buttons;
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            }
+        });
+
+        // مراجعة سريعة من القائمة
+        window.quickReview = function(id, hasDirection) {
+            let msg = 'تأكيد المراجعة وقفل التعديل من المندوب؟';
+            if (!hasDirection) {
+                msg = 'تنبيه: هذا المصروف بدون توجيه محاسبي.\n\n' + msg;
+            }
+            if (!confirm(msg)) return;
+            $.ajax({
+                url: '/expenses/' + id + '/mark-reviewed',
+                type: 'POST',
+                data: {_token: '{{ csrf_token() }}'},
+                dataType: 'json',
+                success: function(res) {
+                    alert(res.message || 'تمت المراجعة');
+                    expensesTable.ajax.reload(null, false);
+                },
+                error: function(xhr) {
+                    let msg = 'حدث خطأ أثناء المراجعة';
+                    try { msg = xhr.responseJSON.message || msg; } catch (e) {}
+                    alert(msg);
+                }
+            });
+        };
+
+        // إلغاء المراجعة (مدير فقط)
+        window.quickUnreview = function(id) {
+            if (!confirm('هل أنت متأكد من إلغاء المراجعة وفتح التعديل على هذا المصروف؟')) return;
+            $.ajax({
+                url: '/expenses/' + id + '/unreview',
+                type: 'POST',
+                data: {_token: '{{ csrf_token() }}'},
+                dataType: 'json',
+                success: function(res) {
+                    alert(res.message || 'تم إلغاء المراجعة');
+                    expensesTable.ajax.reload(null, false);
+                },
+                error: function(xhr) {
+                    let msg = 'حدث خطأ أثناء إلغاء المراجعة';
+                    try { msg = xhr.responseJSON.message || msg; } catch (e) {}
+                    alert(msg);
+                }
+            });
+        };
+
+        // Apply filters on change
+        $('#filter_user').on('input', debounce(function() { expensesTable.ajax.reload(); }, 400));
+        $('#filter_type, #filter_reviewed').on('change', function() { expensesTable.ajax.reload(); });
+        $('#filter_date_from, #filter_date_to').on('change', function() { expensesTable.ajax.reload(); });
+
+        // Reset all filters
+        $('#filter_reset').on('click', function() {
+            $('#filter_user').val('');
+            $('#filter_type').val('');
+            $('#filter_reviewed').val('');
+            $('#filter_date_from').val('');
+            $('#filter_date_to').val('');
+            expensesTable.ajax.reload();
+        });
+
+        // Initialize Purchases Table
+        $('#purchasesTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '{{ route("api.purchase-requests.data") }}',
+            },
+            columns: [
+                { data: 'id' },
+                { data: 'title' },
+                { data: 'category_label' },
+                { data: 'supplier_name', defaultContent: '-' },
+                {
+                    data: 'estimated_cost',
+                    render: function(data) {
+                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '-';
+                    }
+                },
+                {
+                    data: 'actual_cost',
+                    render: function(data) {
+                        return data ? '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>' : '-';
+                    }
+                },
+                {
+                    data: 'status_label',
+                    render: function(data, type, row) {
+                        const colors = {
+                            'في الانتظار': 'warning',
+                            'موافق عليه': 'success',
+                            'مرفوض': 'danger',
+                            'تم الشراء': 'primary'
+                        };
+                        const color = colors[data] || 'secondary';
+                        return '<span class="badge bg-' + color + '">' + data + '</span>';
+                    }
+                },
+                {
+                    data: 'created_at',
+                    render: function(data) {
+                        return new Date(data).toLocaleDateString('ar');
+                    }
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return '<a href="/purchase-requests/' + data + '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> عرض</a>';
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            }
+        });
+
+        // Initialize Salaries Table
+        $('#salariesTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: '{{ route("hr.salaries.data") }}',
+            },
+            columns: [
+                { data: 'id' },
+                { data: 'employee_name' },
+                {
+                    data: 'base_salary',
+                    render: function(data) {
+                        return parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+                    }
+                },
+                {
+                    data: 'allowances_total',
+                    render: function(data) {
+                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '0.00 ج.م';
+                    }
+                },
+                {
+                    data: 'deductions_total',
+                    render: function(data) {
+                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '0.00 ج.م';
+                    }
+                },
+                {
+                    data: 'total_salary',
+                    render: function(data) {
+                        return '<strong style="color: var(--success);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
+                    }
+                },
+                { data: 'period_label', defaultContent: '-' },
+                {
+                    data: 'status_label',
+                    render: function(data) {
+                        const colors = {
+                            'مسودة': 'secondary',
+                            'معتمدة': 'success',
+                            'مرحلة': 'warning'
+                        };
+                        const color = colors[data] || 'secondary';
+                        return '<span class="badge bg-' + color + '">' + (data || 'غير محدد') + '</span>';
+                    }
+                },
+                {
+                    data: 'id',
+                    orderable: false,
+                    searchable: false,
+                    render: function(data) {
+                        return '<a href="/hr/salaries/' + data + '" class="btn btn-sm btn-info"><i class="fas fa-eye"></i> عرض</a>';
+                    }
+                }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            }
+        });
+    });
+
+    function debounce(fn, delay) {
+        var timer;
+        return function() {
+            clearTimeout(timer);
+            timer = setTimeout(fn, delay);
+        };
+    }
+
+    // Load custodies for quick expense modal
+    function loadQuickExpenseCustodies() {
+        $.ajax({
+            url: '{{ route("api.user-custodies") }}',
+            type: 'GET',
+            success: function(data) {
+                const select = $('#quick_custody_id');
+                select.find('option:not(:first)').remove();
+
+                if (data.length === 0) {
+                    select.append('<option disabled>لا توجد عهد متاحة</option>');
+                    return;
+                }
+
+                data.forEach(function(custody) {
+                    // Use remaining balance from API (already calculated correctly)
+                    const balance = parseFloat(custody.remaining);
+                    if (balance > 0) {
+                        const reason = custody.reason || 'عهدة #' + custody.id;
+                        select.append(`
+                            <option value="${custody.id}" data-balance="${balance}">
+                                ${reason} (الرصيد: ${balance.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م)
+                            </option>
+                        `);
+                    }
+                });
+
+                if (select.find('option').length === 1) {
+                    select.append('<option disabled>لا توجد عهد بها رصيد متاح</option>');
+                }
+            },
+            error: function() {
+                console.error('خطأ في تحميل العهد');
+                $('#quick_custody_id').append('<option disabled>خطأ في تحميل العهد</option>');
+            }
+        });
+    }
+
+    // Update custody balance display
+    function updateQuickCustodyBalance() {
+        const selectedOption = $('#quick_custody_id option:selected');
+        const balance = selectedOption.data('balance');
+
+        if (balance !== undefined) {
+            $('#custody_balance').text(parseFloat(balance).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م');
+            $('#quick_amount').attr('max', balance);
+        }
+    }
+
+    // Submit quick expense
+    function submitQuickExpense() {
+        const formData = {
+            custody_id: $('#quick_custody_id').val(),
+            expense_date: $('#quick_expense_date').val(),
+            amount: parseFloat($('#quick_amount').val()),
+            description: $('#quick_description').val(),
+            line_items: $('#quick_line_items').val() || null,
+            is_quick_expense: true
+        };
+
+        $.ajax({
+            url: '{{ route("expenses.quick-store") }}',
+            type: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify(formData),
+            success: function(response) {
+                if (response.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('quickExpenseModal'));
+                    if (modal) modal.hide();
+
+                    // Reset form
+                    $('#quickExpenseForm')[0].reset();
+                    const today = new Date().toISOString().split('T')[0];
+                    $('#quick_expense_date').val(today);
+
+                    // Show success message
+                    showAlert('success', 'تم تسجيل المصروف السريع بنجاح. يمكنك تعديله لاحقاً');
+
+                    // Reload table
+                    expensesTable.ajax.reload();
+                } else {
+                    showAlert('danger', response.message || 'حدث خطأ');
+                }
+            },
+            error: function(xhr) {
+                const error = xhr.responseJSON?.message || 'حدث خطأ أثناء تسجيل المصروف';
+                showAlert('danger', error);
+            }
+        });
+    }
+
+    // Show alert message
+    function showAlert(type, message) {
+        const alertId = 'tempAlert_' + Date.now();
+        const alertHtml = `
+            <div id="${alertId}" class="alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 400px;">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        `;
+
+        $('body').append(alertHtml);
+
+        setTimeout(function() {
+            $(`#${alertId}`).fadeOut(300, function() {
+                $(this).remove();
+            });
+        }, 5000);
+    }
+
+    // View attachment in modal
+    function viewAttachment(expenseId, attachment) {
+        const extension = attachment.split('.').pop().toLowerCase();
+        const isImage = ['jpg', 'jpeg', 'png', 'gif'].includes(extension);
+        const isPdf = extension === 'pdf';
+        const attachmentUrl = `/storage/app/public/${attachment}`;
+        const downloadUrl = `/expenses/${expenseId}/download-attachment`;
+
+        let modalContent = '';
+
+        if (isImage) {
+            modalContent = `
+                <img src="${attachmentUrl}" alt="Expense Attachment" class="img-fluid" style="max-height: 500px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            `;
+        } else if (isPdf) {
+            modalContent = `
+                <div style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(240, 147, 251, 0.1)); padding: 3rem; border-radius: 12px;">
+                    <i class="fas fa-file-pdf" style="font-size: 5rem; color: #f5576c; margin-bottom: 1rem;"></i>
+                    <h5 style="margin-bottom: 1rem;">ملف PDF</h5>
+                    <p class="text-muted" style="margin-bottom: 1.5rem;">${attachment.split('/').pop()}</p>
+                    <a href="${downloadUrl}" class="btn btn-primary" target="_blank" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                        <i class="fas fa-download"></i> تحميل الملف
+                    </a>
+                </div>
+            `;
+        } else {
+            modalContent = `
+                <div style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(240, 147, 251, 0.1)); padding: 3rem; border-radius: 12px;">
+                    <i class="fas fa-file-alt" style="font-size: 5rem; color: #667eea; margin-bottom: 1rem;"></i>
+                    <h5 style="margin-bottom: 1rem;">مستند</h5>
+                    <p class="text-muted" style="margin-bottom: 1.5rem;">${attachment.split('/').pop()}</p>
+                    <a href="${downloadUrl}" class="btn btn-primary" target="_blank" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                        <i class="fas fa-download"></i> تحميل الملف
+                    </a>
+                </div>
+            `;
+        }
+
+        document.getElementById('attachmentModalContent').innerHTML = modalContent;
+        document.getElementById('attachmentDownloadBtn').href = downloadUrl;
+
+        var attachmentModal = new bootstrap.Modal(document.getElementById('attachmentModal'));
+        attachmentModal.show();
+    }
+</script>
+@endpush
+
+<!-- Attachment Modal -->
+<div class="modal fade" id="attachmentModal" tabindex="-1" aria-labelledby="attachmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                <h5 class="modal-title" id="attachmentModalLabel" style="color: white;">
+                    <i class="fas fa-paperclip"></i> مرفق المصروف
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center" style="padding: 2rem;" id="attachmentModalContent">
+                <!-- Content will be loaded dynamically -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <a href="#" id="attachmentDownloadBtn" class="btn btn-success" target="_blank">
+                    <i class="fas fa-download"></i> تحميل
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

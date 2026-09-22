@@ -1,0 +1,243 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\ExpenseItem;
+use App\Models\ExpenseCategory;
+use App\Models\Expense;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Yajra\DataTables\DataTables;
+
+class ExpenseItemController extends Controller
+{
+    public function index()
+    {
+        $this->authorize('manage_expense_items');
+        // المستوى الأول فقط (جذور الشجرة)
+        $roots = ExpenseCategory::with('children.children.items')
+            ->roots()->active()->ordered()->get();
+
+        // إضافة المبالغ المصروفة لكل مستوى (تراكمي: شامل نفسه وجميع الأطفال)
+        $roots = $roots->map(function ($root) {
+            $root->children = $root->children->map(function ($level2) {
+                // Level 2: Calculate totals for each Level 3 first
+                $level2->children = $level2->children->map(function ($level3) {
+                    // Level 3: Sum all items directly under it
+                    $allItemIds = $level3->items->pluck('id');
+                    $level3->total_amount = $allItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $allItemIds->toArray())->sum('amount') : 0;
+
+                    $level3->items = $level3->items->map(function ($item) {
+                        $item->total_amount = Expense::where('expense_item_id', $item->id)->sum('amount');
+                        return $item;
+                    });
+                    return $level3;
+                });
+
+                // Level 2: Sum its items + all level 3 totals
+                $directItemIds = $level2->items->pluck('id');
+                $directAmount = $directItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $directItemIds->toArray())->sum('amount') : 0;
+
+                $childrenTotal = $level2->children->sum('total_amount');
+                $level2->total_amount = $directAmount + $childrenTotal;
+
+                $level2->items = $level2->items->map(function ($item) {
+                    $item->total_amount = Expense::where('expense_item_id', $item->id)->sum('amount');
+                    return $item;
+                });
+                return $level2;
+            });
+
+            // Level 1: Sum its items + all level 2 totals
+            $directItemIds = $root->items->pluck('id');
+            $directAmount = $directItemIds->count() > 0 ? Expense::whereIn('expense_item_id', $directItemIds->toArray())->sum('amount') : 0;
+
+            $childrenTotal = $root->children->sum('total_amount');
+            $root->total_amount = $directAmount + $childrenTotal;
+
+            $root->items = $root->items->map(function ($item) {
+                $item->total_amount = Expense::where('expense_item_id', $item->id)->sum('amount');
+                return $item;
+            });
+            return $root;
+        });
+
+        return view('expense-items.index', compact('roots'));
+    }
+
+    public function data(Request $request)
+    {
+        $this->authorize('manage_expense_items');
+        $query = ExpenseItem::with('category.parent.parent')->orderBy('expense_category_id')->orderBy('order');
+
+        if ($request->filled('category_id')) {
+            $query->where('expense_category_id', $request->category_id);
+        }
+
+        return DataTables::of($query)
+            ->addColumn('full_path', fn($item) => $item->category->full_path ?? $item->category->name)
+            ->addColumn('status', fn($item) => $item->is_active
+                ? '<span class="badge bg-success">نشط</span>'
+                : '<span class="badge bg-secondary">غير نشط</span>')
+            ->addColumn('action', fn($item) => view('expense-items.actions', compact('item'))->render())
+            ->rawColumns(['status', 'action'])
+            ->make(true);
+    }
+
+    public function create()
+    {
+        $this->authorize('manage_expense_items');
+        $roots = ExpenseCategory::roots()->active()->ordered()->get();
+        return view('expense-items.form', compact('roots'));
+    }
+
+    public function store(Request $request)
+    {
+        $this->authorize('manage_expense_items');
+        $request->validate([
+            'expense_category_id' => 'required|exists:expense_categories,id',
+            'name'                => 'required|string|max:255',
+            'code'                => [
+                'required', 'string', 'max:50',
+                Rule::unique('expense_items', 'code')->where('expense_category_id', $request->expense_category_id),
+            ],
+            'default_amount'      => 'nullable|numeric|min:0',
+            'order'               => 'required|integer|min:1',
+        ], [], [
+            'code' => 'الكود',
+        ]);
+
+        ExpenseItem::create($request->only(['expense_category_id', 'name', 'code', 'default_amount', 'order']));
+
+        return redirect()->route('expense-items.index')->with('success', 'تم إضافة البند بنجاح');
+    }
+
+    public function edit(ExpenseItem $expenseItem)
+    {
+        $this->authorize('manage_expense_items');
+        $roots = ExpenseCategory::roots()->active()->ordered()->get();
+        return view('expense-items.form', compact('expenseItem', 'roots'));
+    }
+
+    public function update(Request $request, ExpenseItem $expenseItem)
+    {
+        $this->authorize('manage_expense_items');
+        $request->validate([
+            'expense_category_id' => 'required|exists:expense_categories,id',
+            'name'                => 'required|string|max:255',
+            'code'                => [
+                'required', 'string', 'max:50',
+                Rule::unique('expense_items', 'code')
+                    ->where('expense_category_id', $request->expense_category_id)
+                    ->ignore($expenseItem->id),
+            ],
+            'default_amount'      => 'nullable|numeric|min:0',
+            'order'               => 'required|integer|min:1',
+            'is_active'           => 'boolean',
+        ], [], [
+            'code' => 'الكود',
+        ]);
+
+        $expenseItem->update($request->only(['expense_category_id', 'name', 'code', 'default_amount', 'order', 'is_active']));
+
+        return redirect()->route('expense-items.index')->with('success', 'تم تحديث البند بنجاح');
+    }
+
+    public function destroy(ExpenseItem $expenseItem)
+    {
+        $this->authorize('manage_expense_items');
+        $expenseItem->delete();
+        return redirect()->route('expense-items.index')->with('success', 'تم حذف البند بنجاح');
+    }
+
+    public function toggleStatus(ExpenseItem $expenseItem)
+    {
+        $this->authorize('manage_expense_items');
+        $expenseItem->update(['is_active' => !$expenseItem->is_active]);
+        return back()->with('success', 'تم تحديث حالة البند بنجاح');
+    }
+
+    // ──────────────────────────────────────────
+    // Category Management
+    // ──────────────────────────────────────────
+
+    public function storeCategory(Request $request)
+    {
+        $this->authorize('manage_expense_items');
+        $request->validate([
+            'name'      => 'required|string|max:255',
+            'code'      => 'required|string|max:50|unique:expense_categories,code',
+            'parent_id' => 'nullable|exists:expense_categories,id',
+            'order'     => 'nullable|integer|min:1',
+        ]);
+
+        $level = 1;
+        if ($request->parent_id) {
+            $parent = ExpenseCategory::findOrFail($request->parent_id);
+            $level  = $parent->level + 1;
+        }
+
+        ExpenseCategory::create([
+            'parent_id'   => $request->parent_id,
+            'level'       => $level,
+            'name'        => $request->name,
+            'code'        => $request->code,
+            'description' => $request->description,
+            'is_active'   => true,
+            'order'       => $request->order ?? 1,
+        ]);
+
+        return back()->with('success', 'تم إضافة التصنيف بنجاح');
+    }
+
+    public function destroyCategory(ExpenseCategory $expenseCategory)
+    {
+        $this->authorize('manage_expense_items');
+        $expenseCategory->delete();
+        return back()->with('success', 'تم حذف التصنيف بنجاح');
+    }
+
+    // ──────────────────────────────────────────
+    // API for Cascading Dropdowns
+    // ──────────────────────────────────────────
+
+    public function categoryRoots()
+    {
+        $roots = ExpenseCategory::roots()->active()->ordered()
+            ->get(['id', 'name', 'code', 'level']);
+        return response()->json($roots);
+    }
+
+    public function categoryChildren(ExpenseCategory $category)
+    {
+        $children = $category->children()->active()
+            ->get(['id', 'name', 'code', 'level', 'parent_id']);
+        return response()->json($children);
+    }
+
+    public function categoryItems(ExpenseCategory $category)
+    {
+        $items = $category->items()->where('is_active', true)->orderBy('order')
+            ->get(['id', 'name', 'code', 'default_amount']);
+        return response()->json($items);
+    }
+
+    /**
+     * Returns ancestor chain for a category: [level1_id, level2_id, level3_id?]
+     * Used by the edit form to reconstruct the cascading dropdown state.
+     */
+    public function categoryAncestors(ExpenseCategory $category)
+    {
+        $ancestors = [];
+        $current = $category;
+
+        // Walk up the parent chain
+        while ($current->parent_id) {
+            array_unshift($ancestors, $current->id);
+            $current = $current->parent;
+        }
+        array_unshift($ancestors, $current->id); // add root
+
+        return response()->json($ancestors);
+    }
+}

@@ -1,0 +1,448 @@
+@extends('layouts.modern')
+
+@section('content')
+<div class="container-fluid">
+    <div class="row mb-4" data-aos="fade-down">
+        <div class="col-12">
+            @if($expense->is_quick_expense)
+            <div class="alert alert-warning alert-dismissible fade show" role="alert" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; color: white;">
+                <i class="fas fa-bolt"></i>
+                <strong>مصروف سريع - بحاجة إلى تفاصيل كاملة</strong>
+                <p class="mb-0 mt-1" style="font-size: 0.95rem;">هذا المصروف تم تسجيله بدون تفاصيل كاملة. يرجى تعديله لإضافة الفئة والبند والتفاصيل المطلوبة.</p>
+            </div>
+            @endif
+        </div>
+    </div>
+
+    <div class="row mb-4" data-aos="fade-down">
+        <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h1 style="margin: 0; font-size: 2rem; font-weight: 700;">
+                <i class="fas fa-receipt"></i> تفاصيل المصروف
+            </h1>
+            <button onclick="window.print()" class="btn btn-outline-secondary btn-sm no-print">
+                <i class="fas fa-print"></i> طباعة
+            </button>
+        </div>
+    </div>
+
+    <div class="row" data-aos="fade-up">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-info-circle"></i> بيانات المصروف
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>المستخدم:</strong></label>
+                            <p>{{ $expense->user->name }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>نوع المصروف:</strong></label>
+                            <p>{{ $expense->type === 'social_case' ? 'حالة اجتماعية' : 'مصروف عام' }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>التوجيه المحاسبي:</strong></label>
+                            <p>{{ $expense->accounting_path ?? 'غير محدد' }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>المبلغ:</strong></label>
+                            <p class="text-danger" style="font-size: 1.2rem; font-weight: bold;">{{ number_format($expense->amount, 2) }} ج.م</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>التاريخ:</strong></label>
+                            <p>{{ $expense->expense_date->format('Y-m-d') }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الوصف:</strong></label>
+                        <p>{{ $expense->description }}</p>
+                    </div>
+
+                    @if($expense->location)
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الموقع:</strong></label>
+                        <p>{{ $expense->location }}</p>
+                    </div>
+                    @endif
+
+                    @if($expense->attachment)
+                    <div class="mb-3">
+                        <label class="form-label"><strong><i class="fas fa-paperclip"></i> المرفق:</strong></label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#attachmentModal" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                                <i class="fas fa-eye"></i> عرض المرفق
+                            </button>
+                            <a href="{{ route('expenses.download-attachment', $expense->id) }}" class="btn btn-sm btn-success" target="_blank">
+                                <i class="fas fa-download"></i> تحميل
+                            </a>
+                            <small class="text-muted">
+                                <i class="fas fa-file"></i> {{ basename($expense->attachment) }}
+                            </small>
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($expense->socialCase)
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الحالة الاجتماعية:</strong></label>
+                        <p>
+                            <a href="{{ route('social_cases.show', $expense->socialCase->id) }}" class="btn btn-sm btn-info">
+                                {{ $expense->socialCase->name }}
+                            </a>
+                        </p>
+                    </div>
+                    @endif
+
+                    @if($expense->line_items && is_array($expense->line_items) && count($expense->line_items) > 0)
+                    <div class="mb-3">
+                        <label class="form-label"><strong><i class="fas fa-list-ul"></i> تفاصيل البنود:</strong></label>
+                        @if(isset($expense->line_items['raw_text']) && !empty($expense->line_items['raw_text']))
+                        <div class="alert alert-info">
+                            <strong>ملاحظات:</strong>
+                            <p class="mb-0">{{ $expense->line_items['raw_text'] }}</p>
+                        </div>
+                        @elseif(isset($expense->line_items[0]) && is_array($expense->line_items[0]))
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0" style="font-size:.9rem;">
+                                <thead style="background:#f8f9fa;">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>البيان</th>
+                                        <th class="text-center">الكمية</th>
+                                        <th class="text-center">سعر الوحدة</th>
+                                        <th class="text-center">الإجمالي</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @php $lineTotal = 0; @endphp
+                                    @foreach($expense->line_items as $i => $item)
+                                    @php
+                                        $qty = floatval($item['quantity'] ?? 1);
+                                        $price = floatval($item['unit_price'] ?? 0);
+                                        $sub = $qty * $price;
+                                        $lineTotal += $sub;
+                                    @endphp
+                                    <tr>
+                                        <td class="text-muted">{{ $i + 1 }}</td>
+                                        <td>{{ $item['description'] ?? '—' }}</td>
+                                        <td class="text-center">{{ $qty }}</td>
+                                        <td class="text-center">{{ number_format($price, 2) }} ج.م</td>
+                                        <td class="text-center"><strong>{{ number_format($sub, 2) }} ج.م</strong></td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot style="background:#fff8f0;">
+                                    <tr>
+                                        <td colspan="4" class="text-end"><strong>الإجمالي:</strong></td>
+                                        <td class="text-center text-danger"><strong>{{ number_format($lineTotal, 2) }} ج.م</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        @endif
+                    </div>
+                    @endif
+
+                    <!-- حالة المصروف وأزرار الإجراءات -->
+                    <div class="mb-3 d-flex gap-2 flex-wrap">
+                        @if($expense->isApproved())
+                            <span class="badge bg-success"><i class="fas fa-check"></i> معتمد</span>
+                        @elseif($expense->hasPendingEdit())
+                            <span class="badge bg-warning"><i class="fas fa-clock"></i> في انتظار الموافقة على التعديل</span>
+                        @elseif($expense->hasApprovedEdit())
+                            <span class="badge bg-success"><i class="fas fa-check-double"></i> تم الموافقة على التعديل</span>
+                        @endif
+
+                        @if($expense->isReviewed())
+                            <span class="badge bg-info">
+                                <i class="fas fa-user-check"></i> مراجع بواسطة {{ $expense->reviewer?->name }}
+                                ({{ $expense->reviewed_at->format('d/m/Y') }})
+                            </span>
+                        @else
+                            <span class="badge bg-secondary"><i class="fas fa-hourglass-half"></i> لم تتم المراجعة</span>
+                        @endif
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap" style="margin-top: 2rem;">
+                        <a href="{{ route('expenses.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> رجوع
+                        </a>
+
+                        <!-- زر المراجعة (للمحاسب/المدير) -->
+                        @if((auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير')) && !$expense->isReviewed())
+                            <form action="{{ route('expenses.mark-reviewed', $expense) }}" method="POST" class="d-inline">
+                                @csrf
+                                <button type="submit" class="btn btn-success"
+                                        onclick="return confirm('تأكيد المراجعة وقفل التعديل من المندوب؟')">
+                                    <i class="fas fa-user-check"></i> تمت المراجعة
+                                </button>
+                            </form>
+                        @endif
+
+                        <!-- زر طلب التعديل (للمندوب فقط وقبل المراجعة) -->
+                        @if(auth()->user()->hasRole('مندوب') && $expense->user_id === auth()->id() && !$expense->isReviewed() && !$expense->isApproved() && !$expense->hasPendingEdit())
+                            <a href="{{ route('expense-edit-requests.create', $expense) }}" class="btn btn-warning">
+                                <i class="fas fa-edit"></i> طلب تعديل
+                            </a>
+                        @endif
+
+                        <!-- زر التعديل المباشر (للمحاسب/المدير) -->
+                        @if((auth()->user()->hasRole('محاسب') || (auth()->user()->hasRole('مدير') && $expense->isApproved())) && !$expense->hasPendingEdit())
+                            <a href="{{ route('expenses.edit', $expense) }}" class="btn btn-info">
+                                <i class="fas fa-pencil"></i> تعديل
+                            </a>
+                        @endif
+
+                        <!-- زر الحذف (للمحاسب والمدير فقط) -->
+                        @if(auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير'))
+                            <form action="{{ route('expenses.destroy', $expense) }}" method="POST" style="display: inline;">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger" onclick="return confirm('هل أنت متأكد من حذف هذا المصروف؟');">
+                                    <i class="fas fa-trash"></i> حذف
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Requests History -->
+            @if($expense->editRequests()->count() > 0)
+            <div class="card mt-4">
+                <div class="card-header" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-history"></i> تاريخ التعديلات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @foreach($expense->editRequests()->orderBy('created_at', 'desc')->get() as $editRequest)
+                    <div class="mb-4 pb-3" style="border-bottom: 1px solid #eee;">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>طلب التعديل #{{ $editRequest->id }}</strong><br>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i>
+                                    {{ $editRequest->requested_at?->format('Y-m-d H:i') ?? $editRequest->created_at->format('Y-m-d H:i') }}
+                                </small>
+                            </div>
+                            <div class="col-md-6 text-end">
+                                <span class="badge {{ $editRequest->status === 'approved' ? 'bg-success' : ($editRequest->status === 'rejected' ? 'bg-danger' : 'bg-warning') }}">
+                                    {{ $editRequest->status === 'approved' ? 'تم الموافقة على التعديل' : ($editRequest->status === 'rejected' ? 'تم الرفض' : 'قيد الانتظار') }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="mt-2">
+                            <strong>طلب التعديل من:</strong> {{ $editRequest->requester?->name ?? 'حذف المستخدم' }}
+                        </div>
+
+                        @if($editRequest->reviewed_by)
+                        <div class="mt-2">
+                            <strong>تمت المراجعة بواسطة:</strong>
+                            <span style="color: #4caf50;">{{ $editRequest->reviewer?->name ?? 'حذف المستخدم' }}</span>
+                            @if($editRequest->reviewed_at)
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-clock"></i> {{ $editRequest->reviewed_at->format('Y-m-d H:i') }}
+                            </small>
+                            @endif
+                        </div>
+                        @endif
+
+                        @if($editRequest->rejection_reason)
+                        <div class="alert alert-danger mt-2 mb-0">
+                            <strong>سبب الرفض:</strong>
+                            <p class="mb-0">{{ $editRequest->rejection_reason }}</p>
+                        </div>
+                        @endif
+
+                        <!-- Show Changes -->
+                        <div class="mt-3">
+                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#editDetails{{ $editRequest->id }}" aria-expanded="false">
+                                <i class="fas fa-chevron-down"></i> عرض التغييرات المطلوبة
+                            </button>
+
+                            <div class="collapse mt-2" id="editDetails{{ $editRequest->id }}">
+                                <div class="card card-body">
+                                    @php
+                                        $original = is_array($editRequest->original_data) ? $editRequest->original_data : (json_decode($editRequest->original_data, true) ?? []);
+                                        $changes = is_array($editRequest->requested_changes) ? $editRequest->requested_changes : (json_decode($editRequest->requested_changes, true) ?? []);
+                                    @endphp
+
+                                    @if(!empty($changes))
+                                    <table class="table table-sm table-borderless mb-0">
+                                        <thead>
+                                            <tr style="background: #f8f9fa;">
+                                                <th>الحقل</th>
+                                                <th>القيمة السابقة</th>
+                                                <th>القيمة الجديدة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($changes as $field => $newValue)
+                                            @php
+                                                // Skip name fields - we only show IDs and use name fields for lookup
+                                                if (in_array($field, ['expense_category_name', 'expense_item_name', 'social_case_name'])) {
+                                                    continue;
+                                                }
+
+                                                $oldValue = $original[$field] ?? '-';
+                                                $oldValueDisplay = $oldValue;
+                                                $fieldLabel = '';
+
+                                                if ($field === 'amount') {
+                                                    $fieldLabel = 'المبلغ';
+                                                } elseif ($field === 'description') {
+                                                    $fieldLabel = 'الوصف';
+                                                } elseif ($field === 'location') {
+                                                    $fieldLabel = 'الموقع';
+                                                } elseif ($field === 'expense_date') {
+                                                    $fieldLabel = 'التاريخ';
+                                                } elseif ($field === 'expense_category_id') {
+                                                    $fieldLabel = 'الفئة';
+                                                    // Get old category full path
+                                                    $oldCategoryPath = $original['expense_category_path'] ?? '-';
+                                                    if ($oldCategoryPath && $oldCategoryPath !== '-') {
+                                                        $oldValueDisplay = $oldCategoryPath . ' (ID: ' . $oldValue . ')';
+                                                    }
+                                                    // Get new category full path
+                                                    if ($newValue) {
+                                                        $newCat = \App\Models\ExpenseCategory::find($newValue);
+                                                        $newValue = ($newCat?->full_path ?? '-') . ' (ID: ' . $newValue . ')';
+                                                    }
+                                                } elseif ($field === 'expense_item_id') {
+                                                    $fieldLabel = 'البند';
+                                                    // Get old item name
+                                                    $oldItemName = $original['expense_item_name'] ?? '-';
+                                                    if ($oldItemName && $oldValue) {
+                                                        $oldValueDisplay = $oldItemName . ' (ID: ' . $oldValue . ')';
+                                                    }
+                                                    // Get new item name
+                                                    if ($newValue) {
+                                                        $newItem = \App\Models\ExpenseItem::find($newValue);
+                                                        $newValue = ($newItem?->name ?? '-') . ' (ID: ' . $newValue . ')';
+                                                    }
+                                                } elseif ($field === 'social_case_id') {
+                                                    $fieldLabel = 'الحالة الاجتماعية';
+                                                    // Get old case name
+                                                    $oldCaseName = $original['social_case_name'] ?? '-';
+                                                    if ($oldCaseName && $oldValue) {
+                                                        $oldValueDisplay = $oldCaseName . ' (ID: ' . $oldValue . ')';
+                                                    }
+                                                    // Get new case name
+                                                    if ($newValue) {
+                                                        $newCase = \App\Models\SocialCase::find($newValue);
+                                                        $newValue = ($newCase?->name ?? '-') . ' (ID: ' . $newValue . ')';
+                                                    }
+                                                } else {
+                                                    $fieldLabel = $field;
+                                                }
+                                            @endphp
+                                            <tr>
+                                                <td><strong>{{ $fieldLabel }}</strong></td>
+                                                <td><small style="color: #999;">{{ is_array($oldValueDisplay) ? json_encode($oldValueDisplay) : $oldValueDisplay }}</small></td>
+                                                <td>
+                                                    <span style="color: #4caf50;">
+                                                        <strong>{{ is_array($newValue) ? json_encode($newValue) : $newValue }}</strong>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                    @else
+                                    <p class="text-muted mb-0">لا توجد تغييرات محددة</p>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card" style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(240, 147, 251, 0.1)); border: 1px solid rgba(245, 87, 108, 0.3);">
+                <div class="card-body">
+                    <h6 class="card-title mb-3">
+                        <i class="fas fa-info-circle" style="color: #f5576c;"></i> معلومات إضافية
+                    </h6>
+                    <div style="font-size: 0.9rem; line-height: 2;">
+                        <div class="mb-3">
+                            <strong>معرف المصروف:</strong><br>
+                            <code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px;">{{ $expense->id }}</code>
+                        </div>
+                        <div class="mb-3">
+                            <strong>تاريخ الإنشاء:</strong><br>
+                            {{ $expense->created_at->format('Y-m-d H:i') }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attachment Modal -->
+@if($expense->attachment)
+<div class="modal fade" id="attachmentModal" tabindex="-1" aria-labelledby="attachmentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                <h5 class="modal-title" id="attachmentModalLabel" style="color: white;">
+                    <i class="fas fa-paperclip"></i> مرفق المصروف
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center" style="padding: 2rem;">
+                @php
+                    $extension = strtolower(pathinfo($expense->attachment, PATHINFO_EXTENSION));
+                    $isImage = in_array($extension, ['jpg', 'jpeg', 'png', 'gif']);
+                    $isPdf = $extension === 'pdf';
+                @endphp
+
+                @if($isImage)
+                    <img src="{{ '/storage/app/public/' . $expense->attachment }}" alt="Expense Attachment" class="img-fluid" style="max-height: 500px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                @elseif($isPdf)
+                    <div style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(240, 147, 251, 0.1)); padding: 3rem; border-radius: 12px;">
+                        <i class="fas fa-file-pdf" style="font-size: 5rem; color: #f5576c; margin-bottom: 1rem;"></i>
+                        <h5 style="margin-bottom: 1rem;">ملف PDF</h5>
+                        <p class="text-muted" style="margin-bottom: 1.5rem;">{{ basename($expense->attachment) }}</p>
+                        <a href="{{ route('expenses.download-attachment', $expense->id) }}" class="btn btn-primary" target="_blank" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                            <i class="fas fa-download"></i> تحميل الملف
+                        </a>
+                    </div>
+                @else
+                    <div style="background: linear-gradient(135deg, rgba(245, 87, 108, 0.1), rgba(240, 147, 251, 0.1)); padding: 3rem; border-radius: 12px;">
+                        <i class="fas fa-file-alt" style="font-size: 5rem; color: #667eea; margin-bottom: 1rem;"></i>
+                        <h5 style="margin-bottom: 1rem;">مستند</h5>
+                        <p class="text-muted" style="margin-bottom: 1.5rem;">{{ basename($expense->attachment) }}</p>
+                        <a href="{{ route('expenses.download-attachment', $expense->id) }}" class="btn btn-primary" target="_blank" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                            <i class="fas fa-download"></i> تحميل الملف
+                        </a>
+                    </div>
+                @endif
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                <a href="{{ route('expenses.download-attachment', $expense->id) }}" class="btn btn-success" target="_blank">
+                    <i class="fas fa-download"></i> تحميل
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+@endsection

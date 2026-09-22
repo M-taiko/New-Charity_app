@@ -1,0 +1,927 @@
+@extends('layouts.modern')
+
+@section('content')
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4" data-aos="fade-down">
+        <div class="col-12">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem;">
+                <div>
+                    <h1 style="margin: 0; font-size: 2rem; font-weight: 700; color: var(--dark);">
+                        <i class="fas fa-dashboard"></i> لوحة التحكم
+                    </h1>
+                    <p style="margin: 0.5rem 0 0 0; color: #6b7280; font-size: 0.95rem;">
+                        أهلاً بك {{ auth()->user()->name }}, إليك ملخص الأنشطة الحالية
+                    </p>
+                </div>
+                <div style="font-size: 3rem; opacity: 0.1; color: var(--primary);">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Row -->
+    @if(auth()->user()->hasRole('باحث اجتماعي'))
+        <!-- Researcher Dashboard -->
+        <div class="row g-4 mb-4" data-aos="fade-up">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card info">
+                    <div class="stat-icon"><i class="fas fa-file-alt"></i></div>
+                    <div class="stat-label">إجمالي الحالات</div>
+                    <div class="stat-number" style="color: var(--info);">{{ $researcherStats['total_cases'] ?? 0 }}</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card success">
+                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="stat-label">حالات معتمدة</div>
+                    <div class="stat-number" style="color: var(--success);">{{ $researcherStats['approved_cases'] ?? 0 }}</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card warning">
+                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                    <div class="stat-label">حالات معلقة</div>
+                    <div class="stat-number" style="color: var(--warning);">{{ $researcherStats['pending_cases'] ?? 0 }}</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="stat-card danger">
+                    <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
+                    <div class="stat-label">حالات مرفوضة</div>
+                    <div class="stat-number" style="color: var(--danger);">{{ $researcherStats['rejected_cases'] ?? 0 }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Approval Rate Card -->
+        <div class="row mb-4" data-aos="fade-up">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="row align-items-center">
+                            <div class="col-lg-8">
+                                <h5 style="margin: 0 0 1rem 0;"><i class="fas fa-chart-pie"></i> معدل الموافقة</h5>
+                                <div class="progress" style="height: 24px; border-radius: 12px; background: #f0f0f0;">
+                                    <div class="progress-bar" style="width: {{ $researcherStats['approval_rate'] ?? 0 }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-weight: 700; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.9rem;">
+                                        {{ $researcherStats['approval_rate'] ?? 0 }}%
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-4 text-center mt-3 mt-lg-0">
+                                <div class="display-4" style="color: #667eea; font-weight: 700;">{{ $researcherStats['approval_rate'] ?? 0 }}%</div>
+                                <small class="text-muted">معدل القبول</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @elseif(auth()->user()->hasRole('مندوب'))
+        <!-- Agent Statistics -->
+        @php
+            // فلترة العهد النشطة فقط (بدون closed)
+            $agentCustodies = \App\Models\Custody::where('agent_id', auth()->id())
+                ->whereIn('status', ['accepted', 'active', 'partially_returned'])
+                ->get();
+            $activeCustody = $agentCustodies->where('status', 'accepted')->first()
+                ?? $agentCustodies->where('status', 'active')->first()
+                ?? $agentCustodies->where('status', 'partially_returned')->first();
+            $totalReceived = $agentCustodies->sum('amount');
+            $totalSpent = $agentCustodies->sum('spent');
+            $totalReturned = $agentCustodies->sum('returned');
+            $totalRemaining = $agentCustodies->sum(function($c) {
+                return $c->getRemainingBalance();
+            });
+        @endphp
+
+        <!-- Active Custody Card -->
+        @if($activeCustody)
+            @php
+                $custodySpent = $activeCustody->getTotalSpent();
+                $custodyRemaining = $activeCustody->getRemainingBalance();
+                $custodyPercent = $activeCustody->amount > 0 ? round(($custodySpent / $activeCustody->amount) * 100) : 0;
+                $returnedPercent = $activeCustody->amount > 0 ? round(($activeCustody->returned / $activeCustody->amount) * 100) : 0;
+            @endphp
+            <div class="row g-4 mb-4" data-aos="fade-up">
+                <div class="col-12">
+                    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white;">
+                        <div class="card-body p-4">
+                            <div class="row align-items-center">
+                                <div class="col-lg-8">
+                                    <h4 style="margin: 0 0 0.5rem 0; color: white;">
+                                        <i class="fas fa-hand-holding-usd"></i> عهدتك النشطة
+                                    </h4>
+                                    <p style="margin: 0; opacity: 0.9; font-size: 0.95rem;">عهدة #{{ $activeCustody->id }} - منذ {{ $activeCustody->accepted_at ? $activeCustody->accepted_at->diffForHumans() : 'غير معروف' }}</p>
+
+                                    <div class="row mt-4">
+                                        <div class="col-md-3">
+                                            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">إجمالي العهدة</p>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->amount, 2) }}</h3>
+                                                <small style="opacity: 0.8;">ج.م</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">تم صرفه</p>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodySpent, 2) }}</h3>
+                                                <small style="opacity: 0.8;">ج.م ({{ $custodyPercent }}%)</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">تم رده</p>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->returned, 2) }}</h3>
+                                                <small style="opacity: 0.8;">ج.م ({{ $returnedPercent }}%)</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">المتبقي</p>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodyRemaining, 2) }}</h3>
+                                                <small style="opacity: 0.8;">ج.م</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Progress Bars -->
+                                    <div class="row mt-3">
+                                        <div class="col-md-6">
+                                            <p style="margin: 0 0 8px 0; font-size: 0.9rem; opacity: 0.9;">نسبة الإنفاق</p>
+                                            <div class="progress" style="height: 12px; background: rgba(255,255,255,0.2);">
+                                                <div class="progress-bar" style="width: {{ $custodyPercent }}%; background: rgba(255,255,255,0.9);">{{ $custodyPercent }}%</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p style="margin: 0 0 8px 0; font-size: 0.9rem; opacity: 0.9;">نسبة المردود</p>
+                                            <div class="progress" style="height: 12px; background: rgba(255,255,255,0.2);">
+                                                <div class="progress-bar" style="width: {{ $returnedPercent }}%; background: rgba(255,152,0,0.9);">{{ $returnedPercent }}%</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-lg-4 text-center">
+                                    <div style="background: rgba(255,255,255,0.15); border-radius: 12px; padding: 25px; backdrop-filter: blur(10px);">
+                                        <i class="fas fa-chart-pie" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.9;"></i>
+                                        <h5 style="margin: 0 0 1rem 0;">إجراءات سريعة</h5>
+                                        <div class="d-grid gap-2">
+                                            <a href="{{ route('custodies.show', $activeCustody->id) }}" class="btn btn-light">
+                                                <i class="fas fa-eye"></i> عرض التفاصيل
+                                            </a>
+                                            <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
+                                                <i class="fas fa-exchange-alt"></i> تحويل العهدة
+                                            </a>
+                                            @if($custodyRemaining > 0)
+                                                <a href="{{ route('custodies.show', $activeCustody->id) }}#returnModal" class="btn btn-warning">
+                                                    <i class="fas fa-undo"></i> رد العهدة
+                                                </a>
+                                            @endif
+                                            <a href="{{ route('expenses.create') }}" class="btn btn-success">
+                                                <i class="fas fa-plus"></i> إضافة مصروف
+                                            </a>
+                                            <a href="{{ route('custodies.create') }}" class="btn btn-primary">
+                                                <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <div class="row g-4 mb-4">
+            <!-- Total Custodies -->
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="0">
+                <div class="stat-card success">
+                    <div class="stat-icon">
+                        <i class="fas fa-hand-holding-heart"></i>
+                    </div>
+                    <div class="stat-label">إجمالي العهد</div>
+                    <div class="stat-number" style="color: var(--success);">
+                        {{ number_format($totalReceived, 2) }}
+                    </div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+
+            <!-- Total Spent -->
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+                <div class="stat-card danger">
+                    <div class="stat-icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="stat-label">إجمالي المصروفات</div>
+                    <div class="stat-number" style="color: var(--danger);">
+                        {{ number_format($totalSpent, 2) }}
+                    </div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+
+            <!-- Total Remaining -->
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+                <div class="stat-card info">
+                    <div class="stat-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <div class="stat-label">المبلغ المتبقي</div>
+                    <div class="stat-number" style="color: var(--info);">
+                        {{ number_format($totalRemaining, 2) }}
+                    </div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+
+            <!-- Returned Amount -->
+            <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+                <div class="stat-card warning">
+                    <div class="stat-icon">
+                        <i class="fas fa-arrow-up"></i>
+                    </div>
+                    <div class="stat-label">المبالغ المردودة</div>
+                    <div class="stat-number" style="color: var(--warning);">
+                        {{ number_format($totalReturned, 2) }}
+                    </div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+        </div>
+    @else
+        <!-- Year Filter -->
+        <div class="row mb-3" data-aos="fade-down">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body py-3">
+                        <form method="GET" action="{{ route('dashboard') }}" class="d-flex align-items-center gap-3 flex-wrap">
+                            <label class="fw-bold mb-0"><i class="fas fa-calendar-alt" style="color: var(--primary);"></i> فلترة بالسنة:</label>
+                            <select name="year" class="form-select" style="width: auto;" onchange="this.form.submit()">
+                                @foreach($availableYears as $y)
+                                    <option value="{{ $y }}" {{ $y == $selectedYear ? 'selected' : '' }}>{{ $y }}</option>
+                                @endforeach
+                            </select>
+                            <span class="text-muted small">البيانات المعروضة خاصة بسنة {{ $selectedYear }}</span>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin/Accountant Statistics -->
+        {{-- الصف الأول: إجمالي الأصول + رصيد الخزينة + إجمالي العهد --}}
+        <div class="row g-4 mb-3">
+            <div class="col-12 col-lg-4" data-aos="fade-up" data-aos-delay="0">
+                <div class="stat-card" style="border-right: 4px solid #6366f1; background: linear-gradient(135deg, #f8f7ff 0%, #eef2ff 100%);">
+                    <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-landmark"></i></div>
+                    <div class="stat-label" style="font-weight:700;">إجمالي الأصول (الكلي)</div>
+                    <div class="stat-number" style="color: #6366f1; font-size: 1.8rem;">{{ number_format($totalAssets, 2) }}</div>
+                    <small style="color: #6b7280;">ج.م &nbsp;|&nbsp; خزينة + عهد نشطة</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="stat-card success">
+                    <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                    <div class="stat-label">رصيد الخزينة (المتبقي)</div>
+                    <div class="stat-number" style="color: var(--success);">{{ number_format($treasury->balance ?? 0, 2) }}</div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="stat-card info">
+                    <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                    <div class="stat-label">إجمالي العهد النشطة</div>
+                    <div class="stat-number" style="color: var(--info);">{{ number_format($totalCustodiesAmount, 2) }}</div>
+                    <small style="color: #6b7280;">ج.م &nbsp;|&nbsp; {{ $activeCustodies }} عهدة</small>
+                </div>
+            </div>
+        </div>
+
+        {{-- الصف الثاني: إحصائيات السنة --}}
+        <div class="row g-4 mb-4">
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="0">
+                <div class="stat-card info">
+                    <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                    <div class="stat-label">عهدات {{ $selectedYear }}</div>
+                    <div class="stat-number" style="color: var(--info);">{{ number_format($yearStats['total_custodies_amount'] ?? 0, 2) }}</div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="100">
+                <div class="stat-card danger">
+                    <div class="stat-icon"><i class="fas fa-money-bill"></i></div>
+                    <div class="stat-label">مصروفات {{ $selectedYear }}</div>
+                    <div class="stat-number" style="color: var(--danger);">{{ number_format($yearStats['total_expenses'] ?? 0, 2) }}</div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="stat-card warning">
+                    <div class="stat-icon"><i class="fas fa-undo-alt"></i></div>
+                    <div class="stat-label">مبالغ مردودة {{ $selectedYear }}</div>
+                    <div class="stat-number" style="color: var(--warning);">{{ number_format($yearStats['total_returned'] ?? 0, 2) }}</div>
+                    <small style="color: #6b7280;">ج.م</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Agents Performance -->
+        @if(count($agentsStats) > 0 && auth()->user()->hasRole('مدير'))
+        <div class="row mb-4" data-aos="fade-up">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                        <h5 style="margin: 0; color: white;">
+                            <i class="fas fa-star"></i> تقييم المناديب - {{ $selectedYear }}
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>المندوب</th>
+                                        <th>العهدات</th>
+                                        <th>إجمالي مستلم</th>
+                                        <th>مصروف</th>
+                                        <th>مرجع</th>
+                                        <th>متبقي</th>
+                                        <th>عدد المصروفات</th>
+                                        <th>توثيق بمرفقات</th>
+                                        <th>التقييم</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($agentsStats as $stat)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 34px; height: 34px; font-size: 0.8rem; flex-shrink: 0;">
+                                                    {{ mb_substr($stat['agent']->name, 0, 2) }}
+                                                </div>
+                                                <span class="fw-semibold">{{ $stat['agent']->name }}</span>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge bg-secondary">{{ $stat['custody_count'] }}</span></td>
+                                        <td><strong>{{ number_format($stat['total_received'], 2) }}</strong> ج.م</td>
+                                        <td><span style="color: var(--danger);">{{ number_format($stat['total_spent'], 2) }}</span> ج.م</td>
+                                        <td><span style="color: var(--success);">{{ number_format($stat['total_returned'], 2) }}</span> ج.م</td>
+                                        <td>
+                                            @php $remaining = $stat['remaining']; @endphp
+                                            <span style="color: {{ $remaining > 0 ? 'var(--warning)' : 'var(--success)' }};">
+                                                {{ number_format($remaining, 2) }}
+                                            </span> ج.م
+                                        </td>
+                                        <td><span class="badge bg-info">{{ $stat['expense_count'] }}</span></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1" style="height: 8px; min-width: 60px;">
+                                                    <div class="progress-bar {{ $stat['doc_rate'] >= 70 ? 'bg-success' : ($stat['doc_rate'] >= 40 ? 'bg-warning' : 'bg-danger') }}"
+                                                         style="width: {{ $stat['doc_rate'] }}%;"></div>
+                                                </div>
+                                                <small>{{ $stat['doc_rate'] }}%</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @include('dashboard.partials.stars', ['rating' => $stat['rating']])
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        <i class="fas fa-info-circle"></i>
+                        التقييم يعتمد على: نسبة توثيق المصروفات (40%) + توازن المبالغ (40%) + النشاط (20%)
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+
+        <!-- Researchers Performance -->
+        @if(count($researchersStats) > 0 && auth()->user()->hasRole('مدير'))
+        <div class="row mb-4" data-aos="fade-up">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-header" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); border: none;">
+                        <h5 style="margin: 0; color: white;">
+                            <i class="fas fa-user-check"></i> تقييم الباحثين الاجتماعيين - {{ $selectedYear }}
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>الباحث</th>
+                                        <th>إجمالي الحالات</th>
+                                        <th>معتمدة</th>
+                                        <th>معلقة</th>
+                                        <th>مرفوضة</th>
+                                        <th>معدل القبول</th>
+                                        <th>التقييم</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($researchersStats as $stat)
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="rounded-circle text-white d-flex align-items-center justify-content-center" style="width: 34px; height: 34px; font-size: 0.8rem; flex-shrink: 0; background: linear-gradient(135deg, #11998e, #38ef7d);">
+                                                    {{ mb_substr($stat['researcher']->name, 0, 2) }}
+                                                </div>
+                                                <span class="fw-semibold">{{ $stat['researcher']->name }}</span>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge bg-secondary">{{ $stat['total_cases'] }}</span></td>
+                                        <td><span class="badge bg-success">{{ $stat['approved'] }}</span></td>
+                                        <td><span class="badge bg-warning text-dark">{{ $stat['pending'] }}</span></td>
+                                        <td><span class="badge bg-danger">{{ $stat['rejected'] }}</span></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="progress flex-grow-1" style="height: 8px; min-width: 60px;">
+                                                    <div class="progress-bar {{ $stat['approval_rate'] >= 70 ? 'bg-success' : ($stat['approval_rate'] >= 40 ? 'bg-warning' : 'bg-danger') }}"
+                                                         style="width: {{ $stat['approval_rate'] }}%;"></div>
+                                                </div>
+                                                <small>{{ $stat['approval_rate'] }}%</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @include('dashboard.partials.stars', ['rating' => $stat['rating']])
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="card-footer text-muted small">
+                        <i class="fas fa-info-circle"></i>
+                        التقييم يعتمد على: معدل القبول (60%) + انخفاض الرفض (20%) + النشاط (20%)
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
+    @endif
+
+    <!-- Charts and Content Row -->
+    <div class="row g-4">
+        @if(auth()->user()->hasRole('باحث اجتماعي'))
+            <!-- Researcher's Recent Cases -->
+            <div class="col-12 col-lg-8" data-aos="fade-up" data-aos-delay="400">
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <h5 style="margin: 0;">
+                                    <i class="fas fa-file-alt"></i> آخر الحالات
+                                </h5>
+                            </div>
+                            <a href="{{ route('social_cases.researcher') }}" class="btn btn-light btn-sm">
+                                <i class="fas fa-arrow-left"></i> عرض الكل
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>اسم الحالة</th>
+                                        <th>الحالة</th>
+                                        <th>تاريخ الإنشاء</th>
+                                        <th>إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($researcherStats['recent_cases'] ?? [] as $case)
+                                        <tr>
+                                            <td><strong>{{ $case->name }}</strong></td>
+                                            <td>
+                                                @switch($case->status)
+                                                    @case('pending')
+                                                        <span class="badge bg-warning">معلقة</span>
+                                                        @break
+                                                    @case('approved')
+                                                        <span class="badge bg-success">معتمدة</span>
+                                                        @break
+                                                    @case('rejected')
+                                                        <span class="badge bg-danger">مرفوضة</span>
+                                                        @break
+                                                @endswitch
+                                            </td>
+                                            <td class="text-muted">{{ $case->created_at->format('d/m/Y') }}</td>
+                                            <td>
+                                                <a href="{{ route('social_cases.show', $case->id) }}" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center py-4 text-muted">
+                                                لا توجد حالات بعد
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @elseif(auth()->user()->hasRole('مندوب'))
+            <!-- Agent's Custodies Summary -->
+            <div class="col-12 col-lg-8" data-aos="fade-up" data-aos-delay="400">
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <h5 style="margin: 0;">
+                                    <i class="fas fa-list"></i> ملخص عهدي
+                                </h5>
+                            </div>
+                            <a href="{{ route('agent.transactions') }}" class="btn btn-light btn-sm">
+                                <i class="fas fa-arrow-left"></i> عرض الكل
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><i class="fas fa-hashtag"></i> العهدة</th>
+                                        <th><i class="fas fa-money-bill"></i> المبلغ</th>
+                                        <th><i class="fas fa-chart-pie"></i> نسبة الإنفاق</th>
+                                        <th><i class="fas fa-wallet"></i> المتبقي</th>
+                                        <th><i class="fas fa-signal"></i> الحالة</th>
+                                        <th><i class="fas fa-cog"></i> إجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($agentCustodies as $custody)
+                                        @php
+                                            $totalSpent = $custody->getTotalSpent();
+                                            $remaining = $custody->getRemainingBalance();
+                                            $spendingPercent = $custody->amount > 0 ? round(($totalSpent / $custody->amount) * 100) : 0;
+                                        @endphp
+                                        <tr>
+                                            <td><a href="{{ route('custodies.show', $custody->id) }}" style="text-decoration: none; color: var(--primary); font-weight: 600;">عهدة #{{ $custody->id }}</a></td>
+                                            <td><strong>{{ number_format($custody->amount, 2) }}</strong> ج.م</td>
+                                            <td>
+                                                <div style="min-width: 150px;">
+                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                        <small style="color: #666;">{{ $spendingPercent }}%</small>
+                                                        <small style="color: #999;">{{ number_format($totalSpent, 2) }} ج.م</small>
+                                                    </div>
+                                                    <div class="progress" style="height: 6px;">
+                                                        <div class="progress-bar" style="width: {{ $spendingPercent }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td><span style="color: #4caf50; font-weight: 600;">{{ number_format($remaining, 2) }}</span> ج.م</td>
+                                            <td>
+                                                @if($remaining <= 0 && $custody->status === 'accepted')
+                                                    <span class="badge bg-dark">عهدة مستوفاة</span>
+                                                @else
+                                                    @switch($custody->status)
+                                                        @case('pending')
+                                                            <span class="badge bg-warning">قيد الانتظار</span>
+                                                            @break
+                                                        @case('accepted')
+                                                            <span class="badge bg-success">نشطة</span>
+                                                            @break
+                                                        @case('pending_return')
+                                                            <span class="badge bg-info">انتظار موافقة</span>
+                                                            @break
+                                                        @case('partially_returned')
+                                                            <span class="badge bg-primary">مردودة جزئياً</span>
+                                                            @break
+                                                        @case('closed')
+                                                            <span class="badge bg-secondary">مغلقة</span>
+                                                            @break
+                                                        @default
+                                                            <span class="badge bg-secondary">{{ $custody->status }}</span>
+                                                    @endswitch
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{ route('custodies.show', $custody->id) }}" class="btn btn-outline-primary btn-sm" title="عرض">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    @if($custody->status === 'accepted' && $remaining > 0)
+                                                        <a href="{{ route('custodies.show', $custody->id) }}#returnModal" class="btn btn-outline-info btn-sm" title="رد العهدة">
+                                                            <i class="fas fa-undo"></i>
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center py-5">
+                                                <div class="empty-state">
+                                                    <div class="empty-state-icon">
+                                                        <i class="fas fa-inbox"></i>
+                                                    </div>
+                                                    <div class="empty-state-title">لا توجد عهد</div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Agent Recent Expenses -->
+            @php
+                $recentExpenses = \App\Models\Expense::where('user_id', auth()->id())
+                    ->latest()->limit(5)->get();
+                $pendingTasks = \App\Models\Task::where('assigned_to', auth()->id())
+                    ->whereIn('status', ['pending','in_progress'])->latest()->limit(3)->get();
+            @endphp
+            @if($recentExpenses->count() > 0)
+            <div class="col-12 mt-3" data-aos="fade-up" data-aos-delay="450">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 style="margin:0;"><i class="fas fa-receipt"></i> آخر مصروفاتي</h5>
+                        <a href="{{ route('expenses.agent') }}" class="btn btn-light btn-sm">عرض الكل</a>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" style="font-size:.88rem;">
+                                <thead class="table-light">
+                                    <tr><th>التاريخ</th><th>الوصف</th><th>المبلغ</th><th>الحالة</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($recentExpenses as $exp)
+                                    <tr>
+                                        <td class="text-muted">{{ $exp->expense_date->format('d/m/Y') }}</td>
+                                        <td><a href="{{ route('expenses.show', $exp->id) }}" class="text-decoration-none">{{ Str::limit($exp->description, 30) }}</a></td>
+                                        <td><strong style="color:var(--danger);">{{ number_format($exp->amount, 2) }}</strong> ج.م</td>
+                                        <td>
+                                            @if($exp->isReviewed())
+                                                <span class="badge bg-info" style="font-size:.68rem;">تمت المراجعة</span>
+                                            @elseif($exp->isApproved())
+                                                <span class="badge bg-success" style="font-size:.68rem;">معتمد</span>
+                                            @else
+                                                <span class="badge bg-secondary" style="font-size:.68rem;">قيد المراجعة</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
+            @if($pendingTasks->count() > 0)
+            <div class="col-12 mt-3" data-aos="fade-up" data-aos-delay="480">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 style="margin:0;"><i class="fas fa-tasks"></i> مهامي النشطة</h5>
+                        <a href="{{ route('tasks.index') }}" class="btn btn-light btn-sm">عرض الكل</a>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        @foreach($pendingTasks as $task)
+                        <a href="{{ route('tasks.show', $task->id) }}" class="list-group-item list-group-item-action py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span style="font-size:.9rem;">{{ Str::limit($task->title, 40) }}</span>
+                                <span class="badge {{ $task->status === 'in_progress' ? 'bg-primary' : 'bg-warning text-dark' }}" style="font-size:.68rem;">
+                                    {{ $task->status === 'in_progress' ? 'جارٍ' : 'معلق' }}
+                                </span>
+                            </div>
+                            @if($task->due_date)
+                            <small class="text-muted"><i class="fas fa-calendar-alt"></i> {{ $task->due_date->format('d/m/Y') }}</small>
+                            @endif
+                        </a>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+            @endif
+        @else
+            <!-- Recent Transactions (Admin/Accountant) -->
+            <div class="col-12 col-lg-8" data-aos="fade-up" data-aos-delay="400">
+                <div class="card">
+                    <div class="card-header">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div>
+                                <h5 style="margin: 0;">
+                                    <i class="fas fa-history"></i> آخر العمليات
+                                </h5>
+                            </div>
+                            <a href="{{ route('treasury.index') }}" class="btn btn-light btn-sm">
+                                <i class="fas fa-arrow-left"></i> عرض الكل
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><i class="fas fa-check-circle"></i> النوع</th>
+                                        <th><i class="fas fa-money-bill"></i> المبلغ</th>
+                                        <th><i class="fas fa-calendar"></i> التاريخ</th>
+                                        <th><i class="fas fa-user"></i> المستخدم</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse(\App\Models\TreasuryTransaction::latest()->limit(5)->get() as $transaction)
+                                        <tr>
+                                            <td>
+                                                @switch($transaction->type)
+                                                    @case('donation')
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-gift"></i> تبرع
+                                                        </span>
+                                                        @break
+                                                    @case('expense')
+                                                        <span class="badge bg-danger">
+                                                            <i class="fas fa-money-bill-wave"></i> مصروف
+                                                        </span>
+                                                        @break
+                                                    @case('custody_out')
+                                                        <span class="badge bg-info">
+                                                            <i class="fas fa-arrow-up"></i> عهدة صرف
+                                                        </span>
+                                                        @break
+                                                    @case('custody_return')
+                                                        <span class="badge bg-primary">
+                                                            <i class="fas fa-arrow-down"></i> عهدة إرجاع
+                                                        </span>
+                                                        @break
+                                                @endswitch
+                                            </td>
+                                            <td class="fw-bold">{{ number_format($transaction->amount, 2) }} ج.م</td>
+                                            <td>{{ $transaction->created_at->format('Y-m-d') }}</td>
+                                            <td>
+                                                <small class="badge bg-light text-dark">
+                                                    {{ $transaction->user->name ?? '-' }}
+                                                </small>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="4" class="text-center py-5">
+                                                <div class="empty-state">
+                                                    <div class="empty-state-icon">
+                                                        <i class="fas fa-inbox"></i>
+                                                    </div>
+                                                    <div class="empty-state-title">لا توجد عمليات</div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+        <!-- Notifications & Quick Actions -->
+        <div class="col-12 col-lg-4">
+            <!-- Notifications -->
+            <div class="card mb-4" data-aos="fade-up" data-aos-delay="500">
+                <div class="card-header">
+                    <h5 style="margin: 0;">
+                        <i class="fas fa-bell"></i> التنبيهات الأخيرة
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        @forelse(\App\Models\Notification::where('user_id', auth()->id())->latest()->limit(5)->get() as $notification)
+                            @php
+                                $url = '#';
+                                if ($notification->related_type === 'social_case' && $notification->related_id) {
+                                    $url = route('social_cases.show', $notification->related_id);
+                                } elseif ($notification->related_type === 'custody' && $notification->related_id) {
+                                    $url = route('custodies.show', $notification->related_id);
+                                } elseif ($notification->related_type === 'expense' && $notification->related_id) {
+                                    $url = route('expenses.show', $notification->related_id);
+                                }
+                            @endphp
+                            <a href="{{ $url }}" style="text-decoration: none; color: inherit; display: block;" onclick="markNotificationAsRead(event, {{ $notification->id }})">
+                                <div class="list-group-item p-3 border-bottom-0" style="border-bottom: 1px solid var(--border); cursor: pointer; transition: all 0.2s ease;">
+                                    <div style="display: flex; gap: 1rem;">
+                                        <div style="width: 12px; height: 12px; background: var(--primary); border-radius: 50%; margin-top: 0.35rem; flex-shrink: 0;"></div>
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-weight: 600; color: var(--dark); font-size: 0.95rem;">
+                                                {{ $notification->title }}
+                                            </div>
+                                            <div style="font-size: 0.85rem; color: #6b7280; margin-top: 0.25rem;">
+                                                {{ $notification->message }}
+                                            </div>
+                                            <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.5rem;">
+                                                <i class="fas fa-clock"></i>
+                                                {{ $notification->created_at->diffForHumans() }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        @empty
+                            <div class="p-4 text-center" style="color: #6b7280;">
+                                <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div>لا توجد تنبيهات جديدة</div>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card" data-aos="fade-up" data-aos-delay="600">
+                <div class="card-header">
+                    <h5 style="margin: 0;">
+                        <i class="fas fa-bolt"></i> إجراءات سريعة
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        @if(auth()->user()->hasRole('باحث اجتماعي'))
+                            <!-- Researcher Quick Actions -->
+                            <a href="{{ route('social_cases.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle"></i> إضافة حالة جديدة
+                            </a>
+                            <a href="{{ route('social_cases.researcher') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-list"></i> حالاتي
+                            </a>
+                            <a href="{{ route('social_cases.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-folder-open"></i> جميع الحالات
+                            </a>
+                        @elseif(auth()->user()->hasRole('مندوب'))
+                            <!-- Agent Quick Actions -->
+                            <a href="{{ route('expenses.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle"></i> تسجيل مصروف جديد
+                            </a>
+                            <a href="{{ route('expenses.agent') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-list"></i> عرض مصروفاتي
+                            </a>
+                            <a href="{{ route('custodies.create') }}" class="btn btn-outline-success">
+                                <i class="fas fa-hand-holding-usd"></i> طلب عهدة جديدة
+                            </a>
+                            <a href="{{ route('agent.transactions') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-exchange-alt"></i> حركاتي من الخزينة
+                            </a>
+                            <a href="{{ route('tasks.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-tasks"></i> مهامي
+            </a>
+                        @else
+                            <!-- Admin/Accountant Quick Actions -->
+                            @can('create_custody')
+                            <a href="{{ route('custodies.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle"></i> إنشاء عهدة جديدة
+                            </a>
+                            @endcan
+
+                            @can('spend_money')
+                            <a href="{{ route('expenses.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle"></i> تسجيل مصروف
+                            </a>
+                            @endcan
+
+                            @can('create_social_case')
+                            <a href="{{ route('social_cases.create') }}" class="btn btn-primary">
+                                <i class="fas fa-plus-circle"></i> إنشاء حالة اجتماعية
+                            </a>
+                            @endcan
+
+                            @can('manage_treasury')
+                            <a href="{{ route('treasury.index') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-eye"></i> عرض الخزينة
+                            </a>
+                            @endcan
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stat-card.success { border-top-color: var(--success) !important; }
+    .stat-card.info { border-top-color: var(--info) !important; }
+    .stat-card.warning { border-top-color: var(--warning) !important; }
+    .stat-card.danger { border-top-color: var(--danger) !important; }
+</style>
+@endsection
