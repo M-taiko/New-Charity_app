@@ -68,6 +68,11 @@ class ExpenseEditRequestService
                 }
             }
 
+            // بنود المصروف: array_key_exists حتى يعمل "الفراغ يمسح" (قيمة null مقصودة)
+            if (array_key_exists('line_items', $editRequest->requested_changes ?? [])) {
+                $changesToApply['line_items'] = $editRequest->requested_changes['line_items'];
+            }
+
             // تعديل المبلغ (إذا كان هناك تغيير)
             if (isset($editRequest->requested_changes['amount'])) {
                 $oldAmount = $expense->amount;

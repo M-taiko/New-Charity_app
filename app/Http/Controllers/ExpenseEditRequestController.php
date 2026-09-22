@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\ExpenseEditRequest;
 use App\Services\ExpenseEditRequestService;
+use App\Support\LineItemsSanitizer;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 
@@ -72,6 +73,11 @@ class ExpenseEditRequestController extends Controller
                 $validated['attachment'] = $attachment;
             } else {
                 unset($validated['attachment']);
+            }
+
+            // بنود المصروف: تُرسل فقط إذا كان الحقل موجوداً في الطلب (غائب = يحافظ على الحالي، فارغ = يمسحه)
+            if ($request->has('line_items')) {
+                $validated['line_items'] = LineItemsSanitizer::fromRequest($request);
             }
 
             // إنشاء طلب التعديل

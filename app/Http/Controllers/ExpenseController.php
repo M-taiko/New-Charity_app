@@ -10,6 +10,7 @@ use App\Models\ExpenseItem;
 use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
 use App\Services\TreasuryService;
+use App\Support\LineItemsSanitizer;
 use App\Services\ActivityLogService;
 use App\Services\NotificationService;
 use Yajra\DataTables\DataTables;
@@ -114,7 +115,7 @@ class ExpenseController extends Controller
                     $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
                 }
 
-                $lineItems = $this->lineItemsFromRequest($request);
+                $lineItems = LineItemsSanitizer::fromRequest($request);
 
             $expense = $this->service->recordDirectExpenseFromTreasury(
                 $treasuryId,
@@ -179,7 +180,7 @@ class ExpenseController extends Controller
                     $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
                 }
 
-                $lineItems = $this->lineItemsFromRequest($request);
+                $lineItems = LineItemsSanitizer::fromRequest($request);
 
                 $expense = $this->service->recordExpenseWithItems(
                     $request->custody_id,
@@ -208,49 +209,6 @@ class ExpenseController extends Controller
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'حدث خطأ أثناء تسجيل المصروف: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * قراءة بنود المصروف من الطلب وتنظيفها
-     * الحقل الأساسي line_items مع قبول line_items_data كاسم بديل للتوافق
-     */
-    private function lineItemsFromRequest(Request $request): ?array
-    {
-        $raw = $request->filled('line_items')
-            ? $request->line_items
-            : ($request->filled('line_items_data') ? $request->line_items_data : null);
-
-        if ($raw === null || $raw === '') {
-            return null;
-        }
-
-        $items = is_array($raw) ? $raw : json_decode($raw, true);
-
-        if (!is_array($items) || $items === []) {
-            return null;
-        }
-
-        $clean = [];
-        foreach ($items as $item) {
-            if (!is_array($item)) {
-                continue;
-            }
-            $description = $item['description'] ?? null;
-            if (!is_string($description) || trim($description) === '') {
-                continue;
-            }
-            $quantity = isset($item['quantity']) && is_numeric($item['quantity']) && (float) $item['quantity'] >= 0
-                ? (float) $item['quantity'] : null;
-            $unitPrice = isset($item['unit_price']) && is_numeric($item['unit_price']) && (float) $item['unit_price'] >= 0
-                ? (float) $item['unit_price'] : null;
-            $clean[] = [
-                'description' => mb_substr(trim($description), 0, 255),
-                'quantity' => $quantity,
-                'unit_price' => $unitPrice,
-            ];
-        }
-
-        return $clean === [] ? null : $clean;
     }
 
     public function show(Expense $expense)
@@ -420,7 +378,7 @@ class ExpenseController extends Controller
                     'expense_category_id' => $request->expense_category_id,
                     'expense_item_id'     => $itemId,
                     'line_items'          => $request->has('line_items')
-                        ? $this->lineItemsFromRequest($request)
+                        ? LineItemsSanitizer::fromRequest($request)
                         : $expense->line_items,
                     'type'                => $request->expense_type,
                     'amount'              => $newAmount,

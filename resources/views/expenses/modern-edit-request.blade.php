@@ -142,6 +142,22 @@
                             @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
 
+                        <!-- Line Items (اختياري) -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0"><strong><i class="fas fa-list-ul"></i> تفاصيل البنود (اختياري)</strong></label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addLineItem()">
+                                    <i class="fas fa-plus"></i> إضافة بند
+                                </button>
+                            </div>
+                            <div id="lineItemsContainer"></div>
+                            <input type="hidden" name="line_items" id="lineItemsData">
+                            <small class="d-block mt-1" id="line-items-warning" style="color: #f59e0b; display: none;"></small>
+                            @if($expense->line_items && is_array($expense->line_items) && isset($expense->line_items['raw_text']))
+                                <small class="text-muted d-block mt-1"><i class="fas fa-info-circle"></i> النص الحر الحالي يظهر كأول بند - يمكنك تقسيمه إلى بنود ثم الإرسال.</small>
+                            @endif
+                        </div>
+
                         <div class="mb-3">
                             <label class="form-label"><strong>الموقع</strong></label>
                             <input type="text" name="location" class="form-control @error('location') is-invalid @enderror" value="{{ old('location', $expense->location) }}">
@@ -234,6 +250,90 @@
 
 @push('scripts')
 <script>
+    // ──── Line Items Logic ────
+    let lineItemCount = 0;
+
+    function addLineItem(description = '', quantity = null, unitPrice = null) {
+        lineItemCount++;
+        const container = document.getElementById('lineItemsContainer');
+        const row = document.createElement('div');
+        row.className = 'd-flex gap-2 align-items-center mb-2';
+        row.id = `li_${lineItemCount}`;
+        row.innerHTML = `
+            <input type="text" class="form-control" placeholder="الوصف" data-li="desc" style="flex:3;" value="">
+            <input type="number" class="form-control" placeholder="العدد" data-li="qty" min="1" style="flex:1;" oninput="updateLineItemsData()">
+            <input type="number" class="form-control" placeholder="سعر الوحدة" data-li="price" min="0" step="0.01" style="flex:1.5;" oninput="updateLineItemsData()">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLineItem('li_${lineItemCount}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(row);
+        row.querySelector('[data-li="desc"]').value = description;
+        if (quantity !== null && quantity !== undefined) row.querySelector('[data-li="qty"]').value = quantity;
+        if (unitPrice !== null && unitPrice !== undefined) row.querySelector('[data-li="price"]').value = unitPrice;
+        row.querySelectorAll('input[data-li="desc"]').forEach(i => i.addEventListener('input', updateLineItemsData));
+        updateLineItemsData();
+    }
+
+    function removeLineItem(id) {
+        document.getElementById(id)?.remove();
+        updateLineItemsData();
+    }
+
+    function updateLineItemsData() {
+        const rows = document.querySelectorAll('#lineItemsContainer > div');
+        const items = [];
+        rows.forEach(row => {
+            const desc  = row.querySelector('[data-li="desc"]')?.value?.trim();
+            const qty   = parseFloat(row.querySelector('[data-li="qty"]')?.value) || null;
+            const price = parseFloat(row.querySelector('[data-li="price"]')?.value) || null;
+            if (desc) items.push({ description: desc, quantity: qty, unit_price: price });
+        });
+        document.getElementById('lineItemsData').value = JSON.stringify(items);
+        updateLineItemsWarning(items);
+    }
+
+    // تحذير غير مانع عند اختلاف مجموع البنود عن المبلغ (لا يمنع الإرسال)
+    function updateLineItemsWarning(items) {
+        const warningEl = document.getElementById('line-items-warning');
+        if (!warningEl) return;
+        const amount = parseFloat(document.querySelector('input[name="amount"]')?.value);
+        let total = 0, counted = 0;
+        (items || []).forEach(it => {
+            if (it.quantity !== null && it.unit_price !== null) {
+                total += it.quantity * it.unit_price;
+                counted++;
+            }
+        });
+        if (counted > 0 && !isNaN(amount) && amount > 0 && Math.round(total * 100) !== Math.round(amount * 100)) {
+            warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> مجموع البنود (' + total.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م) يختلف عن المبلغ (' + amount.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م)';
+            warningEl.style.display = 'block';
+        } else {
+            warningEl.style.display = 'none';
+        }
+    }
+
+    // تعبئة الصفوف من البيانات الحالية (أو من old عند فشل التحقق)
+    (function() {
+        @php
+            $existingItems = [];
+            if (is_array($expense->line_items)) {
+                if (isset($expense->line_items['raw_text']) && !empty($expense->line_items['raw_text'])) {
+                    // الصيغة القديمة (نص حر من مصروف سريع): أول بند وصف فقط
+                    $existingItems = [['description' => $expense->line_items['raw_text'], 'quantity' => null, 'unit_price' => null]];
+                } else {
+                    foreach ($expense->line_items as $li) {
+                        if (is_array($li) && isset($li['description'])) {
+                            $existingItems[] = ['description' => $li['description'], 'quantity' => $li['quantity'] ?? null, 'unit_price' => $li['unit_price'] ?? null];
+                        }
+                    }
+                }
+            }
+        @endphp
+        let initialItems = {{ \Illuminate\Support\Js::from(old('line_items') ? json_decode(old('line_items'), true) ?: [] : $existingItems) }};
+        initialItems.forEach(it => addLineItem(it.description ?? '', it.quantity ?? null, it.unit_price ?? null));
+    })();
+
     // ──── Cascading 4-Level Category Logic ────
     async function catLoadChildren(fromLevel, parentId) {
         if (!parentId) {
