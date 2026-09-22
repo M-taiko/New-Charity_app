@@ -393,6 +393,7 @@
                 },
                 {
                     data: 'reviewed_label',
+                    className: 'text-nowrap',
                     render: function(data, type, row) {
                         if (data === 'مراجع') {
                             const esc = s => $('<div>').text(s ?? '').html();
@@ -419,6 +420,7 @@
                     data: 'id',
                     orderable: false,
                     searchable: false,
+                    className: 'text-nowrap',
                     render: function(data, type, row) {
                         let buttons = '<div class="btn-group btn-group-sm" role="group">';
                         if (row.can_review) {

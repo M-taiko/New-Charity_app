@@ -12,6 +12,19 @@
             --secondary-color: #3498db;
         }
 
+        /* منع التفاف الأزرار والشارات التي تجمع أيقونة ونص على سطرين (T18) */
+        .btn,
+        .badge {
+            white-space: nowrap;
+        }
+
+        table .btn,
+        table .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

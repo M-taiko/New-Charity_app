@@ -407,6 +407,23 @@
             font-size: 0.85rem;
         }
 
+        /* منع التفاف الأزرار والشارات التي تجمع أيقونة ونص على سطرين (T18) */
+        .btn,
+        .badge,
+        .btn-nowrap,
+        .badge-nowrap {
+            white-space: nowrap;
+        }
+
+        table .btn,
+        table .badge,
+        .btn-nowrap,
+        .badge-nowrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
         .badge.bg-success {
             background-color: #d1fae5 !important;
             color: #065f46;
