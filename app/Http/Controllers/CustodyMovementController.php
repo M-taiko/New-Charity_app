@@ -39,6 +39,7 @@ class CustodyMovementController extends Controller
         ];
 
         return DataTables::of($query->orderByDesc('transaction_date')->orderByDesc('id'))
+            ->editColumn('transaction_date', fn($row) => $row->transaction_date?->toIso8601String())
             ->addColumn('movement_label', fn($row) => $this->movementLabel($row->type))
             ->addColumn('from_party', fn($row) => $this->fromParty($row))
             ->addColumn('to_party', fn($row) => $this->toParty($row))
