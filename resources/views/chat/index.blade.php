@@ -66,7 +66,7 @@
                         @endif
                     </div>
                     <div style="font-size:.7rem;color:#9ca3af;margin-top:.2rem;{{ $isMe ? 'text-align:left;' : 'text-align:right;' }}padding: 0 .5rem;">
-                        {{ $msg->created_at->format('H:i') }} · {{ $msg->created_at->format('d/m') }}
+                        {!! dt_span($msg->created_at) !!}
                     </div>
                 </div>
             </div>

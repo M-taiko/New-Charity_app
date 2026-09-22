@@ -142,7 +142,7 @@
                                                 <span class="text-muted">-</span>
                                             @endif
                                         </td>
-                                        <td>{{ $request->created_at->format('Y-m-d H:i') }}</td>
+                                        <td>{!! dt_span($request->created_at) !!}</td>
                                         <td>
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <button type="button" class="btn btn-outline-success"
@@ -207,7 +207,7 @@
                                     <td>{{ $request->requester->name }}</td>
                                     <td><strong>{{ number_format($request->amount, 2) }} ج.م</strong></td>
                                     <td>{{ $request->approver->name }}</td>
-                                    <td>{{ $request->approved_at->format('Y-m-d H:i') }}</td>
+                                    <td>{!! dt_span($request->approved_at) !!}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -264,7 +264,7 @@
                                         @endif
                                     </td>
                                     <td>{{ $request->approver->name }}</td>
-                                    <td>{{ $request->approved_at->format('Y-m-d H:i') }}</td>
+                                    <td>{!! dt_span($request->approved_at) !!}</td>
                                 </tr>
                                 @endforeach
                             </tbody>

@@ -363,8 +363,9 @@
                     data: 'last_expense_date',
                     render: function(data) {
                         if (data && data !== '-') {
+                            const label = window.formatLocalDateTime ? window.formatLocalDateTime(data) : data;
                             return `<span style="background: #3498db20; color: #3498db; padding: 6px 10px; border-radius: 6px; font-weight: 500; display: inline-block;">
-                                        <i class="fas fa-clock" style="margin-left: 4px;"></i>${data}
+                                        <i class="fas fa-clock" style="margin-left: 4px;"></i>${label}
                                     </span>`;
                         }
                         return '<span class="text-muted" style="font-size: 0.85rem;">-</span>';

@@ -157,7 +157,7 @@
                                                             <span class="badge bg-secondary">جديد</span>
                                                     @endswitch
                                                 </td>
-                                                <td>{{ $case->created_at->format('Y-m-d') }}</td>
+                                                <td>{!! dt_span($case->created_at, 'date') !!}</td>
                                                 <td>
                                                     <div class="btn-group btn-group-sm" role="group">
                                                         <a href="{{ route('social_cases.show', $case->id) }}" class="btn btn-outline-primary" title="عرض التفاصيل">

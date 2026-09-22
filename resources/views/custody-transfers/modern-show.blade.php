@@ -80,7 +80,7 @@
                         </div>
                         <div class="col-md-6 mb-4">
                             <p class="text-muted small mb-1">التاريخ</p>
-                            <h6 class="mb-0">{{ $custodyTransfer->created_at->format('Y-m-d H:i') }}</h6>
+                            <h6 class="mb-0">{!! dt_span($custodyTransfer->created_at) !!}</h6>
                         </div>
                     </div>
 
@@ -105,7 +105,7 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <p class="text-muted small mb-1">تاريخ الموافقة</p>
-                                <h6 class="mb-0">{{ $custodyTransfer->approved_at->format('Y-m-d H:i') }}</h6>
+                                <h6 class="mb-0">{!! dt_span($custodyTransfer->approved_at) !!}</h6>
                             </div>
                             <div class="col-md-6">
                                 <p class="text-muted small mb-1">من قبل</p>

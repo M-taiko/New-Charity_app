@@ -232,7 +232,7 @@
                         </tr>
                         <tr>
                             <td class="text-muted">التاريخ:</td>
-                            <td>{{ $expense->expense_date?->format('Y-m-d') }}</td>
+                            <td>{!! dt_span($expense->expense_date, 'date') !!}</td>
                         </tr>
                         <tr>
                             <td class="text-muted">المصدر:</td>

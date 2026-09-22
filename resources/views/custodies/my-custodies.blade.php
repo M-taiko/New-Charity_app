@@ -181,7 +181,7 @@
                                     @foreach($myCustodies as $custody)
                                     <tr>
                                         <td>{{ $custody->id }}</td>
-                                        <td>{{ $custody->created_at->format('Y-m-d') }}</td>
+                                        <td>{!! dt_span($custody->created_at, 'date') !!}</td>
                                         <td>{{ number_format($custody->amount, 2) }} ج.م</td>
                                         <td>
                                             <span class="badge bg-danger">
@@ -320,7 +320,7 @@
                                             <span class="badge bg-danger">مرفوض</span>
                                         @endif
                                     </td>
-                                    <td>{{ $transfer->created_at->format('Y-m-d H:i') }}</td>
+                                    <td>{!! dt_span($transfer->created_at) !!}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -366,7 +366,7 @@
                                     </td>
                                     <td>{{ $transfer->fromAgent->name }}</td>
                                     <td><strong>{{ number_format($transfer->amount, 2) }} ج.م</strong></td>
-                                    <td>{{ $transfer->created_at->format('Y-m-d H:i') }}</td>
+                                    <td>{!! dt_span($transfer->created_at) !!}</td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-success" onclick="approveCustodyTransfer({{ $transfer->id }})">
                                             <i class="fas fa-check"></i> قبول
@@ -479,7 +479,7 @@
                                     <div class="timeline-content">
                                         <div class="d-flex justify-content-between">
                                             <h6>إنشاء العهدة</h6>
-                                            <small class="text-muted">{{ $custody->created_at->format('Y-m-d H:i') }}</small>
+                                            <small class="text-muted">{!! dt_span($custody->created_at) !!}</small>
                                         </div>
                                         <p class="mb-0">تم إنشاء عهدة بقيمة {{ number_format($custody->amount, 2) }} ج.م</p>
                                     </div>
@@ -537,7 +537,7 @@
                                                     </div>
                                                 @endif
                                             </div>
-                                            <small class="text-muted ms-2" style="white-space: nowrap;">{{ $transaction->transaction_date->format('Y-m-d H:i:s') }}</small>
+                                            <small class="text-muted ms-2" style="white-space: nowrap;">{!! dt_span($transaction->transaction_date) !!}</small>
                                         </div>
                                     </div>
                                 </div>
@@ -558,7 +558,7 @@
                                                     </a>
                                                 </div>
                                             </div>
-                                            <small class="text-muted ms-2" style="white-space: nowrap;">{{ $expense->created_at->format('Y-m-d H:i') }}</small>
+                                            <small class="text-muted ms-2" style="white-space: nowrap;">{!! dt_span($expense->created_at) !!}</small>
                                         </div>
                                     </div>
                                 </div>

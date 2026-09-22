@@ -2,6 +2,29 @@
 
 use App\Helpers\StorageHelper;
 
+if (!function_exists('dt_span')) {
+    /**
+     * عرض تاريخ/وقت يتحول ل التوقيت المحلي للمستخدم في المتصفح (T20)
+     * النص الخادمي fallback فقط؛ السكبت المشترك في الـ layout يستبدله
+     * mode: datetime (افتراضي) | date | time
+     */
+    function dt_span($date, string $mode = 'datetime'): string
+    {
+        if (!$date instanceof \DateTimeInterface) {
+            return e((string) $date ?: '-');
+        }
+
+        $fallbackFormats = [
+            'datetime' => 'Y-m-d H:i',
+            'date' => 'Y-m-d',
+            'time' => 'H:i',
+        ];
+        $attr = $mode === 'date' ? 'data-utc-date' : ($mode === 'time' ? 'data-utc-time' : 'data-utc-datetime');
+
+        return '<span ' . $attr . '="' . e($date->format('c')) . '">' . e($date->format($fallbackFormats[$mode] ?? 'Y-m-d H:i')) . '</span>';
+    }
+}
+
 if (!function_exists('storage_url')) {
     /**
      * Get the URL for a storage file

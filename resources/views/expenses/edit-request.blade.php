@@ -40,7 +40,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong>التاريخ:</strong>
-                            <p>{{ $expense->expense_date ? $expense->expense_date->format('Y-m-d') : '-' }}</p>
+                            <p>{!! dt_span($expense->expense_date ? $expense->expense_date : null, 'date') !!}</p>
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong>الفئة:</strong>
@@ -223,7 +223,7 @@
                 </div>
                 <div class="card-body">
                     <p><strong>المعرف:</strong> #{{ $expense->id }}</p>
-                    <p><strong>التاريخ:</strong> {{ $expense->created_at->format('d/m/Y H:i') }}</p>
+                    <p><strong>التاريخ:</strong> {!! dt_span($expense->created_at) !!}</p>
                     <p><strong>المستخدم:</strong> {{ $expense->user->name }}</p>
                     <p><strong>النوع:</strong> {{ $expense->type === 'social_case' ? 'حالة اجتماعية' : 'مصروف عام' }}</p>
                     @if($expense->source)

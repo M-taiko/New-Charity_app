@@ -516,7 +516,7 @@
                                                         @break
                                                 @endswitch
                                             </td>
-                                            <td class="text-muted">{{ $case->created_at->format('d/m/Y') }}</td>
+                                            <td class="text-muted">{!! dt_span($case->created_at, 'date') !!}</td>
                                             <td>
                                                 <a href="{{ route('social_cases.show', $case->id) }}" class="btn btn-sm btn-outline-primary">
                                                     <i class="fas fa-eye"></i>
@@ -666,7 +666,7 @@
                                 <tbody>
                                     @foreach($recentExpenses as $exp)
                                     <tr>
-                                        <td class="text-muted">{{ $exp->expense_date->format('d/m/Y') }}</td>
+                                        <td class="text-muted">{!! dt_span($exp->expense_date, 'date') !!}</td>
                                         <td><a href="{{ route('expenses.show', $exp->id) }}" class="text-decoration-none">{{ Str::limit($exp->description, 30) }}</a></td>
                                         <td><strong style="color:var(--danger);">{{ number_format($exp->amount, 2) }}</strong> ج.م</td>
                                         <td>
@@ -768,7 +768,7 @@
                                                 @endswitch
                                             </td>
                                             <td class="fw-bold">{{ number_format($transaction->amount, 2) }} ج.م</td>
-                                            <td>{{ $transaction->created_at->format('Y-m-d') }}</td>
+                                            <td>{!! dt_span($transaction->created_at, 'date') !!}</td>
                                             <td>
                                                 <small class="badge bg-light text-dark">
                                                     {{ $transaction->user->name ?? '-' }}

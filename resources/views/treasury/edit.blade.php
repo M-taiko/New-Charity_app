@@ -65,7 +65,7 @@
                                 <div class="card" style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(13, 71, 161, 0.1)); border: 1px solid rgba(33, 150, 243, 0.3);">
                                     <div class="card-body text-center">
                                         <h6 style="color: #666; margin: 0;">تاريخ الإنشاء</h6>
-                                        <h3 style="color: #2196f3; margin: 10px 0 0 0;">{{ $treasury->created_at->format('Y-m-d') }}</h3>
+                                        <h3 style="color: #2196f3; margin: 10px 0 0 0;">{!! dt_span($treasury->created_at, 'date') !!}</h3>
                                     </div>
                                 </div>
                             </div>

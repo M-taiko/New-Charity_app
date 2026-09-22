@@ -462,7 +462,7 @@
                                                 $startingCustody = $event['object'];
                                             @endphp
                                             <tr style="background-color: #f0f9ff; font-weight: bold;">
-                                                <td style="text-align: right;">{{ $startingCustody->created_at->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right;">{!! dt_span($startingCustody->created_at) !!}</td>
                                                 <td style="text-align: right;">
                                                     <span class="badge bg-primary">
                                                         <i class="fas fa-plus-circle"></i> إنشاء العهدة
@@ -482,7 +482,7 @@
                                                 $returnReq = $event['object'];
                                             @endphp
                                             <tr style="border-bottom: 1px solid #e5e7eb; background-color: #fef3c7;">
-                                                <td style="text-align: right; font-family: monospace;">{{ $returnReq->created_at->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right; font-family: monospace;">{!! dt_span($returnReq->created_at) !!}</td>
                                                 <td style="text-align: right;">
                                                     @if($returnReq->status === 'pending')
                                                         <span class="badge" style="background-color: #f59e0b;"><i class="fas fa-hourglass-half"></i> طلب رد معلق</span>
@@ -524,7 +524,7 @@
                                                 $displayBalance = isset($balancesMap[$idx]) ? $balancesMap[$idx] : 0;
                                             @endphp
                                             <tr style="border-bottom: 1px solid #e5e7eb;">
-                                                <td style="text-align: right; font-family: monospace;">{{ $trans->transaction_date->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right; font-family: monospace;">{!! dt_span($trans->transaction_date) !!}</td>
                                                 <td style="text-align: right;">
                                                     @if($trans->type === 'donation')
                                                         @if(str_contains($trans->description, 'استرداد مصروف'))
@@ -561,7 +561,7 @@
                                                 $displayBalance = isset($balancesMap[$idx]) ? $balancesMap[$idx] : 0;
                                             @endphp
                                             <tr style="border-bottom: 1px solid #e5e7eb; background-color: #fef2f2;">
-                                                <td style="text-align: right; font-family: monospace;">{{ $exp->created_at->format('Y-m-d H:i:s') }}</td>
+                                                <td style="text-align: right; font-family: monospace;">{!! dt_span($exp->created_at) !!}</td>
                                                 <td style="text-align: right;">
                                                     <span class="badge bg-warning"><i class="fas fa-shopping-cart"></i> مصروف</span>
                                                 </td>
@@ -1113,7 +1113,7 @@ function updateAcceptTreasuryInfo() {
                     <div class="mb-3" style="background: #f9fafb; padding: 12px; border-radius: 6px;">
                         <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9rem;"><strong>الوكيل:</strong> {{ $custody->agent->name }}</p>
                         <p style="margin: 0 0 8px 0; color: #666; font-size: 0.9rem;"><strong>المبلغ المطلوب رده:</strong> <span style="color: #dc2626; font-weight: bold;">{{ number_format($returnRequest->amount, 2) }} ج.م</span></p>
-                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>تاريخ الطلب:</strong> {{ $returnRequest->created_at->format('Y-m-d H:i') }}</p>
+                        <p style="margin: 0; color: #666; font-size: 0.9rem;"><strong>تاريخ الطلب:</strong> {!! dt_span($returnRequest->created_at) !!}</p>
                     </div>
 
                     <div class="mb-3">

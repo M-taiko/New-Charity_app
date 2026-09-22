@@ -210,7 +210,7 @@
                 {
                     data: 'expense_datetime',
                     render: function(data) {
-                        return data && data !== '-' ? data : '-';
+                        return data && data !== '-' ? (window.formatLocalDateTime ? window.formatLocalDateTime(data) : data) : '-';
                     }
                 },
                 {

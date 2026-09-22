@@ -237,7 +237,7 @@
                     </h6>
                     <div style="font-size: 0.9rem; line-height: 1.8;">
                         <p><strong>المبلغ الحالي:</strong> {{ number_format($expense->amount, 2) }} ج.م</p>
-                        <p><strong>التاريخ الحالي:</strong> {{ $expense->expense_date?->format('Y-m-d') ?? '-' }}</p>
+                        <p><strong>التاريخ الحالي:</strong> {!! dt_span($expense->expense_date, 'date') !!}</p>
                         <p><strong>الفئة الحالية:</strong> {{ $expense->category?->name ?? '-' }}</p>
                         <p><strong>البند الحالي:</strong> {{ $expense->item?->name ?? '-' }}</p>
                         <p><strong>الحالة الاجتماعية:</strong> {{ $expense->socialCase?->name ?? '-' }}</p>

@@ -363,7 +363,7 @@
                     data: 'expense_datetime',
                     render: function(data) {
                         if (!data || data === '-') return '-';
-                        return data;
+                        return window.formatLocalDateTime ? window.formatLocalDateTime(data) : data;
                     }
                 },
                 {
@@ -397,7 +397,7 @@
                     render: function(data, type, row) {
                         if (data === 'مراجع') {
                             const esc = s => $('<div>').text(s ?? '').html();
-                            const tip = row.reviewer_name ? ' بواسطة ' + esc(row.reviewer_name) + (row.reviewed_at_formatted ? ' (' + esc(row.reviewed_at_formatted) + ')' : '') : '';
+                            const tip = row.reviewer_name ? ' بواسطة ' + esc(row.reviewer_name) + (row.reviewed_at_formatted ? ' (' + esc(window.formatLocalDateTime ? window.formatLocalDateTime(row.reviewed_at_formatted) : row.reviewed_at_formatted) + ')' : '') : '';
                             return '<span class="badge bg-success" title="' + tip + '"><i class="fas fa-check"></i> مراجع</span>';
                         }
                         return '<span class="badge bg-secondary"><i class="fas fa-hourglass-half"></i> غير مراجع</span>';

@@ -27,7 +27,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><strong>التاريخ:</strong></label>
-                            <p>{{ $expense->expense_date->format('Y-m-d') }}</p>
+                            <p>{!! dt_span($expense->expense_date, 'date') !!}</p>
                         </div>
                     </div>
 
@@ -78,7 +78,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label"><strong>تاريخ الاعتماد:</strong></label>
-                                    <p>{{ $expense->reviewed_at->format('d/m/Y H:i') }}</p>
+                                    <p>{!! dt_span($expense->reviewed_at) !!}</p>
                                 </div>
                             </div>
                         </div>

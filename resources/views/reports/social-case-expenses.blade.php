@@ -203,7 +203,7 @@
                                 <tbody>
                                     @foreach($expenses as $expense)
                                         <tr>
-                                            <td>{{ $expense->expense_date->format('Y-m-d') }}</td>
+                                            <td>{!! dt_span($expense->expense_date, 'date') !!}</td>
                                             <td>
                                                 @if($expense->socialCase)
                                                     <span class="badge bg-info">{{ $expense->socialCase->name }}</span>

@@ -71,7 +71,7 @@
                                             @endswitch
                                         </td>
                                         <td>{{ number_format($transaction->amount, 2) }}</td>
-                                        <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
+                                        <td>{!! dt_span($transaction->created_at) !!}</td>
                                     </tr>
                                 @empty
                                     <tr>

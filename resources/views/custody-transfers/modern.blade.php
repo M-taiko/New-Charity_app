@@ -270,8 +270,8 @@
                         }
                     },
                     {data: 'status_badge', name: 'status', orderable: false, searchable: false},
-                    {data: 'request_date', name: 'request_date'},
-                    {data: 'decision_date', name: 'decision_date', orderable: false, searchable: false},
+                    {data: 'request_date', name: 'request_date', render: function(data) { return data && data !== '-' ? (window.formatLocalDateTime ? window.formatLocalDateTime(data) : data) : '-'; }},
+                    {data: 'decision_date', name: 'decision_date', orderable: false, searchable: false, render: function(data) { return data && data !== '-' ? (window.formatLocalDateTime ? window.formatLocalDateTime(data) : data) : '-'; }},
                     {data: 'decided_by', name: 'decided_by', orderable: false, searchable: false},
                     {data: 'rejection_reason', name: 'rejection_reason', orderable: false, searchable: false},
                 ],

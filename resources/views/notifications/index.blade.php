@@ -74,7 +74,7 @@
                                         {{ $notif->created_at->diffForHumans() }}
                                     </div>
                                     <div class="text-muted" style="font-size:.72rem;margin-top:.15rem;">
-                                        {{ $notif->created_at->format('d/m/Y H:i') }}
+                                        {!! dt_span($notif->created_at) !!}
                                     </div>
                                 </div>
                             </div>

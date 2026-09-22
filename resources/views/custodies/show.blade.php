@@ -90,13 +90,13 @@
 
                     <div class="mt-3">
                         <label class="form-label"><strong>التاريخ:</strong></label>
-                        <p>{{ $custody->created_at->format('Y-m-d H:i') }}</p>
+                        <p>{!! dt_span($custody->created_at) !!}</p>
                     </div>
 
                     @if($custody->accepted_at)
                     <div class="mt-2">
                         <label class="form-label"><strong>تاريخ القبول:</strong></label>
-                        <p>{{ $custody->accepted_at->format('Y-m-d H:i') }}</p>
+                        <p>{!! dt_span($custody->accepted_at) !!}</p>
                     </div>
                     @endif
 

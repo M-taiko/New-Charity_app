@@ -206,6 +206,37 @@
                 toast.show();
             });
         });
+
+        // ──── تنسيق التواريخ بالتوقيت المحلي للمستخدم (T20) ────
+        window.formatLocalDateTime = function(iso, mode) {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            try {
+                const dateStr = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+                if (mode === 'date') return dateStr;
+                if (mode === 'time') {
+                    return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
+                }
+                const timeStr = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
+                return dateStr + ' ' + timeStr;
+            } catch (e) {
+                return iso;
+            }
+        };
+
+        function applyLocalDateTimes(root) {
+            (root || document).querySelectorAll('[data-utc-datetime]').forEach(el => {
+                el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-datetime'));
+            });
+            (root || document).querySelectorAll('[data-utc-date]').forEach(el => {
+                el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-date'), 'date');
+            });
+            (root || document).querySelectorAll('[data-utc-time]').forEach(el => {
+                el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-time'), 'time');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() { applyLocalDateTimes(document); });
     </script>
 
     @stack('scripts')
