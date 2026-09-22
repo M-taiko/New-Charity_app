@@ -222,7 +222,9 @@
                 {
                     data: 'category_path',
                     render: function(data, type, row) {
-                        let categoryHtml = data && data !== '-' ? '<small style="color: #666;">' + data + '</small>' : '-';
+                        // الخادم يرسل القيمة خام الآن (rawColumns) — نهرب مرة واحدة هنا فقط
+                        const esc = s => $('<div>').text(s ?? '').html();
+                        let categoryHtml = data && data !== '-' ? '<small style="color: #666;">' + esc(data) + '</small>' : '-';
                         if (row.is_quick_expense) {
                             categoryHtml = '<span class="badge bg-warning me-2">مصروف سريع</span>' + categoryHtml;
                         }

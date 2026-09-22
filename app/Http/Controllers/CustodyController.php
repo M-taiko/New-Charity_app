@@ -785,7 +785,7 @@ class CustodyController extends Controller
             ->addColumn('status_label', fn($row) => $this->getStatusLabel($row->status))
             ->addColumn('status_detail', fn($row) => $row->status_detail)
             ->addColumn('actions', fn($row) => view('custodies.actions', compact('row'))->render())
-            ->rawColumns(['status_label', 'actions'])
+            ->rawColumns(['status_label', 'status_detail', 'actions'])
             ->toJson();
     }
 

@@ -486,6 +486,8 @@ class ExpenseController extends Controller
             ->addColumn('has_direction', fn($row) => $row->expense_category_id !== null || $row->expense_item_id !== null)
             ->addColumn('items_count', fn($row) => is_array($row->line_items) && !isset($row->line_items['raw_text']) ? count($row->line_items) : 0)
             ->addColumn('first_item', fn($row) => is_array($row->line_items) && !isset($row->line_items['raw_text']) && isset($row->line_items[0]['description']) ? $row->line_items[0]['description'] : null)
+            // هذه الأعمدة تُهرَّب من جهة العميل في دوال render (esc) — تُرسل خام لتجنب الإescaping المزدوج
+            ->rawColumns(['item_direction', 'first_item', 'reviewer_name', 'reviewed_at_formatted'])
             ->filterColumn('user_name', fn($q, $k) => $q->whereHas('user', fn($q2) => $q2->where('name', 'like', "%$k%")))
             ->toJson();
     }
@@ -530,7 +532,7 @@ class ExpenseController extends Controller
             ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
             ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->format('Y-m-d H:i') : '-')
             ->addColumn('is_quick_expense', fn($row) => $row->is_quick_expense ? 1 : 0)
-            ->rawColumns(['type_label'])
+            ->rawColumns(['type_label', 'category_path'])
             ->toJson();
     }
 
