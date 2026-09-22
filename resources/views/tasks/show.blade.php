@@ -66,7 +66,7 @@
                         </tr>
                         <tr>
                             <td class="text-muted fw-bold">تاريخ الإنشاء</td>
-                            <td>{{ $task->created_at->format('d/m/Y') }}</td>
+                            <td>{!! dt_span($task->created_at, 'date') !!}</td>
                         </tr>
                         @if($task->due_date)
                         <tr>
@@ -82,7 +82,7 @@
                         @if($task->completed_at)
                         <tr>
                             <td class="text-muted fw-bold">اكتمل في</td>
-                            <td>{{ $task->completed_at->format('d/m/Y') }}</td>
+                            <td>{!! dt_span($task->completed_at, 'date') !!}</td>
                         </tr>
                         @endif
                     </table>

@@ -224,7 +224,7 @@
 
                         <div class="mt-3">
                             @if($salary->calculated_at)
-                                <p><strong>حساب في:</strong><br>{{ $salary->calculated_at->format('Y-m-d H:i') }}</p>
+                                <p><strong>حساب في:</strong><br>{!! dt_span($salary->calculated_at) !!}</p>
                             @endif
 
                             @if($salary->approved_at)

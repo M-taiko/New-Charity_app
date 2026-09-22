@@ -152,8 +152,7 @@
                             <thead>
                                 <tr>
                                     <th>المستخدم</th>
-                                    <th>النوع</th>
-                                    <th>التصنيف</th>
+                                    <th>نوع المصروف</th>
                                     <th>الحالة الاجتماعية</th>
                                     <th>المبلغ</th>
                                     <th>التاريخ والوقت</th>
@@ -353,26 +352,32 @@
             columns: [
                 { data: 'user_name' },
                 { data: 'type_label' },
-                { data: 'category_name', defaultContent: '-' },
                 { data: 'case_name' },
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>';
+                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
                     }
                 },
                 {
                     data: 'expense_datetime',
                     render: function(data) {
                         if (!data || data === '-') return '-';
-                        return data;
+                        return window.formatLocalDateTime ? window.formatLocalDateTime(data) : data;
                     }
                 },
                 {
                     data: 'item_direction',
-                    render: function(data) {
-                        if (!data || data === '-') return '-';
-                        return '<small style="color: #666;">' + data + '</small>';
+                    render: function(data, type, row) {
+                        if (type !== 'display') return data;
+                        const esc = s => $('<div>').text(s ?? '').html();
+                        let html = '<small style="color: #666;" title="' + esc(data) + '">' + esc(data) + '</small>';
+                        if (row.items_count > 0) {
+                            const first = esc(row.first_item || '');
+                            const more = row.items_count > 1 ? ' +' + (row.items_count - 1) + ' بند' : '';
+                            html += '<div><small class="text-muted" style="font-size: 0.72rem;"><i class="fas fa-list-ul"></i> ' + first + more + '</small></div>';
+                        }
+                        return html;
                     }
                 },
                 {
@@ -388,9 +393,12 @@
                 },
                 {
                     data: 'reviewed_label',
-                    render: function(data) {
+                    className: 'text-nowrap',
+                    render: function(data, type, row) {
                         if (data === 'مراجع') {
-                            return '<span class="badge bg-success"><i class="fas fa-check"></i> مراجع</span>';
+                            const esc = s => $('<div>').text(s ?? '').html();
+                            const tip = row.reviewer_name ? ' بواسطة ' + esc(row.reviewer_name) + (row.reviewed_at_formatted ? ' (' + esc(window.formatLocalDateTime ? window.formatLocalDateTime(row.reviewed_at_formatted) : row.reviewed_at_formatted) + ')' : '') : '';
+                            return '<span class="badge bg-success" title="' + tip + '"><i class="fas fa-check"></i> مراجع</span>';
                         }
                         return '<span class="badge bg-secondary"><i class="fas fa-hourglass-half"></i> غير مراجع</span>';
                     }
@@ -412,10 +420,21 @@
                     data: 'id',
                     orderable: false,
                     searchable: false,
-                    render: function(data) {
-                        return `<a href="/expenses/${data}" class="btn btn-sm btn-info">
-                            <i class="fas fa-eye"></i> عرض
-                        </a>`;
+                    className: 'text-nowrap',
+                    render: function(data, type, row) {
+                        let buttons = '<div class="btn-group btn-group-sm" role="group">';
+                        if (row.can_review) {
+                            buttons += `<button type="button" class="btn btn-success" onclick="quickReview(${row.id}, ${row.has_direction ? 'true' : 'false'})" title="مراجعة سريعة"><i class="fas fa-user-check"></i> مراجعة</button>`;
+                        }
+                        if (row.can_unreview) {
+                            buttons += `<button type="button" class="btn btn-outline-warning" onclick="quickUnreview(${row.id})" title="إلغاء المراجعة (مدير)"><i class="fas fa-undo"></i> إلغاء المراجعة</button>`;
+                        }
+                        if (row.can_edit) {
+                            buttons += `<a href="${row.edit_url}" class="btn btn-info" title="تعديل"><i class="fas fa-pencil"></i></a>`;
+                        }
+                        buttons += `<a href="${row.show_url}" class="btn btn-outline-primary" title="عرض"><i class="fas fa-eye"></i></a>`;
+                        buttons += '</div>';
+                        return buttons;
                     }
                 }
             ],
@@ -423,6 +442,50 @@
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             }
         });
+
+        // مراجعة سريعة من القائمة
+        window.quickReview = function(id, hasDirection) {
+            let msg = 'تأكيد المراجعة وقفل التعديل من المندوب؟';
+            if (!hasDirection) {
+                msg = 'تنبيه: هذا المصروف بدون توجيه محاسبي.\n\n' + msg;
+            }
+            if (!confirm(msg)) return;
+            $.ajax({
+                url: '/expenses/' + id + '/mark-reviewed',
+                type: 'POST',
+                data: {_token: '{{ csrf_token() }}'},
+                dataType: 'json',
+                success: function(res) {
+                    alert(res.message || 'تمت المراجعة');
+                    expensesTable.ajax.reload(null, false);
+                },
+                error: function(xhr) {
+                    let msg = 'حدث خطأ أثناء المراجعة';
+                    try { msg = xhr.responseJSON.message || msg; } catch (e) {}
+                    alert(msg);
+                }
+            });
+        };
+
+        // إلغاء المراجعة (مدير فقط)
+        window.quickUnreview = function(id) {
+            if (!confirm('هل أنت متأكد من إلغاء المراجعة وفتح التعديل على هذا المصروف؟')) return;
+            $.ajax({
+                url: '/expenses/' + id + '/unreview',
+                type: 'POST',
+                data: {_token: '{{ csrf_token() }}'},
+                dataType: 'json',
+                success: function(res) {
+                    alert(res.message || 'تم إلغاء المراجعة');
+                    expensesTable.ajax.reload(null, false);
+                },
+                error: function(xhr) {
+                    let msg = 'حدث خطأ أثناء إلغاء المراجعة';
+                    try { msg = xhr.responseJSON.message || msg; } catch (e) {}
+                    alert(msg);
+                }
+            });
+        };
 
         // Apply filters on change
         $('#filter_user').on('input', debounce(function() { expensesTable.ajax.reload(); }, 400));
@@ -454,13 +517,13 @@
                 {
                     data: 'estimated_cost',
                     render: function(data) {
-                        return data ? parseFloat(data).toLocaleString('ar') + ' ج.م' : '-';
+                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '-';
                     }
                 },
                 {
                     data: 'actual_cost',
                     render: function(data) {
-                        return data ? '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>' : '-';
+                        return data ? '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>' : '-';
                     }
                 },
                 {
@@ -509,25 +572,25 @@
                 {
                     data: 'base_salary',
                     render: function(data) {
-                        return parseFloat(data).toLocaleString('ar') + ' ج.م';
+                        return parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
                     }
                 },
                 {
                     data: 'allowances_total',
                     render: function(data) {
-                        return data ? parseFloat(data).toLocaleString('ar') + ' ج.م' : '0.00 ج.م';
+                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '0.00 ج.م';
                     }
                 },
                 {
                     data: 'deductions_total',
                     render: function(data) {
-                        return data ? parseFloat(data).toLocaleString('ar') + ' ج.م' : '0.00 ج.م';
+                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '0.00 ج.م';
                     }
                 },
                 {
                     data: 'total_salary',
                     render: function(data) {
-                        return '<strong style="color: var(--success);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>';
+                        return '<strong style="color: var(--success);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
                     }
                 },
                 { data: 'period_label', defaultContent: '-' },
@@ -587,7 +650,7 @@
                         const reason = custody.reason || 'عهدة #' + custody.id;
                         select.append(`
                             <option value="${custody.id}" data-balance="${balance}">
-                                ${reason} (الرصيد: ${balance.toLocaleString('ar')} ج.م)
+                                ${reason} (الرصيد: ${balance.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م)
                             </option>
                         `);
                     }
@@ -610,7 +673,7 @@
         const balance = selectedOption.data('balance');
 
         if (balance !== undefined) {
-            $('#custody_balance').text(parseFloat(balance).toLocaleString('ar') + ' ج.م');
+            $('#custody_balance').text(parseFloat(balance).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م');
             $('#quick_amount').attr('max', balance);
         }
     }

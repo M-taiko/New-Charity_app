@@ -51,7 +51,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <div class="text-muted small">إجمالي المستلم</div>
-                            <h6 class="mb-0" style="font-size: 0.95rem;">{{ number_format($grandTotals['total_received'], 0) }} ج.م</h6>
+                            <h6 class="mb-0" style="font-size: 0.95rem;">{{ number_format($grandTotals['total_received'], 2) }} ج.م</h6>
                         </div>
                     </div>
                 </div>
@@ -69,7 +69,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <div class="text-muted small">إجمالي المصروف</div>
-                            <h6 class="mb-0" style="font-size: 0.95rem;">{{ number_format($grandTotals['total_spent'], 0) }} ج.م</h6>
+                            <h6 class="mb-0" style="font-size: 0.95rem;">{{ number_format($grandTotals['total_spent'], 2) }} ج.م</h6>
                         </div>
                     </div>
                 </div>
@@ -87,7 +87,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <div class="text-muted small">الرصيد الحالي</div>
-                            <h6 class="mb-0" style="font-size: 0.95rem;">{{ number_format($grandTotals['total_balance'], 0) }} ج.م</h6>
+                            <h6 class="mb-0" style="font-size: 0.95rem;">{{ number_format($grandTotals['total_balance'], 2) }} ج.م</h6>
                         </div>
                     </div>
                 </div>

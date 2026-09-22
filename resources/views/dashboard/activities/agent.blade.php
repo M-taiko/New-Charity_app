@@ -64,7 +64,7 @@
                         <div class="activity-desc">
                             <strong>{{ number_format($custody->amount, 2) }} ج.م</strong>
                             @php
-                                $remaining = $custody->amount - ($custody->spent + $custody->returned);
+                                $remaining = $custody->getRemainingBalance();
                             @endphp
                             | المتبقي: <span style="color: {{ $remaining < $custody->amount * 0.1 ? '#f5576c' : '#43e97b' }}; font-weight: 600;">{{ number_format($remaining, 2) }}</span> ج.م
                         </div>

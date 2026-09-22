@@ -27,6 +27,22 @@ class DashboardController extends Controller
         $totalCustodiesAmount = Custody::whereIn('status', ['accepted', 'active', 'partially_returned'])->sum('amount');
         $totalAssets          = ($treasury ? $treasury->balance : 0) + $totalCustodiesAmount;
 
+        // للمندوب فقط: أرقام العهد الصحيحة (تشمل التحويلات والعهد المغلقة)
+        $agentStats = [];
+        if ($user->hasRole('مندوب')) {
+            $myCustodies = Custody::where('agent_id', $user->id)
+                ->whereIn('status', ['accepted', 'active', 'partially_returned', 'pending_return', 'closed'])
+                ->get();
+            $agentStats = [
+                'received'       => $myCustodies->sum('amount') + $myCustodies->sum('transferred_in'),
+                'spent'          => $myCustodies->sum('spent'),
+                'returned'       => $myCustodies->sum('returned'),
+                'transferred_out' => $myCustodies->sum('transferred_out'),
+                'pending_return' => $myCustodies->sum('pending_return'),
+                'remaining'      => $myCustodies->sum(fn($c) => $c->getRemainingBalance()),
+            ];
+        }
+
         // للمدير/المحاسب فقط: بيانات مع فلتر السنة
         $agentsStats      = [];
         $researchersStats = [];
@@ -82,7 +98,7 @@ class DashboardController extends Controller
                     ->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
                     ->get();
 
-                $totalReceived  = $custodies->sum('amount');
+                $totalReceived  = $custodies->sum('amount') + $custodies->sum('transferred_in');
                 $totalSpentAmt  = $custodies->sum('spent');
                 $totalReturned  = $custodies->sum('returned');
                 $expenseCount   = Expense::where('user_id', $agent->id)
@@ -102,7 +118,7 @@ class DashboardController extends Controller
                     'total_received' => $totalReceived,
                     'total_spent'    => $totalSpentAmt,
                     'total_returned' => $totalReturned,
-                    'remaining'      => $totalReceived - $totalSpentAmt - $totalReturned,
+                    'remaining'      => $custodies->sum(fn($c) => $c->getRemainingBalance()),
                     'expense_count'  => $expenseCount,
                     'doc_rate'       => $expenseCount > 0 ? round($expenseWithDoc / $expenseCount * 100) : 0,
                     'rating'         => $rating,
@@ -147,7 +163,7 @@ class DashboardController extends Controller
 
         return view('dashboard.modern-shortcuts', compact(
             'treasury', 'activeCustodies', 'pendingCases', 'todayExpenses', 'totalSpent',
-            'totalCustodiesAmount', 'totalAssets',
+            'totalCustodiesAmount', 'totalAssets', 'agentStats',
             'agentsStats', 'researchersStats', 'yearStats', 'selectedYear', 'availableYears',
             'researcherStats'
         ));

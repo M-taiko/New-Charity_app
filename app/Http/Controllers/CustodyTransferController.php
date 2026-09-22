@@ -21,12 +21,31 @@ class CustodyTransferController extends Controller
 
         $user = auth()->user();
 
+        // الإدارة (مدير/محاسب/مشرف): بطاقات على مستوى النظام كله
+        $isManagement = $user->can('view_all_records') || $user->can('approve_custody');
+
+        if ($isManagement) {
+            $totalTransfersCount     = CustodyTransfer::count();
+            $pendingTransfersCount   = CustodyTransfer::pending()->count();
+            $approvedTransfersCount  = CustodyTransfer::approved()->count();
+            $rejectedTransfersCount  = CustodyTransfer::rejected()->count();
+
+            return view('custody-transfers.modern', compact(
+                'isManagement',
+                'totalTransfersCount',
+                'pendingTransfersCount',
+                'approvedTransfersCount',
+                'rejectedTransfersCount'
+            ));
+        }
+
         // Get statistics for current user
         $sentTransfersCount = $user->transfersSent()->count();
         $receivedTransfersCount = $user->transfersReceived()->count();
         $pendingTransfersCount = $user->transfersReceived()->pending()->count();
 
         return view('custody-transfers.modern', compact(
+            'isManagement',
             'sentTransfersCount',
             'receivedTransfersCount',
             'pendingTransfersCount'
@@ -226,6 +245,32 @@ class CustodyTransferController extends Controller
                 return $row->from_agent_id === $user->id ? 'sent' : 'received';
             })
             ->addColumn('status_badge', fn($row) => $this->getStatusBadge($row->status))
+            ->rawColumns(['status_badge'])
+            ->toJson();
+    }
+
+    /**
+     * Get DataTable data for all transfers (management only)
+     */
+    public function allTransfersData()
+    {
+        $user = auth()->user();
+        abort_unless($user->can('view_all_records') || $user->can('approve_custody'), 403);
+
+        // Query-level pagination: keep the builder so serverSide works without loading everything
+        $transfers = CustodyTransfer::with(['fromAgent', 'toAgent', 'custody', 'approver'])
+            ->orderByDesc('created_at');
+
+        return DataTables::of($transfers)
+            ->addColumn('from_agent_name', fn($row) => $row->fromAgent->name)
+            ->addColumn('to_agent_name', fn($row) => $row->toAgent->name)
+            ->addColumn('custody_id', fn($row) => $row->custody_id)
+            ->addColumn('amount', fn($row) => number_format($row->amount, 2, '.', ''))
+            ->addColumn('status_badge', fn($row) => $this->getStatusBadge($row->status))
+            ->addColumn('request_date', fn($row) => $row->created_at?->toIso8601String())
+            ->addColumn('decision_date', fn($row) => $row->approved_at?->toIso8601String() ?? '-')
+            ->addColumn('decided_by', fn($row) => $row->approver?->name ?? '-')
+            ->addColumn('rejection_reason', fn($row) => $row->rejection_reason ?? '-')
             ->rawColumns(['status_badge'])
             ->toJson();
     }

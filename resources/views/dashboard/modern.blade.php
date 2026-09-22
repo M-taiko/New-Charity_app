@@ -119,28 +119,28 @@
                                         <div class="col-md-3">
                                             <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                                                 <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">إجمالي العهدة</p>
-                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->amount, 0) }}</h3>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->amount, 2) }}</h3>
                                                 <small style="opacity: 0.8;">ج.م</small>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                                                 <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">تم صرفه</p>
-                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodySpent, 0) }}</h3>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodySpent, 2) }}</h3>
                                                 <small style="opacity: 0.8;">ج.م ({{ $custodyPercent }}%)</small>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                                                 <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">تم رده</p>
-                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->returned, 0) }}</h3>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($activeCustody->returned, 2) }}</h3>
                                                 <small style="opacity: 0.8;">ج.م ({{ $returnedPercent }}%)</small>
                                             </div>
                                         </div>
                                         <div class="col-md-3">
                                             <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
                                                 <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">المتبقي</p>
-                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodyRemaining, 0) }}</h3>
+                                                <h3 style="margin: 0.5rem 0 0; font-size: 1.8rem; font-weight: 700;">{{ number_format($custodyRemaining, 2) }}</h3>
                                                 <small style="opacity: 0.8;">ج.م</small>
                                             </div>
                                         </div>
@@ -203,7 +203,7 @@
                     </div>
                     <div class="stat-label">إجمالي العهد</div>
                     <div class="stat-number" style="color: var(--success);">
-                        {{ number_format($totalReceived, 0) }}
+                        {{ number_format($totalReceived, 2) }}
                     </div>
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
@@ -217,7 +217,7 @@
                     </div>
                     <div class="stat-label">إجمالي المصروفات</div>
                     <div class="stat-number" style="color: var(--danger);">
-                        {{ number_format($totalSpent, 0) }}
+                        {{ number_format($totalSpent, 2) }}
                     </div>
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
@@ -231,7 +231,7 @@
                     </div>
                     <div class="stat-label">المبلغ المتبقي</div>
                     <div class="stat-number" style="color: var(--info);">
-                        {{ number_format($totalRemaining, 0) }}
+                        {{ number_format($totalRemaining, 2) }}
                     </div>
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
@@ -245,7 +245,7 @@
                     </div>
                     <div class="stat-label">المبالغ المردودة</div>
                     <div class="stat-number" style="color: var(--warning);">
-                        {{ number_format($totalReturned, 0) }}
+                        {{ number_format($totalReturned, 2) }}
                     </div>
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
@@ -278,7 +278,7 @@
                 <div class="stat-card" style="border-right: 4px solid #6366f1; background: linear-gradient(135deg, #f8f7ff 0%, #eef2ff 100%);">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-landmark"></i></div>
                     <div class="stat-label" style="font-weight:700;">إجمالي الأصول (الكلي)</div>
-                    <div class="stat-number" style="color: #6366f1; font-size: 1.8rem;">{{ number_format($totalAssets, 0) }}</div>
+                    <div class="stat-number" style="color: #6366f1; font-size: 1.8rem;">{{ number_format($totalAssets, 2) }}</div>
                     <small style="color: #6b7280;">ج.م &nbsp;|&nbsp; خزينة + عهد نشطة</small>
                 </div>
             </div>
@@ -286,7 +286,7 @@
                 <div class="stat-card success">
                     <div class="stat-icon"><i class="fas fa-wallet"></i></div>
                     <div class="stat-label">رصيد الخزينة (المتبقي)</div>
-                    <div class="stat-number" style="color: var(--success);">{{ number_format($treasury->balance ?? 0, 0) }}</div>
+                    <div class="stat-number" style="color: var(--success);">{{ number_format($treasury->balance ?? 0, 2) }}</div>
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
@@ -294,7 +294,7 @@
                 <div class="stat-card info">
                     <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
                     <div class="stat-label">إجمالي العهد النشطة</div>
-                    <div class="stat-number" style="color: var(--info);">{{ number_format($totalCustodiesAmount, 0) }}</div>
+                    <div class="stat-number" style="color: var(--info);">{{ number_format($totalCustodiesAmount, 2) }}</div>
                     <small style="color: #6b7280;">ج.م &nbsp;|&nbsp; {{ $activeCustodies }} عهدة</small>
                 </div>
             </div>
@@ -306,7 +306,7 @@
                 <div class="stat-card info">
                     <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
                     <div class="stat-label">عهدات {{ $selectedYear }}</div>
-                    <div class="stat-number" style="color: var(--info);">{{ number_format($yearStats['total_custodies_amount'] ?? 0, 0) }}</div>
+                    <div class="stat-number" style="color: var(--info);">{{ number_format($yearStats['total_custodies_amount'] ?? 0, 2) }}</div>
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
@@ -314,7 +314,7 @@
                 <div class="stat-card danger">
                     <div class="stat-icon"><i class="fas fa-money-bill"></i></div>
                     <div class="stat-label">مصروفات {{ $selectedYear }}</div>
-                    <div class="stat-number" style="color: var(--danger);">{{ number_format($yearStats['total_expenses'] ?? 0, 0) }}</div>
+                    <div class="stat-number" style="color: var(--danger);">{{ number_format($yearStats['total_expenses'] ?? 0, 2) }}</div>
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
@@ -322,7 +322,7 @@
                 <div class="stat-card warning">
                     <div class="stat-icon"><i class="fas fa-undo-alt"></i></div>
                     <div class="stat-label">مبالغ مردودة {{ $selectedYear }}</div>
-                    <div class="stat-number" style="color: var(--warning);">{{ number_format($yearStats['total_returned'] ?? 0, 0) }}</div>
+                    <div class="stat-number" style="color: var(--warning);">{{ number_format($yearStats['total_returned'] ?? 0, 2) }}</div>
                     <small style="color: #6b7280;">ج.م</small>
                 </div>
             </div>
@@ -366,13 +366,13 @@
                                             </div>
                                         </td>
                                         <td><span class="badge bg-secondary">{{ $stat['custody_count'] }}</span></td>
-                                        <td><strong>{{ number_format($stat['total_received'], 0) }}</strong> ج.م</td>
-                                        <td><span style="color: var(--danger);">{{ number_format($stat['total_spent'], 0) }}</span> ج.م</td>
-                                        <td><span style="color: var(--success);">{{ number_format($stat['total_returned'], 0) }}</span> ج.م</td>
+                                        <td><strong>{{ number_format($stat['total_received'], 2) }}</strong> ج.م</td>
+                                        <td><span style="color: var(--danger);">{{ number_format($stat['total_spent'], 2) }}</span> ج.م</td>
+                                        <td><span style="color: var(--success);">{{ number_format($stat['total_returned'], 2) }}</span> ج.م</td>
                                         <td>
                                             @php $remaining = $stat['remaining']; @endphp
                                             <span style="color: {{ $remaining > 0 ? 'var(--warning)' : 'var(--success)' }};">
-                                                {{ number_format($remaining, 0) }}
+                                                {{ number_format($remaining, 2) }}
                                             </span> ج.م
                                         </td>
                                         <td><span class="badge bg-info">{{ $stat['expense_count'] }}</span></td>
@@ -516,7 +516,7 @@
                                                         @break
                                                 @endswitch
                                             </td>
-                                            <td class="text-muted">{{ $case->created_at->format('d/m/Y') }}</td>
+                                            <td class="text-muted">{!! dt_span($case->created_at, 'date') !!}</td>
                                             <td>
                                                 <a href="{{ route('social_cases.show', $case->id) }}" class="btn btn-sm btn-outline-primary">
                                                     <i class="fas fa-eye"></i>
@@ -574,19 +574,19 @@
                                         @endphp
                                         <tr>
                                             <td><a href="{{ route('custodies.show', $custody->id) }}" style="text-decoration: none; color: var(--primary); font-weight: 600;">عهدة #{{ $custody->id }}</a></td>
-                                            <td><strong>{{ number_format($custody->amount, 0) }}</strong> ج.م</td>
+                                            <td><strong>{{ number_format($custody->amount, 2) }}</strong> ج.م</td>
                                             <td>
                                                 <div style="min-width: 150px;">
                                                     <div class="d-flex justify-content-between align-items-center mb-1">
                                                         <small style="color: #666;">{{ $spendingPercent }}%</small>
-                                                        <small style="color: #999;">{{ number_format($totalSpent, 0) }} ج.م</small>
+                                                        <small style="color: #999;">{{ number_format($totalSpent, 2) }} ج.م</small>
                                                     </div>
                                                     <div class="progress" style="height: 6px;">
                                                         <div class="progress-bar" style="width: {{ $spendingPercent }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td><span style="color: #4caf50; font-weight: 600;">{{ number_format($remaining, 0) }}</span> ج.م</td>
+                                            <td><span style="color: #4caf50; font-weight: 600;">{{ number_format($remaining, 2) }}</span> ج.م</td>
                                             <td>
                                                 @if($remaining <= 0 && $custody->status === 'accepted')
                                                     <span class="badge bg-dark">عهدة مستوفاة</span>
@@ -666,9 +666,9 @@
                                 <tbody>
                                     @foreach($recentExpenses as $exp)
                                     <tr>
-                                        <td class="text-muted">{{ $exp->expense_date->format('d/m/Y') }}</td>
+                                        <td class="text-muted">{!! dt_span($exp->expense_date, 'date') !!}</td>
                                         <td><a href="{{ route('expenses.show', $exp->id) }}" class="text-decoration-none">{{ Str::limit($exp->description, 30) }}</a></td>
-                                        <td><strong style="color:var(--danger);">{{ number_format($exp->amount, 0) }}</strong> ج.م</td>
+                                        <td><strong style="color:var(--danger);">{{ number_format($exp->amount, 2) }}</strong> ج.م</td>
                                         <td>
                                             @if($exp->isReviewed())
                                                 <span class="badge bg-info" style="font-size:.68rem;">تمت المراجعة</span>
@@ -767,8 +767,8 @@
                                                         @break
                                                 @endswitch
                                             </td>
-                                            <td class="fw-bold">{{ number_format($transaction->amount, 0) }} ج.م</td>
-                                            <td>{{ $transaction->created_at->format('Y-m-d') }}</td>
+                                            <td class="fw-bold">{{ number_format($transaction->amount, 2) }} ج.م</td>
+                                            <td>{!! dt_span($transaction->created_at, 'date') !!}</td>
                                             <td>
                                                 <small class="badge bg-light text-dark">
                                                     {{ $transaction->user->name ?? '-' }}

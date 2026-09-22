@@ -10,7 +10,7 @@ class StatusLabelService
     public static function label($status, $type = 'custody'): string
     {
         $labels = self::getLabels($type);
-        return $labels[$status] ?? '';
+        return $labels[$status] ?? '<span class="badge bg-secondary">' . e($status) . '</span>';
     }
 
     /**
@@ -35,10 +35,12 @@ class StatusLabelService
         return [
             'pending' => '<span class="badge bg-warning">قيد الانتظار</span>',
             'accepted' => '<span class="badge bg-success">مقبول</span>',
+            'active' => '<span class="badge bg-success">نشطة</span>',
             'rejected' => '<span class="badge bg-danger">مرفوض</span>',
             'partially_returned' => '<span class="badge bg-info">مرتجع جزئياً</span>',
             'pending_return' => '<span class="badge bg-primary">في انتظار الإرجاع</span>',
             'closed' => '<span class="badge bg-secondary">مغلق</span>',
+            'cancelled' => '<span class="badge bg-dark">ملغاة</span>',
         ];
     }
 

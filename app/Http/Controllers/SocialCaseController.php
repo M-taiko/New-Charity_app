@@ -380,7 +380,7 @@ class SocialCaseController extends Controller
             ->addColumn('last_expense_date', function($row) {
                 $lastExpense = $row->expenses->sortByDesc('created_at')->first();
                 if ($lastExpense) {
-                    return $lastExpense->created_at->format('Y-m-d H:i');
+                    return $lastExpense->created_at->toIso8601String();
                 }
                 return '-';
             })

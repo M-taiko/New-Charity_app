@@ -87,7 +87,7 @@
                         </div>
                         <div class="mb-3">
                             <strong>تاريخ التسجيل:</strong><br>
-                            {{ $user->created_at->format('Y-m-d') }}
+                            {!! dt_span($user->created_at, 'date') !!}
                         </div>
                         <div class="mb-3">
                             <strong>عدد الأدوار:</strong><br>

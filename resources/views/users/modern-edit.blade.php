@@ -127,7 +127,7 @@
                             <strong>عدد الأدوار:</strong> {{ $user->roles->count() }}
                         </div>
                         <div class="mb-2">
-                            <strong>تاريخ التسجيل:</strong> {{ $user->created_at->format('Y-m-d') }}
+                            <strong>تاريخ التسجيل:</strong> {!! dt_span($user->created_at, 'date') !!}
                         </div>
                     </div>
                 </div>

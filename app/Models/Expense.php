@@ -102,6 +102,21 @@ class Expense extends Model
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    /**
+     * المسار المحاسبي الكامل (المستوى 1 > 2 > 3 > البند)
+     */
+    public function getAccountingPathAttribute(): ?string
+    {
+        if ($this->item) {
+            $category = $this->item->category;
+            return $category ? $category->full_path . ' > ' . $this->item->name : $this->item->name;
+        }
+        if ($this->category) {
+            return $this->category->full_path;
+        }
+        return null;
+    }
+
     public function isReviewed(): bool
     {
         return $this->reviewed_at !== null;

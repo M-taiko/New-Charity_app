@@ -83,6 +83,26 @@ class Custody extends Model
         return $this->spent;
     }
 
+    public function getStatusDetailAttribute(): string
+    {
+        return match ($this->status) {
+            'pending' => $this->initiated_by === 'agent'
+                ? 'بانتظار موافقة المدير/المحاسب'
+                : 'بانتظار قبول المندوب',
+            'accepted' => $this->initiated_by === 'agent'
+                ? 'بانتظار تأكيد المندوب استلام العهدة'
+                : ($this->accepted_at ? 'تم القبول بتاريخ ' . $this->accepted_at->format('Y/m/d') : 'مقبولة'),
+            'active', 'partially_returned' => $this->received_at
+                ? 'تم الاستلام بتاريخ ' . $this->received_at->format('Y/m/d')
+                : ($this->accepted_at ? 'تم القبول بتاريخ ' . $this->accepted_at->format('Y/m/d') : 'نشطة'),
+            'pending_return' => 'في انتظار الموافقة على رد العهدة',
+            'rejected' => $this->notes ? 'سبب الرفض: ' . $this->notes : 'مرفوضة',
+            'closed' => 'مغلقة (رصيد صفري)',
+            'cancelled' => 'ملغاة',
+            default => (string) $this->status,
+        };
+    }
+
     public function isAgentInitiated(): bool
     {
         return $this->initiated_by === 'agent';

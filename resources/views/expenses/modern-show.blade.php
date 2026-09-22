@@ -40,8 +40,15 @@
                             <p>{{ $expense->user->name }}</p>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label"><strong>النوع:</strong></label>
+                            <label class="form-label"><strong>نوع المصروف:</strong></label>
                             <p>{{ $expense->type === 'social_case' ? 'حالة اجتماعية' : 'مصروف عام' }}</p>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label"><strong>التوجيه المحاسبي:</strong></label>
+                            <p>{{ $expense->accounting_path ?? 'غير محدد' }}</p>
                         </div>
                     </div>
 
@@ -52,7 +59,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><strong>التاريخ:</strong></label>
-                            <p>{{ $expense->expense_date->format('Y-m-d') }}</p>
+                            <p>{!! dt_span($expense->expense_date, 'date') !!}</p>
                         </div>
                     </div>
 
@@ -159,7 +166,7 @@
                         @if($expense->isReviewed())
                             <span class="badge bg-info">
                                 <i class="fas fa-user-check"></i> مراجع بواسطة {{ $expense->reviewer?->name }}
-                                ({{ $expense->reviewed_at->format('d/m/Y') }})
+                                ({!! dt_span($expense->reviewed_at, 'date') !!})
                             </span>
                         @else
                             <span class="badge bg-secondary"><i class="fas fa-hourglass-half"></i> لم تتم المراجعة</span>
@@ -226,7 +233,7 @@
                                 <strong>طلب التعديل #{{ $editRequest->id }}</strong><br>
                                 <small class="text-muted">
                                     <i class="fas fa-calendar"></i>
-                                    {{ $editRequest->requested_at?->format('Y-m-d H:i') ?? $editRequest->created_at->format('Y-m-d H:i') }}
+                                    {!! dt_span($editRequest->requested_at ?? $editRequest->created_at) !!}
                                 </small>
                             </div>
                             <div class="col-md-6 text-end">
@@ -246,7 +253,7 @@
                             <span style="color: #4caf50;">{{ $editRequest->reviewer?->name ?? 'حذف المستخدم' }}</span>
                             @if($editRequest->reviewed_at)
                             <small class="text-muted d-block mt-1">
-                                <i class="fas fa-clock"></i> {{ $editRequest->reviewed_at->format('Y-m-d H:i') }}
+                                <i class="fas fa-clock"></i> {!! dt_span($editRequest->reviewed_at) !!}
                             </small>
                             @endif
                         </div>
@@ -379,7 +386,7 @@
                         </div>
                         <div class="mb-3">
                             <strong>تاريخ الإنشاء:</strong><br>
-                            {{ $expense->created_at->format('Y-m-d H:i') }}
+                            {!! dt_span($expense->created_at) !!}
                         </div>
                     </div>
                 </div>

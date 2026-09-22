@@ -407,6 +407,23 @@
             font-size: 0.85rem;
         }
 
+        /* منع التفاف الأزرار والشارات التي تجمع أيقونة ونص على سطرين (T18) */
+        .btn,
+        .badge,
+        .btn-nowrap,
+        .badge-nowrap {
+            white-space: nowrap;
+        }
+
+        table .btn,
+        table .badge,
+        .btn-nowrap,
+        .badge-nowrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
         .badge.bg-success {
             background-color: #d1fae5 !important;
             color: #065f46;
@@ -618,16 +635,26 @@
         @media print {
             .sidebar, .topbar, .notification-bell, .user-menu,
             .btn, button, form, .no-print,
-            [data-aos], .alert-dismissible .btn-close,
-            nav, .navbar { display: none !important; }
+            .alert-dismissible .btn-close,
+            nav, .navbar,
+            .dataTables_filter, .dataTables_length, .dataTables_paginate,
+            .dataTables_info, .dt-buttons, .dt-search, .dt-length,
+            .buttons-print { display: none !important; }
+
+            [data-aos] {
+                opacity: 1 !important;
+                transform: none !important;
+                transition: none !important;
+                visibility: visible !important;
+            }
 
             .main-content { margin: 0 !important; padding: 0 !important; }
             .container-fluid { padding: 0 !important; }
-            body { background: white !important; color: black !important; font-size: 12pt; }
+            body { background: white !important; color: black !important; font-size: 12pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .card { border: 1px solid #ccc !important; box-shadow: none !important; break-inside: avoid; }
             .card-header { background: #f5f5f5 !important; color: black !important; }
             table { font-size: 10pt !important; }
-            .badge { border: 1px solid #ccc !important; color: black !important; background: none !important; }
+            .badge { border: 1px solid #999 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             h1, h2, h3, h4, h5 { color: black !important; }
             .stat-number, .stat-label { color: black !important; }
             a { color: black !important; text-decoration: none !important; }
@@ -635,9 +662,27 @@
             @page { margin: 1.5cm; }
         }
         .print-only { display: none; }
+        .print-header {
+            border-bottom: 2px solid #333;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        .print-header h2 { margin: 0; font-size: 16pt; }
+        .print-header div { font-size: 10pt; color: #333; }
     </style>
 </head>
 <body>
+
+    {{-- Print header (visible only when printing) --}}
+    @php
+        $printTitle = trim($__env->yieldContent('title'));
+        $printTitle = $printTitle !== '' ? $printTitle : last(explode('/', request()->path()));
+    @endphp
+    <div class="print-only print-header">
+        <h2>{{ \App\Models\Setting::get('organization_name', 'جمعية أبي ذر الغفاري') }}</h2>
+        <div>{{ $printTitle !== '' ? $printTitle . ' — ' : '' }}{!! dt_span(now()) !!} — {{ auth()->user()?->name }}</div>
+    </div>
 
     {{-- Urgent Broadcast Overlay --}}
     @php
@@ -887,6 +932,15 @@
                     </a>
                 </li>
                 @endcan
+
+                @if(auth()->user()->can('approve_custody') || auth()->user()->can('view_all_records'))
+                <li>
+                    <a href="{{ route('custody-movements.index') }}" class="@if(Route::current()->getName() == 'custody-movements.index') active @endif">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>حركات العهد</span>
+                    </a>
+                </li>
+                @endif
 
                 @can('view_all_expenses')
                 <li>
@@ -1323,6 +1377,38 @@
                 bsAlert.close();
             }, 5000);
         });
+
+        // ──── تنسيق التواريخ بالتوقيت المحلي للمستخدم (T20) ────
+        // يعرض ISO UTC القادم من الخادم بصيغة YYYY-MM-DD hh:mm AM/PM حسب توقيت المتصفح
+        window.formatLocalDateTime = function(iso, mode) {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            try {
+                const dateStr = new Intl.DateTimeFormat('en-CA', { year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+                if (mode === 'date') return dateStr;
+                if (mode === 'time') {
+                    return new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
+                }
+                const timeStr = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d);
+                return dateStr + ' ' + timeStr;
+            } catch (e) {
+                return iso;
+            }
+        };
+
+        function applyLocalDateTimes(root) {
+            (root || document).querySelectorAll('[data-utc-datetime]').forEach(el => {
+                el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-datetime'));
+            });
+            (root || document).querySelectorAll('[data-utc-date]').forEach(el => {
+                el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-date'), 'date');
+            });
+            (root || document).querySelectorAll('[data-utc-time]').forEach(el => {
+                el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-time'), 'time');
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() { applyLocalDateTimes(document); });
     </script>
 
     @stack('scripts')

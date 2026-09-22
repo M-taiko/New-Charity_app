@@ -96,8 +96,7 @@
                                 <tr>
                                     <td style="font-size: 0.8rem; white-space: nowrap;">
                                         <i class="fas fa-clock text-muted"></i>
-                                        {{ $log->created_at->format('Y-m-d') }}<br>
-                                        <span class="text-muted">{{ $log->created_at->format('H:i:s') }}</span>
+                                        {!! dt_span($log->created_at) !!}
                                     </td>
                                     <td>
                                         @if($log->user)

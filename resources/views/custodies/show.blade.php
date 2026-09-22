@@ -35,16 +35,28 @@
                                     @case('accepted')
                                         <span class="badge bg-success">مقبول</span>
                                         @break
+                                    @case('active')
+                                        <span class="badge bg-success">نشطة</span>
+                                        @break
                                     @case('rejected')
                                         <span class="badge bg-danger">مرفوض</span>
                                         @break
                                     @case('partially_returned')
                                         <span class="badge bg-info">مرتجع جزئياً</span>
                                         @break
+                                    @case('pending_return')
+                                        <span class="badge bg-primary">في انتظار الإرجاع</span>
+                                        @break
                                     @case('closed')
                                         <span class="badge bg-secondary">مغلق</span>
                                         @break
+                                    @case('cancelled')
+                                        <span class="badge bg-dark">ملغاة</span>
+                                        @break
+                                    @default
+                                        <span class="badge bg-secondary">{{ $custody->status }}</span>
                                 @endswitch
+                                <br><small class="text-muted">{{ $custody->status_detail }}</small>
                             </p>
                         </div>
                     </div>
@@ -78,13 +90,13 @@
 
                     <div class="mt-3">
                         <label class="form-label"><strong>التاريخ:</strong></label>
-                        <p>{{ $custody->created_at->format('Y-m-d H:i') }}</p>
+                        <p>{!! dt_span($custody->created_at) !!}</p>
                     </div>
 
                     @if($custody->accepted_at)
                     <div class="mt-2">
                         <label class="form-label"><strong>تاريخ القبول:</strong></label>
-                        <p>{{ $custody->accepted_at->format('Y-m-d H:i') }}</p>
+                        <p>{!! dt_span($custody->accepted_at) !!}</p>
                     </div>
                     @endif
 

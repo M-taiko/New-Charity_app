@@ -139,6 +139,15 @@
                                                     @case('rejected')
                                                         <span class="badge bg-danger">مرفوض</span>
                                                         @break
+                                                    @case('active')
+                                                        <span class="badge bg-success">نشطة</span>
+                                                        @break
+                                                    @case('pending_return')
+                                                        <span class="badge bg-primary">في انتظار الإرجاع</span>
+                                                        @break
+                                                    @case('cancelled')
+                                                        <span class="badge bg-dark">ملغاة</span>
+                                                        @break
                                                     @case('closed')
                                                         <span class="badge bg-secondary">مغلق</span>
                                                         @break

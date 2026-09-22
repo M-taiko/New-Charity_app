@@ -861,27 +861,27 @@ class TreasuryService
     public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null)
     {
         return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type, $lineItems) {
-            // Get all active custodies for the user sorted by oldest first
-            $availableCustodies = Custody::where('agent_id', $userId)
-                ->whereIn('status', ['accepted', 'active'])
-                ->orderBy('created_at', 'asc')
-                ->get()
-                ->filter(function($custody) {
-                    return $custody->getRemainingBalance() > 0;
-                });
+            // Load and lock ONLY the selected custody
+            $custody = Custody::where('id', $custodyId)->lockForUpdate()->first();
 
-            // Calculate total available balance
-            $totalAvailable = $availableCustodies->sum(function($custody) {
-                return $custody->getRemainingBalance();
-            });
-
-            if ($totalAvailable < $amount) {
-                throw new \Exception('الرصيد المتاح في جميع العهد (' . number_format($totalAvailable, 2) . ' ج.م) غير كافي للمبلغ المطلوب (' . number_format($amount, 2) . ' ج.م)');
+            if (!$custody) {
+                throw new \Exception('العهدة المحددة غير موجودة');
             }
 
-            // Create the expense record
+            if (!in_array($custody->status, ['accepted', 'active', 'partially_returned'])) {
+                throw new \Exception('لا يمكن الصرف من هذه العهدة في حالتها الحالية');
+            }
+
+            $amount = round((float) $amount, 2);
+            $custodyBalance = round((float) $custody->getRemainingBalance(), 2);
+
+            if ($amount > $custodyBalance) {
+                throw new \Exception('رصيد العهدة #' . $custody->id . ' غير كافٍ. الرصيد المتاح: ' . number_format($custodyBalance, 2) . ' ج.م، والمبلغ المطلوب: ' . number_format($amount, 2) . ' ج.م');
+            }
+
+            // Create the expense record on the selected custody
             $expense = Expense::create([
-                'custody_id' => $custodyId, // Keep for backward compatibility (will be the first custody used)
+                'custody_id' => $custody->id,
                 'user_id' => $userId,
                 'social_case_id' => $socialCaseId,
                 'expense_category_id' => $categoryId,
@@ -896,63 +896,40 @@ class TreasuryService
                 'line_items' => $lineItems,
             ]);
 
-            // Distribute the expense across custodies
-            $remainingAmount = $amount;
-            $treasuryId = null;
+            // Increase spent on the selected custody by the full amount
+            $custody->increment('spent', $amount);
 
-            foreach ($availableCustodies as $custody) {
-                if ($remainingAmount <= 0) {
-                    break;
-                }
+            // Exactly one pivot row with the full amount
+            $expense->custodies()->attach($custody->id, ['amount' => $amount]);
 
-                // Lock the custody for update to prevent race conditions
-                $custody = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            // Exactly one treasury transaction linked to this custody
+            TreasuryTransaction::create([
+                'treasury_id' => $custody->treasury_id,
+                'type' => 'expense',
+                'amount' => $amount,
+                'description' => $description . ' (من عهدة #' . $custody->id . ')',
+                'user_id' => $userId,
+                'custody_id' => $custody->id,
+                'expense_id' => $expense->id,
+                'expense_category_id' => $categoryId,
+                'expense_item_id' => $itemId,
+                'transaction_date' => now(),
+            ]);
 
-                $custodyBalance = $custody->getRemainingBalance();
-                $amountFromThisCustody = min($remainingAmount, $custodyBalance);
+            // Close the custody if its balance reaches zero
+            if ($custody->fresh()->getRemainingBalance() <= 0) {
+                $custody->update(['status' => 'closed']);
 
-                // Store treasury ID (all custodies should have the same treasury)
-                if (!$treasuryId) {
-                    $treasuryId = $custody->treasury_id;
-                }
-
-                // Update custody spent
-                $custody->increment('spent', $amountFromThisCustody);
-
-                // Create pivot record
-                $expense->custodies()->attach($custody->id, ['amount' => $amountFromThisCustody]);
-
-                // Create transaction
+                // Create closure transaction (administrative record)
                 TreasuryTransaction::create([
                     'treasury_id' => $custody->treasury_id,
-                    'type' => 'expense',
-                    'amount' => $amountFromThisCustody,
-                    'description' => $description . ' (من عهدة #' . $custody->id . ')',
+                    'type' => 'custody_close',
+                    'amount' => 0,
+                    'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (رصيد صفر)",
                     'user_id' => $userId,
                     'custody_id' => $custody->id,
-                    'expense_id' => $expense->id,
-                    'expense_category_id' => $categoryId,
-                    'expense_item_id' => $itemId,
                     'transaction_date' => now(),
                 ]);
-
-                // Close custody if balance reaches zero
-                if ($custody->fresh()->getRemainingBalance() <= 0) {
-                    $custody->update(['status' => 'closed']);
-
-                    // Create closure transaction (administrative record)
-                    TreasuryTransaction::create([
-                        'treasury_id' => $custody->treasury_id,
-                        'type' => 'custody_close',
-                        'amount' => 0,
-                        'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (رصيد صفر)",
-                        'user_id' => $userId,
-                        'custody_id' => $custody->id,
-                        'transaction_date' => now(),
-                    ]);
-                }
-
-                $remainingAmount -= $amountFromThisCustody;
             }
 
             // Get category and item names for notification

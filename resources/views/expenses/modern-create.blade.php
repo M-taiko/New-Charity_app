@@ -196,6 +196,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                             <small class="text-muted d-block mt-2" id="balance-warning"></small>
+                            <small class="d-block mt-1" id="line-items-warning" style="color: #f59e0b; display: none;"></small>
                         </div>
 
                         <div class="mb-3">
@@ -400,6 +401,27 @@
             if (desc) items.push({ description: desc, quantity: qty, unit_price: price });
         });
         document.getElementById('lineItemsData').value = JSON.stringify(items);
+        updateLineItemsWarning(items);
+    }
+
+    // تحذير غير مانع عند اختلاف مجموع البنود عن المبلغ (لا يمنع الحفظ)
+    function updateLineItemsWarning(items) {
+        const warningEl = document.getElementById('line-items-warning');
+        if (!warningEl) return;
+        const amount = parseFloat(document.querySelector('input[name="amount"]')?.value);
+        let total = 0, counted = 0;
+        (items || []).forEach(it => {
+            if (it.quantity !== null && it.unit_price !== null) {
+                total += it.quantity * it.unit_price;
+                counted++;
+            }
+        });
+        if (counted > 0 && !isNaN(amount) && amount > 0 && Math.round(total * 100) !== Math.round(amount * 100)) {
+            warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> مجموع البنود (' + total.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م) يختلف عن المبلغ (' + amount.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م)';
+            warningEl.style.display = 'block';
+        } else {
+            warningEl.style.display = 'none';
+        }
     }
 
     function toggleSourceFields() {
@@ -507,6 +529,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         updateCustodyInfo();
         toggleExpenseType();
+        document.querySelector('input[name="amount"]')?.addEventListener('input', updateLineItemsData);
     });
 
     // File upload functions

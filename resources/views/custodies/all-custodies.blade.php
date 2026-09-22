@@ -124,7 +124,7 @@
                             </div>
                             <div class="flex-grow-1 ms-3">
                                 <div class="text-muted small">المتبقي</div>
-                                <h6 class="mb-0" style="font-size: 0.9rem;">{{ number_format($stats['total_remaining'], 0) }} ج.م</h6>
+                                <h6 class="mb-0" style="font-size: 0.9rem;">{{ number_format($stats['total_remaining'], 2) }} ج.م</h6>
                             </div>
                         </div>
                         <div>
@@ -354,7 +354,9 @@
                                                                         'active' => ['label' => 'نشطة', 'class' => 'bg-success'],
                                                                         'rejected' => ['label' => 'مرفوضة', 'class' => 'bg-danger'],
                                                                         'partially_returned' => ['label' => 'مرتجع جزئياً', 'class' => 'bg-primary'],
+                                                                        'pending_return' => ['label' => 'في انتظار الإرجاع', 'class' => 'bg-primary'],
                                                                         'closed' => ['label' => 'مغلقة', 'class' => 'bg-secondary'],
+                                                                        'cancelled' => ['label' => 'ملغاة', 'class' => 'bg-dark'],
                                                                     ];
                                                                     $status = $statusLabels[$custody['status']] ?? ['label' => $custody['status'], 'class' => 'bg-secondary'];
                                                                 @endphp
@@ -475,7 +477,7 @@
                                         <span class="text-muted">-</span>
                                         @endif
                                     </td>
-                                    <td>{{ $custody->created_at->format('Y-m-d') }}</td>
+                                    <td>{!! dt_span($custody->created_at, 'date') !!}</td>
                                     <td>{{ number_format($custody->amount, 2) }} ج.م</td>
                                     <td>
                                         <span class="badge bg-danger">
@@ -643,7 +645,7 @@
                             <div class="timeline-content">
                                 <div class="d-flex justify-content-between">
                                     <h6>إنشاء العهدة</h6>
-                                    <small class="text-muted">{{ $custody->created_at->format('Y-m-d') }}</small>
+                                    <small class="text-muted">{!! dt_span($custody->created_at, 'date') !!}</small>
                                 </div>
                                 <p class="mb-0">تم إنشاء عهدة للمندوب {{ $custody->agent?->name ?? '-' }} بقيمة {{ number_format($custody->amount, 2) }} ج.م</p>
                             </div>
@@ -669,7 +671,7 @@
                                             <i class="fas fa-exchange-alt text-info"></i> {{ $transaction->type }}
                                         @endif
                                     </h6>
-                                    <small class="text-muted">{{ $transaction->transaction_date->format('Y-m-d') }}</small>
+                                    <small class="text-muted">{!! dt_span($transaction->transaction_date, 'date') !!}</small>
                                 </div>
                                 <p class="mb-0">{{ $transaction->description }}</p>
                                 <strong>المبلغ: {{ number_format($transaction->amount, 2) }} ج.م</strong>
@@ -685,7 +687,7 @@
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div class="flex-grow-1">
                                         <h6><i class="fas fa-shopping-cart text-warning"></i> مصروف</h6>
-                                        <small class="text-muted">{{ $expense->expense_date->format('Y-m-d') }}</small>
+                                        <small class="text-muted">{!! dt_span($expense->expense_date, 'date') !!}</small>
                                     </div>
                                     @if($expense->attachment)
                                     <button type="button"
@@ -885,7 +887,9 @@ document.addEventListener('DOMContentLoaded', function() {
             'active': { bg: 'bg-success', text: 'نشطة' },
             'rejected': { bg: 'bg-danger', text: 'مرفوضة' },
             'partially_returned': { bg: 'bg-info', text: 'مرتجع جزئياً' },
-            'closed': { bg: 'bg-secondary', text: 'مغلقة' }
+            'pending_return': { bg: 'bg-primary', text: 'في انتظار الإرجاع' },
+            'closed': { bg: 'bg-secondary', text: 'مغلقة' },
+            'cancelled': { bg: 'bg-dark', text: 'ملغاة' }
         };
 
         const badge = badges[status] || { bg: 'bg-secondary', text: status };

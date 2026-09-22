@@ -102,7 +102,7 @@
                                     <td>
                                         <span class="badge bg-info">{{ $treasury->transactions()->count() }}</span>
                                     </td>
-                                    <td>{{ $treasury->created_at->format('Y-m-d') }}</td>
+                                    <td>{!! dt_span($treasury->created_at, 'date') !!}</td>
                                     <td>
                                         <small class="text-muted">{{ Str::limit($treasury->notes ?? '-', 30) }}</small>
                                     </td>

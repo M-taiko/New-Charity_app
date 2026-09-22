@@ -145,6 +145,22 @@
                             @enderror
                         </div>
 
+                        <!-- Line Items (اختياري) -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label mb-0"><strong><i class="fas fa-list-ul"></i> تفاصيل البنود (اختياري)</strong></label>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addLineItem()">
+                                    <i class="fas fa-plus"></i> إضافة بند
+                                </button>
+                            </div>
+                            <div id="lineItemsContainer"></div>
+                            <input type="hidden" name="line_items" id="lineItemsData">
+                            <small class="d-block mt-1" id="line-items-warning" style="color: #f59e0b; display: none;"></small>
+                            @if($expense->line_items && is_array($expense->line_items) && isset($expense->line_items['raw_text']))
+                                <small class="text-muted d-block mt-1"><i class="fas fa-info-circle"></i> النص الحر الحالي يظهر كأول بند - يمكنك تقسيمه إلى بنود ثم الحفظ.</small>
+                            @endif
+                        </div>
+
                         <!-- Location -->
                         <div class="mb-3">
                             <label class="form-label"><strong>الموقع</strong></label>
@@ -216,7 +232,7 @@
                         </tr>
                         <tr>
                             <td class="text-muted">التاريخ:</td>
-                            <td>{{ $expense->expense_date?->format('Y-m-d') }}</td>
+                            <td>{!! dt_span($expense->expense_date, 'date') !!}</td>
                         </tr>
                         <tr>
                             <td class="text-muted">المصدر:</td>
@@ -247,6 +263,90 @@
     // Pre-load current expense's hierarchy path for edit mode
     const currentExpenseItemId   = {{ $expense->expense_item_id ?? 'null' }};
     const currentExpenseCatId    = {{ $expense->expense_category_id ?? 'null' }};
+
+    // ──── Line Items Logic ────
+    let lineItemCount = 0;
+
+    function addLineItem(description = '', quantity = null, unitPrice = null) {
+        lineItemCount++;
+        const container = document.getElementById('lineItemsContainer');
+        const row = document.createElement('div');
+        row.className = 'd-flex gap-2 align-items-center mb-2';
+        row.id = `li_${lineItemCount}`;
+        row.innerHTML = `
+            <input type="text" class="form-control" placeholder="الوصف" data-li="desc" style="flex:3;" value="">
+            <input type="number" class="form-control" placeholder="العدد" data-li="qty" min="1" style="flex:1;" oninput="updateLineItemsData()">
+            <input type="number" class="form-control" placeholder="سعر الوحدة" data-li="price" min="0" step="0.01" style="flex:1.5;" oninput="updateLineItemsData()">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeLineItem('li_${lineItemCount}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        container.appendChild(row);
+        row.querySelector('[data-li="desc"]').value = description;
+        if (quantity !== null && quantity !== undefined) row.querySelector('[data-li="qty"]').value = quantity;
+        if (unitPrice !== null && unitPrice !== undefined) row.querySelector('[data-li="price"]').value = unitPrice;
+        row.querySelectorAll('input[data-li="desc"]').forEach(i => i.addEventListener('input', updateLineItemsData));
+        updateLineItemsData();
+    }
+
+    function removeLineItem(id) {
+        document.getElementById(id)?.remove();
+        updateLineItemsData();
+    }
+
+    function updateLineItemsData() {
+        const rows = document.querySelectorAll('#lineItemsContainer > div');
+        const items = [];
+        rows.forEach(row => {
+            const desc  = row.querySelector('[data-li="desc"]')?.value?.trim();
+            const qty   = parseFloat(row.querySelector('[data-li="qty"]')?.value) || null;
+            const price = parseFloat(row.querySelector('[data-li="price"]')?.value) || null;
+            if (desc) items.push({ description: desc, quantity: qty, unit_price: price });
+        });
+        document.getElementById('lineItemsData').value = JSON.stringify(items);
+        updateLineItemsWarning(items);
+    }
+
+    // تحذير غير مانع عند اختلاف مجموع البنود عن المبلغ (لا يمنع الحفظ)
+    function updateLineItemsWarning(items) {
+        const warningEl = document.getElementById('line-items-warning');
+        if (!warningEl) return;
+        const amount = parseFloat(document.querySelector('input[name="amount"]')?.value);
+        let total = 0, counted = 0;
+        (items || []).forEach(it => {
+            if (it.quantity !== null && it.unit_price !== null) {
+                total += it.quantity * it.unit_price;
+                counted++;
+            }
+        });
+        if (counted > 0 && !isNaN(amount) && amount > 0 && Math.round(total * 100) !== Math.round(amount * 100)) {
+            warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> مجموع البنود (' + total.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م) يختلف عن المبلغ (' + amount.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م)';
+            warningEl.style.display = 'block';
+        } else {
+            warningEl.style.display = 'none';
+        }
+    }
+
+    // تعبئة الصفوف من البيانات الحالية (أو من old عند فشل التحقق)
+    (function() {
+        @php
+            $existingItems = [];
+            if (is_array($expense->line_items)) {
+                if (isset($expense->line_items['raw_text']) && !empty($expense->line_items['raw_text'])) {
+                    // الصيغة القديمة (نص حر من مصروف سريع): أول بند وصف فقط
+                    $existingItems = [['description' => $expense->line_items['raw_text'], 'quantity' => null, 'unit_price' => null]];
+                } else {
+                    foreach ($expense->line_items as $li) {
+                        if (is_array($li) && isset($li['description'])) {
+                            $existingItems[] = ['description' => $li['description'], 'quantity' => $li['quantity'] ?? null, 'unit_price' => $li['unit_price'] ?? null];
+                        }
+                    }
+                }
+            }
+        @endphp
+        let initialItems = {{ \Illuminate\Support\Js::from(old('line_items') ? json_decode(old('line_items'), true) ?: [] : $existingItems) }};
+        initialItems.forEach(it => addLineItem(it.description ?? '', it.quantity ?? null, it.unit_price ?? null));
+    })();
 
     async function catLoadChildren(fromLevel, parentId) {
         const sel2 = document.getElementById('cat_level2');
@@ -381,10 +481,11 @@
     // On page load: restore the current expense's hierarchy
     document.addEventListener('DOMContentLoaded', async function() {
         toggleExpenseType();
+        document.querySelector('input[name="amount"]')?.addEventListener('input', updateLineItemsData);
 
-        // If the expense has an item, we need to reconstruct the path
-        // We'll call a helper API that returns the item's ancestor category IDs
-        if (currentExpenseItemId && currentExpenseCatId) {
+        // Restore whenever a category exists, even if the item is null
+        // (category-only expenses and quick expenses converted to a category)
+        if (currentExpenseCatId) {
             try {
                 // Walk up: get the category chain for currentExpenseCatId
                 const res = await fetch(`/api/expense-categories/${currentExpenseCatId}/ancestors`);
@@ -409,14 +510,18 @@
 
                 document.getElementById('final_category_id').value = currentExpenseCatId;
 
-                // Select the item
-                const selItem = document.getElementById('cat_item');
-                selItem.value = currentExpenseItemId;
-                setDefaultAmount();
+                // Select the item only when one exists
+                if (currentExpenseItemId) {
+                    const selItem = document.getElementById('cat_item');
+                    selItem.value = currentExpenseItemId;
+                    setDefaultAmount();
+                }
             } catch(e) {
                 console.error('Could not restore hierarchy', e);
             }
         }
+        // If the expense has neither category nor item (a quick expense),
+        // the dropdowns stay empty and a choice is required.
     });
 </script>
 @endpush

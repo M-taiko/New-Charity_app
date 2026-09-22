@@ -248,7 +248,7 @@
                                         <td>
                                             <strong style="color: #4caf50;">{{ number_format($expense->amount, 2) }} ج.م</strong>
                                         </td>
-                                        <td>{{ $expense->created_at->format('Y-m-d') }}</td>
+                                        <td>{!! dt_span($expense->created_at, 'date') !!}</td>
                                         <td>
                                             <small>{{ Str::limit($expense->description, 30) }}</small>
                                         </td>
@@ -377,7 +377,7 @@
                         </div>
                         <div class="mb-3">
                             <strong>تاريخ الإنشاء:</strong><br>
-                            {{ $socialCase->created_at->format('Y-m-d H:i') }}
+                            {!! dt_span($socialCase->created_at) !!}
                         </div>
                         <div class="mb-3">
                             <strong>الباحث:</strong><br>
@@ -392,7 +392,7 @@
                         @if($socialCase->reviewed_at)
                         <div class="mb-3">
                             <strong>تاريخ المراجعة:</strong><br>
-                            {{ $socialCase->reviewed_at->format('Y-m-d H:i') }}
+                            {!! dt_span($socialCase->reviewed_at) !!}
                         </div>
                         @endif
                         @if($socialCase->case_type)

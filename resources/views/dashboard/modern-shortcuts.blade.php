@@ -129,38 +129,49 @@
         @elseif(auth()->user()->hasRole('مندوب'))
             <!-- Stats للمندوب -->
             @php
-                $agentCustodies = auth()->user()->custodiesAsAgent()->whereIn('status', ['accepted', 'active', 'partially_returned'])->get();
-                $totalReceived = $agentCustodies->sum('amount');
-                $totalSpent = $agentCustodies->sum('spent');
-                $totalReturned = $agentCustodies->sum('returned');
-                $remaining = $totalReceived - $totalSpent - $totalReturned;
+                $totalReceived = $agentStats['received'];
+                $totalSpent = $agentStats['spent'];
+                $totalReturned = $agentStats['returned'];
+                $remaining = $agentStats['remaining'];
+                $transferredOut = $agentStats['transferred_out'];
+                $pendingReturn = $agentStats['pending_return'];
             @endphp
-            <div class="col-12 col-sm-6 col-lg-3">
+            <div class="col-12 col-sm-6 col-lg">
                 <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                     <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
                     <div class="stat-label">إجمالي استلمت</div>
                     <div class="stat-number">{{ number_format($totalReceived, 2) }} ج.م</div>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3">
+            <div class="col-12 col-sm-6 col-lg">
                 <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
                     <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                     <div class="stat-label">المصروف</div>
                     <div class="stat-number">{{ number_format($totalSpent, 2) }} ج.م</div>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3">
+            <div class="col-12 col-sm-6 col-lg">
                 <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
                     <div class="stat-icon"><i class="fas fa-piggy-bank"></i></div>
                     <div class="stat-label">المتبقي</div>
                     <div class="stat-number">{{ number_format($remaining, 2) }} ج.م</div>
                 </div>
             </div>
-            <div class="col-12 col-sm-6 col-lg-3">
+            <div class="col-12 col-sm-6 col-lg">
                 <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white;">
                     <div class="stat-icon"><i class="fas fa-undo"></i></div>
                     <div class="stat-label">المرتجع</div>
                     <div class="stat-number">{{ number_format($totalReturned, 2) }} ج.م</div>
+                </div>
+            </div>
+            <div class="col-12 col-sm-6 col-lg">
+                <div class="stat-card" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: white;">
+                    <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
+                    <div class="stat-label">المحوّل لمناديب آخرين</div>
+                    <div class="stat-number">{{ number_format($transferredOut, 2) }} ج.م</div>
+                    @if($pendingReturn > 0)
+                        <div class="stat-label" style="font-size: 0.75rem;">في انتظار الإرجاع: {{ number_format($pendingReturn, 2) }} ج.م</div>
+                    @endif
                 </div>
             </div>
         @endif

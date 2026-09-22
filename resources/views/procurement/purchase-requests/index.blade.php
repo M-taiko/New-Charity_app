@@ -41,7 +41,7 @@
             <div class="stat-card danger">
                 <div class="stat-icon"><i class="fas fa-coins"></i></div>
                 <div class="stat-label">إجمالي المنصرف</div>
-                <div class="stat-number" style="color:var(--danger);font-size:1.2rem;">{{ number_format($stats['total_cost'], 0) }} <small>ج.م</small></div>
+                <div class="stat-number" style="color:var(--danger);font-size:1.2rem;">{{ number_format($stats['total_cost'], 2) }} <small>ج.م</small></div>
             </div>
         </div>
     </div>
@@ -73,7 +73,7 @@
                             <td><strong>{{ $req->title }}</strong></td>
                             <td><span class="badge bg-secondary">{{ $req->category_label }}</span></td>
                             <td><span class="badge bg-{{ $req->priority_color }}">{{ $req->priority_label }}</span></td>
-                            <td>{{ $req->estimated_cost ? number_format($req->estimated_cost, 0) . ' ج.م' : '—' }}</td>
+                            <td>{{ $req->estimated_cost ? number_format($req->estimated_cost, 2) . ' ج.م' : '—' }}</td>
                             <td><span class="badge bg-{{ $req->status_color }}">{{ $req->status_label }}</span></td>
                             <td style="font-size:.85rem;">{{ $req->requester->name }}</td>
                             <td style="font-size:.8rem;">{{ $req->created_at->format('Y-m-d') }}</td>

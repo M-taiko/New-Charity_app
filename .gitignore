@@ -22,3 +22,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local working docs and data (never deploy)
+/.kilo
+/Task*.md
+/CLIENT_FEEDBACK_TASKS.md
+/PRE_IMPLEMENTATION_VERIFICATION.md
+/LOCAL_SETUP_TASK.md
+/temp_xlsx/
+u734216585_charity*.sql

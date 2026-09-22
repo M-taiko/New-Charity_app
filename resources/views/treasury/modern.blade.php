@@ -28,7 +28,7 @@
                     </div>
                     <h6 style="color: #6b7280; margin-bottom: 0.5rem;">رصيد الخزينة الحالي</h6>
                     <div style="font-size: 3rem; font-weight: 700; color: var(--success); margin-bottom: 0.5rem;">
-                        {{ number_format($treasury->balance ?? 0, 0) }}
+                        {{ number_format($treasury->balance ?? 0, 2) }}
                     </div>
                     <div style="color: #6b7280;">جنية مصري (ج.م)</div>
                 </div>
@@ -164,7 +164,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--primary);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>';
+                        return '<strong style="color: var(--primary);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
                     }
                 }, 
                 { data: 'user.name', defaultContent: '-' },

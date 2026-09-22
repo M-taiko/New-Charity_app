@@ -8,7 +8,9 @@ use App\Models\SocialCase;
 use App\Models\ExpenseCategory;
 use App\Models\ExpenseItem;
 use App\Models\Treasury;
+use App\Models\TreasuryTransaction;
 use App\Services\TreasuryService;
+use App\Support\LineItemsSanitizer;
 use App\Services\ActivityLogService;
 use App\Services\NotificationService;
 use Yajra\DataTables\DataTables;
@@ -113,9 +115,7 @@ class ExpenseController extends Controller
                     $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
                 }
 
-                $lineItems = $request->filled('line_items_data')
-                    ? json_decode($request->line_items_data, true)
-                    : null;
+                $lineItems = LineItemsSanitizer::fromRequest($request);
 
             $expense = $this->service->recordDirectExpenseFromTreasury(
                 $treasuryId,
@@ -139,33 +139,20 @@ class ExpenseController extends Controller
             NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
             NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
             } else {
-                // Custody spending - validate against selected custody balance
+                // Custody spending - the custody must be selected explicitly
 
-                // If custody_id is provided, validate against that specific custody
-                $maxAmount = 1000000;
-                if ($request->filled('custody_id')) {
-                    $custody = Custody::findOrFail($request->custody_id);
+                $custody = Custody::findOrFail($request->input('custody_id'));
 
-                    // Agents can only spend from their own custodies
-                    if (auth()->user()->hasRole('مندوب') && $custody->agent_id !== auth()->id()) {
-                        return back()->withInput()->with('error', 'غير مصرح لك بالصرف من هذه العهدة');
-                    }
-                    // Managers and accountants can spend from any custody
-
-                    $maxAmount = $custody->getRemainingBalance();
-                } else {
-                    // If no custody specified, calculate total available across all custodies
-                    $totalAvailable = Custody::where('agent_id', auth()->id())
-                        ->whereIn('status', ['accepted', 'partially_returned', 'closed'])
-                        ->get()
-                        ->sum(function($custody) {
-                            return max(0, $custody->getRemainingBalance());
-                        });
-                    $maxAmount = $totalAvailable;
+                // Agents can only spend from their own custodies
+                if (auth()->user()->hasRole('مندوب') && $custody->agent_id !== auth()->id()) {
+                    return back()->withInput()->with('error', 'غير مصرح لك بالصرف من هذه العهدة');
                 }
+                // Managers and accountants can spend from any custody
+
+                $maxAmount = $custody->getRemainingBalance();
 
                 $rules = [
-                    'custody_id' => 'nullable|exists:custodies,id',
+                    'custody_id' => 'required|exists:custodies,id',
                     'amount' => 'required|numeric|min:0.01|max:' . $maxAmount,
                     'expense_category_id' => 'required|exists:expense_categories,id',
                     'expense_type' => 'required|in:social_case,general',
@@ -193,15 +180,10 @@ class ExpenseController extends Controller
                     $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
                 }
 
-                // Use first custody ID for backward compatibility, or first available
-                $custodyId = $request->custody_id ?? $availableCustodies->first()->id;
-
-                $lineItems = $request->filled('line_items_data')
-                    ? json_decode($request->line_items_data, true)
-                    : null;
+                $lineItems = LineItemsSanitizer::fromRequest($request);
 
                 $expense = $this->service->recordExpenseWithItems(
-                    $custodyId,
+                    $request->custody_id,
                     auth()->id(),
                     $request->amount,
                     $request->expense_category_id,
@@ -231,6 +213,7 @@ class ExpenseController extends Controller
 
     public function show(Expense $expense)
     {
+        $expense->load(['user', 'custody', 'socialCase', 'category.parent.parent', 'item.category.parent.parent']);
         return view('expenses.modern-show', compact('expense'));
     }
 
@@ -272,6 +255,10 @@ class ExpenseController extends Controller
             $category = ExpenseCategory::find($request->expense_category_id);
             $isOtherExpense = $category && $category->code === 'OTHER';
 
+            // البند إلزامي فقط إذا كانت الفئة المختارة تحتوي على بنود نشطة (و ليست OTHER)
+            $categoryHasItems = $category
+                && \App\Models\ExpenseItem::active()->where('expense_category_id', $category->id)->exists();
+
             $rules = [
                 'expense_category_id' => 'required|exists:expense_categories,id',
                 'expense_type'        => 'required|in:social_case,general',
@@ -287,44 +274,123 @@ class ExpenseController extends Controller
                 $rules['social_case_id'] = 'required|exists:social_cases,id';
             }
 
-            $rules['expense_item_id'] = $isOtherExpense
-                ? 'nullable|exists:expense_items,id'
-                : 'required|exists:expense_items,id';
+            $rules['expense_item_id'] = ($isOtherExpense || !$categoryHasItems)
+                ? 'nullable'
+                : 'required';
 
             $request->validate($rules, [
+                'expense_item_id.required' => 'يجب اختيار التوجيه النهائي (المستوى الرابع) لأن هذه الفئة تحتوي على بنود',
+                'expense_category_id.required' => 'يجب اختيار فئة المصروف',
+                'expense_category_id.exists' => 'الفئة المختارة غير موجودة',
                 'attachment.max'   => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
                 'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
             ]);
 
-            // تحديث custody.spent إذا تغير المبلغ
-            $oldAmount = (float) $expense->amount;
-            $newAmount = (float) $request->amount;
-
-            if ($expense->custody_id && $oldAmount !== $newAmount) {
-                $custody = Custody::findOrFail($expense->custody_id);
-                $diff = $newAmount - $oldAmount;
-                $custody->increment('spent', $diff);
+            // عند إرسال بند: التحقق أنه ينتمي للفئة المختارة
+            $itemId = $request->filled('expense_item_id') ? (int) $request->expense_item_id : null;
+            if ($itemId !== null) {
+                $itemBelongsToCategory = \App\Models\ExpenseItem::where('id', $itemId)
+                    ->where('expense_category_id', $request->expense_category_id)
+                    ->exists();
+                if (!$itemBelongsToCategory) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'expense_item_id' => 'البند المختار لا ينتمي إلى الفئة المختارة',
+                    ]);
+                }
             }
 
-            // رفع المرفق الجديد إذا وُجد
+            // مقارنة المبالغ بعد التقريب لخانتين عشريتين (لا مقارنة floats مباشرة)
+            $oldAmount = round((float) $expense->amount, 2);
+            $newAmount = round((float) $request->amount, 2);
+            $amountChanged = $oldAmount !== $newAmount;
+
+            // عدد صفوف pivot للمصروف (التوزيع على العهد)
+            $pivotCustodies = $expense->custodies()->get();
+
+            // (D2) مصروف موزع على أكثر من عهدة + تغيير المبلغ = رفض
+            if ($amountChanged && $pivotCustodies->count() > 1) {
+                throw new \Exception('لا يمكن تعديل مبلغ مصروف موزّع على أكثر من عهدة. يمكن تعديل باقي الحقول فقط دون تغيير المبلغ.');
+            }
+
+            // العهدة المتأثرة فعلياً: صف pivot واحد إن وُجد، وإلا custody_id (مصروفات سريعة وغيرها)
+            $affectedCustodyId = $pivotCustodies->count() === 1
+                ? $pivotCustodies->first()->id
+                : $expense->custody_id;
+
+            // رفع المرفق الجديد إذا وُجد (خارج المعاملة)
             $attachmentPath = $expense->attachment;
             if ($request->hasFile('attachment')) {
                 $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
             }
 
-            $expense->update([
-                'expense_category_id' => $request->expense_category_id,
-                'expense_item_id'     => $request->expense_item_id,
-                'type'                => $request->expense_type,
-                'amount'              => $newAmount,
-                'description'         => $request->description,
-                'location'            => $request->location,
-                'social_case_id'      => $request->expense_type === 'social_case' ? $request->social_case_id : null,
-                'expense_date'        => $request->expense_date,
-                'attachment'          => $attachmentPath,
-                'is_quick_expense'    => false, // Mark as no longer a quick expense after editing
-                'approval_status'     => 'pending_edit', // Reset to pending edit
-            ]);
+            DB::transaction(function () use ($expense, $request, $itemId, $oldAmount, $newAmount, $amountChanged, $affectedCustodyId, $pivotCustodies, $attachmentPath) {
+                if ($affectedCustodyId && $amountChanged) {
+                    $diff = round($newAmount - $oldAmount, 2);
+
+                    // قفل العهدة المتأثرة داخل المعاملة
+                    $custody = Custody::where('id', $affectedCustodyId)->lockForUpdate()->first();
+                    if (!$custody) {
+                        throw new \Exception('العهدة المرتبطة بالمصروف غير موجودة');
+                    }
+
+                    if ($diff > 0) {
+                        // حارس صريح لحالة العهدة: لا زيادة على عهدة مرفوضة/ملغاة/معلقة
+                        if (!in_array($custody->status, ['accepted', 'active', 'partially_returned'])) {
+                            throw new \Exception('لا يمكن زيادة مبلغ مصروف مرتبط بعهدة في حالة "' . $custody->status . '" (عهدة #' . $custody->id . ')');
+                        }
+
+                        $remaining = round((float) $custody->getRemainingBalance(), 2);
+                        if ($diff > $remaining) {
+                            throw new \Exception('الزيادة المطلوبة في المبلغ (' . number_format($diff, 2) . ' ج.م) تتجاوز الرصيد المتبقي للعهدة #' . $custody->id . ' (' . number_format($remaining, 2) . ' ج.م)');
+                        }
+                    }
+
+                    // تطبيق الفرق على spent
+                    $custody->increment('spent', $diff);
+
+                    // تحديث مبلغ صف pivot إن وُجد
+                    if ($pivotCustodies->count() === 1) {
+                        $expense->custodies()->updateExistingPivot($custody->id, ['amount' => $newAmount]);
+                    }
+
+                    // تحديث حركة الخزينة المرتبطة إن وُجدت (المصروفات الجديدة بعد T13)
+                    $transaction = TreasuryTransaction::where('expense_id', $expense->id)->first();
+                    if ($transaction) {
+                        $transaction->update(['amount' => $newAmount]);
+                    }
+
+                    // إغلاق العهدة إذا وصل رصيدها للصفر (لا يتم فتح عهدة مغلقة تلقائياً)
+                    if ($custody->fresh()->getRemainingBalance() <= 0 && $custody->status !== 'closed') {
+                        $custody->update(['status' => 'closed']);
+                        TreasuryTransaction::create([
+                            'treasury_id' => $custody->treasury_id,
+                            'type' => 'custody_close',
+                            'amount' => 0,
+                            'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (رصيد صفر)",
+                            'user_id' => auth()->id(),
+                            'custody_id' => $custody->id,
+                            'transaction_date' => now(),
+                        ]);
+                    }
+                }
+
+                $expense->update([
+                    'expense_category_id' => $request->expense_category_id,
+                    'expense_item_id'     => $itemId,
+                    'line_items'          => $request->has('line_items')
+                        ? LineItemsSanitizer::fromRequest($request)
+                        : $expense->line_items,
+                    'type'                => $request->expense_type,
+                    'amount'              => $newAmount,
+                    'description'         => $request->description,
+                    'location'            => $request->location,
+                    'social_case_id'      => $request->expense_type === 'social_case' ? $request->social_case_id : null,
+                    'expense_date'        => $request->expense_date,
+                    'attachment'          => $attachmentPath,
+                    'is_quick_expense'    => false, // Mark as no longer a quick expense after editing
+                    'approval_status'     => 'pending_edit', // Reset to pending edit
+                ]);
+            });
 
             ActivityLogService::updated($expense, 'تم تعديل المصروف #' . $expense->id . ' (المبلغ: ' . number_format($newAmount, 2) . ' ج.م)');
 
@@ -365,7 +431,7 @@ class ExpenseController extends Controller
     {
         $this->authorize('view_all_expenses');
 
-        $query = Expense::with(['user', 'custody', 'socialCase', 'category', 'item.category.parent.parent']);
+        $query = Expense::with(['user', 'custody', 'socialCase', 'reviewer', 'category.parent.parent', 'item.category.parent.parent']);
 
         // Date range filter - use created_at to match reports page
         if ($request->filled('date_from')) {
@@ -394,19 +460,34 @@ class ExpenseController extends Controller
             $query->whereHas('user', fn($q) => $q->where('name', 'like', '%' . $request->user_filter . '%'));
         }
 
+        // طلبات التعديل المعلقة باستعلام واحد مجمع (لا استعلام لكل صف)
+        $user = auth()->user();
+        $isAccountant = $user->hasRole('محاسب');
+        $isManager = $user->hasRole('مدير');
+        $pendingEditIds = \App\Models\ExpenseEditRequest::where('status', 'pending')
+            ->distinct()->pluck('expense_id')->flip();
+
         return DataTables::of($query)
             ->addColumn('user_name', fn($row) => $row->user->name)
             ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
             ->addColumn('type_label', fn($row) => $row->type === 'social_case' ? 'حالة اجتماعية' : 'مصروف عام')
             ->addColumn('category_name', fn($row) => $row->category->name ?? '-')
-            ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->format('Y-m-d H:i') : '-')
-            ->addColumn('item_direction', function($row) {
-                if (!$row->item) return '-';
-                $category = $row->item->category;
-                return $category ? $category->full_path . ' > ' . $row->item->name : $row->item->name;
-            })
+            ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->toIso8601String() : '-')
+            ->addColumn('item_direction', fn($row) => $row->accounting_path ?? 'غير محدد')
             ->addColumn('is_quick_expense', fn($row) => $row->is_quick_expense ?? false)
             ->addColumn('reviewed_label', fn($row) => $row->reviewed_at ? 'مراجع' : 'غير مراجع')
+            ->addColumn('can_review', fn($row) => ($isAccountant || $isManager) && !$row->reviewed_at)
+            ->addColumn('can_edit', fn($row) => ($isAccountant || ($isManager && $row->isApproved())) && !$pendingEditIds->has($row->id))
+            ->addColumn('can_unreview', fn($row) => $isManager && $row->reviewed_at)
+            ->addColumn('edit_url', fn($row) => route('expenses.edit', $row))
+            ->addColumn('show_url', fn($row) => route('expenses.show', $row))
+            ->addColumn('reviewer_name', fn($row) => $row->reviewer?->name)
+            ->addColumn('reviewed_at_formatted', fn($row) => $row->reviewed_at?->toIso8601String())
+            ->addColumn('has_direction', fn($row) => $row->expense_category_id !== null || $row->expense_item_id !== null)
+            ->addColumn('items_count', fn($row) => is_array($row->line_items) && !isset($row->line_items['raw_text']) ? count($row->line_items) : 0)
+            ->addColumn('first_item', fn($row) => is_array($row->line_items) && !isset($row->line_items['raw_text']) && isset($row->line_items[0]['description']) ? $row->line_items[0]['description'] : null)
+            // هذه الأعمدة تُهرَّب من جهة العميل في دوال render (esc) — تُرسل خام لتجنب الإescaping المزدوج
+            ->rawColumns(['item_direction', 'first_item', 'reviewer_name', 'reviewed_at_formatted'])
             ->filterColumn('user_name', fn($q, $k) => $q->whereHas('user', fn($q2) => $q2->where('name', 'like', "%$k%")))
             ->toJson();
     }
@@ -425,7 +506,7 @@ class ExpenseController extends Controller
 
         // Get expenses for agent's custodies OR direct expenses by this user
         // Hide original quick expenses (those that are still marked as quick_expense and lack proper category/item)
-        $expenses = Expense::with(['user', 'custody', 'socialCase', 'item.category.parent.parent'])
+        $expenses = Expense::with(['user', 'custody', 'socialCase', 'category.parent.parent', 'item.category.parent.parent'])
             ->where(function($q) use ($custodies, $user) {
                 $q->whereIn('custody_id', $custodies)
                   ->orWhere(function($q2) use ($user) {
@@ -447,19 +528,11 @@ class ExpenseController extends Controller
                     return 'مصروف عام';
                 }
             })
-            ->addColumn('category_path', function($row) {
-                if (!$row->item) {
-                    $category = $row->category;
-                    return $category ? $category->full_path : 'مصروفات أخرى';
-                }
-                $category = $row->item->category;
-                if (!$category) return $row->item->name;
-                return $category->full_path . ' > ' . $row->item->name;
-            })
+            ->addColumn('category_path', fn($row) => $row->accounting_path ?? 'غير محدد')
             ->addColumn('case_name', fn($row) => $row->socialCase->name ?? '-')
-            ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->format('Y-m-d H:i') : '-')
+            ->addColumn('expense_datetime', fn($row) => $row->expense_date ? $row->expense_date->toIso8601String() : '-')
             ->addColumn('is_quick_expense', fn($row) => $row->is_quick_expense ? 1 : 0)
-            ->rawColumns(['type_label'])
+            ->rawColumns(['type_label', 'category_path'])
             ->toJson();
     }
 
@@ -480,7 +553,7 @@ class ExpenseController extends Controller
         return response()->download($filePath);
     }
 
-    public function markReviewed(Expense $expense)
+    public function markReviewed(Request $request, Expense $expense)
     {
         $user = auth()->user();
         if (!$user->hasRole('محاسب') && !$user->hasRole('مدير')) {
@@ -518,6 +591,51 @@ class ExpenseController extends Controller
         $message = $isQuickExpense
             ? 'تمت مراجعة المصروف وتحويله من مصروف سريع إلى مصروف عادي وتم قفل التعديل'
             : 'تمت مراجعة المصروف وتم قفل التعديل';
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * إلغاء المراجعة - للمدير فقط (D5-a)
+     * يفتح التعديل مرة أخرى دون إرجاع المصروف إلى حالة "سريع"
+     */
+    public function unreview(Request $request, Expense $expense)
+    {
+        $user = auth()->user();
+        abort_unless($user->hasRole('مدير'), 403, 'فقط المدير يمكنه إلغاء المراجعة');
+
+        if (!$expense->isReviewed()) {
+            $message = 'هذا المصروف غير مراجع أصلاً';
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $message], 422)
+                : back()->with('error', $message);
+        }
+
+        $expense->update([
+            'reviewed_by' => null,
+            'reviewed_at' => null,
+        ]);
+
+        \App\Services\NotificationService::notifyUser(
+            $expense->user_id,
+            'تم فتح التعديل على مصروف',
+            'قام المدير ' . $user->name . ' بإلغاء مراجعة المصروف رقم #' . $expense->id . ' - أصبح التعديل متاحاً مرة أخرى',
+            'warning',
+            $expense->id,
+            'expense'
+        );
+
+        ActivityLogService::updated($expense, 'قام المدير ' . $user->name . ' بإلغاء مراجعة المصروف #' . $expense->id . ' وفتح التعديل مرة أخرى');
+
+        $message = 'تم إلغاء المراجعة وفتح التعديل على المصروف';
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
 
         return back()->with('success', $message);
     }

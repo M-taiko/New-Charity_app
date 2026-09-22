@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TreasuryController;
 use App\Http\Controllers\CustodyController;
 use App\Http\Controllers\CustodyTransferController;
+use App\Http\Controllers\CustodyMovementController;
 use App\Http\Controllers\CustodyReturnRequestController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseItemController;
@@ -72,6 +73,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/expenses/quick-store', [ExpenseController::class, 'quickStore'])->name('expenses.quick-store');
     Route::get('/expenses/{expense}/download-attachment', [ExpenseController::class, 'downloadAttachment'])->name('expenses.download-attachment');
     Route::post('/expenses/{expense}/mark-reviewed', [ExpenseController::class, 'markReviewed'])->name('expenses.mark-reviewed');
+    Route::post('/expenses/{expense}/unreview', [ExpenseController::class, 'unreview'])->name('expenses.unreview');
 
     // طلبات تعديل المصروفات
     Route::get('/expenses/{expense}/edit-request', [ExpenseEditRequestController::class, 'create'])->name('expense-edit-requests.create');
@@ -93,7 +95,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/custody-transfers/{custodyTransfer}/reject', [CustodyTransferController::class, 'reject'])->name('custody-transfers.reject');
     Route::get('/api/custody-transfers/sent', [CustodyTransferController::class, 'sentTransfersData'])->name('api.custody-transfers.sent');
     Route::get('/api/custody-transfers/received', [CustodyTransferController::class, 'receivedTransfersData'])->name('api.custody-transfers.received');
+    Route::get('/api/custody-transfers/all', [CustodyTransferController::class, 'allTransfersData'])->name('api.custody-transfers.all');
     Route::get('/api/agent/transfers', [CustodyTransferController::class, 'agentTransfersData'])->name('api.agent.transfers');
+
+    // Custody Movements Ledger (read-only)
+    Route::get('/custody-movements', [CustodyMovementController::class, 'index'])->name('custody-movements.index');
+    Route::get('/api/custody-movements', [CustodyMovementController::class, 'data'])->name('api.custody-movements.data');
 
     Route::resource('social-cases', SocialCaseController::class)->names('social_cases');
     Route::post('/social-cases/{socialCase}/approve', [SocialCaseController::class, 'approve'])->name('social_cases.approve');

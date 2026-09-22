@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Custody;
 use App\Models\Expense;
 use App\Models\ExpenseEditRequest;
 use App\Models\Notification;
+use App\Models\TreasuryTransaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
@@ -68,25 +70,82 @@ class ExpenseEditRequestService
                 }
             }
 
-            // تعديل المبلغ (إذا كان هناك تغيير)
+            // بنود المصروف: array_key_exists حتى يعمل "الفراغ يمسح" (قيمة null مقصودة)
+            if (array_key_exists('line_items', $editRequest->requested_changes ?? [])) {
+                $changesToApply['line_items'] = $editRequest->requested_changes['line_items'];
+            }
+
+            // تعديل المبلغ (إذا كان هناك تغيير) — بنفس قواعد T6 في ExpenseController::update
             if (isset($editRequest->requested_changes['amount'])) {
-                $oldAmount = $expense->amount;
-                $newAmount = $editRequest->requested_changes['amount'];
-                $difference = $newAmount - $oldAmount;
+                // مقارنة المبالغ بعد التقريب لخانتين عشريتين (لا مقارنة floats مباشرة)
+                $oldAmount = round((float) $expense->amount, 2);
+                $newAmount = round((float) $editRequest->requested_changes['amount'], 2);
+                $amountChanged = $oldAmount !== $newAmount;
 
-                $changesToApply['amount'] = $newAmount;
+                // عدد صفوف pivot للمصروف (التوزيع على العهد)
+                $pivotCustodies = $expense->custodies()->get();
 
-                // إذا كان المصروف مرتبطاً بعهدة، نعدل الـ spent
-                if ($expense->custody_id && $difference !== 0) {
-                    $custody = $expense->custody;
-                    if ($difference > 0) {
-                        // إضافة مبلغ إلى spent
-                        $custody->increment('spent', $difference);
-                    } else {
-                        // تقليل مبلغ من spent
-                        $custody->decrement('spent', abs($difference));
+                // (D2) مصروف موزع على أكثر من عهدة + تغيير المبلغ = رفض الموافقة
+                if ($amountChanged && $pivotCustodies->count() > 1) {
+                    throw new \Exception('لا يمكن الموافقة على تعديل مبلغ مصروف موزّع على أكثر من عهدة. يمكن رفض طلب التعديل أو تعديل باقي الحقول فقط دون تغيير المبلغ.');
+                }
+
+                // العهدة المتأثرة فعلياً: صف pivot واحد إن وُجد، وإلا custody_id
+                $affectedCustodyId = $pivotCustodies->count() === 1
+                    ? $pivotCustodies->first()->id
+                    : $expense->custody_id;
+
+                if ($affectedCustodyId && $amountChanged) {
+                    $diff = round($newAmount - $oldAmount, 2);
+
+                    // قفل العهدة المتأثرة داخل المعاملة
+                    $custody = Custody::where('id', $affectedCustodyId)->lockForUpdate()->first();
+                    if (!$custody) {
+                        throw new \Exception('العهدة المرتبطة بالمصروف غير موجودة');
+                    }
+
+                    if ($diff > 0) {
+                        // حارس صريح لحالة العهدة: لا زيادة على عهدة مرفوضة/ملغاة/معلقة
+                        if (!in_array($custody->status, ['accepted', 'active', 'partially_returned'])) {
+                            throw new \Exception('لا يمكن زيادة مبلغ مصروف مرتبط بعهدة في حالة "' . $custody->status . '" (عهدة #' . $custody->id . ')');
+                        }
+
+                        $remaining = round((float) $custody->getRemainingBalance(), 2);
+                        if ($diff > $remaining) {
+                            throw new \Exception('الزيادة المطلوبة في المبلغ (' . number_format($diff, 2) . ' ج.م) تتجاوز الرصيد المتبقي للعهدة #' . $custody->id . ' (' . number_format($remaining, 2) . ' ج.م)');
+                        }
+                    }
+
+                    // تطبيق الفرق على spent
+                    $custody->increment('spent', $diff);
+
+                    // تحديث مبلغ صف pivot إن وُجد
+                    if ($pivotCustodies->count() === 1) {
+                        $expense->custodies()->updateExistingPivot($custody->id, ['amount' => $newAmount]);
+                    }
+
+                    // تحديث حركة الخزينة المرتبطة إن وُجدت (المصروفات الجديدة بعد T13)
+                    $transaction = TreasuryTransaction::where('expense_id', $expense->id)->first();
+                    if ($transaction) {
+                        $transaction->update(['amount' => $newAmount]);
+                    }
+
+                    // إغلاق العهدة إذا وصل رصيدها للصفر (لا يتم فتح عهدة مغلقة تلقائياً)
+                    if ($custody->fresh()->getRemainingBalance() <= 0 && $custody->status !== 'closed') {
+                        $custody->update(['status' => 'closed']);
+                        TreasuryTransaction::create([
+                            'treasury_id' => $custody->treasury_id,
+                            'type' => 'custody_close',
+                            'amount' => 0,
+                            'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (رصيد صفر)",
+                            'user_id' => $reviewer->id,
+                            'custody_id' => $custody->id,
+                            'transaction_date' => now(),
+                        ]);
                     }
                 }
+
+                $changesToApply['amount'] = $newAmount;
             }
 
             // تطبيق التغييرات على المصروف

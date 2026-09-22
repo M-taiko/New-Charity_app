@@ -14,6 +14,9 @@
                         ملخصات شاملة لعمليات المؤسسة
                     </p>
                 </div>
+                <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
             </div>
         </div>
     </div>
@@ -26,7 +29,7 @@
                 <div class="stat-icon"><i class="fas fa-wallet"></i></div>
                 <div class="stat-label">رصيد الخزينة</div>
                 <div class="stat-number" style="color: var(--success);">
-                    {{ number_format(\App\Models\Treasury::first()?->balance ?? 0, 0) }}
+                    {{ number_format(\App\Models\Treasury::first()?->balance ?? 0, 2) }}
                 </div>
                 <small style="color: #6b7280;">ج.م</small>
             </div>
@@ -38,7 +41,7 @@
                 <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                 <div class="stat-label">إجمالي المصروفات</div>
                 <div class="stat-number" style="color: var(--danger);">
-                    {{ number_format(\App\Models\Expense::sum('amount'), 0) }}
+                    {{ number_format(\App\Models\Expense::sum('amount'), 2) }}
                 </div>
                 <small style="color: #6b7280;">ج.م</small>
             </div>
@@ -153,7 +156,7 @@
                             <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
                                 <small style="color: #666;">إجمالي العهد الصادرة</small>
                                 <h4 style="margin: 0.5rem 0 0 0; color: #667eea;">
-                                    {{ number_format($custodyAmount, 0) }}
+                                    {{ number_format($custodyAmount, 2) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -162,7 +165,7 @@
                             <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
                                 <small style="color: #666;">إجمالي المصروف</small>
                                 <h4 style="margin: 0.5rem 0 0 0; color: #f57c00;">
-                                    {{ number_format($custodySpent, 0) }}
+                                    {{ number_format($custodySpent, 2) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -173,7 +176,7 @@
                             <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
                                 <small style="color: #666;">إجمالي المردود</small>
                                 <h4 style="margin: 0.5rem 0 0 0; color: #4caf50;">
-                                    {{ number_format($custodyReturned, 0) }}
+                                    {{ number_format($custodyReturned, 2) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -182,7 +185,7 @@
                             <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
                                 <small style="color: #666;">المتبقي</small>
                                 <h4 style="margin: 0.5rem 0 0 0; color: #2196f3;">
-                                    {{ number_format($custodyAmount - $custodySpent, 0) }}
+                                    {{ number_format($custodyAmount - $custodySpent, 2) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -243,7 +246,7 @@
                             <div style="padding: 15px; background: #f5f5f5; border-radius: 4px;">
                                 <small style="color: #666;">إجمالي المصروف</small>
                                 <h4 style="margin: 0.5rem 0 0 0; color: #2196f3;">
-                                    {{ number_format($socialCaseSpent, 0) }}
+                                    {{ number_format($socialCaseSpent, 2) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -288,7 +291,7 @@
                             <div style="text-align: center; padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
                                 <small style="color: #666; display: block; margin-bottom: 0.5rem;">مصروفات اليوم</small>
                                 <h4 style="margin: 0; color: #f5576c;">
-                                    {{ number_format($expensesToday, 0) }}
+                                    {{ number_format($expensesToday, 2) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -297,7 +300,7 @@
                             <div style="text-align: center; padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
                                 <small style="color: #666; display: block; margin-bottom: 0.5rem;">مصروفات هذا الشهر</small>
                                 <h4 style="margin: 0; color: #f5576c;">
-                                    {{ number_format($expensesThisMonth, 0) }}
+                                    {{ number_format($expensesThisMonth, 2) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -306,7 +309,7 @@
                             <div style="text-align: center; padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
                                 <small style="color: #666; display: block; margin-bottom: 0.5rem;">مصروفات هذه السنة</small>
                                 <h4 style="margin: 0; color: #f5576c;">
-                                    {{ number_format($expensesThisYear, 0) }}
+                                    {{ number_format($expensesThisYear, 2) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>
@@ -315,7 +318,7 @@
                             <div style="text-align: center; padding: 15px; background: #f5f5f5; border-radius: 4px; margin-bottom: 15px;">
                                 <small style="color: #666; display: block; margin-bottom: 0.5rem;">إجمالي جميع المصروفات</small>
                                 <h4 style="margin: 0; color: #f5576c;">
-                                    {{ number_format($totalExpenses, 0) }}
+                                    {{ number_format($totalExpenses, 2) }}
                                 </h4>
                                 <small style="color: #999;">ج.م</small>
                             </div>

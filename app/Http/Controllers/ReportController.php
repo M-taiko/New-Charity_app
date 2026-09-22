@@ -364,7 +364,7 @@ class ReportController extends Controller
             $closedCustodies = $custodies->where('status', 'closed')->count();
 
             // Calculate financial totals
-            $totalReceived = $custodies->sum('amount');
+            $totalReceived = $custodies->sum('amount') + $custodies->sum('transferred_in');
             $totalSpent = $custodies->sum('spent');
             $totalReturned = $custodies->sum('returned');
             $currentBalance = $custodies->sum(function ($custody) {

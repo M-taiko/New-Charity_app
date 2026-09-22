@@ -210,7 +210,7 @@
                 {
                     data: 'expense_datetime',
                     render: function(data) {
-                        return data && data !== '-' ? data : '-';
+                        return data && data !== '-' ? (window.formatLocalDateTime ? window.formatLocalDateTime(data) : data) : '-';
                     }
                 },
                 {
@@ -222,7 +222,9 @@
                 {
                     data: 'category_path',
                     render: function(data, type, row) {
-                        let categoryHtml = data && data !== '-' ? '<small style="color: #666;">' + data + '</small>' : '-';
+                        // الخادم يرسل القيمة خام الآن (rawColumns) — نهرب مرة واحدة هنا فقط
+                        const esc = s => $('<div>').text(s ?? '').html();
+                        let categoryHtml = data && data !== '-' ? '<small style="color: #666;">' + esc(data) + '</small>' : '-';
                         if (row.is_quick_expense) {
                             categoryHtml = '<span class="badge bg-warning me-2">مصروف سريع</span>' + categoryHtml;
                         }
@@ -278,7 +280,7 @@
                     if (remaining > 0) {
                         select.append(`
                             <option value="${custody.id}" data-balance="${remaining}">
-                                ${reason} (الرصيد: ${remaining.toLocaleString('ar')} ج.م)
+                                ${reason} (الرصيد: ${remaining.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م)
                             </option>
                         `);
                     }
@@ -300,7 +302,7 @@
         const balance = selectedOption.data('balance');
 
         if (balance !== undefined) {
-            $('#custody_balance').text(parseFloat(balance).toLocaleString('ar') + ' ج.م');
+            $('#custody_balance').text(parseFloat(balance).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م');
             $('#quick_amount').attr('max', balance);
         }
     }

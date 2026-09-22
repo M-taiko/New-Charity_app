@@ -31,7 +31,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong>التاريخ:</strong>
-                            <p>{{ $editRequest->requested_at->format('d/m/Y H:i') }}</p>
+                            <p>{!! dt_span($editRequest->requested_at) !!}</p>
                         </div>
                         <div class="col-md-6 mb-3">
                             <strong>الحالة:</strong>
@@ -142,7 +142,7 @@
                         <p><strong>الموقع:</strong> {{ $editRequest->expense->location }}</p>
                     @endif
                     <p><strong>الفئة:</strong> {{ $editRequest->expense->category?->name ?? '-' }}</p>
-                    <p><strong>التاريخ:</strong> {{ $editRequest->expense->created_at->format('d/m/Y H:i') }}</p>
+                    <p><strong>التاريخ:</strong> {!! dt_span($editRequest->expense->created_at) !!}</p>
                 </div>
             </div>
 
@@ -163,7 +163,7 @@
                         @endif
                     </p>
                     @if($editRequest->reviewed_at)
-                        <p><strong>تاريخ المراجعة:</strong> {{ $editRequest->reviewed_at->format('d/m/Y H:i') }}</p>
+                        <p><strong>تاريخ المراجعة:</strong> {!! dt_span($editRequest->reviewed_at) !!}</p>
                     @endif
                 </div>
             </div>

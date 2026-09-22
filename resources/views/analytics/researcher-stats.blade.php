@@ -54,7 +54,7 @@
                 <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                 <div class="stat-label">إجمالي المصروف</div>
                 <div class="stat-number" style="color: var(--warning);">
-                    {{ number_format($totalSpent, 0) }}
+                    {{ number_format($totalSpent, 2) }}
                 </div>
                 <small style="color: #6b7280;">ج.م</small>
             </div>

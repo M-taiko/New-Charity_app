@@ -19,6 +19,9 @@ class TreasuryTransaction extends Model
         'reference_id',
         'reference_type',
         'custody_transfer_id',
+        'expense_id',
+        'expense_category_id',
+        'expense_item_id',
     ];
 
     protected $casts = [
@@ -39,5 +42,15 @@ class TreasuryTransaction extends Model
     public function custody(): BelongsTo
     {
         return $this->belongsTo(Custody::class);
+    }
+
+    public function custodyTransfer(): BelongsTo
+    {
+        return $this->belongsTo(CustodyTransfer::class);
+    }
+
+    public function expense(): BelongsTo
+    {
+        return $this->belongsTo(Expense::class);
     }
 }

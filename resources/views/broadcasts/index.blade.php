@@ -126,7 +126,7 @@
                                             <span class="badge bg-secondary">موقوفة</span>
                                         @endif
                                     </td>
-                                    <td style="font-size: .8rem;">{{ $b->created_at->format('Y-m-d H:i') }}</td>
+                                    <td style="font-size: .8rem;">{!! dt_span($b->created_at) !!}</td>
                                     <td style="min-width: 120px;">
                                         @if($b->is_active)
                                         <form action="{{ route('broadcasts.deactivate', $b) }}" method="POST" class="d-inline">

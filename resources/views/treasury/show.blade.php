@@ -80,11 +80,11 @@
                         </div>
                         <div class="col-md-4">
                             <strong>تاريخ الإنشاء:</strong>
-                            <p>{{ $treasury->created_at->format('Y-m-d H:i') }}</p>
+                            <p>{!! dt_span($treasury->created_at) !!}</p>
                         </div>
                         <div class="col-md-4">
                             <strong>آخر تحديث:</strong>
-                            <p>{{ $treasury->updated_at->format('Y-m-d H:i') }}</p>
+                            <p>{!! dt_span($treasury->updated_at) !!}</p>
                         </div>
                     </div>
                     @if($treasury->notes)
@@ -127,7 +127,7 @@
                                 @forelse($transactions as $index => $transaction)
                                 <tr>
                                     <td>{{ $transactions->currentPage() * $transactions->perPage() - $transactions->perPage() + $index + 1 }}</td>
-                                    <td>{{ $transaction->created_at->format('Y-m-d H:i') }}</td>
+                                    <td>{!! dt_span($transaction->created_at) !!}</td>
                                     <td>
                                         @php
                                             $typeLabels = [

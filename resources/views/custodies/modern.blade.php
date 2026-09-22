@@ -54,16 +54,16 @@
 
     <!-- Custody Stats -->
     <div class="row g-4 mb-4">
-        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up">
+        <div class="col-12 col-sm-6 col-lg" data-aos="fade-up">
             <div class="stat-card success">
                 <div class="stat-icon">
                     <i class="fas fa-check-circle"></i>
                 </div>
                 <div class="stat-label">العهد المقبولة</div>
-                <div class="stat-number">{{ \App\Models\Custody::where('status', 'accepted')->count() }}</div>
+                <div class="stat-number">{{ \App\Models\Custody::whereIn('status', ['accepted', 'active', 'partially_returned', 'pending_return'])->count() }}</div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+        <div class="col-12 col-sm-6 col-lg" data-aos="fade-up" data-aos-delay="100">
             <div class="stat-card warning">
                 <div class="stat-icon">
                     <i class="fas fa-clock"></i>
@@ -72,7 +72,7 @@
                 <div class="stat-number">{{ \App\Models\Custody::where('status', 'pending')->count() }}</div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+        <div class="col-12 col-sm-6 col-lg" data-aos="fade-up" data-aos-delay="200">
             <div class="stat-card danger">
                 <div class="stat-icon">
                     <i class="fas fa-times-circle"></i>
@@ -81,7 +81,16 @@
                 <div class="stat-number">{{ \App\Models\Custody::where('status', 'rejected')->count() }}</div>
             </div>
         </div>
-        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="300">
+        <div class="col-12 col-sm-6 col-lg" data-aos="fade-up" data-aos-delay="300">
+            <div class="stat-card" style="background: linear-gradient(135deg, #f3f4f6, #e5e7eb);">
+                <div class="stat-icon">
+                    <i class="fas fa-archive"></i>
+                </div>
+                <div class="stat-label">المغلقة / الملغاة</div>
+                <div class="stat-number">{{ \App\Models\Custody::whereIn('status', ['closed', 'cancelled'])->count() }}</div>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg" data-aos="fade-up" data-aos-delay="400">
             <div class="stat-card info">
                 <div class="stat-icon">
                     <i class="fas fa-list"></i>
@@ -135,19 +144,19 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong>' + parseFloat(data).toLocaleString('ar') + ' ج.م</strong>';
+                        return '<strong>' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
                     }
                 },
                 {
                     data: 'spent',
                     render: function(data) {
-                        return '<span style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</span>';
+                        return '<span style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</span>';
                     }
                 },
                 {
                     data: 'remaining',
                     render: function(data) {
-                        return '<span style="color: var(--success);">' + parseFloat(data).toLocaleString('ar') + ' ج.م</span>';
+                        return '<span style="color: var(--success);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</span>';
                     }
                 },
                 {
@@ -161,7 +170,16 @@
                                 </div>`;
                     }
                 },
-                { data: 'status_label' },
+                {
+                    data: 'status_label',
+                    render: function(data, type, row) {
+                        if (type !== 'display') return data;
+                        const detail = row.status_detail
+                            ? '<div><small class="text-muted" style="font-size: 0.75rem;">' + $('<div>').text(row.status_detail).html() + '</small></div>'
+                            : '';
+                        return data + detail;
+                    }
+                },
                 {
                     data: 'actions',
                     orderable: false,

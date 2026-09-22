@@ -11,6 +11,7 @@ use App\Models\TreasuryTransaction;
 use App\Services\TreasuryService;
 use App\Services\ActivityLogService;
 use App\Services\NotificationService;
+use App\Services\StatusLabelService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -782,21 +783,15 @@ class CustodyController extends Controller
             ->addColumn('spent_percent', fn($row) => $row->amount > 0 ? (int)round(($row->spent / $row->amount) * 100) : 0)
             ->addColumn('remaining', fn($row) => (float)$row->getRemainingBalance())
             ->addColumn('status_label', fn($row) => $this->getStatusLabel($row->status))
+            ->addColumn('status_detail', fn($row) => $row->status_detail)
             ->addColumn('actions', fn($row) => view('custodies.actions', compact('row'))->render())
-            ->rawColumns(['status_label', 'actions'])
+            ->rawColumns(['status_label', 'status_detail', 'actions'])
             ->toJson();
     }
 
     private function getStatusLabel($status)
     {
-        $labels = [
-            'pending' => '<span class="badge bg-warning">قيد الانتظار</span>',
-            'accepted' => '<span class="badge bg-success">مقبول</span>',
-            'rejected' => '<span class="badge bg-danger">مرفوض</span>',
-            'partially_returned' => '<span class="badge bg-info">مرتجع جزئياً</span>',
-            'closed' => '<span class="badge bg-secondary">مغلق</span>',
-        ];
-        return $labels[$status] ?? '';
+        return StatusLabelService::label($status, 'custody');
     }
 
     public function agentTransactions()

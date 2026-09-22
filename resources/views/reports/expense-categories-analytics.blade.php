@@ -43,6 +43,9 @@
                         <i class="fas fa-arrow-left"></i> عودة
                     </a>
                 @endif
+                <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
             </div>
         </div>
     </div>
@@ -561,7 +564,7 @@
                             ${approvalInfo}
                         </td>
                         <td class="text-end fw-bold" style="color: #27ae60;">
-                            <small>${parseFloat(expense.amount).toLocaleString('ar')} ج.م</small>
+                            <small>${parseFloat(expense.amount).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</small>
                         </td>
                         <td class="text-center">
                             <a href="/expenses/${expense.id}" class="btn btn-sm btn-outline-primary" title="عرض التفاصيل">
@@ -579,7 +582,7 @@
                 <div class="alert alert-light border border-top-0 mt-3" style="border-top: 3px solid #667eea !important;">
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="fw-bold"><i class="fas fa-sum"></i> الإجمالي:</span>
-                        <span class="fs-5 fw-bold" style="color: #27ae60;">${totalAmount.toLocaleString('ar')} ج.م</span>
+                        <span class="fs-5 fw-bold" style="color: #27ae60;">${totalAmount.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م</span>
                     </div>
                     <small class="text-muted d-block mt-2">عدد المصروفات: ${expenses.length}</small>
                 </div>

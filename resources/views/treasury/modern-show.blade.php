@@ -41,7 +41,7 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><strong>آخر تحديث:</strong></label>
-                            <p>{{ $treasury->updated_at->format('Y-m-d H:i') }}</p>
+                            <p>{!! dt_span($treasury->updated_at) !!}</p>
                         </div>
                     </div>
 
