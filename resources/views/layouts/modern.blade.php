@@ -1277,24 +1277,72 @@
             });
         });
 
-        // Notification Sound - Web Audio API
+        // Notification Sound - Web Audio API (loud two-note ascending chime)
+        let notificationAudioCtx = null;
+        function getNotificationAudioCtx() {
+            if (!notificationAudioCtx) {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return null;
+                notificationAudioCtx = new AC();
+            }
+            return notificationAudioCtx;
+        }
+
+        // Browsers block audio until the user interacts with the page:
+        // resume the context on the first click/keypress so the sound is never silently blocked
+        ['pointerdown', 'keydown'].forEach(function(evt) {
+            document.addEventListener(evt, function() {
+                const ctx = getNotificationAudioCtx();
+                if (ctx && ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+            }, { passive: true });
+        });
+
         function playNotificationSound() {
             try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-                osc.start(ctx.currentTime);
-                osc.stop(ctx.currentTime + 0.3);
+                const ctx = getNotificationAudioCtx();
+                if (!ctx) return;
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+                const t0 = ctx.currentTime;
+                playChimeNote(ctx, t0, 783.99, 0.28);          // G5 - "ding"
+                playChimeNote(ctx, t0 + 0.22, 1174.66, 0.5);   // D6 - higher "dong", total ~0.7s
             } catch(e) {
                 console.log('Notification sound not supported');
             }
+        }
+
+        function playChimeNote(ctx, startTime, freq, duration) {
+            const envelope = ctx.createGain();
+            // fast attack (no click) then smooth exponential decay (no distortion)
+            envelope.gain.setValueAtTime(0.0001, startTime);
+            envelope.gain.exponentialRampToValueAtTime(1.0, startTime + 0.015);
+            envelope.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+            envelope.connect(ctx.destination);
+
+            const carrier = ctx.createOscillator();
+            carrier.type = 'triangle'; // brighter than the old sine
+            carrier.frequency.value = freq;
+            const carrierGain = ctx.createGain();
+            carrierGain.gain.value = 0.72;
+            carrier.connect(carrierGain);
+            carrierGain.connect(envelope);
+
+            // quiet octave shimmer for distinctiveness (keeps the peak below clipping)
+            const shimmer = ctx.createOscillator();
+            shimmer.type = 'sine';
+            shimmer.frequency.value = freq * 2;
+            const shimmerGain = ctx.createGain();
+            shimmerGain.gain.value = 0.18;
+            shimmer.connect(shimmerGain);
+            shimmerGain.connect(envelope);
+
+            carrier.start(startTime);
+            carrier.stop(startTime + duration + 0.02);
+            shimmer.start(startTime);
+            shimmer.stop(startTime + duration + 0.02);
         }
 
         // Notification Polling
