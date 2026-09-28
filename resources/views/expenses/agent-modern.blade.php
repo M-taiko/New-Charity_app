@@ -216,7 +216,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: #e53935;">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
+                        return '<strong style="color: #e53935;">' + formatMoney(data) + '</strong> ج.م';
                     }
                 },
                 {
@@ -280,7 +280,7 @@
                     if (remaining > 0) {
                         select.append(`
                             <option value="${custody.id}" data-balance="${remaining}">
-                                ${reason} (الرصيد: ${remaining.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م)
+                                ${reason} (الرصيد: ${formatMoney(remaining)} ج.م)
                             </option>
                         `);
                     }
@@ -302,7 +302,7 @@
         const balance = selectedOption.data('balance');
 
         if (balance !== undefined) {
-            $('#custody_balance').text(parseFloat(balance).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م');
+            $('#custody_balance').text(formatMoney(balance) + ' ج.م');
             $('#quick_amount').attr('max', balance);
         }
     }

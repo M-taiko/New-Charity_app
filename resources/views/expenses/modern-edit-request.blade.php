@@ -306,7 +306,7 @@
             }
         });
         if (counted > 0 && !isNaN(amount) && amount > 0 && Math.round(total * 100) !== Math.round(amount * 100)) {
-            warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> مجموع البنود (' + total.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م) يختلف عن المبلغ (' + amount.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م)';
+            warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> مجموع البنود (' + formatMoney(total) + ' ج.م) يختلف عن المبلغ (' + formatMoney(amount) + ' ج.م)';
             warningEl.style.display = 'block';
         } else {
             warningEl.style.display = 'none';
@@ -395,7 +395,7 @@
         const info = document.getElementById('default-amount-info');
         const amountInput = document.querySelector('input[name="amount"]');
         if (opt && opt.dataset.default) {
-            info.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${parseFloat(opt.dataset.default).toFixed(2)} ج.م</strong>`;
+            info.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${formatMoney(opt.dataset.default)} ج.م</strong>`;
             if (!amountInput.value) amountInput.value = opt.dataset.default;
         } else {
             info.innerHTML = '';

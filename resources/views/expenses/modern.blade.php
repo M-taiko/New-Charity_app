@@ -356,7 +356,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
+                        return '<strong style="color: var(--danger);">' + formatMoney(data) + ' ج.م</strong>';
                     }
                 },
                 {
@@ -517,13 +517,13 @@
                 {
                     data: 'estimated_cost',
                     render: function(data) {
-                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '-';
+                        return data ? formatMoney(data) + ' ج.م' : '-';
                     }
                 },
                 {
                     data: 'actual_cost',
                     render: function(data) {
-                        return data ? '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>' : '-';
+                        return data ? '<strong style="color: var(--danger);">' + formatMoney(data) + ' ج.م</strong>' : '-';
                     }
                 },
                 {
@@ -572,25 +572,25 @@
                 {
                     data: 'base_salary',
                     render: function(data) {
-                        return parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+                        return formatMoney(data) + ' ج.م';
                     }
                 },
                 {
                     data: 'allowances_total',
                     render: function(data) {
-                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '0.00 ج.م';
+                        return data ? formatMoney(data) + ' ج.م' : '0.00 ج.م';
                     }
                 },
                 {
                     data: 'deductions_total',
                     render: function(data) {
-                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '0.00 ج.م';
+                        return data ? formatMoney(data) + ' ج.م' : '0.00 ج.م';
                     }
                 },
                 {
                     data: 'total_salary',
                     render: function(data) {
-                        return '<strong style="color: var(--success);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
+                        return '<strong style="color: var(--success);">' + formatMoney(data) + ' ج.م</strong>';
                     }
                 },
                 { data: 'period_label', defaultContent: '-' },
@@ -650,7 +650,7 @@
                         const reason = custody.reason || 'عهدة #' + custody.id;
                         select.append(`
                             <option value="${custody.id}" data-balance="${balance}">
-                                ${reason} (الرصيد: ${balance.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م)
+                                ${reason} (الرصيد: ${formatMoney(balance)} ج.م)
                             </option>
                         `);
                     }
@@ -673,7 +673,7 @@
         const balance = selectedOption.data('balance');
 
         if (balance !== undefined) {
-            $('#custody_balance').text(parseFloat(balance).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م');
+            $('#custody_balance').text(formatMoney(balance) + ' ج.م');
             $('#quick_amount').attr('max', balance);
         }
     }

@@ -150,7 +150,7 @@ function updateTreasuryBalance() {
     const select = document.getElementById('from_treasury_id');
     const option = select.options[select.selectedIndex];
     const balance = option.dataset.balance || 0;
-    document.getElementById('fromBalance').textContent = parseFloat(balance).toFixed(2) + ' ج.م';
+    document.getElementById('fromBalance').textContent = formatMoney(balance) + ' ج.م';
     updatePreview();
 }
 
@@ -158,7 +158,7 @@ function updateToTreasuryBalance() {
     const select = document.getElementById('to_treasury_id');
     const option = select.options[select.selectedIndex];
     const balance = option.dataset.balance || 0;
-    document.getElementById('toBalance').textContent = parseFloat(balance).toFixed(2) + ' ج.م';
+    document.getElementById('toBalance').textContent = formatMoney(balance) + ' ج.م';
     updatePreview();
 }
 
@@ -174,8 +174,8 @@ function updatePreview() {
     const fromPreview = fromBalance - amount;
     const toPreview = toBalance + amount;
 
-    document.getElementById('fromPreview').textContent = fromPreview.toFixed(2) + ' ج.م';
-    document.getElementById('toPreview').textContent = toPreview.toFixed(2) + ' ج.م';
+    document.getElementById('fromPreview').textContent = formatMoney(fromPreview) + ' ج.م';
+    document.getElementById('toPreview').textContent = formatMoney(toPreview) + ' ج.م';
 
     // Change color if balance goes negative
     const fromPreviewCard = document.getElementById('fromPreview').closest('.card');
@@ -212,7 +212,7 @@ function validateTransfer() {
     }
 
     if (amount > fromBalance) {
-        alert('الرصيد المتاح غير كافي. الرصيد المتاح: ' + fromBalance.toFixed(2) + ' ج.م');
+        alert('الرصيد المتاح غير كافي. الرصيد المتاح: ' + formatMoney(fromBalance) + ' ج.م');
         return false;
     }
 

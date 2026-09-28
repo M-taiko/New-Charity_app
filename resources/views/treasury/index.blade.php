@@ -303,8 +303,8 @@ function updateDonationTreasuryInfo() {
         const amount = parseFloat(amountInput.value) || 0;
         const newBalance = currentBalance + amount;
 
-        currentBalanceDisplay.textContent = currentBalance.toFixed(2) + ' ج.م';
-        newBalanceDisplay.textContent = newBalance.toFixed(2) + ' ج.م';
+        currentBalanceDisplay.textContent = formatMoney(currentBalance) + ' ج.م';
+        newBalanceDisplay.textContent = formatMoney(newBalance) + ' ج.م';
         infoCard.style.display = 'block';
     } else {
         infoCard.style.display = 'none';

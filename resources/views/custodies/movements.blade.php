@@ -144,7 +144,7 @@
 @push('scripts')
 <script>
     $(document).ready(function() {
-        const money = v => parseFloat(v ?? 0).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+        const money = v => formatMoney(v ?? 0) + ' ج.م';
 
         const table = $('#movementsTable').DataTable({
             processing: true,

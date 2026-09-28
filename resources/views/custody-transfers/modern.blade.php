@@ -266,7 +266,7 @@
                         data: 'amount',
                         name: 'amount',
                         render: function(data) {
-                            return parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+                            return formatMoney(data) + ' ج.م';
                         }
                     },
                     {data: 'status_badge', name: 'status', orderable: false, searchable: false},

@@ -780,11 +780,11 @@ function updatePersonalCustodyBalance() {
         const requiredAmount = {{ $custody->amount }};
 
         if (balance >= requiredAmount) {
-            balanceDiv.textContent = '✓ رصيد الخزينة كافي (' + balance.toFixed(2) + ' ج.م)';
+            balanceDiv.textContent = '✓ رصيد الخزينة كافي (' + formatMoney(balance) + ' ج.م)';
             balanceDiv.style.color = '#4caf50';
             submitBtn.disabled = false;
         } else {
-            balanceDiv.textContent = '✗ رصيد الخزينة غير كافي (متوفر: ' + balance.toFixed(2) + ' ج.م، مطلوب: ' + requiredAmount.toFixed(2) + ' ج.م)';
+            balanceDiv.textContent = '✗ رصيد الخزينة غير كافي (متوفر: ' + formatMoney(balance) + ' ج.م، مطلوب: ' + formatMoney(requiredAmount) + ' ج.م)';
             balanceDiv.style.color = '#dc2626';
             submitBtn.disabled = true;
         }
@@ -830,7 +830,7 @@ function updateDistributionTotal() {
         total += amount;
     });
 
-    totalDisplay.textContent = total.toFixed(2) + ' ج.م';
+    totalDisplay.textContent = formatMoney(total) + ' ج.م';
 
     // Check if total matches required amount
     if (hasError) {
@@ -840,7 +840,7 @@ function updateDistributionTotal() {
         statusDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle"></i> المبالغ صحيحة وجاهزة للموافقة</span>';
         submitBtn.disabled = false;
     } else if (total < requiredAmount) {
-        const remaining = (requiredAmount - total).toFixed(2);
+        const remaining = formatMoney(requiredAmount - total);
         statusDiv.innerHTML = `<span class="text-warning"><i class="fas fa-exclamation-circle"></i> ينقص ${remaining} ج.م</span>`;
         submitBtn.disabled = true;
     } else {
@@ -868,7 +868,7 @@ function validateTreasuryDistribution() {
     });
 
     if (Math.abs(total - requiredAmount) > 0.01) {
-        alert(`مجموع المبالغ المدخلة يجب أن يساوي ${requiredAmount.toFixed(2)} ج.م`);
+        alert(`مجموع المبالغ المدخلة يجب أن يساوي ${formatMoney(requiredAmount)} ج.م`);
         return false;
     }
 
@@ -894,7 +894,7 @@ function updateAcceptTreasuryInfo() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
 
-        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+        balanceDisplay.textContent = formatMoney(balance) + ' ج.م';
         infoCard.style.display = 'block';
 
         if (balance >= requiredAmount) {
@@ -902,7 +902,7 @@ function updateAcceptTreasuryInfo() {
             submitBtn.disabled = false;
         } else {
             const shortfall = requiredAmount - balance;
-            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + shortfall.toFixed(2) + ' ج.م</span>';
+            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + formatMoney(shortfall) + ' ج.م</span>';
             submitBtn.disabled = true;
         }
     } else {
@@ -1180,8 +1180,8 @@ function updateTreasuryBalance{{ $returnRequest->id }}() {
         const treasuryName = option.getAttribute('data-name');
 
         document.getElementById('treasuryName{{ $returnRequest->id }}').textContent = treasuryName;
-        document.getElementById('currentBalance{{ $returnRequest->id }}').textContent = currentBalance.toFixed(2);
-        document.getElementById('newBalance{{ $returnRequest->id }}').textContent = newBalance.toFixed(2);
+        document.getElementById('currentBalance{{ $returnRequest->id }}').textContent = formatMoney(currentBalance);
+        document.getElementById('newBalance{{ $returnRequest->id }}').textContent = formatMoney(newBalance);
         document.getElementById('treasuryInfo{{ $returnRequest->id }}').style.display = 'block';
     } else {
         document.getElementById('treasuryInfo{{ $returnRequest->id }}').style.display = 'none';
@@ -1239,7 +1239,7 @@ function updateAgentAcceptTreasuryInfo() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
 
-        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+        balanceDisplay.textContent = formatMoney(balance) + ' ج.م';
         infoCard.style.display = 'block';
 
         if (balance >= requiredAmount) {
@@ -1247,7 +1247,7 @@ function updateAgentAcceptTreasuryInfo() {
             submitBtn.disabled = false;
         } else {
             const shortfall = requiredAmount - balance;
-            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + shortfall.toFixed(2) + ' ج.م</span>';
+            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + formatMoney(shortfall) + ' ج.م</span>';
             submitBtn.disabled = true;
         }
     } else {
@@ -1268,8 +1268,8 @@ function updateReturnTreasuryBalance() {
         const currentBalance = parseFloat(option.dataset.balance) || 0;
         const newBalance = currentBalance + returnAmount;
 
-        currentBalanceSpan.textContent = currentBalance.toFixed(2);
-        newBalanceSpan.textContent = newBalance.toFixed(2);
+        currentBalanceSpan.textContent = formatMoney(currentBalance);
+        newBalanceSpan.textContent = formatMoney(newBalance);
         infoDiv.style.display = 'block';
     } else {
         infoDiv.style.display = 'none';

@@ -901,7 +901,7 @@ function updateDonationBalance() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
         custodyId.value = select.value;
-        currentBalance.textContent = balance.toFixed(2);
+        currentBalance.textContent = formatMoney(balance);
         balanceInfo.style.display = 'block';
     } else {
         balanceInfo.style.display = 'none';
@@ -919,7 +919,7 @@ function updateRecoveryBalance() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
         custodyId.value = select.value;
-        currentBalance.textContent = balance.toFixed(2);
+        currentBalance.textContent = formatMoney(balance);
         balanceInfo.style.display = 'block';
     } else {
         balanceInfo.style.display = 'none';
@@ -939,9 +939,9 @@ function updateRefundBalance() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
         custodyId.value = select.value;
-        currentBalance.textContent = balance.toFixed(2);
+        currentBalance.textContent = formatMoney(balance);
         amountInput.max = balance.toFixed(2);
-        maxHint.textContent = `الحد الأقصى: ${balance.toFixed(2)} ج.م`;
+        maxHint.textContent = `الحد الأقصى: ${formatMoney(balance)} ج.م`;
         balanceInfo.style.display = 'block';
     } else {
         balanceInfo.style.display = 'none';

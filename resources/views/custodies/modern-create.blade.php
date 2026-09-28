@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (enteredAmount > treasuryBalance) {
                 this.classList.add('is-invalid');
                 amountError.style.display = 'block';
-                amountError.textContent = 'المبلغ المطلوب (' + enteredAmount.toFixed(2) + ' ج.م) يتجاوز الرصيد المتاح في الخزينة (' + treasuryBalance.toFixed(2) + ' ج.م)';
+                amountError.textContent = 'المبلغ المطلوب (' + formatMoney(enteredAmount) + ' ج.م) يتجاوز الرصيد المتاح في الخزينة (' + formatMoney(treasuryBalance) + ' ج.م)';
                 submitBtn.disabled = true;
             } else if (enteredAmount <= 0) {
                 this.classList.add('is-invalid');
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 amountInput.classList.add('is-invalid');
                 amountError.style.display = 'block';
                 if (enteredAmount > treasuryBalance) {
-                    amountError.textContent = 'المبلغ المطلوب (' + enteredAmount.toFixed(2) + ' ج.م) يتجاوز الرصيد المتاح في الخزينة (' + treasuryBalance.toFixed(2) + ' ج.م)';
+                    amountError.textContent = 'المبلغ المطلوب (' + formatMoney(enteredAmount) + ' ج.م) يتجاوز الرصيد المتاح في الخزينة (' + formatMoney(treasuryBalance) + ' ج.م)';
                 } else {
                     amountError.textContent = 'المبلغ يجب أن يكون أكبر من صفر';
                 }

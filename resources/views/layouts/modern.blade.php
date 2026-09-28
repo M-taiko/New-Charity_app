@@ -1277,6 +1277,15 @@
             });
         });
 
+        // Shared money formatter: Western digits, comma thousands separator, exactly two decimals
+        // (matches the server-side number_format($x, 2) output).
+        // Display only: never use it for values sent to the server or for type="number" input values.
+        window.formatMoney = function(value) {
+            const n = parseFloat(value);
+            if (isNaN(n)) return '0.00';
+            return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
         // Notification Sound - Web Audio API (loud two-note ascending chime)
         let notificationAudioCtx = null;
         function getNotificationAudioCtx() {

@@ -1107,9 +1107,9 @@ function updateCustodySummary() {
 
     // Update summary cards
     document.getElementById('totalCustodiesCount').textContent = count;
-    document.getElementById('totalAmount').textContent = totalAmount.toLocaleString('ar-SA', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج.م';
-    document.getElementById('totalSpent').textContent = totalSpent.toLocaleString('ar-SA', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج.م';
-    document.getElementById('totalRemaining').textContent = totalRemaining.toLocaleString('ar-SA', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ج.م';
+    document.getElementById('totalAmount').textContent = formatMoney(totalAmount) + ' ج.م';
+    document.getElementById('totalSpent').textContent = formatMoney(totalSpent) + ' ج.م';
+    document.getElementById('totalRemaining').textContent = formatMoney(totalRemaining) + ' ج.م';
 }
 
 // Prevent event bubbling for expand/collapse - moved inside first DOMContentLoaded
