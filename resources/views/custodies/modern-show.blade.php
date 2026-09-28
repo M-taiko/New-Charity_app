@@ -649,7 +649,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" onsubmit="return @if($custody->treasury_id === null) validateSingleTreasury() @else validateTreasuryDistribution() @endif">
+            <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" novalidate onsubmit="@if($custody->treasury_id === null) var ok = validateSingleTreasury() @else var ok = validateTreasuryDistribution() @endif; if (ok) { if (window.submitModalFormAjax) submitModalFormAjax(this); else return true; } return false;">
                 @csrf
                 <div class="modal-body">
                     @if($custody->treasury_id === null)
@@ -920,7 +920,7 @@ function updateAcceptTreasuryInfo() {
                 <h5 class="modal-title" style="color: white;"><i class="fas fa-times-circle"></i> رفض العهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.reject', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.reject', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-warning">
@@ -952,7 +952,7 @@ function updateAcceptTreasuryInfo() {
                 <h5 class="modal-title" style="color: white;" id="returnModalLabel"><i class="fas fa-undo"></i> طلب رد العهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="returnForm" action="{{ route('custodies.requestReturn') }}" method="POST">
+            <form id="returnForm" action="{{ route('custodies.requestReturn') }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <input type="hidden" name="custody_id" value="{{ $custody->id }}">
                 <div class="modal-body">
@@ -1021,7 +1021,7 @@ function updateAcceptTreasuryInfo() {
                 <h5 class="modal-title" style="color: white;" id="approveReturnModalLabel"><i class="fas fa-check-double"></i> الموافقة على رد العهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('custodies.approveReturn', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.approveReturn', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-warning">
@@ -1103,7 +1103,7 @@ function updateAcceptTreasuryInfo() {
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('custodies.approveReturnWithTreasury', $returnRequest->id) }}" method="POST">
+            <form action="{{ route('custodies.approveReturnWithTreasury', $returnRequest->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info">
@@ -1292,7 +1292,7 @@ document.addEventListener('shown.bs.modal', function (event) {
                 <h5 class="modal-title" style="color: white;">رفض العهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.agent-reject', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.agent-reject', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1358,7 +1358,7 @@ document.addEventListener('shown.bs.modal', function (event) {
                 <h5 class="modal-title" style="color: white;"><i class="fas fa-plus-circle"></i> إضافة تبرع خارجي / استرداد</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info" style="font-size:.9rem;">
@@ -1405,7 +1405,7 @@ document.addEventListener('shown.bs.modal', function (event) {
                 <h5 class="modal-title" style="color: white;"><i class="fas fa-file-invoice-dollar"></i> طلب رد عهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.requestReturn', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.requestReturn', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info" style="font-size:.9rem;">

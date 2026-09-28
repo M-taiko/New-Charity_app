@@ -91,7 +91,7 @@ class ExpenseEditRequestController extends Controller
             return redirect()->route('expenses.show', $expense)
                 ->with('success', 'تم إرسال طلب التعديل للمحاسب والمدير بنجاح');
         } catch (\Exception $e) {
-            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+            return $this->formBackOrJson($request, 'error', 'حدث خطأ: ' . $e->getMessage());
         }
     }
 
@@ -175,7 +175,7 @@ class ExpenseEditRequestController extends Controller
             return redirect()->route('expenses.show', $editRequest->expense_id)
                 ->with('success', 'تمت الموافقة على التعديل بنجاح');
         } catch (\Exception $e) {
-            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+            return $this->formBackOrJson($request, 'error', 'حدث خطأ: ' . $e->getMessage());
         }
     }
 
@@ -187,7 +187,7 @@ class ExpenseEditRequestController extends Controller
         $this->authorize('manage_treasury');
 
         if (!$editRequest->isPending()) {
-            return back()->with('error', 'لا يمكن رفض هذا الطلب - الحالة غير صحيحة');
+            return $this->formBackOrJson($request, 'error', 'لا يمكن رفض هذا الطلب - الحالة غير صحيحة');
         }
 
         $validated = $request->validate([
@@ -197,10 +197,9 @@ class ExpenseEditRequestController extends Controller
         try {
             $this->service->rejectEdit($editRequest, auth()->user(), $validated['rejection_reason']);
 
-            return redirect()->route('expense-edit-requests.index')
-                ->with('success', 'تم رفض طلب التعديل');
+            return $this->formBackOrJson($request, 'success', 'تم رفض طلب التعديل');
         } catch (\Exception $e) {
-            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+            return $this->formBackOrJson($request, 'error', 'حدث خطأ: ' . $e->getMessage());
         }
     }
 }

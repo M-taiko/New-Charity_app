@@ -40,6 +40,7 @@ return [
     'custody_return' => 'إرجاع عهدة',
 
     'company' => 'شركة',
+    'returnings' => 'مردود/مرتجع',
     'external' => 'خارجي',
 
     'cash' => 'نقدي',

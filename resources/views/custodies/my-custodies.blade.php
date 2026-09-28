@@ -586,7 +586,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <p class="text-muted mb-3">
@@ -639,7 +639,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.requestReturn') }}" method="POST">
+            <form action="{{ route('custodies.requestReturn') }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); border: 1px solid rgba(79, 172, 254, 0.3);">
@@ -698,7 +698,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="quickDonationForm" method="POST">
+            <form id="quickDonationForm" method="POST" novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -762,7 +762,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="quickRecoveryForm" method="POST" action="{{ route('custodies.addRecovery') }}">
+            <form id="quickRecoveryForm" method="POST" action="{{ route('custodies.addRecovery') }}" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <p class="text-muted mb-3">
@@ -831,7 +831,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="quickRefundForm" method="POST" action="{{ route('custodies.requestReturn') }}">
+            <form id="quickRefundForm" method="POST" action="{{ route('custodies.requestReturn') }}" novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); border: 1px solid rgba(79, 172, 254, 0.3);">
@@ -959,7 +959,7 @@ document.getElementById('quickDonationForm').addEventListener('submit', function
         return;
     }
     this.action = `/custodies/${custodyId}/external-donation`;
-    this.submit();
+    if (window.submitModalFormAjax) { window.submitModalFormAjax(this); } else { this.submit(); }
 });
 
 // Handle form submission for quick recovery
@@ -977,8 +977,8 @@ document.getElementById('quickRefundForm').addEventListener('submit', function(e
         alert('يرجى اختيار عهدة');
         return;
     }
-    // Form will submit to custodies.requestReturn which handles custody_id
-    this.submit();
+    // Form will submit to custodies.requestReturn which handles custody_id (T25: via AJAX)
+    if (window.submitModalFormAjax) { window.submitModalFormAjax(this); } else { this.submit(); }
 });
 </script>
 

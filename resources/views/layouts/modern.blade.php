@@ -1435,6 +1435,135 @@
             }, 5000);
         });
 
+        // ──── نماذج المودال عبر AJAX (T25) ────
+        // أي <form data-ajax-modal> يُرسل عبر fetch مع Accept: application/json:
+        // عند خطأ التحقق تبقى النافذة مفتوحة والقيم كما هي والرسالة العربية تظهر تحت الحقل
+        window.submitModalFormAjax = function(form) {
+            if (form.dataset.ajaxSubmitting === '1') return;
+            form.dataset.ajaxSubmitting = '1';
+
+            clearModalFormErrors(form);
+            // فحص خفيف للحقول المطلوبة بنص عربي (التحقق الخادمي هو المرجع)
+            var firstBad = markRequiredClientSide(form);
+            if (firstBad) {
+                form.dataset.ajaxSubmitting = '0';
+                firstBad.focus();
+                return;
+            }
+
+            var submitBtn = form.querySelector('button[type="submit"], button:not([type])');
+            var btnHtml = submitBtn ? submitBtn.innerHTML : null;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> جارٍ الحفظ...';
+            }
+
+            fetch(form.action || window.location.href, {
+                method: (form.method || 'POST').toUpperCase(),
+                body: new FormData(form),
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function(res) {
+                return res.json().catch(function() { return {}; }).then(function(json) {
+                    return { ok: res.ok, status: res.status, json: json };
+                });
+            }).then(function(r) {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = btnHtml; }
+                form.dataset.ajaxSubmitting = '0';
+
+                if (r.ok && r.json.success !== false) {
+                    var modalEl = form.closest('.modal');
+                    if (modalEl && window.bootstrap) {
+                        var inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                    }
+                    try { sessionStorage.setItem('t25Flash', r.json.message || 'تم الحفظ بنجاح'); } catch (e) {}
+                    window.location.reload();
+                    return;
+                }
+
+                if (r.status === 422 && r.json.errors) {
+                    var first = null;
+                    Object.keys(r.json.errors).forEach(function(name) {
+                        var field = form.querySelector('[name="' + name + '"]');
+                        if (!field) return;
+                        field.classList.add('is-invalid');
+                        var msg = document.createElement('div');
+                        msg.className = 'invalid-feedback ajax-err d-block';
+                        msg.textContent = r.json.errors[name][0];
+                        field.parentNode.appendChild(msg);
+                        if (!first) first = field;
+                    });
+                    if (first) first.focus();
+                    if (r.json.message) showModalFormAlert(form, r.json.message, 'warning');
+                } else {
+                    showModalFormAlert(form, r.json.message || 'حدث خطأ غير متوقع، حاول مرة أخرى', 'danger');
+                }
+            }).catch(function() {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = btnHtml; }
+                form.dataset.ajaxSubmitting = '0';
+                showModalFormAlert(form, 'تعذر الاتصال بالخادم، تحقق من الاتصال وحاول مرة أخرى', 'danger');
+            });
+        };
+
+        function clearModalFormErrors(form) {
+            form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+            form.querySelectorAll('.invalid-feedback.ajax-err').forEach(function(el) { el.remove(); });
+            var alertEl = form.querySelector('.ajax-modal-alert');
+            if (alertEl) alertEl.remove();
+        }
+
+        function markRequiredClientSide(form) {
+            var first = null;
+            form.querySelectorAll('[required]').forEach(function(el) {
+                if (el.type === 'radio' || el.type === 'checkbox') return;
+                if (!(el.value || '').trim()) {
+                    el.classList.add('is-invalid');
+                    var msg = document.createElement('div');
+                    msg.className = 'invalid-feedback ajax-err d-block';
+                    msg.textContent = 'هذا الحقل مطلوب';
+                    el.parentNode.appendChild(msg);
+                    if (!first) first = el;
+                }
+            });
+            return first;
+        }
+
+        function showModalFormAlert(form, message, type) {
+            var body = form.querySelector('.modal-body');
+            var alertEl = document.createElement('div');
+            alertEl.className = 'alert alert-' + (type || 'danger') + ' ajax-modal-alert';
+            alertEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ';
+            alertEl.appendChild(document.createTextNode(message));
+            if (body) body.insertBefore(alertEl, body.firstChild);
+            else form.insertBefore(alertEl, form.firstChild);
+        }
+
+        // التقاط إرسال أي نموذج يحمل data-ajax-modal (مرحلة الالتقاط قبل أي onsubmit مضمّن)
+        document.addEventListener('submit', function(e) {
+            var f = e.target;
+            if (f && f.matches && f.matches('form[data-ajax-modal]')) {
+                e.preventDefault();
+                window.submitModalFormAjax(f);
+            }
+        }, true);
+
+        // عرض رسالة النجاح بعد إعادة تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                var msg = sessionStorage.getItem('t25Flash');
+                if (msg) {
+                    sessionStorage.removeItem('t25Flash');
+                    var alertEl = document.createElement('div');
+                    alertEl.className = 'alert alert-success alert-dismissible fade show';
+                    alertEl.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:2000;min-width:280px;text-align:center';
+                    alertEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + msg +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                    document.body.appendChild(alertEl);
+                    setTimeout(function() { alertEl.remove(); }, 5000);
+                }
+            } catch (e) {}
+        });
+
         // ──── تنسيق التواريخ بالتوقيت المحلي للمستخدم (T20) ────
         // يعرض ISO UTC القادم من الخادم بصيغة YYYY-MM-DD hh:mm AM/PM حسب توقيت المتصفح
         window.formatLocalDateTime = function(iso, mode) {

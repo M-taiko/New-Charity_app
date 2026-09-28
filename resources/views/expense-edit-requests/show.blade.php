@@ -191,7 +191,7 @@
                 <h5 class="modal-title">رفض طلب التعديل</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('expense-edit-requests.reject', $editRequest) }}" method="POST">
+            <form action="{{ route('expense-edit-requests.reject', $editRequest) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="form-group">

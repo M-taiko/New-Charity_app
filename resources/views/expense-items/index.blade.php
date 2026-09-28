@@ -185,7 +185,7 @@
                 <h5 class="modal-title" id="modalTitle"><i class="fas fa-sitemap"></i> إضافة تصنيف</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('expense-categories.store') }}" method="POST">
+            <form action="{{ route('expense-categories.store') }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <input type="hidden" name="parent_id" id="modalParentId" value="">
                 <div class="modal-body">
@@ -220,7 +220,7 @@
                 <h5 class="modal-title"><i class="fas fa-tag"></i> إضافة بند (توجيه نهائي)</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('expense-items.store') }}" method="POST">
+            <form action="{{ route('expense-items.store') }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <input type="hidden" name="expense_category_id" id="itemCategoryId">
                 <div class="modal-body">

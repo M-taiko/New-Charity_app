@@ -317,7 +317,7 @@
                 <h5 class="modal-title" style="color: white;"><i class="fas fa-times-circle"></i> رفض الطلب</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custody-return-requests.reject', $request->id) }}" method="POST">
+            <form action="{{ route('custody-return-requests.reject', $request->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-warning">
