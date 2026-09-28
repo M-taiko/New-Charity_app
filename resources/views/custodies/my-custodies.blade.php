@@ -13,9 +13,18 @@
                         متابعة جميع عهداتك وحركاتها
                     </p>
                 </div>
-                <a href="{{ route('custodies.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
-                </a>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    {{-- T28: استلام خارجي ذاتي — متاح لكل مستخدم --}}
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#externalReceiptModal"
+                            style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                        <i class="fas fa-hand-holding-heart"></i> استلام خارجي
+                    </button>
+                    @role('مندوب')
+                    <a href="{{ route('custodies.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
+                    </a>
+                    @endrole
+                </div>
             </div>
         </div>
     </div>
@@ -140,6 +149,7 @@
                         <i class="fas fa-list"></i> جميع العهدات
                     </h5>
                     @if($myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])->isNotEmpty())
+                    @role('مندوب')
                     <div class="btn-group" role="group" style="gap: 0.5rem;">
                         <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickDonationModal" title="إضافة تبرع خارجي سريع">
                             <i class="fas fa-gift"></i> تبرع خارجي
@@ -151,6 +161,7 @@
                             <i class="fas fa-undo"></i> رد للخزينة
                         </button>
                     </div>
+                    @endrole
                     @endif
                 </div>
                 <div class="card-body">
@@ -696,6 +707,53 @@
     </div>
 </div>
 @endforeach
+
+{{-- T28: External Receipt Modal (self-service, any role; AJAX pattern من T25) --}}
+<div class="modal fade" id="externalReceiptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                <h5 class="modal-title" style="color: white;">
+                    <i class="fas fa-hand-holding-heart"></i> استلام خارجي
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('external-receipt.store') }}" method="POST" data-ajax-modal novalidate>
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(69, 160, 73, 0.1)); border: 1px solid rgba(76, 175, 80, 0.3);">
+                        <i class="fas fa-info-circle"></i>
+                        سجّل مالاً استلمته مباشرة من جهة خارجية؛ يُضاف لك فوراً كعهدة نشطة دون موافقة، ويُخبر المدير والمحاسب.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>المبلغ (ج.م) <span class="text-danger">*</span></strong></label>
+                        <input type="number" name="amount" class="form-control" step="0.01" min="0.01"
+                               placeholder="أدخل المبلغ" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اسم الجهة الخارجية <span class="text-danger">*</span></strong></label>
+                        <input type="text" name="external_source" class="form-control"
+                               placeholder="مثال: جهة الأوقاف، متبرع خاص، إلخ" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الملاحظات/الوصف <span class="text-danger">*</span></strong></label>
+                        <textarea name="description" class="form-control" rows="3"
+                                  placeholder="أضف أي ملاحظات عن الاستلام..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> تسجيل الاستلام
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Quick External Donation Modal (Select Custody) -->
 <div class="modal fade" id="quickDonationModal" tabindex="-1">

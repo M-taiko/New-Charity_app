@@ -1027,6 +1027,62 @@ class TreasuryService
         return $total;
     }
 
+    /**
+     * T28: استلام خارجي ذاتي — أي مستخدم يسجل مالاً استلمه من جهة خارجية
+     * تُسجَّل حركة تبرع خارجي في أقدم خزينة ثم تُصرف كعهدة فورية للمستخدم من نفس الخزينة،
+     * فيكون الأثر الصافي على رصيد الخزينة صفراً ويحمل المستخدم النقد كعهدة.
+     * بلا موافقة وبلا حد أقصى للمبلغ (قرار المالك).
+     */
+    public function recordExternalReceipt($userId, $amount, $externalParty, $description)
+    {
+        return DB::transaction(function () use ($userId, $amount, $externalParty, $description) {
+            $user = User::findOrFail($userId);
+            $amount = round((float) $amount, 2);
+
+            // أقدم خزينة أولاً (اليوم توجد خزينة واحدة؛ القرار لمستقبل تعدد الخزائن)
+            $treasury = Treasury::orderBy('id')->lockForUpdate()->first();
+            if (!$treasury) {
+                throw new \Exception('لا توجد خزائن مسجلة في النظام. يرجى الاتصال بالإدارة.');
+            }
+
+            // نفس حركة التبرع التي تنشئها شاشة الخزينة (إعادة استخدام addDonation كما هي)
+            $this->addDonation($treasury->id, $amount, 'external: ' . $externalParty, $description, $userId);
+
+            // عهدة فورية للمستخدم: مقبولة ومستلمة (بصيغة صرف العهدة الموجودة)
+            $custody = Custody::create([
+                'treasury_id' => $treasury->id,
+                'agent_id' => $userId,
+                'accountant_id' => $userId, // سجّلها المستخدم بنفسه
+                'initiated_by' => 'agent',
+                'amount' => $amount,
+                'spent' => 0,
+                'transferred_out' => 0,
+                'transferred_in' => 0,
+                'returned' => 0,
+                'pending_return' => 0,
+                'pending_transfer_out' => 0,
+                'status' => 'active',
+                'notes' => 'استلام خارجي: ' . $externalParty,
+                'accepted_at' => now(),
+                'received_at' => now(),
+            ]);
+
+            // خصم المبلغ من نفس الخزينة كصرف عهدة — الأثر الصافي على الرصيد صفر
+            $treasury->decrement('balance', $amount);
+            TreasuryTransaction::create([
+                'treasury_id' => $treasury->id,
+                'type' => 'custody_out',
+                'amount' => $amount,
+                'description' => "صرف عهدة استلام خارجي للمستخدم {$user->name} (الجهة: {$externalParty})",
+                'user_id' => $userId,
+                'custody_id' => $custody->id,
+                'transaction_date' => now(),
+            ]);
+
+            return $custody;
+        });
+    }
+
     public function recordDirectExpenseFromTreasury($treasuryId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null)
     {
         return DB::transaction(function () use ($treasuryId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type, $lineItems) {

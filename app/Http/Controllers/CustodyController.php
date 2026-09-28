@@ -871,12 +871,8 @@ class CustodyController extends Controller
     {
         $user = auth()->user();
 
-        // Check if user is agent (مندوب)
-        if (!$user->hasRole('مندوب')) {
-            abort(403, 'Unauthorized');
-        }
-
-        // Get agent's own custodies with related data
+        // T28: متاحة لكل مستخدم مسجل (كانت حكراً على المندوبين) — الاستلام الخارجي الذاتي يمنح الجميع عهدات
+        // Get the user's own custodies with related data
         $myCustodies = Custody::where('agent_id', $user->id)
             ->with(['treasury', 'accountant', 'transactions', 'expenses'])
             ->orderBy('created_at', 'desc')
@@ -1006,6 +1002,44 @@ class CustodyController extends Controller
             ->values();
 
         return view('custodies.all-custodies', compact('custodies', 'stats', 'agents', 'agentsSummary'));
+    }
+
+    /**
+     * T28: استلام خارجي ذاتي — متاح لكل مستخدم مسجل أياً كان دوره، بلا موافقة وبلا حد أقصى
+     */
+    public function storeExternalReceipt(Request $request)
+    {
+        // نفس قواعد ورسائل إضافة التبرع في الخزينة (بلا selector خزينة وبلا حد أقصى للمبلغ)
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'external_source' => 'required|string|max:255',
+            'description' => 'required|string|max:500',
+        ]);
+
+        try {
+            $custody = $this->service->recordExternalReceipt(
+                auth()->id(),
+                $validated['amount'],
+                $validated['external_source'],
+                $validated['description']
+            );
+
+            ActivityLogService::created(
+                $custody,
+                'استلام خارجي بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من الجهة: ' . $validated['external_source']
+            );
+
+            // إشعار المديرين والمحاسبين مرة واحدة لكل مستخدم (طريقة T21)
+            $user = auth()->user();
+            $notificationMessage = 'المستخدم: ' . $user->name . ' - سجل استلاماً خارجياً بمبلغ '
+                . number_format($validated['amount'], 2) . ' ج.م من الجهة: ' . $validated['external_source']
+                . ' - الوصف: ' . $validated['description'];
+            NotificationService::notifyByRoles(['مدير', 'محاسب'], 'استلام خارجي جديد', $notificationMessage, 'info', $custody->id, 'custody');
+
+            return $this->formBackOrJson($request, 'success', 'تم تسجيل الاستلام الخارجي وإضافة عهدة جديدة لك بنجاح');
+        } catch (\Exception $e) {
+            return $this->formBackOrJson($request, 'error', 'حدث خطأ أثناء تسجيل الاستلام الخارجي: ' . $e->getMessage(), true);
+        }
     }
 
     /**
