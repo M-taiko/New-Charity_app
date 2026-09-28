@@ -443,11 +443,6 @@ class CustodyController extends Controller
 
     public function requestReturnTreasury(Request $request)
     {
-        // Agent requesting to return funds to treasury
-        if (!auth()->user()->hasRole('مندوب')) {
-            return $this->formBackOrJson($request, 'error', 'غير مصرح لك بتقديم طلب رد');
-        }
-
         $request->validate([
             'custody_id' => 'required|exists:custodies,id',
             'amount' => 'required|numeric|min:0.01',
@@ -455,6 +450,16 @@ class CustodyController extends Controller
         ]);
 
         $custody = Custody::findOrFail($request->custody_id);
+
+        // T28 rev2: المندوب كالمعتاد، وأيضاً أي مالك للعهدة المذكورة (غير المشرف)
+        // — باحث أو غيره استلم عهدة عبر الاستلام الخارجي يردها للخزينة من هنا
+        $user = auth()->user();
+        if (!$user->hasRole('مندوب')) {
+            $isOwnerNonSupervisor = !$user->hasRole('مشرف') && $custody->agent_id === $user->id;
+            if (!$isOwnerNonSupervisor) {
+                return $this->formBackOrJson($request, 'error', 'غير مصرح لك بتقديم طلب رد');
+            }
+        }
 
         if (auth()->id() !== $custody->agent_id) {
             return $this->formBackOrJson($request, 'error', 'غير مصرح لك برد من هذه العهدة');
@@ -1009,6 +1014,11 @@ class CustodyController extends Controller
      */
     public function storeExternalReceipt(Request $request)
     {
+        // T28 rev2: المشرف دور اطلاعي فقط — لا يستلم خارجياً ولا تحدث له عهدة
+        if (auth()->user()->hasRole('مشرف')) {
+            return $this->formBackOrJson($request, 'error', 'الاستلام الخارجي غير متاح لدور المشرف. المشرف دور للاطلاع فقط دون استلام أو صرف أموال');
+        }
+
         // نفس قواعد ورسائل إضافة التبرع في الخزينة (بلا selector خزينة وبلا حد أقصى للمبلغ)
         $validated = $request->validate([
             'amount' => 'required|numeric|min:0.01',

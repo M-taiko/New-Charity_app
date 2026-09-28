@@ -1028,10 +1028,10 @@ class TreasuryService
     }
 
     /**
-     * T28: استلام خارجي ذاتي — أي مستخدم يسجل مالاً استلمه من جهة خارجية
-     * تُسجَّل حركة تبرع خارجي في أقدم خزينة ثم تُصرف كعهدة فورية للمستخدم من نفس الخزينة،
-     * فيكون الأثر الصافي على رصيد الخزينة صفراً ويحمل المستخدم النقد كعهدة.
-     * بلا موافقة وبلا حد أقصى للمبلغ (قرار المالك).
+     * T28 (rev2): استلام خارجي ذاتي — أي مستخدم (عدا المشرف) يسجل مالاً استلمه من جهة خارجية
+     * المبلغ يضاف مباشرة إلى عهدته الخاصة (نفس آلية addExternalDonationToCustody):
+     * حركة donatio واحدة مرتبطة بالعهدة، وبلا أي أثر على رصيد الخزينة وقت الاستلام.
+     * الخزينة تُختار (الأقدم) فقط لربط حركة الدفتر بها. بلا موافقة وبلا حد أقصى (قرار المالك).
      */
     public function recordExternalReceipt($userId, $amount, $externalParty, $description)
     {
@@ -1039,16 +1039,13 @@ class TreasuryService
             $user = User::findOrFail($userId);
             $amount = round((float) $amount, 2);
 
-            // أقدم خزينة أولاً (اليوم توجد خزينة واحدة؛ القرار لمستقبل تعدد الخزائن)
+            // أقدم خزينة أولاً — تُستخدم فقط لربط حركة الدفتر (قرار المالك لمستقبل تعدد الخزائن)
             $treasury = Treasury::orderBy('id')->lockForUpdate()->first();
             if (!$treasury) {
                 throw new \Exception('لا توجد خزائن مسجلة في النظام. يرجى الاتصال بالإدارة.');
             }
 
-            // نفس حركة التبرع التي تنشئها شاشة الخزينة (إعادة استخدام addDonation كما هي)
-            $this->addDonation($treasury->id, $amount, 'external: ' . $externalParty, $description, $userId);
-
-            // عهدة فورية للمستخدم: مقبولة ومستلمة (بصيغة صرف العهدة الموجودة)
+            // عهدة فورية للمستخدم: مقبولة ومستلمة
             $custody = Custody::create([
                 'treasury_id' => $treasury->id,
                 'agent_id' => $userId,
@@ -1067,13 +1064,13 @@ class TreasuryService
                 'received_at' => now(),
             ]);
 
-            // خصم المبلغ من نفس الخزينة كصرف عهدة — الأثر الصافي على الرصيد صفر
-            $treasury->decrement('balance', $amount);
+            // حركة دفتر واحدة فقط بنفس شكل addExternalDonationToCustody:
+            // نوع donation مرتبطة بالعهدة، وبلا أي تغيير على رصيد الخزينة
             TreasuryTransaction::create([
                 'treasury_id' => $treasury->id,
-                'type' => 'custody_out',
+                'type' => 'donation',
                 'amount' => $amount,
-                'description' => "صرف عهدة استلام خارجي للمستخدم {$user->name} (الجهة: {$externalParty})",
+                'description' => "استلام خارجي مباشر على عهدة #{$custody->id} من الجهة: {$externalParty} - {$description}",
                 'user_id' => $userId,
                 'custody_id' => $custody->id,
                 'transaction_date' => now(),

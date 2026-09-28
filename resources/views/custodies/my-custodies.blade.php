@@ -14,11 +14,14 @@
                     </p>
                 </div>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                    {{-- T28: استلام خارجي ذاتي — متاح لكل مستخدم --}}
-                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#externalReceiptModal"
-                            style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
-                        <i class="fas fa-hand-holding-heart"></i> استلام خارجي
-                    </button>
+                    {{-- T28 rev2: زر الاستلام الخارجي لمن لا يملك أي عهدة فقط (وغير المشرف)؛
+                         بعد أول استلام يختفي الزر ويستخدم "تبرع خارجي" على عهدته لأي إضافات لاحقة --}}
+                    @if($myCustodies->isEmpty() && !auth()->user()->hasRole('مشرف'))
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#externalReceiptModal"
+                                style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                            <i class="fas fa-hand-holding-heart"></i> استلام خارجي
+                        </button>
+                    @endif
                     @role('مندوب')
                     <a href="{{ route('custodies.create') }}" class="btn btn-primary">
                         <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
@@ -148,20 +151,21 @@
                     <h5 style="margin: 0; color: white;">
                         <i class="fas fa-list"></i> جميع العهدات
                     </h5>
-                    @if($myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])->isNotEmpty())
-                    @role('مندوب')
+                    @if($myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])->isNotEmpty() && !auth()->user()->hasRole('مشرف'))
+                    {{-- T28 rev2: تبرع خارجي ورد للخزينة لأي مالك عهدة (غير المشرف)؛ الاسترداد للمندوب فقط --}}
                     <div class="btn-group" role="group" style="gap: 0.5rem;">
                         <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickDonationModal" title="إضافة تبرع خارجي سريع">
                             <i class="fas fa-gift"></i> تبرع خارجي
                         </button>
+                        @role('مندوب')
                         <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickRecoveryModal" title="استرجاع أموال من المشتريات">
                             <i class="fas fa-arrow-left"></i> استرداد
                         </button>
+                        @endrole
                         <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickRefundModal" title="استرجاع أموال للخزينة">
                             <i class="fas fa-undo"></i> رد للخزينة
                         </button>
                     </div>
-                    @endrole
                     @endif
                 </div>
                 <div class="card-body">
@@ -708,7 +712,8 @@
 </div>
 @endforeach
 
-{{-- T28: External Receipt Modal (self-service, any role; AJAX pattern من T25) --}}
+{{-- T28 rev2: External Receipt Modal — يُعرض فقط لمن لا يملك أي عهدة وغير المشرف (الزر أعلاه بنفس الشرط) --}}
+@if($myCustodies->isEmpty() && !auth()->user()->hasRole('مشرف'))
 <div class="modal fade" id="externalReceiptModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -754,6 +759,7 @@
         </div>
     </div>
 </div>
+@endif
 
 <!-- Quick External Donation Modal (Select Custody) -->
 <div class="modal fade" id="quickDonationModal" tabindex="-1">

@@ -21,6 +21,39 @@ class ExpenseController extends Controller
 {
     public function __construct(private TreasuryService $service) {}
 
+    /**
+     * T28 rev2: صرف من عهدة بلا صلاحية spend_money
+     * مسموح أيضاً لمن يملك عهدة واحدة على الأقل بحالة قابلة للصرف (غير المشرف) —
+     * مثل الباحث الذي استلم عهدة عبر الاستلام الخارجي؛ يصرف من عهدته ويردها كالمندوب
+     */
+    private function authorizeSpending(): void
+    {
+        $user = auth()->user();
+        if ($user->can('spend_money')) {
+            return;
+        }
+
+        $ownsSpendableCustody = !$user->hasRole('مشرف')
+            && Custody::where('agent_id', $user->id)
+                ->whereIn('status', ['accepted', 'active', 'partially_returned'])
+                ->exists();
+
+        if ($ownsSpendableCustody) {
+            return;
+        }
+
+        $this->authorize('spend_money');
+    }
+
+    /**
+     * T28 rev2: هل نطاق المستخدم مقتصر على عهداته فقط؟
+     * (المندوب كالمعتاد، وأيضاً من لا يملك spend_money ودخل عبر امتلاكه عهدة)
+     */
+    private function restrictedToOwnCustodies($user): bool
+    {
+        return $user->hasRole('مندوب') || !$user->can('spend_money');
+    }
+
     public function index()
     {
         $user = auth()->user();
@@ -36,12 +69,12 @@ class ExpenseController extends Controller
 
     public function create()
     {
-        $this->authorize('spend_money');
+        $this->authorizeSpending();
 
         // Get custodies based on user role
         $user = auth()->user();
-        if ($user->hasRole('مندوب')) {
-            // Agents see only their own custodies
+        if ($this->restrictedToOwnCustodies($user)) {
+            // المندوب، ومالك العهدة عبر الاستلام الخارجي (T28 rev2): عهداته الخاصة فقط
             $custodies = Custody::where('agent_id', $user->id)
                 ->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
                 ->get();
@@ -73,7 +106,7 @@ class ExpenseController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('spend_money');
+        $this->authorizeSpending();
 
         try {
             // Determine source (default to custody)
@@ -147,8 +180,8 @@ class ExpenseController extends Controller
 
                 $custody = Custody::findOrFail($request->input('custody_id'));
 
-                // Agents can only spend from their own custodies
-                if (auth()->user()->hasRole('مندوب') && $custody->agent_id !== auth()->id()) {
+                // المندوب ومالك العهدة عبر الاستلام الخارجي (T28 rev2) يصرفان من عهداتهما فقط
+                if ($this->restrictedToOwnCustodies(auth()->user()) && $custody->agent_id !== auth()->id()) {
                     return back()->withInput()->with('error', 'غير مصرح لك بالصرف من هذه العهدة');
                 }
                 // Managers and accountants can spend from any custody
@@ -655,7 +688,7 @@ class ExpenseController extends Controller
 
     public function quickStore(Request $request)
     {
-        $this->authorize('spend_money');
+        $this->authorizeSpending();
 
         try {
             $validated = $request->validate([
@@ -671,8 +704,8 @@ class ExpenseController extends Controller
             $custody = Custody::findOrFail($validated['custody_id']);
             $user = auth()->user();
 
-            // Agents can only spend from their own custodies
-            if ($user->hasRole('مندوب') && $custody->agent_id !== $user->id) {
+            // المندوب ومالك العهدة عبر الاستلام الخارجي (T28 rev2) يصرفان من عهداتهما فقط
+            if ($this->restrictedToOwnCustodies($user) && $custody->agent_id !== $user->id) {
                 return response()->json(['success' => false, 'message' => 'غير مصرح لك بصرف من هذه العهدة'], 403);
             }
             // Managers and accountants can spend from any custody
