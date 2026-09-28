@@ -677,8 +677,8 @@ class CustodyController extends Controller
                     'transaction_date' => now(),
                 ]);
 
-                // Update custody status if fully returned
-                if ($custody->returned >= $custody->amount) {
+                // Update custody status if fully returned (ولا يوجد تحويل معلق مجمّد — T26)
+                if ($custody->returned >= $custody->amount && (float) $custody->pending_transfer_out <= 0) {
                     $custody->update(['status' => 'closed']);
 
                     TreasuryTransaction::create([

@@ -332,6 +332,11 @@
                             <div class="mb-3" style="padding-bottom: 1rem; border-bottom: 1px solid rgba(245, 124, 0, 0.2);">
                                 <p style="margin: 0; color: #666; font-size: 0.8rem;">المبلغ المتبقي</p>
                                 <h4 style="margin: 0.5rem 0 0; color: #43a047; font-weight: 700;">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</h4>
+                                @if((float) $custody->pending_transfer_out > 0)
+                                    <small class="d-block" style="color: #999; margin-top: .25rem;" title="مبلغ محجوز لتحويل عهدة معلق ولم يعد متاحاً للصرف حتى البت في التحويل">
+                                        <i class="fas fa-snowflake"></i> مجمّد لتحويل معلق: {{ number_format($custody->pending_transfer_out, 2) }} ج.م
+                                    </small>
+                                @endif
                             </div>
 
                             <!-- Spending Percentage -->

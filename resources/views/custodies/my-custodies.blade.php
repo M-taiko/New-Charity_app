@@ -197,6 +197,12 @@
                                             <span class="badge bg-primary">
                                                 {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
                                             </span>
+                                            @if((float) $custody->pending_transfer_out > 0)
+                                                <small class="d-block text-muted" style="font-size: .7rem;"
+                                                       title="مبلغ محجوز لتحويل عهدة معلق ولم يعد متاحاً للصرف حتى البت في التحويل">
+                                                    مجمّد لتحويل معلق: {{ number_format($custody->pending_transfer_out, 2) }} ج.م
+                                                </small>
+                                            @endif
                                         </td>
                                         <td>
                                             @switch($custody->status)
@@ -423,6 +429,9 @@
                         <div class="text-center p-3 border rounded">
                             <div class="text-muted small">المتبقي</div>
                             <h5 class="mb-0 text-primary">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</h5>
+                            @if((float) $custody->pending_transfer_out > 0)
+                                <small class="d-block text-muted" style="font-size: .72rem;">مجمّد لتحويل معلق: {{ number_format($custody->pending_transfer_out, 2) }} ج.م</small>
+                            @endif
                         </div>
                     </div>
                 </div>

@@ -23,6 +23,7 @@ class Custody extends Model
         'transferred_in',
         'returned',
         'pending_return',
+        'pending_transfer_out',
         'status',
         'notes',
         'accepted_at',
@@ -37,6 +38,7 @@ class Custody extends Model
         'transferred_in' => 'decimal:2',
         'returned' => 'decimal:2',
         'pending_return' => 'decimal:2',
+        'pending_transfer_out' => 'decimal:2',
         'accepted_at' => 'datetime',
         'received_at' => 'datetime',
         'returned_at' => 'datetime',
@@ -69,13 +71,14 @@ class Custody extends Model
 
     public function getRemainingBalance()
     {
-        // الرصيد = المبلغ الأصلي + المبالغ المستقبلة - المصروفات - المحولات - المرتجعات - المعلقة
+        // الرصيد = المبلغ الأصلي + المبالغ المستقبلة - المصروفات - المحولات - المرتجعات - المعلقة - المجمدة لتحويلات معلقة (T26)
         return $this->amount
             + $this->transferred_in
             - $this->spent
             - $this->transferred_out
             - $this->returned
-            - $this->pending_return;
+            - $this->pending_return
+            - $this->pending_transfer_out;
     }
 
     public function getTotalSpent()

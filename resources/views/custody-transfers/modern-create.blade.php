@@ -53,8 +53,13 @@
                             <select name="custody_id" class="form-select @error('custody_id') is-invalid @enderror" required onchange="updateCustodyInfo()">
                                 <option value="">-- اختر عهدة --</option>
                                 @foreach ($custodies as $custody)
-                                    <option value="{{ $custody->id }}" data-remaining="{{ $custody->remaining_balance }}">
-                                        عهدة #{{ $custody->id }} - الرصيد المتبقي: {{ $custody->remaining_balance }} ج.م
+                                    <option value="{{ $custody->id }}"
+                                            data-remaining="{{ $custody->remaining_balance }}"
+                                            data-frozen="{{ (float) $custody->pending_transfer_out }}">
+                                        عهدة #{{ $custody->id }} - الرصيد المتاح: {{ $custody->remaining_balance }} ج.م
+                                        @if((float) $custody->pending_transfer_out > 0)
+                                            (منها مجمّد لتحويل معلق: {{ number_format($custody->pending_transfer_out, 2) }} ج.م)
+                                        @endif
                                     </option>
                                 @endforeach
                             </select>
@@ -166,7 +171,14 @@
 
         if (selectedOption && selectedOption.value) {
             const remaining = selectedOption.getAttribute('data-remaining');
-            remainingInfo.innerHTML = `<i class="fas fa-info-circle"></i> الرصيد المتبقي: <strong>${remaining} ج.م</strong>`;
+            const frozen = parseFloat(selectedOption.getAttribute('data-frozen') || '0');
+            let html = `<i class="fas fa-info-circle"></i> الرصيد المتاح: <strong>${remaining} ج.م</strong>`;
+            // T26: عرض المبلغ المجمد لتحويل معلق حتى يفهم المندوب لماذا رصيده المتاح أقل
+            if (frozen > 0) {
+                html += `<br><i class="fas fa-snowflake"></i> مجمّد لتحويل معلق: <strong>${formatMoney(frozen)} ج.م</strong> (غير متاح للصرف أو تحويل جديد حتى البت في التحويل)`;
+            }
+            html += `<br>الحد الأقصى للتحويل: <strong>${remaining} ج.م</strong>`;
+            remainingInfo.innerHTML = html;
         } else {
             remainingInfo.innerHTML = `<i class="fas fa-info-circle"></i> اختر عهدة أولاً`;
         }

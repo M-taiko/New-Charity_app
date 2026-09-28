@@ -362,7 +362,7 @@ class ExpenseController extends Controller
                     }
 
                     // إغلاق العهدة إذا وصل رصيدها للصفر (لا يتم فتح عهدة مغلقة تلقائياً)
-                    if ($custody->fresh()->getRemainingBalance() <= 0 && $custody->status !== 'closed') {
+                    if ($custody->fresh()->getRemainingBalance() <= 0 && (float) $custody->fresh()->pending_transfer_out <= 0 && $custody->status !== 'closed') {
                         $custody->update(['status' => 'closed']);
                         TreasuryTransaction::create([
                             'treasury_id' => $custody->treasury_id,
