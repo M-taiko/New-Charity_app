@@ -182,6 +182,13 @@
                                     <strong>{{ basename($expense->attachment) }}</strong>
                                     <small class="text-muted d-block">رفع ملف جديد سيستبدل المرفق الحالي</small>
                                 </div>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="remove_attachment" id="removeAttachmentCheck" value="1">
+                                    <label class="form-check-label" for="removeAttachmentCheck">
+                                        حذف المرفق الحالي نهائياً (بدون رفع ملف بديل)
+                                    </label>
+                                </div>
                             @endif
                             <div class="input-group">
                                 <input type="file"
@@ -473,6 +480,9 @@
             fileName.textContent = file.name;
             fileSize.textContent = `الحجم: ${(file.size / (1024*1024)).toFixed(2)} ميجابايت`;
             filePreview.style.display = 'block';
+            // ملف جديد يفوز دائماً: إلغاء تحديد "حذف المرفق" عند اختيار ملف بديل
+            const removeCheck = document.getElementById('removeAttachmentCheck');
+            if (removeCheck && removeCheck.checked) removeCheck.checked = false;
         } else {
             filePreview.style.display = 'none';
         }

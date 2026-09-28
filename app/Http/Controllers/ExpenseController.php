@@ -266,6 +266,7 @@ class ExpenseController extends Controller
                 'social_case_id'      => 'nullable|exists:social_cases,id',
                 'expense_date'        => 'required|date',
                 'attachment'          => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+                'remove_attachment'   => 'nullable|boolean',
             ];
 
             if ($request->expense_type === 'social_case') {
@@ -315,10 +316,13 @@ class ExpenseController extends Controller
                 ? $pivotCustodies->first()->id
                 : $expense->custody_id;
 
-            // رفع المرفق الجديد إذا وُجد (خارج المعاملة)
+            // رفع المرفق الجديد إذا وُجد (خارج المعاملة)، أو حذف المرفق الحالي إذا طُلب ذلك ولم يُرفع بديل
+            $oldAttachment = $expense->attachment;
             $attachmentPath = $expense->attachment;
             if ($request->hasFile('attachment')) {
                 $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+            } elseif ($request->boolean('remove_attachment') && $expense->attachment) {
+                $attachmentPath = null;
             }
 
             DB::transaction(function () use ($expense, $request, $itemId, $oldAmount, $newAmount, $amountChanged, $affectedCustodyId, $pivotCustodies, $attachmentPath) {
@@ -391,6 +395,11 @@ class ExpenseController extends Controller
             });
 
             ActivityLogService::updated($expense, 'تم تعديل المصروف #' . $expense->id . ' (المبلغ: ' . number_format($newAmount, 2) . ' ج.م)');
+
+            // بعد نجاح المعاملة فقط: حذف الملف القديم من القرص إن تغير المرفق ولم يعد يشير إليه سجل آخر
+            if ($oldAttachment && $oldAttachment !== $attachmentPath) {
+                \App\Support\AttachmentFileCleanup::deleteIfUnreferenced($oldAttachment, $expense->id);
+            }
 
             return redirect()->route('expenses.show', $expense)
                 ->with('success', 'تم تعديل المصروف بنجاح');

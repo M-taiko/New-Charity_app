@@ -192,6 +192,13 @@
                                 <small class="text-muted d-block mt-2">
                                     المرفق الحالي موجود - يمكنك تحميل مرفق جديد لاستبداله
                                 </small>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="remove_attachment" id="removeAttachmentCheck" value="1">
+                                    <label class="form-check-label" for="removeAttachmentCheck">
+                                        حذف المرفق الحالي نهائياً (بدون رفع ملف بديل)
+                                    </label>
+                                </div>
                             @endif
                             <div id="filePreview" style="display: none; margin-top: 1rem;">
                                 <div class="alert alert-success" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(69, 160, 73, 0.1)); border: 1px solid rgba(76, 175, 80, 0.3);">
@@ -422,6 +429,9 @@
             document.getElementById('fileName').textContent = file.name;
             document.getElementById('fileSize').textContent = `${(file.size / 1024).toFixed(2)} KB`;
             preview.style.display = 'block';
+            // ملف جديد يفوز دائماً: إلغاء تحديد "حذف المرفق" عند اختيار ملف بديل
+            const removeCheck = document.getElementById('removeAttachmentCheck');
+            if (removeCheck && removeCheck.checked) removeCheck.checked = false;
         } else {
             preview.style.display = 'none';
         }

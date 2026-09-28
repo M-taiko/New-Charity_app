@@ -73,13 +73,25 @@
                                     <div class="col-md-6">
                                         <div class="alert alert-danger mb-0">
                                             <small class="text-muted d-block">البيانات القديمة:</small>
-                                            <code>{{ $values['old'] ?? '-' }}</code>
+                                            @if($field === 'attachment')
+                                                <code>{{ !empty($values['old']) ? basename($values['old']) : '-' }}</code>
+                                            @else
+                                                <code>{{ $values['old'] ?? '-' }}</code>
+                                            @endif
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="alert alert-success mb-0">
                                             <small class="text-muted d-block">البيانات الجديدة:</small>
-                                            <code>{{ $values['new'] ?? '-' }}</code>
+                                            @if($field === 'attachment')
+                                                @if(!empty($values['new']))
+                                                    <code>{{ basename($values['new']) }}</code>
+                                                @else
+                                                    <code><i class="fas fa-trash"></i> بدون مرفق — المندوب طلب حذف المرفق الحالي وسيُحذف نهائياً عند الموافقة</code>
+                                                @endif
+                                            @else
+                                                <code>{{ $values['new'] ?? '-' }}</code>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>

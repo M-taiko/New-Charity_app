@@ -61,19 +61,24 @@ class ExpenseEditRequestController extends Controller
             'expense_item_id' => 'nullable|exists:expense_items,id',
             'social_case_id' => 'nullable|exists:social_cases,id',
             'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+            'remove_attachment' => 'nullable|boolean',
             'reason' => 'nullable|string|max:500',
         ];
 
         $validated = $request->validate($rules);
 
         try {
-            // معالجة المرفق إذا تم تحميله
+            // معالجة المرفق: ملف جديد يفوز دائماً؛ وإن لم يُرفع ملف وتحديد "حذف المرفق"
+            // فإن التغيير المطلوب هو "المرفق يصبح فارغاً" (لا يُمس أي شيء قبل الموافقة)
             if ($request->hasFile('attachment')) {
                 $attachment = $request->file('attachment')->store('expense_attachments', 'public');
                 $validated['attachment'] = $attachment;
+            } elseif ($request->boolean('remove_attachment') && $expense->attachment) {
+                $validated['attachment'] = null;
             } else {
                 unset($validated['attachment']);
             }
+            unset($validated['remove_attachment']);
 
             // بنود المصروف: تُرسل فقط إذا كان الحقل موجوداً في الطلب (غائب = يحافظ على الحالي، فارغ = يمسحه)
             if ($request->has('line_items')) {

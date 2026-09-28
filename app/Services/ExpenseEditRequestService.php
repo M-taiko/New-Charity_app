@@ -8,6 +8,7 @@ use App\Models\ExpenseEditRequest;
 use App\Models\Notification;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
+use App\Support\AttachmentFileCleanup;
 use Illuminate\Support\Facades\DB;
 
 class ExpenseEditRequestService
@@ -57,17 +58,27 @@ class ExpenseEditRequestService
      */
     public function approveEdit(ExpenseEditRequest $editRequest, User $reviewer)
     {
-        return DB::transaction(function () use ($editRequest, $reviewer) {
+        $oldAttachment = $editRequest->expense->attachment;
+        $newAttachment = $oldAttachment;
+        $attachmentKeyPresent = array_key_exists('attachment', $editRequest->requested_changes ?? []);
+
+        $result = DB::transaction(function () use ($editRequest, $reviewer, $attachmentKeyPresent, &$newAttachment) {
             $expense = $editRequest->expense;
 
             // تطبيق التغييرات
             $changesToApply = [];
 
             // الحقول البسيطة
-            foreach (['description', 'location', 'expense_category_id', 'expense_item_id', 'social_case_id', 'attachment'] as $field) {
+            foreach (['description', 'location', 'expense_category_id', 'expense_item_id', 'social_case_id'] as $field) {
                 if (isset($editRequest->requested_changes[$field])) {
                     $changesToApply[$field] = $editRequest->requested_changes[$field];
                 }
+            }
+
+            // المرفق: array_key_exists حتى يعمل "الحذف" (قيمة null مقصودة تعني إفراغ المرفق)
+            if ($attachmentKeyPresent) {
+                $newAttachment = $editRequest->requested_changes['attachment'];
+                $changesToApply['attachment'] = $newAttachment;
             }
 
             // بنود المصروف: array_key_exists حتى يعمل "الفراغ يمسح" (قيمة null مقصودة)
@@ -166,6 +177,13 @@ class ExpenseEditRequestService
 
             return $editRequest;
         });
+
+        // بعد نجاح المعاملة فقط: حذف الملف القديم من القرص إن تغير المرفق ولم يعد يشير إليه سجل آخر
+        if ($oldAttachment && $oldAttachment !== $newAttachment) {
+            AttachmentFileCleanup::deleteIfUnreferenced($oldAttachment, $editRequest->expense_id);
+        }
+
+        return $result;
     }
 
     /**
