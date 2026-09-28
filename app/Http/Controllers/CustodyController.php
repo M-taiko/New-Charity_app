@@ -431,8 +431,7 @@ class CustodyController extends Controller
 
                 // Send notifications to accountants and managers
                 $notificationMessage = "المندوب: {$user->name} - استرجع " . number_format($request->amount, 2) . " ج.م - السبب: {$request->description}";
-                NotificationService::notifyByRole('محاسب', 'استرجاع أموال جديد', $notificationMessage, 'info', $custody->id, 'custody');
-                NotificationService::notifyByRole('مدير', 'استرجاع أموال جديد', $notificationMessage, 'info', $custody->id, 'custody');
+                NotificationService::notifyByRoles(['محاسب', 'مدير'], 'استرجاع أموال جديد', $notificationMessage, 'info', $custody->id, 'custody');
             });
 
             return back()->with('success', 'تم تسجيل الاسترجاع بنجاح وإرسال إشعار للمحاسب والمدير');
@@ -485,8 +484,7 @@ class CustodyController extends Controller
             // Notify accountants and managers about the return request
             $user = auth()->user();
             $notificationMessage = "المندوب: {$user->name} - طلب رد " . number_format($request->amount, 2) . " ج.م من العهدة #" . $custody->id . " - السبب: " . $request->description;
-            NotificationService::notifyByRole('محاسب', 'طلب رد عهدة جديد', $notificationMessage, 'warning', $custody->id, 'custody');
-            NotificationService::notifyByRole('مدير', 'طلب رد عهدة جديد', $notificationMessage, 'warning', $custody->id, 'custody');
+            NotificationService::notifyByRoles(['محاسب', 'مدير'], 'طلب رد عهدة جديد', $notificationMessage, 'warning', $custody->id, 'custody');
 
             return back()->with('success', 'تم تقديم طلب الرد بنجاح. سيقوم المحاسب بمراجعة الطلب واختيار الخزينة المناسبة');
         } catch (\Exception $e) {
@@ -619,8 +617,7 @@ class CustodyController extends Controller
                 // Notify accountants and managers about the approved return
                 $user = auth()->user();
                 $notificationMessage = "المستخدم: {$user->name} - وافق على رد " . number_format($returnRequest->amount, 2) . " ج.م من العهدة #" . $custody->id . " للمندوب " . $custody->agent->name;
-                NotificationService::notifyByRole('محاسب', 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
-                NotificationService::notifyByRole('مدير', 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
+                NotificationService::notifyByRoles(['محاسب', 'مدير'], 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
 
                 ActivityLogService::returned($custody, 'رد مقبول ' . number_format($returnRequest->amount, 2) . ' ج.م من العهدة #' . $custody->id . ' بموافقة من المدير');
             });

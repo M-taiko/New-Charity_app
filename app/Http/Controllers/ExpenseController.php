@@ -136,8 +136,7 @@ class ExpenseController extends Controller
             // Send notification to managers and accountants for review
             $user = auth()->user();
             $notificationMessage = "المستخدم: {$user->name} - سجل مصروفاً بمبلغ " . number_format($request->amount, 2) . " ج.م من الخزينة - الوصف: {$request->description}";
-            NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
-            NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
+            NotificationService::notifyByRoles(['مدير', 'محاسب'], 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
             } else {
                 // Custody spending - the custody must be selected explicitly
 
@@ -201,8 +200,7 @@ class ExpenseController extends Controller
                 // Send notification to managers and accountants for review
                 $user = auth()->user();
                 $notificationMessage = "المستخدم: {$user->name} - سجل مصروفاً بمبلغ " . number_format($request->amount, 2) . " ج.م - الوصف: {$request->description}";
-                NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'Expense');
-                NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'Expense');
+                NotificationService::notifyByRoles(['مدير', 'محاسب'], 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'Expense');
             }
 
             return redirect()->route('expenses.agent')->with('success', 'تم تسجيل المصروف');
@@ -716,8 +714,7 @@ class ExpenseController extends Controller
             // Send notification to managers and accountants for review
             $user = auth()->user();
             $notificationMessage = "المستخدم: {$user->name} - سجل مصروفاً سريعاً بمبلغ " . number_format($expense->amount, 2) . " ج.م - الوصف: {$expense->description}";
-            NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
-            NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
+            NotificationService::notifyByRoles(['مدير', 'محاسب'], 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
 
             return response()->json(['success' => true, 'message' => 'تم تسجيل المصروف بنجاح']);
         } catch (\Exception $e) {

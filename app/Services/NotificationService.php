@@ -81,6 +81,25 @@ class NotificationService
     }
 
     /**
+     * Notify all users holding any of the given roles, each distinct user once
+     * (a user holding several of the roles is not notified twice)
+     */
+    public static function notifyByRoles(
+        array $roles,
+        string $title,
+        string $message,
+        string $type = 'info',
+        int|null $relatedId = null,
+        string|null $relatedType = null
+    ): void {
+        $users = User::role($roles)->get()->unique('id');
+
+        foreach ($users as $user) {
+            self::notifyUser($user->id, $title, $message, $type, $relatedId, $relatedType);
+        }
+    }
+
+    /**
      * Notify multiple users
      */
     public static function notifyMultiple(
