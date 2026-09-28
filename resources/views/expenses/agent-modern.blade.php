@@ -275,11 +275,12 @@
 
                 data.forEach(function(custody) {
                     const remaining = parseFloat(custody.remaining || 0);
+                    const totalAvailable = parseFloat(custody.total_available || remaining);
                     const reason = custody.reason || 'عهدة #' + custody.id;
 
                     if (remaining > 0) {
                         select.append(`
-                            <option value="${custody.id}" data-balance="${remaining}">
+                            <option value="${custody.id}" data-balance="${remaining}" data-total="${totalAvailable}">
                                 ${reason} (الرصيد: ${formatMoney(remaining)} ج.م)
                             </option>
                         `);
@@ -300,10 +301,16 @@
     function updateQuickCustodyBalance() {
         const selectedOption = $('#quick_custody_id option:selected');
         const balance = selectedOption.data('balance');
+        const total = selectedOption.data('total');
 
         if (balance !== undefined) {
-            $('#custody_balance').text(formatMoney(balance) + ' ج.م');
-            $('#quick_amount').attr('max', balance);
+            // T27: عرض رصيد العهدة المختارة + إجمالي المتاح عبر كل العهدات (التوزيع التلقائي)
+            let text = formatMoney(balance) + ' ج.م';
+            if (total !== undefined && parseFloat(total) > parseFloat(balance)) {
+                text += ' — إجمالي المتاح في كل عهداتك: ' + formatMoney(total) + ' ج.م';
+            }
+            $('#custody_balance').text(text);
+            $('#quick_amount').attr('max', total !== undefined ? total : balance);
         }
     }
 

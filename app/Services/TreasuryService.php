@@ -858,10 +858,10 @@ class TreasuryService
         });
     }
 
-    public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null)
+    public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null, $expenseDate = null, $isQuick = false)
     {
-        return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type, $lineItems) {
-            // Load and lock ONLY the selected custody
+        return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type, $lineItems, $expenseDate, $isQuick) {
+            // Load and lock ONLY the selected custody first
             $custody = Custody::where('id', $custodyId)->lockForUpdate()->first();
 
             if (!$custody) {
@@ -873,13 +873,46 @@ class TreasuryService
             }
 
             $amount = round((float) $amount, 2);
-            $custodyBalance = round((float) $custody->getRemainingBalance(), 2);
 
-            if ($amount > $custodyBalance) {
-                throw new \Exception('رصيد العهدة #' . $custody->id . ' غير كافٍ. الرصيد المتاح: ' . number_format($custodyBalance, 2) . ' ج.م، والمبلغ المطلوب: ' . number_format($amount, 2) . ' ج.م');
+            // T27: توزيع المبلغ على عهدات صاحب العهدة المختارة — العهدة المختارة أولاً ثم الأقدم فالأحدث
+            // (المالك هو agent العهدة المختارة وليس المستخدم الحالي: المدير/المحاسب قد يسجل نيابة عن المندوب)
+            // القفل بترتيب id المتسق يمنع التزاحم (deadlock)
+            $otherCustodies = Custody::where('agent_id', $custody->agent_id)
+                ->whereIn('status', ['accepted', 'active', 'partially_returned'])
+                ->where('id', '!=', $custody->id)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $allocation = []; // custody_id => share
+            $totalAvailable = round((float) $custody->getRemainingBalance(), 2);
+            $remainingToCover = $amount;
+
+            $takeFromSelected = min($totalAvailable, $remainingToCover);
+            if ($takeFromSelected > 0) {
+                $allocation[$custody->id] = round($takeFromSelected, 2);
+                $remainingToCover = round($remainingToCover - $takeFromSelected, 2);
             }
 
-            // Create the expense record on the selected custody
+            foreach ($otherCustodies as $other) {
+                $available = round((float) $other->getRemainingBalance(), 2);
+                $totalAvailable = round($totalAvailable + $available, 2);
+                if ($remainingToCover > 0 && $available > 0) {
+                    $take = min($available, $remainingToCover);
+                    $allocation[$other->id] = round($take, 2);
+                    $remainingToCover = round($remainingToCover - $take, 2);
+                }
+            }
+
+            if ($remainingToCover > 0) {
+                // لا يتغير أي شيء: رفض واضح بإجمالي المتاح عبر كل العهدات المؤهلة
+                throw new \Exception(
+                    'المبلغ المطلوب (' . number_format($amount, 2) . ' ج.م) يتجاوز إجمالي الرصيد المتاح في عهدات المندوب. '
+                    . 'إجمالي المتاح: ' . number_format($totalAvailable, 2) . ' ج.م'
+                );
+            }
+
+            // Create the expense record on the selected custody (المبلغ الكامل والعهدة المختارة كما هي)
             $expense = Expense::create([
                 'custody_id' => $custody->id,
                 'user_id' => $userId,
@@ -891,45 +924,53 @@ class TreasuryService
                 'description' => $description,
                 'location' => $location,
                 'source' => 'custody',
-                'expense_date' => now(),
+                'expense_date' => $expenseDate ?? now(),
                 'attachment' => $attachment,
                 'line_items' => $lineItems,
+                'is_quick_expense' => $isQuick,
+                'approval_status' => $isQuick ? 'pending_edit' : null,
             ]);
 
-            // Increase spent on the selected custody by the full amount
-            $custody->increment('spent', $amount);
+            foreach ($allocation as $custodyIdUsed => $share) {
+                $usedCustody = $custodyIdUsed === $custody->id
+                    ? $custody
+                    : $otherCustodies->firstWhere('id', $custodyIdUsed);
 
-            // Exactly one pivot row with the full amount
-            $expense->custodies()->attach($custody->id, ['amount' => $amount]);
+                // Increase spent by this custody's share
+                $usedCustody->increment('spent', $share);
 
-            // Exactly one treasury transaction linked to this custody
-            TreasuryTransaction::create([
-                'treasury_id' => $custody->treasury_id,
-                'type' => 'expense',
-                'amount' => $amount,
-                'description' => $description . ' (من عهدة #' . $custody->id . ')',
-                'user_id' => $userId,
-                'custody_id' => $custody->id,
-                'expense_id' => $expense->id,
-                'expense_category_id' => $categoryId,
-                'expense_item_id' => $itemId,
-                'transaction_date' => now(),
-            ]);
+                // One pivot row per custody with its share
+                $expense->custodies()->attach($custodyIdUsed, ['amount' => $share]);
 
-            // Close the custody if its balance reaches zero and nothing is frozen for a pending transfer (T26)
-            if ($custody->fresh()->getRemainingBalance() <= 0 && (float) $custody->fresh()->pending_transfer_out <= 0) {
-                $custody->update(['status' => 'closed']);
-
-                // Create closure transaction (administrative record)
+                // One treasury transaction per custody with its share
                 TreasuryTransaction::create([
-                    'treasury_id' => $custody->treasury_id,
-                    'type' => 'custody_close',
-                    'amount' => 0,
-                    'description' => "إقفال عهدة #$custody->id للمندوب {$custody->agent->name} (رصيد صفر)",
+                    'treasury_id' => $usedCustody->treasury_id,
+                    'type' => 'expense',
+                    'amount' => $share,
+                    'description' => ($isQuick ? 'مصروف سريع: ' : '') . $description . ' (من عهدة #' . $usedCustody->id . ')',
                     'user_id' => $userId,
-                    'custody_id' => $custody->id,
+                    'custody_id' => $usedCustody->id,
+                    'expense_id' => $expense->id,
+                    'expense_category_id' => $categoryId,
+                    'expense_item_id' => $itemId,
                     'transaction_date' => now(),
                 ]);
+
+                // Close the custody if its balance reaches zero and nothing is frozen for a pending transfer (T26)
+                if ($usedCustody->fresh()->getRemainingBalance() <= 0 && (float) $usedCustody->fresh()->pending_transfer_out <= 0) {
+                    $usedCustody->update(['status' => 'closed']);
+
+                    // Create closure transaction (administrative record)
+                    TreasuryTransaction::create([
+                        'treasury_id' => $usedCustody->treasury_id,
+                        'type' => 'custody_close',
+                        'amount' => 0,
+                        'description' => "إقفال عهدة #$usedCustody->id للمندوب {$usedCustody->agent->name} (رصيد صفر)",
+                        'user_id' => $userId,
+                        'custody_id' => $usedCustody->id,
+                        'transaction_date' => now(),
+                    ]);
+                }
             }
 
             // Get category and item names for notification
@@ -963,6 +1004,27 @@ class TreasuryService
 
             return $expense;
         });
+    }
+
+    /**
+     * T27: إجمالي الرصيد المتاح للصرف من عهدة مختارة = رصيدها + أرصدة عهدات مالكها المؤهلة الأخرى
+     * (الأقدم فالأحدث، والرصيد المتاح يستبعد المجمد لتحويلات معلقة بعد T26)
+     */
+    public function totalAvailableForCustody($custodyId): float
+    {
+        $selected = Custody::findOrFail($custodyId);
+        $total = round((float) $selected->getRemainingBalance(), 2);
+
+        $others = Custody::where('agent_id', $selected->agent_id)
+            ->whereIn('status', ['accepted', 'active', 'partially_returned'])
+            ->where('id', '!=', $selected->id)
+            ->get();
+
+        foreach ($others as $other) {
+            $total = round($total + (float) $other->getRemainingBalance(), 2);
+        }
+
+        return $total;
     }
 
     public function recordDirectExpenseFromTreasury($treasuryId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null)

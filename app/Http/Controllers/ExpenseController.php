@@ -51,6 +51,11 @@ class ExpenseController extends Controller
                 ->get();
         }
 
+        // T27: إجمالي المتاح لكل عهدة (هي أولاً ثم بقية عهدات مالكها) لعرضه في النموذج
+        $custodies->each(function ($c) {
+            $c->total_available = $this->service->totalAvailableForCustody($c->id);
+        });
+
         $cases = SocialCase::where('status', 'approved')->get();
         $categoryRoots = ExpenseCategory::roots()->active()->ordered()->get();
 
@@ -148,7 +153,8 @@ class ExpenseController extends Controller
                 }
                 // Managers and accountants can spend from any custody
 
-                $maxAmount = $custody->getRemainingBalance();
+                // T27: الحد الأقصى = إجمالي المتاح عبر عهدات المندوب (المختارة أولاً ثم بقية عهداته)
+                $maxAmount = $this->service->totalAvailableForCustody($custody->id);
 
                 $rules = [
                     'custody_id' => 'required|exists:custodies,id',
@@ -168,7 +174,7 @@ class ExpenseController extends Controller
                 }
 
                 $request->validate($rules, [
-                    'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح. الحد الأقصى: ' . number_format($maxAmount, 2) . ' ج.م',
+                    'amount.max' => 'المبلغ المدخل يتجاوز إجمالي الرصيد المتاح في عهداتك (قد يوزَّع المبلغ على أكثر من عهدة). الحد الأقصى: ' . number_format($maxAmount, 2) . ' ج.م',
                     'attachment.max' => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
                     'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
                 ]);
@@ -672,53 +678,34 @@ class ExpenseController extends Controller
             // Managers and accountants can spend from any custody
 
 
-            // Check custody has enough balance
-            $remaining = $custody->getRemainingBalance();
-            if ($validated['amount'] > $remaining) {
+            // T27: نفس قاعدة التوزيع — الحد الأقصى إجمالي المتاح عبر عهدات المندوب
+            $totalAvailable = $this->service->totalAvailableForCustody($custody->id);
+            if (round((float) $validated['amount'], 2) > $totalAvailable) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'المبلغ يتجاوز الرصيد المتاح. الرصيد المتاح: ' . number_format($remaining, 2) . ' ج.م'
+                    'message' => 'المبلغ يتجاوز إجمالي الرصيد المتاح في عهداتك (قد يوزَّع المبلغ على أكثر من عهدة). إجمالي المتاح: ' . number_format($totalAvailable, 2) . ' ج.م'
                 ], 422);
             }
 
-            // Use transaction to ensure all operations succeed or all fail
-            $expense = DB::transaction(function () use ($validated, $custody) {
-                // Create expense with quick flag
-                $expense = Expense::create([
-                    'custody_id' => $validated['custody_id'],
-                    'treasury_id' => $custody->treasury_id,
-                    'user_id' => auth()->id(),
-                    'expense_date' => $validated['expense_date'],
-                    'amount' => $validated['amount'],
-                    'description' => $validated['description'],
-                    'type' => 'general',
-                    'approval_status' => 'pending_edit',
-                    'is_quick_expense' => true,
-                    'line_items' => $validated['line_items'] ? json_encode(['raw_text' => $validated['line_items']]) : null,
-                ]);
+            // نفس منطق التوزيع في الخدمة (عقدة مختارة أولاً ثم بقية عهدات المالك الأقدم فالأحدث)
+            $expense = $this->service->recordExpenseWithItems(
+                $custody->id,
+                auth()->id(),
+                $validated['amount'],
+                null,
+                null,
+                $validated['description'],
+                null,
+                null,
+                null,
+                'general',
+                $validated['line_items'] ? json_encode(['raw_text' => $validated['line_items']]) : null,
+                $validated['expense_date'],
+                true
+            );
 
-                // Update custody spent amount
-                $custody->increment('spent', $validated['amount']);
-
-                // Create treasury transaction for tracking
-                if ($custody->treasury_id) {
-                    DB::table('treasury_transactions')->insert([
-                        'treasury_id' => $custody->treasury_id,
-                        'custody_id' => $custody->id,
-                        'type' => 'expense',
-                        'amount' => $validated['amount'],
-                        'description' => 'مصروف سريع: ' . $validated['description'],
-                        'transaction_date' => now(),
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-
-                // Log the activity
-                ActivityLogService::created($expense, 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
-
-                return $expense;
-            });
+            // Log the activity
+            ActivityLogService::created($expense, 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
 
             // Send notification to managers and accountants for review
             $user = auth()->user();

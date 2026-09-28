@@ -1026,9 +1026,12 @@ class CustodyController extends Controller
                         'spent' => (float)$custody->spent,
                         'returned' => (float)$custody->returned,
                         'pending_return' => (float)$custody->pending_return,
+                        'pending_transfer_out' => (float)($custody->pending_transfer_out ?? 0),
                         'transferred_in' => (float)($custody->transferred_in ?? 0),
                         'transferred_out' => (float)($custody->transferred_out ?? 0),
                         'remaining' => (float)$remaining,
+                        // T27: إجمالي المتاح لو اختار المستخدم هذه العهدة (هي أولاً ثم بقية عهداته)
+                        'total_available' => app(\App\Services\TreasuryService::class)->totalAvailableForCustody($custody->id),
                     ];
                 }
                 return null;

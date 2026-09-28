@@ -57,6 +57,7 @@
                                     @endphp
                                     <option value="{{ $custody->id }}"
                                             data-remaining="{{ $remaining }}"
+                                            data-total="{{ $custody->total_available }}"
                                             {{ old('custody_id') == $custody->id ? 'selected' : '' }}>
                                         العهدة #{{ $custody->id }} - الوكيل: {{ $custody->agent->name }} (المتبقي: {{ number_format($remaining, 2) }} ج.م)
                                     </option>
@@ -503,7 +504,14 @@
 
         if (selectedOption && selectedOption.value) {
             const remaining = selectedOption.getAttribute('data-remaining');
-            balanceWarning.innerHTML = `<i class="fas fa-info-circle"></i> الرصيد المتبقي: <strong>${formatMoney(remaining)} ج.م</strong>`;
+            const total = selectedOption.getAttribute('data-total');
+            let html = `<i class="fas fa-info-circle"></i> رصيد العهدة المختارة: <strong>${formatMoney(remaining)} ج.م</strong>`;
+            // T27: توضيح أن الزيادة تُغطى تلقائياً من بقية عهدات المندوب
+            if (total !== null && parseFloat(total) > parseFloat(remaining)) {
+                html += `<br><i class="fas fa-layer-group"></i> إجمالي المتاح في كل عهدات المندوب (قد يوزَّع المبلغ عليها تلقائياً): <strong>${formatMoney(total)} ج.م</strong>`;
+            }
+            html += `<br><small>إذا تجاوز المبلغ رصيد العهدة المختارة سيوزَّع الفرق على عهداتك الأخرى (الأقدم أولاً)، وكل عهدة تُستخدم يُسجل لها حركة مستقلة. المصروف الموزّع على أكثر من عهدة لا يمكن تعديل مبلغه لاحقاً.</small>`;
+            balanceWarning.innerHTML = html;
         } else {
             balanceWarning.innerHTML = '';
         }
