@@ -124,11 +124,18 @@
                         <i class="fas fa-shopping-cart"></i> طلبات الشراء
                     </button>
                 </li>
+                {{-- تبويب الرواتب للمدير/المحاسب فقط: المشرف يرى الصفحة لكن لا يملك صلاحية بيانات الرواتب،
+                     وطلبها كان يعيد صفحة HTML فيظهر تحذير DataTables "Invalid JSON response" --}}
+                @php
+                    $canViewSalaries = auth()->user()->hasRole('مدير') || auth()->user()->hasRole('محاسب');
+                @endphp
+                @if($canViewSalaries)
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="salaries-tab" data-bs-toggle="tab" data-bs-target="#salariesPanel" type="button" role="tab">
                         <i class="fas fa-money-bill"></i> الرواتب والمرتبات
                     </button>
                 </li>
+                @endif
             </ul>
         </div>
     </div>
@@ -205,6 +212,7 @@
             </div>
         </div>
 
+        @if($canViewSalaries)
         <!-- Salaries Tab -->
         <div class="tab-pane fade" id="salariesPanel" role="tabpanel">
             <div class="row" data-aos="fade-up" data-aos-delay="400">
@@ -238,6 +246,7 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
 </div>
 
@@ -559,7 +568,8 @@
             }
         });
 
-        // Initialize Salaries Table
+        // Initialize Salaries Table (only when the tab exists for this user's role)
+        if ($('#salariesTable').length) {
         $('#salariesTable').DataTable({
             processing: true,
             serverSide: true,
@@ -619,6 +629,7 @@
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             }
         });
+        }
     });
 
     function debounce(fn, delay) {

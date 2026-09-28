@@ -21,6 +21,12 @@ class SalaryController extends Controller
     private function checkHrAccess()
     {
         if (!auth()->user()->hasRole('مدير') && !auth()->user()->hasRole('محاسب')) {
+            // للطلبات الأجاكس (DataTables): JSON بدل صفحة HTML حتى لا يظهر تحذير "Invalid JSON response"
+            if (request()->expectsJson() || request()->ajax()) {
+                throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                    response()->json(['error' => 'غير مصرح لك بالوصول إلى بيانات الرواتب'], 403)
+                );
+            }
             abort(403, 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
     }
