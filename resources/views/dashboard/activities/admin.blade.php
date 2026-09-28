@@ -34,7 +34,7 @@
                             <strong>{{ $custody->user->name }}</strong> - {{ number_format($custody->amount, 2) }} ج.م
                         </div>
                         <div class="activity-time">
-                            <i class="fas fa-calendar"></i> {{ $custody->created_at->diffForHumans() }}
+                            <i class="fas fa-calendar"></i> {!! rel_time_span($custody->created_at) !!}
                         </div>
                     </div>
                 @empty
@@ -61,7 +61,7 @@
                             <strong>{{ $expense->user->name }}</strong> - {{ number_format($expense->amount, 2) }} ج.م
                         </div>
                         <div class="activity-time">
-                            <i class="fas fa-calendar"></i> {{ $expense->created_at->diffForHumans() }}
+                            <i class="fas fa-calendar"></i> {!! rel_time_span($expense->created_at) !!}
                         </div>
                     </div>
                 @empty

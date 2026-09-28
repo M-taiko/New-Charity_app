@@ -73,7 +73,7 @@
                                     </div>
                                     <div>
                                         <span class="badge bg-warning">قيد الانتظار</span><br>
-                                        <small class="text-muted">{{ $transfer->created_at->diffForHumans() }}</small>
+                                        <small class="text-muted">{!! rel_time_span($transfer->created_at) !!}</small>
                                     </div>
                                 </div>
                             </div>

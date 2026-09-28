@@ -71,7 +71,7 @@
                                 <div class="text-end flex-shrink-0">
                                     <div class="text-muted" style="font-size:.78rem;">
                                         <i class="fas fa-clock"></i>
-                                        {{ $notif->created_at->diffForHumans() }}
+                                        {!! rel_time_span($notif->created_at) !!}
                                     </div>
                                     <div class="text-muted" style="font-size:.72rem;margin-top:.15rem;">
                                         {!! dt_span($notif->created_at) !!}

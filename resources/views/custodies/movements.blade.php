@@ -163,7 +163,7 @@
             columns: [
                 {
                     data: 'transaction_date',
-                    render: function(data) { return data ? (window.formatLocalDateTime ? window.formatLocalDateTime(data) : data) : '-'; }
+                    render: function(data) { return data ? (window.formatLocalDateTimeHtml ? window.formatLocalDateTimeHtml(data) : data) : '-'; }
                 },
                 { data: 'movement_label' },
                 { data: 'from_party' },

@@ -49,7 +49,7 @@
                                         جديد
                                 @endswitch
                             </span>
-                            <span class="activity-time">{{ $case->updated_at->diffForHumans() }}</span>
+                            <span class="activity-time">{!! rel_time_span($case->updated_at) !!}</span>
                         </div>
                     </div>
                 @empty
@@ -76,7 +76,7 @@
                             <strong>{{ $case->phone ?? 'بدون رقم' }}</strong>
                         </div>
                         <div class="activity-time">
-                            <i class="fas fa-calendar"></i> {{ $case->created_at->diffForHumans() }}
+                            <i class="fas fa-calendar"></i> {!! rel_time_span($case->created_at) !!}
                         </div>
                     </div>
                 @empty

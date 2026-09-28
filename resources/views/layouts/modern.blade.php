@@ -726,7 +726,7 @@
                 <p style="font-size: .95rem; line-height: 1.7; color: #374151; margin-bottom: 1.5rem; white-space: pre-line;">{{ $activeBroadcast->message }}</p>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: .8rem; color: #9ca3af;">
                     <span><i class="fas fa-user"></i> {{ $activeBroadcast->creator->name }}</span>
-                    <span><i class="fas fa-clock"></i> {{ $activeBroadcast->created_at->diffForHumans() }}</span>
+                    <span><i class="fas fa-clock"></i> {!! rel_time_span($activeBroadcast->created_at) !!}</span>
                 </div>
             </div>
             <div style="padding: 1rem 2rem 1.5rem; border-top: 1px solid #f3f4f6; display: flex; gap: .75rem;">
@@ -809,7 +809,7 @@
                                     <div class="notification-item-text">{{ $notification->message }}</div>
                                     <div class="notification-item-time">
                                         <i class="fas fa-clock"></i>
-                                        {{ $notification->created_at->diffForHumans() }}
+                                        {!! rel_time_span($notification->created_at) !!}
                                     </div>
                                 </button>
                             </form>
@@ -1453,15 +1453,52 @@
             }
         };
 
+        // نسخة معزولة الاتجاه (T29): النص اللاتيني (أرقام + AM/PM) داخل صفحة RTL يعيد المتصفح ترتيبه،
+        // فنعرضه داخل عنصر dir="ltr" ليُقرأ دائماً بالترتيب: التاريخ ثم الوقت ثم AM/PM
+        window.formatLocalDateTimeHtml = function(iso, mode) {
+            return '<span dir="ltr">' + window.formatLocalDateTime(iso, mode) + '</span>';
+        };
+
+        // ──── الوقت النسبي بالعربية (T29) ────
+        // يحسب من الطابع الزمني UTC في متصفح المستخدم فيحترم توقيت قارئه، لا نص إنجليزي من الخادم
+        window.formatRelativeTimeAr = function(iso) {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            const diffSeconds = Math.round((d.getTime() - Date.now()) / 1000);
+            const abs = Math.abs(diffSeconds);
+            try {
+                const rtf = new Intl.RelativeTimeFormat('ar-u-nu-latn', { numeric: 'auto' });
+                if (abs < 60) return rtf.format(Math.round(diffSeconds), 'second');
+                if (abs < 3600) return rtf.format(Math.round(diffSeconds / 60), 'minute');
+                if (abs < 86400) return rtf.format(Math.round(diffSeconds / 3600), 'hour');
+                if (abs < 2592000) return rtf.format(Math.round(diffSeconds / 86400), 'day');
+                if (abs < 31536000) return rtf.format(Math.round(diffSeconds / 2592000), 'month');
+                return rtf.format(Math.round(diffSeconds / 31536000), 'year');
+            } catch (e) {
+                try {
+                    const rtf2 = new Intl.RelativeTimeFormat('ar', { numeric: 'auto' });
+                    return rtf2.format(Math.round(diffSeconds / 60), 'minute');
+                } catch (e2) {
+                    return window.formatLocalDateTime(iso);
+                }
+            }
+        };
+
         function applyLocalDateTimes(root) {
             (root || document).querySelectorAll('[data-utc-datetime]').forEach(el => {
+                el.setAttribute('dir', 'ltr');
                 el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-datetime'));
             });
             (root || document).querySelectorAll('[data-utc-date]').forEach(el => {
+                el.setAttribute('dir', 'ltr');
                 el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-date'), 'date');
             });
             (root || document).querySelectorAll('[data-utc-time]').forEach(el => {
+                el.setAttribute('dir', 'ltr');
                 el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-time'), 'time');
+            });
+            (root || document).querySelectorAll('.rel-time-ar[data-utc-rel]').forEach(el => {
+                el.textContent = window.formatRelativeTimeAr(el.getAttribute('data-utc-rel'));
             });
         }
 

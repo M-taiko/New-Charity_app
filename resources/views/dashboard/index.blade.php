@@ -96,7 +96,7 @@
                             <a href="#" class="list-group-item list-group-item-action">
                                 <div class="d-flex w-100 justify-content-between">
                                     <h6 class="mb-1">{{ $notification->title }}</h6>
-                                    <small>{{ $notification->created_at->diffForHumans() }}</small>
+                                    <small>{!! rel_time_span($notification->created_at) !!}</small>
                                 </div>
                                 <p class="mb-1">{{ $notification->message }}</p>
                             </a>

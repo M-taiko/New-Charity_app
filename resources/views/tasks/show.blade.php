@@ -202,7 +202,7 @@
                                 <div style="white-space:pre-line; font-size:.9rem;">{{ $comment->body }}</div>
                             </div>
                             <div class="text-muted mt-1" style="font-size:.72rem; {{ $isMe ? 'text-align:end;' : '' }}">
-                                {{ $comment->created_at->diffForHumans() }}
+                                {!! rel_time_span($comment->created_at) !!}
                             </div>
                         </div>
                     </div>

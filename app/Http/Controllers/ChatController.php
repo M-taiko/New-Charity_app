@@ -48,7 +48,7 @@ class ChatController extends Controller
                 'user_id' => $m->user_id,
                 'name'    => $m->user->name,
                 'body'    => $m->body,
-                'time'    => $m->created_at->diffForHumans(),
+                'time'    => $m->created_at->locale('ar')->diffForHumans(),
                 'is_me'   => $m->user_id === auth()->id(),
                 'poll'    => $m->poll ? $this->formatPoll($m->poll) : null,
             ]);
