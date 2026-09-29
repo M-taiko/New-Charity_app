@@ -169,11 +169,11 @@ function updateTreasuryInfo() {
         const balance = parseFloat(option.dataset.balance) || 0;
 
         // Update display
-        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+        balanceDisplay.textContent = formatMoney(balance) + ' ج.م';
 
         // Set max amount
         amountInput.max = balance.toFixed(2);
-        maxAmountInput.textContent = balance.toFixed(2);
+        maxAmountInput.textContent = formatMoney(balance);
         maxAmountHint.style.display = 'block';
 
         // Clear previous validation messages
@@ -201,7 +201,7 @@ function validateAmount() {
 
     if (amount > max) {
         amountInput.classList.add('is-invalid');
-        amountInput.title = `المبلغ لا يمكن أن يتجاوز ${max.toFixed(2)} ج.م`;
+        amountInput.title = `المبلغ لا يمكن أن يتجاوز ${formatMoney(max)} ج.م`;
         return false;
     } else {
         amountInput.classList.remove('is-invalid');
@@ -228,7 +228,7 @@ function validateCustodyAmount() {
     const amount = parseFloat(amountInput.value) || 0;
 
     if (amount > max) {
-        alert(`المبلغ لا يمكن أن يتجاوز ${max.toFixed(2)} ج.م`);
+        alert(`المبلغ لا يمكن أن يتجاوز ${formatMoney(max)} ج.م`);
         return false;
     }
 

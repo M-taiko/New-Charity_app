@@ -348,7 +348,7 @@ class SocialCaseController extends Controller
         ]);
 
         ActivityLogService::rejected($socialCase, 'تم رفض الحالة الاجتماعية: ' . $socialCase->name);
-        return back()->with('success', 'تم رفض الحالة');
+        return $this->formBackOrJson($request, 'success', 'تم رفض الحالة');
     }
 
     public function toggleActive(SocialCase $socialCase)

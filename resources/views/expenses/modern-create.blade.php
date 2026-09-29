@@ -57,6 +57,7 @@
                                     @endphp
                                     <option value="{{ $custody->id }}"
                                             data-remaining="{{ $remaining }}"
+                                            data-total="{{ $custody->total_available }}"
                                             {{ old('custody_id') == $custody->id ? 'selected' : '' }}>
                                         العهدة #{{ $custody->id }} - الوكيل: {{ $custody->agent->name }} (المتبقي: {{ number_format($remaining, 2) }} ج.م)
                                     </option>
@@ -358,7 +359,7 @@
         const info = document.getElementById('default-amount-info');
         const amountInput = document.querySelector('input[name="amount"]');
         if (opt && opt.dataset.default) {
-            info.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${parseFloat(opt.dataset.default).toFixed(2)} ج.م</strong>`;
+            info.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${formatMoney(opt.dataset.default)} ج.م</strong>`;
             if (!amountInput.value) amountInput.value = opt.dataset.default;
         } else {
             info.innerHTML = '';
@@ -417,7 +418,7 @@
             }
         });
         if (counted > 0 && !isNaN(amount) && amount > 0 && Math.round(total * 100) !== Math.round(amount * 100)) {
-            warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> مجموع البنود (' + total.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م) يختلف عن المبلغ (' + amount.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م)';
+            warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> مجموع البنود (' + formatMoney(total) + ' ج.م) يختلف عن المبلغ (' + formatMoney(amount) + ' ج.م)';
             warningEl.style.display = 'block';
         } else {
             warningEl.style.display = 'none';
@@ -472,7 +473,7 @@
         if (treasurySelect && treasurySelect.value) {
             const option = treasurySelect.options[treasurySelect.selectedIndex];
             const balance = option.dataset.balance || '0.00';
-            balanceDisplay.textContent = parseFloat(balance).toFixed(2) + ' ج.م';
+            balanceDisplay.textContent = formatMoney(balance) + ' ج.م';
         } else {
             balanceDisplay.textContent = '0.00 ج.م';
         }
@@ -487,7 +488,7 @@
         if (selectedOption && selectedOption.value) {
             const defaultAmount = selectedOption.getAttribute('data-default-amount');
             if (defaultAmount && defaultAmount !== '') {
-                defaultAmountInfo.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${parseFloat(defaultAmount).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ج.م</strong>`;
+                defaultAmountInfo.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${formatMoney(defaultAmount)} ج.م</strong>`;
                 if (!amountInput.value) {
                     amountInput.value = defaultAmount;
                 }
@@ -503,7 +504,14 @@
 
         if (selectedOption && selectedOption.value) {
             const remaining = selectedOption.getAttribute('data-remaining');
-            balanceWarning.innerHTML = `<i class="fas fa-info-circle"></i> الرصيد المتبقي: <strong>${parseFloat(remaining).toLocaleString('ar-SA', {minimumFractionDigits: 2})} ج.م</strong>`;
+            const total = selectedOption.getAttribute('data-total');
+            let html = `<i class="fas fa-info-circle"></i> رصيد العهدة المختارة: <strong>${formatMoney(remaining)} ج.م</strong>`;
+            // T27: توضيح أن الزيادة تُغطى تلقائياً من بقية عهدات المندوب
+            if (total !== null && parseFloat(total) > parseFloat(remaining)) {
+                html += `<br><i class="fas fa-layer-group"></i> إجمالي المتاح في كل عهدات المندوب (قد يوزَّع المبلغ عليها تلقائياً): <strong>${formatMoney(total)} ج.م</strong>`;
+            }
+            html += `<br><small>إذا تجاوز المبلغ رصيد العهدة المختارة سيوزَّع الفرق على عهداتك الأخرى (الأقدم أولاً)، وكل عهدة تُستخدم يُسجل لها حركة مستقلة. المصروف الموزّع على أكثر من عهدة لا يمكن تعديل مبلغه لاحقاً.</small>`;
+            balanceWarning.innerHTML = html;
         } else {
             balanceWarning.innerHTML = '';
         }

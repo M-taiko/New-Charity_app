@@ -65,6 +65,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/custody-transfers/{custodyTransfer}/approve', [CustodyTransferController::class, 'approve'])->name('custody-transfers.approve');
     Route::post('/custody-transfers/{custodyTransfer}/reject', [CustodyTransferController::class, 'reject'])->name('custody-transfers.reject');
     Route::get('/agent/my-custodies', [CustodyController::class, 'myCustodies'])->name('agent.my-custodies');
+    // T28: استلام خارجي ذاتي متاح لكل مستخدم مسجل أياً كان دوره (المتحكم لا يفرض دوراً)
+    Route::post('/my-external-receipt', [CustodyController::class, 'storeExternalReceipt'])->name('external-receipt.store');
     Route::get('/accountant/all-custodies', [CustodyController::class, 'allCustodies'])->name('accountant.all-custodies');
 
     Route::resource('expenses', ExpenseController::class);

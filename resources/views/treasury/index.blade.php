@@ -164,7 +164,7 @@
                 <h5 class="modal-title" style="color: white;"><i class="fas fa-gift"></i> استقبال تبرع جديد</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="donationForm" method="POST" onsubmit="return submitDonationForm(event)">
+            <form id="donationForm" method="POST" novalidate onsubmit="return submitDonationForm(event)">
                 @csrf
 
                 <div class="modal-body">
@@ -303,8 +303,8 @@ function updateDonationTreasuryInfo() {
         const amount = parseFloat(amountInput.value) || 0;
         const newBalance = currentBalance + amount;
 
-        currentBalanceDisplay.textContent = currentBalance.toFixed(2) + ' ج.م';
-        newBalanceDisplay.textContent = newBalance.toFixed(2) + ' ج.م';
+        currentBalanceDisplay.textContent = formatMoney(currentBalance) + ' ج.م';
+        newBalanceDisplay.textContent = formatMoney(newBalance) + ' ج.م';
         infoCard.style.display = 'block';
     } else {
         infoCard.style.display = 'none';
@@ -342,7 +342,7 @@ function validateDonation() {
 }
 
 function submitDonationForm(event) {
-    event.preventDefault();
+    if (event) event.preventDefault();
 
     if (!validateDonation()) {
         return false;
@@ -353,7 +353,8 @@ function submitDonationForm(event) {
 
     // Dynamically set the form action with the selected treasury ID
     form.action = `/treasury/${treasuryId}/add-donation`;
-    form.submit();
+    if (window.submitModalFormAjax) { window.submitModalFormAjax(form); } else { form.submit(); }
+    return false;
 }
 
 // Initialize external source field visibility on modal open

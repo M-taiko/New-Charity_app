@@ -296,7 +296,7 @@
                         } else if (row.type === 'custody_return') {
                             color = 'var(--warning)'; // رد
                         }
-                        return `<strong style="color: ${color};">${parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 })} ج.م</strong>`;
+                        return `<strong style="color: ${color};">${formatMoney(data)} ج.م</strong>`;
                     }
                 },
                 { data: 'description' },
@@ -348,7 +348,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
+                        return '<strong style="color: var(--danger);">' + formatMoney(data) + '</strong> ج.م';
                     }
                 },
                 { data: 'description' },
@@ -383,7 +383,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--warning);">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
+                        return '<strong style="color: var(--warning);">' + formatMoney(data) + '</strong> ج.م';
                     }
                 },
                 {
@@ -435,7 +435,7 @@
                     data: 'amount',
                     render: function(data, type, row) {
                         let color = row.transfer_type === 'sent' ? 'var(--danger)' : 'var(--success)';
-                        return '<strong style="color: ' + color + ';">' + parseFloat(data).toLocaleString('ar-SA', { minimumFractionDigits: 2 }) + '</strong> ج.م';
+                        return '<strong style="color: ' + color + ';">' + formatMoney(data) + '</strong> ج.م';
                     }
                 },
                 {

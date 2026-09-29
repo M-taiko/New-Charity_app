@@ -192,6 +192,13 @@
                                 <small class="text-muted d-block mt-2">
                                     المرفق الحالي موجود - يمكنك تحميل مرفق جديد لاستبداله
                                 </small>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="remove_attachment" id="removeAttachmentCheck" value="1">
+                                    <label class="form-check-label" for="removeAttachmentCheck">
+                                        حذف المرفق الحالي نهائياً (بدون رفع ملف بديل)
+                                    </label>
+                                </div>
                             @endif
                             <div id="filePreview" style="display: none; margin-top: 1rem;">
                                 <div class="alert alert-success" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(69, 160, 73, 0.1)); border: 1px solid rgba(76, 175, 80, 0.3);">
@@ -306,7 +313,7 @@
             }
         });
         if (counted > 0 && !isNaN(amount) && amount > 0 && Math.round(total * 100) !== Math.round(amount * 100)) {
-            warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> مجموع البنود (' + total.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م) يختلف عن المبلغ (' + amount.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م)';
+            warningEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> مجموع البنود (' + formatMoney(total) + ' ج.م) يختلف عن المبلغ (' + formatMoney(amount) + ' ج.م)';
             warningEl.style.display = 'block';
         } else {
             warningEl.style.display = 'none';
@@ -395,7 +402,7 @@
         const info = document.getElementById('default-amount-info');
         const amountInput = document.querySelector('input[name="amount"]');
         if (opt && opt.dataset.default) {
-            info.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${parseFloat(opt.dataset.default).toFixed(2)} ج.م</strong>`;
+            info.innerHTML = `<i class="fas fa-info-circle"></i> المبلغ الافتراضي: <strong>${formatMoney(opt.dataset.default)} ج.م</strong>`;
             if (!amountInput.value) amountInput.value = opt.dataset.default;
         } else {
             info.innerHTML = '';
@@ -422,6 +429,9 @@
             document.getElementById('fileName').textContent = file.name;
             document.getElementById('fileSize').textContent = `${(file.size / 1024).toFixed(2)} KB`;
             preview.style.display = 'block';
+            // ملف جديد يفوز دائماً: إلغاء تحديد "حذف المرفق" عند اختيار ملف بديل
+            const removeCheck = document.getElementById('removeAttachmentCheck');
+            if (removeCheck && removeCheck.checked) removeCheck.checked = false;
         } else {
             preview.style.display = 'none';
         }

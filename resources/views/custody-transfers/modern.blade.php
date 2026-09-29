@@ -266,12 +266,12 @@
                         data: 'amount',
                         name: 'amount',
                         render: function(data) {
-                            return parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+                            return formatMoney(data) + ' ج.م';
                         }
                     },
                     {data: 'status_badge', name: 'status', orderable: false, searchable: false},
-                    {data: 'request_date', name: 'request_date', render: function(data) { return data && data !== '-' ? (window.formatLocalDateTime ? window.formatLocalDateTime(data) : data) : '-'; }},
-                    {data: 'decision_date', name: 'decision_date', orderable: false, searchable: false, render: function(data) { return data && data !== '-' ? (window.formatLocalDateTime ? window.formatLocalDateTime(data) : data) : '-'; }},
+                    {data: 'request_date', name: 'request_date', render: function(data) { return data && data !== '-' ? (window.formatLocalDateTimeHtml ? window.formatLocalDateTimeHtml(data) : data) : '-'; }},
+                    {data: 'decision_date', name: 'decision_date', orderable: false, searchable: false, render: function(data) { return data && data !== '-' ? (window.formatLocalDateTimeHtml ? window.formatLocalDateTimeHtml(data) : data) : '-'; }},
                     {data: 'decided_by', name: 'decided_by', orderable: false, searchable: false},
                     {data: 'rejection_reason', name: 'rejection_reason', orderable: false, searchable: false},
                 ],

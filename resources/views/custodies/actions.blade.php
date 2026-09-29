@@ -20,7 +20,7 @@
                 <h5 class="modal-title">رفض العهدة</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.reject', $row->id) }}" method="POST">
+            <form action="{{ route('custodies.reject', $row->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -45,7 +45,7 @@
                 <h5 class="modal-title">إرجاع العهدة</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.return', $row->id) }}" method="POST">
+            <form action="{{ route('custodies.return', $row->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">

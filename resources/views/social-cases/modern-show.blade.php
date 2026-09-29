@@ -459,7 +459,7 @@
                 <h5 class="modal-title" style="color: white;">رفض الحالة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('social_cases.reject', $socialCase->id) }}" method="POST">
+            <form action="{{ route('social_cases.reject', $socialCase->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">

@@ -113,7 +113,7 @@
                                     <h4 style="margin: 0 0 0.5rem 0; color: white;">
                                         <i class="fas fa-hand-holding-usd"></i> عهدتك النشطة
                                     </h4>
-                                    <p style="margin: 0; opacity: 0.9; font-size: 0.95rem;">عهدة #{{ $activeCustody->id }} - منذ {{ $activeCustody->accepted_at ? $activeCustody->accepted_at->diffForHumans() : 'غير معروف' }}</p>
+                                    <p style="margin: 0; opacity: 0.9; font-size: 0.95rem;">عهدة #{{ $activeCustody->id }} - {!! $activeCustody->accepted_at ? rel_time_span($activeCustody->accepted_at) : 'غير معروف' !!}</p>
 
                                     <div class="row mt-4">
                                         <div class="col-md-3">
@@ -830,7 +830,7 @@
                                             </div>
                                             <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.5rem;">
                                                 <i class="fas fa-clock"></i>
-                                                {{ $notification->created_at->diffForHumans() }}
+                                                {!! rel_time_span($notification->created_at) !!}
                                             </div>
                                         </div>
                                     </div>

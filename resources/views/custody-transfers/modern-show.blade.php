@@ -168,7 +168,7 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('custody-transfers.reject', $custodyTransfer) }}" method="POST">
+            <form action="{{ route('custody-transfers.reject', $custodyTransfer) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">

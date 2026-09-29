@@ -218,10 +218,10 @@ function calculateSalary() {
         calculated = baseSalary - (dailyRate * absenceDays);
     }
 
-    document.getElementById('previewBaseSalary').textContent = baseSalary.toFixed(2);
+    document.getElementById('previewBaseSalary').textContent = formatMoney(baseSalary);
     document.getElementById('previewAttendance').textContent = attendanceDays;
     document.getElementById('previewAbsence').textContent = absenceDays;
-    document.getElementById('previewCalculated').textContent = calculated.toFixed(2);
+    document.getElementById('previewCalculated').textContent = formatMoney(calculated);
 }
 
 function addAllowanceForm() {

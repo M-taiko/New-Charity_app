@@ -73,7 +73,7 @@
                                     </div>
                                     <div>
                                         <span class="badge bg-warning">قيد الانتظار</span><br>
-                                        <small class="text-muted">{{ $transfer->created_at->diffForHumans() }}</small>
+                                        <small class="text-muted">{!! rel_time_span($transfer->created_at) !!}</small>
                                     </div>
                                 </div>
                             </div>
@@ -332,6 +332,11 @@
                             <div class="mb-3" style="padding-bottom: 1rem; border-bottom: 1px solid rgba(245, 124, 0, 0.2);">
                                 <p style="margin: 0; color: #666; font-size: 0.8rem;">المبلغ المتبقي</p>
                                 <h4 style="margin: 0.5rem 0 0; color: #43a047; font-weight: 700;">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</h4>
+                                @if((float) $custody->pending_transfer_out > 0)
+                                    <small class="d-block" style="color: #999; margin-top: .25rem;" title="مبلغ محجوز لتحويل عهدة معلق ولم يعد متاحاً للصرف حتى البت في التحويل">
+                                        <i class="fas fa-snowflake"></i> مجمّد لتحويل معلق: {{ number_format($custody->pending_transfer_out, 2) }} ج.م
+                                    </small>
+                                @endif
                             </div>
 
                             <!-- Spending Percentage -->
@@ -649,7 +654,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" onsubmit="return @if($custody->treasury_id === null) validateSingleTreasury() @else validateTreasuryDistribution() @endif">
+            <form action="{{ route('custodies.accept', $custody->id) }}" method="POST" novalidate onsubmit="@if($custody->treasury_id === null) var ok = validateSingleTreasury() @else var ok = validateTreasuryDistribution() @endif; if (ok) { if (window.submitModalFormAjax) submitModalFormAjax(this); else return true; } return false;">
                 @csrf
                 <div class="modal-body">
                     @if($custody->treasury_id === null)
@@ -780,11 +785,11 @@ function updatePersonalCustodyBalance() {
         const requiredAmount = {{ $custody->amount }};
 
         if (balance >= requiredAmount) {
-            balanceDiv.textContent = '✓ رصيد الخزينة كافي (' + balance.toFixed(2) + ' ج.م)';
+            balanceDiv.textContent = '✓ رصيد الخزينة كافي (' + formatMoney(balance) + ' ج.م)';
             balanceDiv.style.color = '#4caf50';
             submitBtn.disabled = false;
         } else {
-            balanceDiv.textContent = '✗ رصيد الخزينة غير كافي (متوفر: ' + balance.toFixed(2) + ' ج.م، مطلوب: ' + requiredAmount.toFixed(2) + ' ج.م)';
+            balanceDiv.textContent = '✗ رصيد الخزينة غير كافي (متوفر: ' + formatMoney(balance) + ' ج.م، مطلوب: ' + formatMoney(requiredAmount) + ' ج.م)';
             balanceDiv.style.color = '#dc2626';
             submitBtn.disabled = true;
         }
@@ -830,7 +835,7 @@ function updateDistributionTotal() {
         total += amount;
     });
 
-    totalDisplay.textContent = total.toFixed(2) + ' ج.م';
+    totalDisplay.textContent = formatMoney(total) + ' ج.م';
 
     // Check if total matches required amount
     if (hasError) {
@@ -840,7 +845,7 @@ function updateDistributionTotal() {
         statusDiv.innerHTML = '<span class="text-success"><i class="fas fa-check-circle"></i> المبالغ صحيحة وجاهزة للموافقة</span>';
         submitBtn.disabled = false;
     } else if (total < requiredAmount) {
-        const remaining = (requiredAmount - total).toFixed(2);
+        const remaining = formatMoney(requiredAmount - total);
         statusDiv.innerHTML = `<span class="text-warning"><i class="fas fa-exclamation-circle"></i> ينقص ${remaining} ج.م</span>`;
         submitBtn.disabled = true;
     } else {
@@ -868,7 +873,7 @@ function validateTreasuryDistribution() {
     });
 
     if (Math.abs(total - requiredAmount) > 0.01) {
-        alert(`مجموع المبالغ المدخلة يجب أن يساوي ${requiredAmount.toFixed(2)} ج.م`);
+        alert(`مجموع المبالغ المدخلة يجب أن يساوي ${formatMoney(requiredAmount)} ج.م`);
         return false;
     }
 
@@ -894,7 +899,7 @@ function updateAcceptTreasuryInfo() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
 
-        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+        balanceDisplay.textContent = formatMoney(balance) + ' ج.م';
         infoCard.style.display = 'block';
 
         if (balance >= requiredAmount) {
@@ -902,7 +907,7 @@ function updateAcceptTreasuryInfo() {
             submitBtn.disabled = false;
         } else {
             const shortfall = requiredAmount - balance;
-            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + shortfall.toFixed(2) + ' ج.م</span>';
+            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + formatMoney(shortfall) + ' ج.م</span>';
             submitBtn.disabled = true;
         }
     } else {
@@ -920,7 +925,7 @@ function updateAcceptTreasuryInfo() {
                 <h5 class="modal-title" style="color: white;"><i class="fas fa-times-circle"></i> رفض العهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.reject', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.reject', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-warning">
@@ -952,7 +957,7 @@ function updateAcceptTreasuryInfo() {
                 <h5 class="modal-title" style="color: white;" id="returnModalLabel"><i class="fas fa-undo"></i> طلب رد العهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="returnForm" action="{{ route('custodies.requestReturn') }}" method="POST">
+            <form id="returnForm" action="{{ route('custodies.requestReturn') }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <input type="hidden" name="custody_id" value="{{ $custody->id }}">
                 <div class="modal-body">
@@ -1021,7 +1026,7 @@ function updateAcceptTreasuryInfo() {
                 <h5 class="modal-title" style="color: white;" id="approveReturnModalLabel"><i class="fas fa-check-double"></i> الموافقة على رد العهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('custodies.approveReturn', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.approveReturn', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-warning">
@@ -1103,7 +1108,7 @@ function updateAcceptTreasuryInfo() {
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('custodies.approveReturnWithTreasury', $returnRequest->id) }}" method="POST">
+            <form action="{{ route('custodies.approveReturnWithTreasury', $returnRequest->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info">
@@ -1180,8 +1185,8 @@ function updateTreasuryBalance{{ $returnRequest->id }}() {
         const treasuryName = option.getAttribute('data-name');
 
         document.getElementById('treasuryName{{ $returnRequest->id }}').textContent = treasuryName;
-        document.getElementById('currentBalance{{ $returnRequest->id }}').textContent = currentBalance.toFixed(2);
-        document.getElementById('newBalance{{ $returnRequest->id }}').textContent = newBalance.toFixed(2);
+        document.getElementById('currentBalance{{ $returnRequest->id }}').textContent = formatMoney(currentBalance);
+        document.getElementById('newBalance{{ $returnRequest->id }}').textContent = formatMoney(newBalance);
         document.getElementById('treasuryInfo{{ $returnRequest->id }}').style.display = 'block';
     } else {
         document.getElementById('treasuryInfo{{ $returnRequest->id }}').style.display = 'none';
@@ -1239,7 +1244,7 @@ function updateAgentAcceptTreasuryInfo() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
 
-        balanceDisplay.textContent = balance.toFixed(2) + ' ج.م';
+        balanceDisplay.textContent = formatMoney(balance) + ' ج.م';
         infoCard.style.display = 'block';
 
         if (balance >= requiredAmount) {
@@ -1247,7 +1252,7 @@ function updateAgentAcceptTreasuryInfo() {
             submitBtn.disabled = false;
         } else {
             const shortfall = requiredAmount - balance;
-            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + shortfall.toFixed(2) + ' ج.م</span>';
+            statusMessage.innerHTML = '<span style="color: #f44336;"><i class="fas fa-exclamation-circle"></i> رصيد غير كافي! ينقص ' + formatMoney(shortfall) + ' ج.م</span>';
             submitBtn.disabled = true;
         }
     } else {
@@ -1268,8 +1273,8 @@ function updateReturnTreasuryBalance() {
         const currentBalance = parseFloat(option.dataset.balance) || 0;
         const newBalance = currentBalance + returnAmount;
 
-        currentBalanceSpan.textContent = currentBalance.toFixed(2);
-        newBalanceSpan.textContent = newBalance.toFixed(2);
+        currentBalanceSpan.textContent = formatMoney(currentBalance);
+        newBalanceSpan.textContent = formatMoney(newBalance);
         infoDiv.style.display = 'block';
     } else {
         infoDiv.style.display = 'none';
@@ -1292,7 +1297,7 @@ document.addEventListener('shown.bs.modal', function (event) {
                 <h5 class="modal-title" style="color: white;">رفض العهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.agent-reject', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.agent-reject', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -1358,7 +1363,7 @@ document.addEventListener('shown.bs.modal', function (event) {
                 <h5 class="modal-title" style="color: white;"><i class="fas fa-plus-circle"></i> إضافة تبرع خارجي / استرداد</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info" style="font-size:.9rem;">
@@ -1405,7 +1410,7 @@ document.addEventListener('shown.bs.modal', function (event) {
                 <h5 class="modal-title" style="color: white;"><i class="fas fa-file-invoice-dollar"></i> طلب رد عهدة</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.requestReturn', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.requestReturn', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info" style="font-size:.9rem;">

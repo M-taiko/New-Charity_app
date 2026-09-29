@@ -124,11 +124,18 @@
                         <i class="fas fa-shopping-cart"></i> طلبات الشراء
                     </button>
                 </li>
+                {{-- تبويب الرواتب للمدير/المحاسب فقط: المشرف يرى الصفحة لكن لا يملك صلاحية بيانات الرواتب،
+                     وطلبها كان يعيد صفحة HTML فيظهر تحذير DataTables "Invalid JSON response" --}}
+                @php
+                    $canViewSalaries = auth()->user()->hasRole('مدير') || auth()->user()->hasRole('محاسب');
+                @endphp
+                @if($canViewSalaries)
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="salaries-tab" data-bs-toggle="tab" data-bs-target="#salariesPanel" type="button" role="tab">
                         <i class="fas fa-money-bill"></i> الرواتب والمرتبات
                     </button>
                 </li>
+                @endif
             </ul>
         </div>
     </div>
@@ -205,6 +212,7 @@
             </div>
         </div>
 
+        @if($canViewSalaries)
         <!-- Salaries Tab -->
         <div class="tab-pane fade" id="salariesPanel" role="tabpanel">
             <div class="row" data-aos="fade-up" data-aos-delay="400">
@@ -238,6 +246,7 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
 </div>
 
@@ -356,14 +365,14 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
+                        return '<strong style="color: var(--danger);">' + formatMoney(data) + ' ج.م</strong>';
                     }
                 },
                 {
                     data: 'expense_datetime',
                     render: function(data) {
                         if (!data || data === '-') return '-';
-                        return window.formatLocalDateTime ? window.formatLocalDateTime(data) : data;
+                        return window.formatLocalDateTimeHtml ? window.formatLocalDateTimeHtml(data) : data;
                     }
                 },
                 {
@@ -397,7 +406,7 @@
                     render: function(data, type, row) {
                         if (data === 'مراجع') {
                             const esc = s => $('<div>').text(s ?? '').html();
-                            const tip = row.reviewer_name ? ' بواسطة ' + esc(row.reviewer_name) + (row.reviewed_at_formatted ? ' (' + esc(window.formatLocalDateTime ? window.formatLocalDateTime(row.reviewed_at_formatted) : row.reviewed_at_formatted) + ')' : '') : '';
+                            const tip = row.reviewer_name ? ' بواسطة ' + esc(row.reviewer_name) + (row.reviewed_at_formatted ? ' (' + esc(window.formatLocalDateTimeHtml ? window.formatLocalDateTimeHtml(row.reviewed_at_formatted) : row.reviewed_at_formatted) + ')' : '') : '';
                             return '<span class="badge bg-success" title="' + tip + '"><i class="fas fa-check"></i> مراجع</span>';
                         }
                         return '<span class="badge bg-secondary"><i class="fas fa-hourglass-half"></i> غير مراجع</span>';
@@ -517,13 +526,13 @@
                 {
                     data: 'estimated_cost',
                     render: function(data) {
-                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '-';
+                        return data ? formatMoney(data) + ' ج.م' : '-';
                     }
                 },
                 {
                     data: 'actual_cost',
                     render: function(data) {
-                        return data ? '<strong style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>' : '-';
+                        return data ? '<strong style="color: var(--danger);">' + formatMoney(data) + ' ج.م</strong>' : '-';
                     }
                 },
                 {
@@ -559,7 +568,8 @@
             }
         });
 
-        // Initialize Salaries Table
+        // Initialize Salaries Table (only when the tab exists for this user's role)
+        if ($('#salariesTable').length) {
         $('#salariesTable').DataTable({
             processing: true,
             serverSide: true,
@@ -572,25 +582,25 @@
                 {
                     data: 'base_salary',
                     render: function(data) {
-                        return parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م';
+                        return formatMoney(data) + ' ج.م';
                     }
                 },
                 {
                     data: 'allowances_total',
                     render: function(data) {
-                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '0.00 ج.م';
+                        return data ? formatMoney(data) + ' ج.م' : '0.00 ج.م';
                     }
                 },
                 {
                     data: 'deductions_total',
                     render: function(data) {
-                        return data ? parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م' : '0.00 ج.م';
+                        return data ? formatMoney(data) + ' ج.م' : '0.00 ج.م';
                     }
                 },
                 {
                     data: 'total_salary',
                     render: function(data) {
-                        return '<strong style="color: var(--success);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
+                        return '<strong style="color: var(--success);">' + formatMoney(data) + ' ج.م</strong>';
                     }
                 },
                 { data: 'period_label', defaultContent: '-' },
@@ -619,6 +629,7 @@
                 url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
             }
         });
+        }
     });
 
     function debounce(fn, delay) {
@@ -647,10 +658,11 @@
                     // Use remaining balance from API (already calculated correctly)
                     const balance = parseFloat(custody.remaining);
                     if (balance > 0) {
+                        const totalAvailable = parseFloat(custody.total_available || balance);
                         const reason = custody.reason || 'عهدة #' + custody.id;
                         select.append(`
-                            <option value="${custody.id}" data-balance="${balance}">
-                                ${reason} (الرصيد: ${balance.toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ج.م)
+                            <option value="${custody.id}" data-balance="${balance}" data-total="${totalAvailable}">
+                                ${reason} (الرصيد: ${formatMoney(balance)} ج.م)
                             </option>
                         `);
                     }
@@ -671,10 +683,16 @@
     function updateQuickCustodyBalance() {
         const selectedOption = $('#quick_custody_id option:selected');
         const balance = selectedOption.data('balance');
+        const total = selectedOption.data('total');
 
         if (balance !== undefined) {
-            $('#custody_balance').text(parseFloat(balance).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م');
-            $('#quick_amount').attr('max', balance);
+            // T27: عرض رصيد العهدة المختارة + إجمالي المتاح عبر كل العهدات (التوزيع التلقائي)
+            let text = formatMoney(balance) + ' ج.م';
+            if (total !== undefined && parseFloat(total) > parseFloat(balance)) {
+                text += ' — إجمالي المتاح في كل عهداتك: ' + formatMoney(total) + ' ج.م';
+            }
+            $('#custody_balance').text(text);
+            $('#quick_amount').attr('max', total !== undefined ? total : balance);
         }
     }
 

@@ -186,9 +186,9 @@ class CustodyController extends Controller
             try {
                 $this->service->acceptCustody($custody);
                 ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . ($custody->agent?->name ?? 'غير محدد'));
-                return back()->with('success', 'تم الموافقة على العهدة. المندوب سيستقبل الأموال من خزينة "' . ($custody->treasury->name ?? 'غير محددة') . '" عند القبول');
+                return $this->formBackOrJson($request, 'success', 'تم الموافقة على العهدة. المندوب سيستقبل الأموال من خزينة "' . ($custody->treasury->name ?? 'غير محددة') . '" عند القبول');
             } catch (\Exception $e) {
-                return back()->with('error', $e->getMessage());
+                return $this->formBackOrJson($request, 'error', $e->getMessage());
             }
         }
 
@@ -198,16 +198,16 @@ class CustodyController extends Controller
             $treasuryId = $request->input('treasury_id');
 
             if (!$treasuryId) {
-                return back()->with('error', 'يرجى اختيار خزينة');
+                return $this->formBackOrJson($request, 'error', 'يرجى اختيار خزينة');
             }
 
             try {
                 $treasury = Treasury::findOrFail($treasuryId);
                 $this->service->acceptPersonalCustodyFromTreasury($custody, $treasury);
                 ActivityLogService::approved($custody, 'تم الموافقة على العهدة الشخصية #' . $custody->id . ' للموظف ' . ($custody->agent?->name ?? 'غير محدد'));
-                return back()->with('success', 'تم الموافقة على العهدة الشخصية وصرف الأموال من خزينة "' . $treasury->name . '" بنجاح');
+                return $this->formBackOrJson($request, 'success', 'تم الموافقة على العهدة الشخصية وصرف الأموال من خزينة "' . $treasury->name . '" بنجاح');
             } catch (\Exception $e) {
-                return back()->with('error', $e->getMessage());
+                return $this->formBackOrJson($request, 'error', $e->getMessage());
             }
         }
 
@@ -215,7 +215,7 @@ class CustodyController extends Controller
         $treasuryAmounts = $request->input('treasury_amounts', []);
 
         if (empty($treasuryAmounts) || !array_filter($treasuryAmounts)) {
-            return back()->with('error', 'يرجى توزيع المبالغ على الخزائن');
+            return $this->formBackOrJson($request, 'error', 'يرجى توزيع المبالغ على الخزائن');
         }
 
         // Calculate total and validate
@@ -229,7 +229,7 @@ class CustodyController extends Controller
 
                 // Validate treasury has enough balance
                 if ($treasury->balance < $amount) {
-                    return back()->with('error', "رصيد خزينة '{$treasury->name}' غير كافي. المطلوب: {$amount}, المتاح: {$treasury->balance}");
+                    return $this->formBackOrJson($request, 'error', "رصيد خزينة '{$treasury->name}' غير كافي. المطلوب: {$amount}, المتاح: {$treasury->balance}");
                 }
 
                 $distribution[$treasuryId] = [
@@ -242,15 +242,15 @@ class CustodyController extends Controller
 
         // Validate total equals custody amount
         if (abs($totalAmount - $custody->amount) > 0.01) {
-            return back()->with('error', 'مجموع المبالغ المتوزعة يجب أن يساوي ' . number_format($custody->amount, 2) . ' ج.م');
+            return $this->formBackOrJson($request, 'error', 'مجموع المبالغ المتوزعة يجب أن يساوي ' . number_format($custody->amount, 2) . ' ج.م');
         }
 
         try {
             $this->service->acceptCustodyWithDistribution($custody, $distribution);
             ActivityLogService::approved($custody, 'تم الموافقة على العهدة #' . $custody->id . ' للمندوب ' . ($custody->agent?->name ?? 'غير محدد'));
-            return back()->with('success', 'تم الموافقة على العهدة وتوزيع الأموال بنجاح');
+            return $this->formBackOrJson($request, 'success', 'تم الموافقة على العهدة وتوزيع الأموال بنجاح');
         } catch (\Exception $e) {
-            return back()->with('error', $e->getMessage());
+            return $this->formBackOrJson($request, 'error', $e->getMessage());
         }
     }
 
@@ -276,9 +276,9 @@ class CustodyController extends Controller
         try {
             $this->service->rejectCustody($custody, $request->reason);
             ActivityLogService::rejected($custody, 'تم رفض العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name);
-            return back()->with('success', 'تم رفض العهدة');
+            return $this->formBackOrJson($request, 'success', 'تم رفض العهدة');
         } catch (\Exception $e) {
-            return back()->with('error', $e->getMessage());
+            return $this->formBackOrJson($request, 'error', $e->getMessage());
         }
     }
 
@@ -313,9 +313,9 @@ class CustodyController extends Controller
 
         try {
             $this->service->agentRejectCustody($custody, $request->reason);
-            return back()->with('success', 'تم رفض العهدة');
+            return $this->formBackOrJson($request, 'success', 'تم رفض العهدة');
         } catch (\Exception $e) {
-            return back()->with('error', $e->getMessage());
+            return $this->formBackOrJson($request, 'error', $e->getMessage());
         }
     }
 
@@ -328,7 +328,7 @@ class CustodyController extends Controller
 
         // Check if there are pending transfers
         if ($custody->hasPendingTransfers()) {
-            return back()->with('error', 'لا يمكن رد عهدة بها تحويلات معلقة. يرجى انتظار قبول أو رفض التحويلات أولاً');
+            return $this->formBackOrJson($request, 'error', 'لا يمكن رد عهدة بها تحويلات معلقة. يرجى انتظار قبول أو رفض التحويلات أولاً');
         }
 
         $remainingBalance = $custody->getRemainingBalance();
@@ -339,14 +339,14 @@ class CustodyController extends Controller
 
         $this->service->requestReturnCustody($custody, $request->returned_amount);
         ActivityLogService::returned($custody, 'طلب رد ' . number_format($request->returned_amount, 2) . ' ج.م من العهدة #' . $custody->id);
-        return back()->with('success', 'تم إرسال طلب رد العهدة للمحاسب');
+        return $this->formBackOrJson($request, 'success', 'تم إرسال طلب رد العهدة للمحاسب');
     }
 
     public function addExternalDonation(Request $request, Custody $custody)
     {
         // Allow custody owner or users with manage_treasury permission
         if (auth()->id() !== $custody->agent_id && !auth()->user()->can('manage_treasury')) {
-            return back()->with('error', 'غير مصرح لك بإضافة تبرعات لهذه العهدة');
+            return $this->formBackOrJson($request, 'error', 'غير مصرح لك بإضافة تبرعات لهذه العهدة');
         }
 
         $request->validate([
@@ -357,9 +357,9 @@ class CustodyController extends Controller
 
         try {
             $this->service->addExternalDonationToCustody($custody, $request->amount, $request->description, $request->type);
-            return back()->with('success', 'تم إضافة المبلغ لرصيد العهدة بنجاح');
+            return $this->formBackOrJson($request, 'success', 'تم إضافة المبلغ لرصيد العهدة بنجاح');
         } catch (\Exception $e) {
-            return back()->with('error', $e->getMessage());
+            return $this->formBackOrJson($request, 'error', $e->getMessage());
         }
     }
 
@@ -367,7 +367,7 @@ class CustodyController extends Controller
     {
         // Allow agent to add recovery funds
         if (!auth()->user()->hasRole('مندوب')) {
-            return back()->with('error', 'غير مصرح لك بتسجيل استرجاع');
+            return $this->formBackOrJson($request, 'error', 'غير مصرح لك بتسجيل استرجاع');
         }
 
         $request->validate([
@@ -431,24 +431,18 @@ class CustodyController extends Controller
 
                 // Send notifications to accountants and managers
                 $notificationMessage = "المندوب: {$user->name} - استرجع " . number_format($request->amount, 2) . " ج.م - السبب: {$request->description}";
-                NotificationService::notifyByRole('محاسب', 'استرجاع أموال جديد', $notificationMessage, 'info', $custody->id, 'custody');
-                NotificationService::notifyByRole('مدير', 'استرجاع أموال جديد', $notificationMessage, 'info', $custody->id, 'custody');
+                NotificationService::notifyByRoles(['محاسب', 'مدير'], 'استرجاع أموال جديد', $notificationMessage, 'info', $custody->id, 'custody');
             });
 
-            return back()->with('success', 'تم تسجيل الاسترجاع بنجاح وإرسال إشعار للمحاسب والمدير');
+            return $this->formBackOrJson($request, 'success', 'تم تسجيل الاسترجاع بنجاح وإرسال إشعار للمحاسب والمدير');
         } catch (\Exception $e) {
             \Log::error('Recovery error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+            return $this->formBackOrJson($request, 'error', 'حدث خطأ: ' . $e->getMessage());
         }
     }
 
     public function requestReturnTreasury(Request $request)
     {
-        // Agent requesting to return funds to treasury
-        if (!auth()->user()->hasRole('مندوب')) {
-            return back()->with('error', 'غير مصرح لك بتقديم طلب رد');
-        }
-
         $request->validate([
             'custody_id' => 'required|exists:custodies,id',
             'amount' => 'required|numeric|min:0.01',
@@ -457,13 +451,23 @@ class CustodyController extends Controller
 
         $custody = Custody::findOrFail($request->custody_id);
 
+        // T28 rev2: المندوب كالمعتاد، وأيضاً أي مالك للعهدة المذكورة (غير المشرف)
+        // — باحث أو غيره استلم عهدة عبر الاستلام الخارجي يردها للخزينة من هنا
+        $user = auth()->user();
+        if (!$user->hasRole('مندوب')) {
+            $isOwnerNonSupervisor = !$user->hasRole('مشرف') && $custody->agent_id === $user->id;
+            if (!$isOwnerNonSupervisor) {
+                return $this->formBackOrJson($request, 'error', 'غير مصرح لك بتقديم طلب رد');
+            }
+        }
+
         if (auth()->id() !== $custody->agent_id) {
-            return back()->with('error', 'غير مصرح لك برد من هذه العهدة');
+            return $this->formBackOrJson($request, 'error', 'غير مصرح لك برد من هذه العهدة');
         }
 
         $remainingBalance = $custody->getRemainingBalance();
         if ($request->amount > $remainingBalance) {
-            return back()->withInput()->with('error', 'المبلغ يتجاوز الرصيد المتاح (' . number_format($remainingBalance, 2) . ' ج.م)');
+            return $this->formBackOrJson($request, 'error', 'المبلغ يتجاوز الرصيد المتاح (' . number_format($remainingBalance, 2) . ' ج.م)', true);
         }
 
         try {
@@ -485,13 +489,12 @@ class CustodyController extends Controller
             // Notify accountants and managers about the return request
             $user = auth()->user();
             $notificationMessage = "المندوب: {$user->name} - طلب رد " . number_format($request->amount, 2) . " ج.م من العهدة #" . $custody->id . " - السبب: " . $request->description;
-            NotificationService::notifyByRole('محاسب', 'طلب رد عهدة جديد', $notificationMessage, 'warning', $custody->id, 'custody');
-            NotificationService::notifyByRole('مدير', 'طلب رد عهدة جديد', $notificationMessage, 'warning', $custody->id, 'custody');
+            NotificationService::notifyByRoles(['محاسب', 'مدير'], 'طلب رد عهدة جديد', $notificationMessage, 'warning', $custody->id, 'custody');
 
-            return back()->with('success', 'تم تقديم طلب الرد بنجاح. سيقوم المحاسب بمراجعة الطلب واختيار الخزينة المناسبة');
+            return $this->formBackOrJson($request, 'success', 'تم تقديم طلب الرد بنجاح. سيقوم المحاسب بمراجعة الطلب واختيار الخزينة المناسبة');
         } catch (\Exception $e) {
             \Log::error('Return request error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
-            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
+            return $this->formBackOrJson($request, 'error', 'حدث خطأ: ' . $e->getMessage());
         }
     }
 
@@ -500,7 +503,7 @@ class CustodyController extends Controller
         $this->authorize('approve_custody');
 
         if ($custody->pending_return <= 0) {
-            return back()->with('error', 'لا يوجد مبلغ معلق للموافقة عليه');
+            return $this->formBackOrJson($request, 'error', 'لا يوجد مبلغ معلق للموافقة عليه');
         }
 
         $request->validate([
@@ -515,7 +518,7 @@ class CustodyController extends Controller
 
         $this->service->approveCustodyReturn($custody, $treasuryId);
         ActivityLogService::approved($custody, 'تم قبول رد ' . number_format($pendingAmount, 2) . ' ج.م من العهدة #' . $custody->id . ' للمندوب ' . $custody->agent->name . ' وإضافتها إلى الخزينة');
-        return back()->with('success', 'تم قبول رد العهدة والتحويل للخزينة المختارة');
+        return $this->formBackOrJson($request, 'success', 'تم قبول رد العهدة والتحويل للخزينة المختارة');
     }
 
     /**
@@ -619,8 +622,7 @@ class CustodyController extends Controller
                 // Notify accountants and managers about the approved return
                 $user = auth()->user();
                 $notificationMessage = "المستخدم: {$user->name} - وافق على رد " . number_format($returnRequest->amount, 2) . " ج.م من العهدة #" . $custody->id . " للمندوب " . $custody->agent->name;
-                NotificationService::notifyByRole('محاسب', 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
-                NotificationService::notifyByRole('مدير', 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
+                NotificationService::notifyByRoles(['محاسب', 'مدير'], 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
 
                 ActivityLogService::returned($custody, 'رد مقبول ' . number_format($returnRequest->amount, 2) . ' ج.م من العهدة #' . $custody->id . ' بموافقة من المدير');
             });
@@ -642,7 +644,7 @@ class CustodyController extends Controller
         }
 
         if (!$returnRequest->isPending()) {
-            return back()->with('error', 'لا يمكن الموافقة على طلب تم البت فيه بالفعل');
+            return $this->formBackOrJson($request, 'error', 'لا يمكن الموافقة على طلب تم البت فيه بالفعل');
         }
 
         $request->validate([
@@ -680,8 +682,8 @@ class CustodyController extends Controller
                     'transaction_date' => now(),
                 ]);
 
-                // Update custody status if fully returned
-                if ($custody->returned >= $custody->amount) {
+                // Update custody status if fully returned (ولا يوجد تحويل معلق مجمّد — T26)
+                if ($custody->returned >= $custody->amount && (float) $custody->pending_transfer_out <= 0) {
                     $custody->update(['status' => 'closed']);
 
                     TreasuryTransaction::create([
@@ -718,9 +720,9 @@ class CustodyController extends Controller
                 NotificationService::notifyByRole('مدير', 'رد عهدة موافق عليه', $notificationMessage, 'success', $custody->id, 'custody');
             });
 
-            return back()->with('success', 'تمت الموافقة على طلب الرد وتحويل المبلغ للخزينة المختارة بنجاح');
+            return $this->formBackOrJson($request, 'success', 'تمت الموافقة على طلب الرد وتحويل المبلغ للخزينة المختارة بنجاح');
         } catch (\Exception $e) {
-            return back()->with('error', 'خطأ: ' . $e->getMessage());
+            return $this->formBackOrJson($request, 'error', 'خطأ: ' . $e->getMessage());
         }
     }
 
@@ -730,7 +732,7 @@ class CustodyController extends Controller
     public function rejectReturnRequest(Request $request, CustodyReturnRequest $returnRequest)
     {
         if (!$returnRequest->isPending()) {
-            return back()->with('error', 'لا يمكن رفض طلب تم البت فيه بالفعل');
+            return $this->formBackOrJson($request, 'error', 'لا يمكن رفض طلب تم البت فيه بالفعل');
         }
 
         $custody = $returnRequest->custody;
@@ -767,9 +769,9 @@ class CustodyController extends Controller
             ]);
 
             ActivityLogService::logged('تم رفض طلب رد عهدة', 'CustodyReturnRequest', $returnRequest->id);
-            return back()->with('success', 'تم رفض الطلب بنجاح');
+            return $this->formBackOrJson($request, 'success', 'تم رفض الطلب بنجاح');
         } catch (\Exception $e) {
-            return back()->with('error', 'خطأ: ' . $e->getMessage());
+            return $this->formBackOrJson($request, 'error', 'خطأ: ' . $e->getMessage());
         }
     }
 
@@ -874,12 +876,8 @@ class CustodyController extends Controller
     {
         $user = auth()->user();
 
-        // Check if user is agent (مندوب)
-        if (!$user->hasRole('مندوب')) {
-            abort(403, 'Unauthorized');
-        }
-
-        // Get agent's own custodies with related data
+        // T28: متاحة لكل مستخدم مسجل (كانت حكراً على المندوبين) — الاستلام الخارجي الذاتي يمنح الجميع عهدات
+        // Get the user's own custodies with related data
         $myCustodies = Custody::where('agent_id', $user->id)
             ->with(['treasury', 'accountant', 'transactions', 'expenses'])
             ->orderBy('created_at', 'desc')
@@ -1012,6 +1010,49 @@ class CustodyController extends Controller
     }
 
     /**
+     * T28: استلام خارجي ذاتي — متاح لكل مستخدم مسجل أياً كان دوره، بلا موافقة وبلا حد أقصى
+     */
+    public function storeExternalReceipt(Request $request)
+    {
+        // T28 rev2: المشرف دور اطلاعي فقط — لا يستلم خارجياً ولا تحدث له عهدة
+        if (auth()->user()->hasRole('مشرف')) {
+            return $this->formBackOrJson($request, 'error', 'الاستلام الخارجي غير متاح لدور المشرف. المشرف دور للاطلاع فقط دون استلام أو صرف أموال');
+        }
+
+        // نفس قواعد ورسائل إضافة التبرع في الخزينة (بلا selector خزينة وبلا حد أقصى للمبلغ)
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'external_source' => 'required|string|max:255',
+            'description' => 'required|string|max:500',
+        ]);
+
+        try {
+            $custody = $this->service->recordExternalReceipt(
+                auth()->id(),
+                $validated['amount'],
+                $validated['external_source'],
+                $validated['description']
+            );
+
+            ActivityLogService::created(
+                $custody,
+                'استلام خارجي بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من الجهة: ' . $validated['external_source']
+            );
+
+            // إشعار المديرين والمحاسبين مرة واحدة لكل مستخدم (طريقة T21)
+            $user = auth()->user();
+            $notificationMessage = 'المستخدم: ' . $user->name . ' - سجل استلاماً خارجياً بمبلغ '
+                . number_format($validated['amount'], 2) . ' ج.م من الجهة: ' . $validated['external_source']
+                . ' - الوصف: ' . $validated['description'];
+            NotificationService::notifyByRoles(['مدير', 'محاسب'], 'استلام خارجي جديد', $notificationMessage, 'info', $custody->id, 'custody');
+
+            return $this->formBackOrJson($request, 'success', 'تم تسجيل الاستلام الخارجي وإضافة عهدة جديدة لك بنجاح');
+        } catch (\Exception $e) {
+            return $this->formBackOrJson($request, 'error', 'حدث خطأ أثناء تسجيل الاستلام الخارجي: ' . $e->getMessage(), true);
+        }
+    }
+
+    /**
      * API endpoint for user's custodies with available balance
      */
     public function userCustodiesApi()
@@ -1029,9 +1070,12 @@ class CustodyController extends Controller
                         'spent' => (float)$custody->spent,
                         'returned' => (float)$custody->returned,
                         'pending_return' => (float)$custody->pending_return,
+                        'pending_transfer_out' => (float)($custody->pending_transfer_out ?? 0),
                         'transferred_in' => (float)($custody->transferred_in ?? 0),
                         'transferred_out' => (float)($custody->transferred_out ?? 0),
                         'remaining' => (float)$remaining,
+                        // T27: إجمالي المتاح لو اختار المستخدم هذه العهدة (هي أولاً ثم بقية عهداته)
+                        'total_available' => app(\App\Services\TreasuryService::class)->totalAvailableForCustody($custody->id),
                     ];
                 }
                 return null;

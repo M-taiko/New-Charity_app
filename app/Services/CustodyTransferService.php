@@ -6,6 +6,7 @@ use App\Models\Custody;
 use App\Models\CustodyTransfer;
 use App\Models\TreasuryTransaction;
 use App\Models\Notification;
+use App\Exceptions\TransferBalanceException;
 use Illuminate\Support\Facades\DB;
 
 class CustodyTransferService
@@ -16,7 +17,8 @@ class CustodyTransferService
     public function createTransferRequest($fromAgentId, $toAgentId, $custodyId, $amount, $notes = null)
     {
         return DB::transaction(function () use ($fromAgentId, $toAgentId, $custodyId, $amount, $notes) {
-            $custody = Custody::findOrFail($custodyId);
+            // قفل العهدة أولاً حتى لا يسبقنا صرف/طلب آخر على نفس المبلغ (T26)
+            $custody = Custody::where('id', $custodyId)->lockForUpdate()->firstOrFail();
 
             // Verify ownership
             if ($custody->agent_id !== $fromAgentId) {
@@ -28,9 +30,11 @@ class CustodyTransferService
                 throw new \Exception('العهدة يجب أن تكون في حالة مقبولة أو نشطة');
             }
 
-            // Check remaining balance
-            if ($custody->getRemainingBalance() < $amount) {
-                throw new \Exception('الرصيد المتبقي غير كافي');
+            // Check remaining balance (يقارن بعد تقريب خانتين عشريتين؛ الرصيد المتاح يستبعد المبالغ المجمدة)
+            $amount = round((float) $amount, 2);
+            $available = round((float) $custody->getRemainingBalance(), 2);
+            if ($available < $amount) {
+                throw new \Exception('الرصيد المتاح في العهدة لا يكفي لهذا التحويل. المتاح: ' . number_format($available, 2) . ' ج.م، المطلوب: ' . number_format($amount, 2) . ' ج.م');
             }
 
             // Create transfer request
@@ -42,6 +46,9 @@ class CustodyTransferService
                 'status' => 'pending',
                 'notes' => $notes,
             ]);
+
+            // تجميد المبلغ فوراً (مثل حجز بنكي): ينقص الرصيد المتاح حتى البت في التحويل (T26)
+            $custody->increment('pending_transfer_out', $amount);
 
             // Collect all users to notify (avoiding duplicates)
             $notifiedUsers = [];
@@ -91,34 +98,52 @@ class CustodyTransferService
      */
     public function approveTransfer($transfer, $approverId)
     {
-        return DB::transaction(function () use ($transfer, $approverId) {
-            // Verify receiving agent is approving
-            if ($transfer->to_agent_id !== $approverId) {
-                throw new \Exception('فقط المندوب المستقبل يمكنه الموافقة على التحويل');
-            }
+        try {
+            return DB::transaction(function () use ($transfer, $approverId) {
+                // Verify receiving agent is approving
+                if ($transfer->to_agent_id !== $approverId) {
+                    throw new \Exception('فقط المندوب المستقبل يمكنه الموافقة على التحويل');
+                }
 
-            // Lock the custody for update to prevent race conditions
-            $custody = Custody::where('id', $transfer->custody_id)->lockForUpdate()->first();
+                // Lock the custody for update to prevent race conditions
+                $custody = Custody::where('id', $transfer->custody_id)->lockForUpdate()->first();
 
-            // Re-verify balance one more time with fresh data
-            if ($custody->getRemainingBalance() < $transfer->amount) {
-                throw new \Exception('الرصيد المتبقي غير كافي');
-            }
+                // T26: تحرير تجميد هذا التحويل أولاً (لا ينزل عن صفر: التحويلات القديمة قبل التجميد لا تملك حجزاً)
+                $frozen = (float) $custody->pending_transfer_out;
+                $release = min((float) $transfer->amount, $frozen);
+                if ($release > 0) {
+                    $custody->decrement('pending_transfer_out', $release);
+                }
+                $custody = $custody->fresh();
 
-            // Update transfer status
-            $transfer->update([
-                'status' => 'approved',
-                'approved_at' => now(),
-                'approved_by' => $approverId,
-            ]);
+                // Re-verify balance one more time with fresh data
+                // (المبلغ المحرَّر يعود متاحاً لهذا الفحص؛ رسالة صريحة أن المقصود رصيد عهدة المُرسل)
+                $available = round((float) $custody->getRemainingBalance(), 2);
+                $needed = round((float) $transfer->amount, 2);
+                if ($available < $needed) {
+                    throw new TransferBalanceException(
+                        'رصيد عهدة المُحوِّل لم يعد كافياً لإتمام هذا التحويل. المتاح: '
+                        . number_format($available, 2) . ' ج.م، المطلوب: ' . number_format($needed, 2) . ' ج.م'
+                    );
+                }
 
-            // Deduct from sender's custody using transferred_out (not spent!)
-            $custody->increment('transferred_out', $transfer->amount);
+                // Update transfer status
+                $transfer->update([
+                    'status' => 'approved',
+                    'approved_at' => now(),
+                    'approved_by' => $approverId,
+                ]);
 
-            // Close custody if balance reaches zero
-            if ($custody->fresh()->getRemainingBalance() <= 0) {
-                $custody->update(['status' => 'closed']);
-            }
+                // Deduct from sender's custody using transferred_out (not spent!)
+                $custody->increment('transferred_out', $transfer->amount);
+
+                // Close custody if balance reaches zero — وليس بها تحويلات معلقة أخرى (T26)
+                if (
+                    round((float) $custody->fresh()->getRemainingBalance(), 2) <= 0
+                    && (float) $custody->fresh()->pending_transfer_out <= 0
+                ) {
+                    $custody->update(['status' => 'closed']);
+                }
 
             // Check if receiving agent has an existing active custody for the same treasury
             $toAgentCustody = Custody::where('treasury_id', $custody->treasury_id)
@@ -230,6 +255,18 @@ class CustodyTransferService
 
             return $transfer;
         });
+        } catch (TransferBalanceException $e) {
+            // بعد فشل المعاملة وتراجعها: إبلاغ المُرسل أن تحويله تعذر وسبب ذلك (T26)
+            $this->notifyUser(
+                $transfer->from_agent_id,
+                'تعذر إتمام التحويل',
+                "تعذر إتمام تحويل " . number_format((float) $transfer->amount, 2) . " ج.م من العهدة #{$transfer->custody_id}. {$e->getMessage()}",
+                'error',
+                $transfer->id,
+                'custody_transfer'
+            );
+            throw $e;
+        }
     }
 
     /**
@@ -241,6 +278,13 @@ class CustodyTransferService
             // Verify receiving agent is rejecting
             if ($transfer->to_agent_id !== $rejecterId) {
                 throw new \Exception('فقط المندوب المستقبل يمكنه رفض التحويل');
+            }
+
+            // T26: تحرير تجميد هذا التحويل (لا ينزل عن صفر للتحويلات القديمة غير المجمّدة)
+            $custody = Custody::where('id', $transfer->custody_id)->lockForUpdate()->first();
+            $release = min((float) $transfer->amount, (float) $custody->pending_transfer_out);
+            if ($release > 0) {
+                $custody->decrement('pending_transfer_out', $release);
             }
 
             // Update transfer status

@@ -109,7 +109,7 @@ class ExpenseItemController extends Controller
 
         ExpenseItem::create($request->only(['expense_category_id', 'name', 'code', 'default_amount', 'order']));
 
-        return redirect()->route('expense-items.index')->with('success', 'تم إضافة البند بنجاح');
+        return $this->formBackOrJson($request, 'success', 'تم إضافة البند بنجاح');
     }
 
     public function edit(ExpenseItem $expenseItem)
@@ -187,7 +187,7 @@ class ExpenseItemController extends Controller
             'order'       => $request->order ?? 1,
         ]);
 
-        return back()->with('success', 'تم إضافة التصنيف بنجاح');
+        return $this->formBackOrJson($request, 'success', 'تم إضافة التصنيف بنجاح');
     }
 
     public function destroyCategory(ExpenseCategory $expenseCategory)

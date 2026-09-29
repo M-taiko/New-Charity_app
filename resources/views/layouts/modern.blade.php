@@ -726,7 +726,7 @@
                 <p style="font-size: .95rem; line-height: 1.7; color: #374151; margin-bottom: 1.5rem; white-space: pre-line;">{{ $activeBroadcast->message }}</p>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: .8rem; color: #9ca3af;">
                     <span><i class="fas fa-user"></i> {{ $activeBroadcast->creator->name }}</span>
-                    <span><i class="fas fa-clock"></i> {{ $activeBroadcast->created_at->diffForHumans() }}</span>
+                    <span><i class="fas fa-clock"></i> {!! rel_time_span($activeBroadcast->created_at) !!}</span>
                 </div>
             </div>
             <div style="padding: 1rem 2rem 1.5rem; border-top: 1px solid #f3f4f6; display: flex; gap: .75rem;">
@@ -809,7 +809,7 @@
                                     <div class="notification-item-text">{{ $notification->message }}</div>
                                     <div class="notification-item-time">
                                         <i class="fas fa-clock"></i>
-                                        {{ $notification->created_at->diffForHumans() }}
+                                        {!! rel_time_span($notification->created_at) !!}
                                     </div>
                                 </button>
                             </form>
@@ -960,13 +960,15 @@
                 </li>
                 @endcan
 
-                @role('مندوب')
+                {{-- T28: عهداتي متاحة لكل مستخدم (الاستلام الخارجي الذاتي يمنح الجميع عهدات) --}}
                 <li>
                     <a href="{{ route('agent.my-custodies') }}" class="@if(Route::current()->getName() == 'agent.my-custodies') active @endif">
                         <i class="fas fa-hand-holding-usd"></i>
                         <span>عهداتي</span>
                     </a>
                 </li>
+
+                @role('مندوب')
                 <li>
                     <a href="{{ route('expenses.agent') }}" class="@if(Route::current()->getName() == 'expenses.agent') active @endif">
                         <i class="fas fa-wallet"></i>
@@ -1277,24 +1279,126 @@
             });
         });
 
-        // Notification Sound - Web Audio API
+        // Shared money formatter: Western digits, comma thousands separator, exactly two decimals
+        // (matches the server-side number_format($x, 2) output).
+        // Display only: never use it for values sent to the server or for type="number" input values.
+        window.formatMoney = function(value) {
+            const n = parseFloat(value);
+            if (isNaN(n)) return '0.00';
+            return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
+        // Notification Sound - Web Audio API (loud two-note ascending chime)
+        let notificationAudioCtx = null;
+        function getNotificationAudioCtx() {
+            if (!notificationAudioCtx) {
+                const AC = window.AudioContext || window.webkitAudioContext;
+                if (!AC) return null;
+                notificationAudioCtx = new AC();
+            }
+            return notificationAudioCtx;
+        }
+
+        // Browsers block audio until the user interacts with the page:
+        // resume the context on the first click/keypress so the sound is never silently blocked
+        ['pointerdown', 'keydown'].forEach(function(evt) {
+            document.addEventListener(evt, function() {
+                const ctx = getNotificationAudioCtx();
+                if (ctx && ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+            }, { passive: true });
+        });
+
         function playNotificationSound() {
             try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.15);
-                gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-                osc.start(ctx.currentTime);
-                osc.stop(ctx.currentTime + 0.3);
+                const ctx = getNotificationAudioCtx();
+                if (!ctx) return;
+                if (ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+                const t0 = ctx.currentTime;
+                // سلسلة إصدار عالية: رفع قوي ← ضاغط ← تعويض ← قاصّ ناعم يمنع أي قطع/تشويه ← الخرج
+                // المتوسط يرتفع كثيراً (أعلى صوتاً بوضوح) مع بقاء القمم دون القطع
+                const preGain = ctx.createGain();
+                preGain.gain.value = 2.0;
+                const comp = ctx.createDynamicsCompressor();
+                comp.threshold.value = -4;
+                comp.knee.value = 6;
+                comp.ratio.value = 6;
+                comp.attack.value = 0.001;
+                comp.release.value = 0.12;
+                const makeup = ctx.createGain();
+                makeup.gain.value = 1.4;
+                const clipper = ctx.createWaveShaper();
+                const clipCurve = new Float32Array(1024);
+                for (let i = 0; i < 1024; i++) {
+                    const x = (i / 1023) * 2 - 1;
+                    // 0.98: سقف أقل قليلاً من 1.0 حتى لا يتجاوز الاستيفاء في oversample حد القطع
+                    clipCurve[i] = 0.98 * Math.tanh(1.5 * x) / Math.tanh(1.5);
+                }
+                clipper.curve = clipCurve;
+                clipper.oversample = '2x';
+                preGain.connect(comp);
+                comp.connect(makeup);
+                makeup.connect(clipper);
+                clipper.connect(ctx.destination);
+                playChimeNote(ctx, preGain, t0, 783.99, 0.32);          // G5 - "ding"
+                playChimeNote(ctx, preGain, t0 + 0.22, 1174.66, 0.6);   // D6 - higher "dong", total ~0.8s
             } catch(e) {
                 console.log('Notification sound not supported');
             }
+        }
+
+        function playChimeNote(ctx, destination, startTime, freq, duration) {
+            const envelope = ctx.createGain();
+            // fast attack (no click) then smooth exponential decay (no distortion)
+            envelope.gain.setValueAtTime(0.0001, startTime);
+            envelope.gain.exponentialRampToValueAtTime(1.0, startTime + 0.015);
+            envelope.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+            envelope.connect(destination);
+
+            // نغمتان أساسيتان متقاربتان قليلاً في الطبقة (unison): صوت أمتلأ وأعلى إحساساً دون رفع القمم
+            const carrier = ctx.createGain();
+            carrier.gain.value = 0.88;
+
+            const osc = ctx.createOscillator();
+            osc.type = 'triangle';
+            osc.frequency.value = freq;
+            osc.detune.value = -7;
+            osc.connect(carrier);
+
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'triangle';
+            osc2.frequency.value = freq;
+            osc2.detune.value = 7;
+            osc2.connect(carrier);
+            carrier.connect(envelope);
+
+            // octave shimmer + a brief high sparkle: لمعان ووضوح أعلى يُسمع بوضوح حتى على مكبرات ضعيفة
+            const shimmer = ctx.createGain();
+            shimmer.gain.value = 0.12;
+            const shimmerOsc = ctx.createOscillator();
+            shimmerOsc.type = 'sine';
+            shimmerOsc.frequency.value = freq * 2;
+            shimmerOsc.connect(shimmer);
+            shimmer.connect(envelope);
+
+            const sparkle = ctx.createGain();
+            sparkle.gain.setValueAtTime(0.0, startTime);
+            sparkle.gain.linearRampToValueAtTime(0.14, startTime + 0.01);
+            sparkle.gain.exponentialRampToValueAtTime(0.0001, startTime + Math.min(duration, 0.12));
+            const sparkleOsc = ctx.createOscillator();
+            sparkleOsc.type = 'sine';
+            sparkleOsc.frequency.value = freq * 4;
+            sparkleOsc.connect(sparkle);
+            sparkle.connect(envelope);
+
+            const stopAt = startTime + duration + 0.02;
+            osc.start(startTime); osc.stop(stopAt);
+            osc2.start(startTime); osc2.stop(stopAt);
+            shimmerOsc.start(startTime); shimmerOsc.stop(stopAt);
+            sparkleOsc.start(startTime); sparkleOsc.stop(stopAt);
         }
 
         // Notification Polling
@@ -1378,6 +1482,135 @@
             }, 5000);
         });
 
+        // ──── نماذج المودال عبر AJAX (T25) ────
+        // أي <form data-ajax-modal> يُرسل عبر fetch مع Accept: application/json:
+        // عند خطأ التحقق تبقى النافذة مفتوحة والقيم كما هي والرسالة العربية تظهر تحت الحقل
+        window.submitModalFormAjax = function(form) {
+            if (form.dataset.ajaxSubmitting === '1') return;
+            form.dataset.ajaxSubmitting = '1';
+
+            clearModalFormErrors(form);
+            // فحص خفيف للحقول المطلوبة بنص عربي (التحقق الخادمي هو المرجع)
+            var firstBad = markRequiredClientSide(form);
+            if (firstBad) {
+                form.dataset.ajaxSubmitting = '0';
+                firstBad.focus();
+                return;
+            }
+
+            var submitBtn = form.querySelector('button[type="submit"], button:not([type])');
+            var btnHtml = submitBtn ? submitBtn.innerHTML : null;
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> جارٍ الحفظ...';
+            }
+
+            fetch(form.action || window.location.href, {
+                method: (form.method || 'POST').toUpperCase(),
+                body: new FormData(form),
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            }).then(function(res) {
+                return res.json().catch(function() { return {}; }).then(function(json) {
+                    return { ok: res.ok, status: res.status, json: json };
+                });
+            }).then(function(r) {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = btnHtml; }
+                form.dataset.ajaxSubmitting = '0';
+
+                if (r.ok && r.json.success !== false) {
+                    var modalEl = form.closest('.modal');
+                    if (modalEl && window.bootstrap) {
+                        var inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                    }
+                    try { sessionStorage.setItem('t25Flash', r.json.message || 'تم الحفظ بنجاح'); } catch (e) {}
+                    window.location.reload();
+                    return;
+                }
+
+                if (r.status === 422 && r.json.errors) {
+                    var first = null;
+                    Object.keys(r.json.errors).forEach(function(name) {
+                        var field = form.querySelector('[name="' + name + '"]');
+                        if (!field) return;
+                        field.classList.add('is-invalid');
+                        var msg = document.createElement('div');
+                        msg.className = 'invalid-feedback ajax-err d-block';
+                        msg.textContent = r.json.errors[name][0];
+                        field.parentNode.appendChild(msg);
+                        if (!first) first = field;
+                    });
+                    if (first) first.focus();
+                    if (r.json.message) showModalFormAlert(form, r.json.message, 'warning');
+                } else {
+                    showModalFormAlert(form, r.json.message || 'حدث خطأ غير متوقع، حاول مرة أخرى', 'danger');
+                }
+            }).catch(function() {
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = btnHtml; }
+                form.dataset.ajaxSubmitting = '0';
+                showModalFormAlert(form, 'تعذر الاتصال بالخادم، تحقق من الاتصال وحاول مرة أخرى', 'danger');
+            });
+        };
+
+        function clearModalFormErrors(form) {
+            form.querySelectorAll('.is-invalid').forEach(function(el) { el.classList.remove('is-invalid'); });
+            form.querySelectorAll('.invalid-feedback.ajax-err').forEach(function(el) { el.remove(); });
+            var alertEl = form.querySelector('.ajax-modal-alert');
+            if (alertEl) alertEl.remove();
+        }
+
+        function markRequiredClientSide(form) {
+            var first = null;
+            form.querySelectorAll('[required]').forEach(function(el) {
+                if (el.type === 'radio' || el.type === 'checkbox') return;
+                if (!(el.value || '').trim()) {
+                    el.classList.add('is-invalid');
+                    var msg = document.createElement('div');
+                    msg.className = 'invalid-feedback ajax-err d-block';
+                    msg.textContent = 'هذا الحقل مطلوب';
+                    el.parentNode.appendChild(msg);
+                    if (!first) first = el;
+                }
+            });
+            return first;
+        }
+
+        function showModalFormAlert(form, message, type) {
+            var body = form.querySelector('.modal-body');
+            var alertEl = document.createElement('div');
+            alertEl.className = 'alert alert-' + (type || 'danger') + ' ajax-modal-alert';
+            alertEl.innerHTML = '<i class="fas fa-exclamation-circle"></i> ';
+            alertEl.appendChild(document.createTextNode(message));
+            if (body) body.insertBefore(alertEl, body.firstChild);
+            else form.insertBefore(alertEl, form.firstChild);
+        }
+
+        // التقاط إرسال أي نموذج يحمل data-ajax-modal (مرحلة الالتقاط قبل أي onsubmit مضمّن)
+        document.addEventListener('submit', function(e) {
+            var f = e.target;
+            if (f && f.matches && f.matches('form[data-ajax-modal]')) {
+                e.preventDefault();
+                window.submitModalFormAjax(f);
+            }
+        }, true);
+
+        // عرض رسالة النجاح بعد إعادة تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                var msg = sessionStorage.getItem('t25Flash');
+                if (msg) {
+                    sessionStorage.removeItem('t25Flash');
+                    var alertEl = document.createElement('div');
+                    alertEl.className = 'alert alert-success alert-dismissible fade show';
+                    alertEl.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:2000;min-width:280px;text-align:center';
+                    alertEl.innerHTML = '<i class="fas fa-check-circle"></i> ' + msg +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                    document.body.appendChild(alertEl);
+                    setTimeout(function() { alertEl.remove(); }, 5000);
+                }
+            } catch (e) {}
+        });
+
         // ──── تنسيق التواريخ بالتوقيت المحلي للمستخدم (T20) ────
         // يعرض ISO UTC القادم من الخادم بصيغة YYYY-MM-DD hh:mm AM/PM حسب توقيت المتصفح
         window.formatLocalDateTime = function(iso, mode) {
@@ -1396,15 +1629,52 @@
             }
         };
 
+        // نسخة معزولة الاتجاه (T29): النص اللاتيني (أرقام + AM/PM) داخل صفحة RTL يعيد المتصفح ترتيبه،
+        // فنعرضه داخل عنصر dir="ltr" ليُقرأ دائماً بالترتيب: التاريخ ثم الوقت ثم AM/PM
+        window.formatLocalDateTimeHtml = function(iso, mode) {
+            return '<span dir="ltr">' + window.formatLocalDateTime(iso, mode) + '</span>';
+        };
+
+        // ──── الوقت النسبي بالعربية (T29) ────
+        // يحسب من الطابع الزمني UTC في متصفح المستخدم فيحترم توقيت قارئه، لا نص إنجليزي من الخادم
+        window.formatRelativeTimeAr = function(iso) {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            const diffSeconds = Math.round((d.getTime() - Date.now()) / 1000);
+            const abs = Math.abs(diffSeconds);
+            try {
+                const rtf = new Intl.RelativeTimeFormat('ar-u-nu-latn', { numeric: 'auto' });
+                if (abs < 60) return rtf.format(Math.round(diffSeconds), 'second');
+                if (abs < 3600) return rtf.format(Math.round(diffSeconds / 60), 'minute');
+                if (abs < 86400) return rtf.format(Math.round(diffSeconds / 3600), 'hour');
+                if (abs < 2592000) return rtf.format(Math.round(diffSeconds / 86400), 'day');
+                if (abs < 31536000) return rtf.format(Math.round(diffSeconds / 2592000), 'month');
+                return rtf.format(Math.round(diffSeconds / 31536000), 'year');
+            } catch (e) {
+                try {
+                    const rtf2 = new Intl.RelativeTimeFormat('ar', { numeric: 'auto' });
+                    return rtf2.format(Math.round(diffSeconds / 60), 'minute');
+                } catch (e2) {
+                    return window.formatLocalDateTime(iso);
+                }
+            }
+        };
+
         function applyLocalDateTimes(root) {
             (root || document).querySelectorAll('[data-utc-datetime]').forEach(el => {
+                el.setAttribute('dir', 'ltr');
                 el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-datetime'));
             });
             (root || document).querySelectorAll('[data-utc-date]').forEach(el => {
+                el.setAttribute('dir', 'ltr');
                 el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-date'), 'date');
             });
             (root || document).querySelectorAll('[data-utc-time]').forEach(el => {
+                el.setAttribute('dir', 'ltr');
                 el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-time'), 'time');
+            });
+            (root || document).querySelectorAll('.rel-time-ar[data-utc-rel]').forEach(el => {
+                el.textContent = window.formatRelativeTimeAr(el.getAttribute('data-utc-rel'));
             });
         }
 

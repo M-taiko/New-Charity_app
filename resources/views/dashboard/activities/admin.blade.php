@@ -1,5 +1,6 @@
 @php
-    $recentCustodies = App\Models\Custody::with('user', 'treasury')
+    // علاقة صاحب العهدة في الموديل اسمها agent (كانت user فتنهار الصفحة بدور المدير/المشرف الخالص)
+    $recentCustodies = App\Models\Custody::with('agent', 'treasury')
         ->orderBy('created_at', 'desc')
         ->limit(5)
         ->get();
@@ -31,10 +32,10 @@
                             </a>
                         </div>
                         <div class="activity-desc">
-                            <strong>{{ $custody->user->name }}</strong> - {{ number_format($custody->amount, 2) }} ج.م
+                            <strong>{{ $custody->agent?->name ?? 'غير محدد' }}</strong> - {{ number_format($custody->amount, 2) }} ج.م
                         </div>
                         <div class="activity-time">
-                            <i class="fas fa-calendar"></i> {{ $custody->created_at->diffForHumans() }}
+                            <i class="fas fa-calendar"></i> {!! rel_time_span($custody->created_at) !!}
                         </div>
                     </div>
                 @empty
@@ -61,7 +62,7 @@
                             <strong>{{ $expense->user->name }}</strong> - {{ number_format($expense->amount, 2) }} ج.م
                         </div>
                         <div class="activity-time">
-                            <i class="fas fa-calendar"></i> {{ $expense->created_at->diffForHumans() }}
+                            <i class="fas fa-calendar"></i> {!! rel_time_span($expense->created_at) !!}
                         </div>
                     </div>
                 @empty

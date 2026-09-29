@@ -13,9 +13,21 @@
                         متابعة جميع عهداتك وحركاتها
                     </p>
                 </div>
-                <a href="{{ route('custodies.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
-                </a>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    {{-- T28 rev2: زر الاستلام الخارجي لمن لا يملك أي عهدة فقط (وغير المشرف)؛
+                         بعد أول استلام يختفي الزر ويستخدم "تبرع خارجي" على عهدته لأي إضافات لاحقة --}}
+                    @if($myCustodies->isEmpty() && !auth()->user()->hasRole('مشرف'))
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#externalReceiptModal"
+                                style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                            <i class="fas fa-hand-holding-heart"></i> استلام خارجي
+                        </button>
+                    @endif
+                    @role('مندوب')
+                    <a href="{{ route('custodies.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle"></i> طلب عهدة جديدة
+                    </a>
+                    @endrole
+                </div>
             </div>
         </div>
     </div>
@@ -139,14 +151,17 @@
                     <h5 style="margin: 0; color: white;">
                         <i class="fas fa-list"></i> جميع العهدات
                     </h5>
-                    @if($myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])->isNotEmpty())
+                    @if($myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])->isNotEmpty() && !auth()->user()->hasRole('مشرف'))
+                    {{-- T28 rev2: تبرع خارجي ورد للخزينة لأي مالك عهدة (غير المشرف)؛ الاسترداد للمندوب فقط --}}
                     <div class="btn-group" role="group" style="gap: 0.5rem;">
                         <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickDonationModal" title="إضافة تبرع خارجي سريع">
                             <i class="fas fa-gift"></i> تبرع خارجي
                         </button>
+                        @role('مندوب')
                         <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickRecoveryModal" title="استرجاع أموال من المشتريات">
                             <i class="fas fa-arrow-left"></i> استرداد
                         </button>
+                        @endrole
                         <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#quickRefundModal" title="استرجاع أموال للخزينة">
                             <i class="fas fa-undo"></i> رد للخزينة
                         </button>
@@ -197,6 +212,12 @@
                                             <span class="badge bg-primary">
                                                 {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
                                             </span>
+                                            @if((float) $custody->pending_transfer_out > 0)
+                                                <small class="d-block text-muted" style="font-size: .7rem;"
+                                                       title="مبلغ محجوز لتحويل عهدة معلق ولم يعد متاحاً للصرف حتى البت في التحويل">
+                                                    مجمّد لتحويل معلق: {{ number_format($custody->pending_transfer_out, 2) }} ج.م
+                                                </small>
+                                            @endif
                                         </td>
                                         <td>
                                             @switch($custody->status)
@@ -423,6 +444,9 @@
                         <div class="text-center p-3 border rounded">
                             <div class="text-muted small">المتبقي</div>
                             <h5 class="mb-0 text-primary">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</h5>
+                            @if((float) $custody->pending_transfer_out > 0)
+                                <small class="d-block text-muted" style="font-size: .72rem;">مجمّد لتحويل معلق: {{ number_format($custody->pending_transfer_out, 2) }} ج.م</small>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -586,7 +610,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST">
+            <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <p class="text-muted mb-3">
@@ -639,7 +663,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ route('custodies.requestReturn') }}" method="POST">
+            <form action="{{ route('custodies.requestReturn') }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); border: 1px solid rgba(79, 172, 254, 0.3);">
@@ -688,6 +712,55 @@
 </div>
 @endforeach
 
+{{-- T28 rev2: External Receipt Modal — يُعرض فقط لمن لا يملك أي عهدة وغير المشرف (الزر أعلاه بنفس الشرط) --}}
+@if($myCustodies->isEmpty() && !auth()->user()->hasRole('مشرف'))
+<div class="modal fade" id="externalReceiptModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                <h5 class="modal-title" style="color: white;">
+                    <i class="fas fa-hand-holding-heart"></i> استلام خارجي
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('external-receipt.store') }}" method="POST" data-ajax-modal novalidate>
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(69, 160, 73, 0.1)); border: 1px solid rgba(76, 175, 80, 0.3);">
+                        <i class="fas fa-info-circle"></i>
+                        سجّل مالاً استلمته مباشرة من جهة خارجية؛ يُضاف لك فوراً كعهدة نشطة دون موافقة، ويُخبر المدير والمحاسب.
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>المبلغ (ج.م) <span class="text-danger">*</span></strong></label>
+                        <input type="number" name="amount" class="form-control" step="0.01" min="0.01"
+                               placeholder="أدخل المبلغ" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>اسم الجهة الخارجية <span class="text-danger">*</span></strong></label>
+                        <input type="text" name="external_source" class="form-control"
+                               placeholder="مثال: جهة الأوقاف، متبرع خاص، إلخ" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"><strong>الملاحظات/الوصف <span class="text-danger">*</span></strong></label>
+                        <textarea name="description" class="form-control" rows="3"
+                                  placeholder="أضف أي ملاحظات عن الاستلام..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> تسجيل الاستلام
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
 <!-- Quick External Donation Modal (Select Custody) -->
 <div class="modal fade" id="quickDonationModal" tabindex="-1">
     <div class="modal-dialog">
@@ -698,7 +771,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="quickDonationForm" method="POST">
+            <form id="quickDonationForm" method="POST" novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
@@ -762,7 +835,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="quickRecoveryForm" method="POST" action="{{ route('custodies.addRecovery') }}">
+            <form id="quickRecoveryForm" method="POST" action="{{ route('custodies.addRecovery') }}" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
                     <p class="text-muted mb-3">
@@ -831,7 +904,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form id="quickRefundForm" method="POST" action="{{ route('custodies.requestReturn') }}">
+            <form id="quickRefundForm" method="POST" action="{{ route('custodies.requestReturn') }}" novalidate>
                 @csrf
                 <div class="modal-body">
                     <div class="alert alert-info" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.1), rgba(0, 242, 254, 0.1)); border: 1px solid rgba(79, 172, 254, 0.3);">
@@ -901,7 +974,7 @@ function updateDonationBalance() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
         custodyId.value = select.value;
-        currentBalance.textContent = balance.toFixed(2);
+        currentBalance.textContent = formatMoney(balance);
         balanceInfo.style.display = 'block';
     } else {
         balanceInfo.style.display = 'none';
@@ -919,7 +992,7 @@ function updateRecoveryBalance() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
         custodyId.value = select.value;
-        currentBalance.textContent = balance.toFixed(2);
+        currentBalance.textContent = formatMoney(balance);
         balanceInfo.style.display = 'block';
     } else {
         balanceInfo.style.display = 'none';
@@ -939,9 +1012,9 @@ function updateRefundBalance() {
         const option = select.options[select.selectedIndex];
         const balance = parseFloat(option.dataset.balance) || 0;
         custodyId.value = select.value;
-        currentBalance.textContent = balance.toFixed(2);
+        currentBalance.textContent = formatMoney(balance);
         amountInput.max = balance.toFixed(2);
-        maxHint.textContent = `الحد الأقصى: ${balance.toFixed(2)} ج.م`;
+        maxHint.textContent = `الحد الأقصى: ${formatMoney(balance)} ج.م`;
         balanceInfo.style.display = 'block';
     } else {
         balanceInfo.style.display = 'none';
@@ -959,7 +1032,7 @@ document.getElementById('quickDonationForm').addEventListener('submit', function
         return;
     }
     this.action = `/custodies/${custodyId}/external-donation`;
-    this.submit();
+    if (window.submitModalFormAjax) { window.submitModalFormAjax(this); } else { this.submit(); }
 });
 
 // Handle form submission for quick recovery
@@ -977,8 +1050,8 @@ document.getElementById('quickRefundForm').addEventListener('submit', function(e
         alert('يرجى اختيار عهدة');
         return;
     }
-    // Form will submit to custodies.requestReturn which handles custody_id
-    this.submit();
+    // Form will submit to custodies.requestReturn which handles custody_id (T25: via AJAX)
+    if (window.submitModalFormAjax) { window.submitModalFormAjax(this); } else { this.submit(); }
 });
 </script>
 

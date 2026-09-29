@@ -21,6 +21,39 @@ class ExpenseController extends Controller
 {
     public function __construct(private TreasuryService $service) {}
 
+    /**
+     * T28 rev2: صرف من عهدة بلا صلاحية spend_money
+     * مسموح أيضاً لمن يملك عهدة واحدة على الأقل بحالة قابلة للصرف (غير المشرف) —
+     * مثل الباحث الذي استلم عهدة عبر الاستلام الخارجي؛ يصرف من عهدته ويردها كالمندوب
+     */
+    private function authorizeSpending(): void
+    {
+        $user = auth()->user();
+        if ($user->can('spend_money')) {
+            return;
+        }
+
+        $ownsSpendableCustody = !$user->hasRole('مشرف')
+            && Custody::where('agent_id', $user->id)
+                ->whereIn('status', ['accepted', 'active', 'partially_returned'])
+                ->exists();
+
+        if ($ownsSpendableCustody) {
+            return;
+        }
+
+        $this->authorize('spend_money');
+    }
+
+    /**
+     * T28 rev2: هل نطاق المستخدم مقتصر على عهداته فقط؟
+     * (المندوب كالمعتاد، وأيضاً من لا يملك spend_money ودخل عبر امتلاكه عهدة)
+     */
+    private function restrictedToOwnCustodies($user): bool
+    {
+        return $user->hasRole('مندوب') || !$user->can('spend_money');
+    }
+
     public function index()
     {
         $user = auth()->user();
@@ -36,12 +69,12 @@ class ExpenseController extends Controller
 
     public function create()
     {
-        $this->authorize('spend_money');
+        $this->authorizeSpending();
 
         // Get custodies based on user role
         $user = auth()->user();
-        if ($user->hasRole('مندوب')) {
-            // Agents see only their own custodies
+        if ($this->restrictedToOwnCustodies($user)) {
+            // المندوب، ومالك العهدة عبر الاستلام الخارجي (T28 rev2): عهداته الخاصة فقط
             $custodies = Custody::where('agent_id', $user->id)
                 ->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
                 ->get();
@@ -50,6 +83,11 @@ class ExpenseController extends Controller
             $custodies = Custody::whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
                 ->get();
         }
+
+        // T27: إجمالي المتاح لكل عهدة (هي أولاً ثم بقية عهدات مالكها) لعرضه في النموذج
+        $custodies->each(function ($c) {
+            $c->total_available = $this->service->totalAvailableForCustody($c->id);
+        });
 
         $cases = SocialCase::where('status', 'approved')->get();
         $categoryRoots = ExpenseCategory::roots()->active()->ordered()->get();
@@ -68,7 +106,7 @@ class ExpenseController extends Controller
 
     public function store(Request $request)
     {
-        $this->authorize('spend_money');
+        $this->authorizeSpending();
 
         try {
             // Determine source (default to custody)
@@ -136,20 +174,20 @@ class ExpenseController extends Controller
             // Send notification to managers and accountants for review
             $user = auth()->user();
             $notificationMessage = "المستخدم: {$user->name} - سجل مصروفاً بمبلغ " . number_format($request->amount, 2) . " ج.م من الخزينة - الوصف: {$request->description}";
-            NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
-            NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
+            NotificationService::notifyByRoles(['مدير', 'محاسب'], 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
             } else {
                 // Custody spending - the custody must be selected explicitly
 
                 $custody = Custody::findOrFail($request->input('custody_id'));
 
-                // Agents can only spend from their own custodies
-                if (auth()->user()->hasRole('مندوب') && $custody->agent_id !== auth()->id()) {
+                // المندوب ومالك العهدة عبر الاستلام الخارجي (T28 rev2) يصرفان من عهداتهما فقط
+                if ($this->restrictedToOwnCustodies(auth()->user()) && $custody->agent_id !== auth()->id()) {
                     return back()->withInput()->with('error', 'غير مصرح لك بالصرف من هذه العهدة');
                 }
                 // Managers and accountants can spend from any custody
 
-                $maxAmount = $custody->getRemainingBalance();
+                // T27: الحد الأقصى = إجمالي المتاح عبر عهدات المندوب (المختارة أولاً ثم بقية عهداته)
+                $maxAmount = $this->service->totalAvailableForCustody($custody->id);
 
                 $rules = [
                     'custody_id' => 'required|exists:custodies,id',
@@ -169,7 +207,7 @@ class ExpenseController extends Controller
                 }
 
                 $request->validate($rules, [
-                    'amount.max' => 'المبلغ المدخل يتجاوز الرصيد المتاح. الحد الأقصى: ' . number_format($maxAmount, 2) . ' ج.م',
+                    'amount.max' => 'المبلغ المدخل يتجاوز إجمالي الرصيد المتاح في عهداتك (قد يوزَّع المبلغ على أكثر من عهدة). الحد الأقصى: ' . number_format($maxAmount, 2) . ' ج.م',
                     'attachment.max' => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
                     'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
                 ]);
@@ -201,8 +239,7 @@ class ExpenseController extends Controller
                 // Send notification to managers and accountants for review
                 $user = auth()->user();
                 $notificationMessage = "المستخدم: {$user->name} - سجل مصروفاً بمبلغ " . number_format($request->amount, 2) . " ج.م - الوصف: {$request->description}";
-                NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'Expense');
-                NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'Expense');
+                NotificationService::notifyByRoles(['مدير', 'محاسب'], 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'Expense');
             }
 
             return redirect()->route('expenses.agent')->with('success', 'تم تسجيل المصروف');
@@ -268,6 +305,7 @@ class ExpenseController extends Controller
                 'social_case_id'      => 'nullable|exists:social_cases,id',
                 'expense_date'        => 'required|date',
                 'attachment'          => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
+                'remove_attachment'   => 'nullable|boolean',
             ];
 
             if ($request->expense_type === 'social_case') {
@@ -317,10 +355,13 @@ class ExpenseController extends Controller
                 ? $pivotCustodies->first()->id
                 : $expense->custody_id;
 
-            // رفع المرفق الجديد إذا وُجد (خارج المعاملة)
+            // رفع المرفق الجديد إذا وُجد (خارج المعاملة)، أو حذف المرفق الحالي إذا طُلب ذلك ولم يُرفع بديل
+            $oldAttachment = $expense->attachment;
             $attachmentPath = $expense->attachment;
             if ($request->hasFile('attachment')) {
                 $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+            } elseif ($request->boolean('remove_attachment') && $expense->attachment) {
+                $attachmentPath = null;
             }
 
             DB::transaction(function () use ($expense, $request, $itemId, $oldAmount, $newAmount, $amountChanged, $affectedCustodyId, $pivotCustodies, $attachmentPath) {
@@ -360,7 +401,7 @@ class ExpenseController extends Controller
                     }
 
                     // إغلاق العهدة إذا وصل رصيدها للصفر (لا يتم فتح عهدة مغلقة تلقائياً)
-                    if ($custody->fresh()->getRemainingBalance() <= 0 && $custody->status !== 'closed') {
+                    if ($custody->fresh()->getRemainingBalance() <= 0 && (float) $custody->fresh()->pending_transfer_out <= 0 && $custody->status !== 'closed') {
                         $custody->update(['status' => 'closed']);
                         TreasuryTransaction::create([
                             'treasury_id' => $custody->treasury_id,
@@ -393,6 +434,11 @@ class ExpenseController extends Controller
             });
 
             ActivityLogService::updated($expense, 'تم تعديل المصروف #' . $expense->id . ' (المبلغ: ' . number_format($newAmount, 2) . ' ج.م)');
+
+            // بعد نجاح المعاملة فقط: حذف الملف القديم من القرص إن تغير المرفق ولم يعد يشير إليه سجل آخر
+            if ($oldAttachment && $oldAttachment !== $attachmentPath) {
+                \App\Support\AttachmentFileCleanup::deleteIfUnreferenced($oldAttachment, $expense->id);
+            }
 
             return redirect()->route('expenses.show', $expense)
                 ->with('success', 'تم تعديل المصروف بنجاح');
@@ -642,7 +688,7 @@ class ExpenseController extends Controller
 
     public function quickStore(Request $request)
     {
-        $this->authorize('spend_money');
+        $this->authorizeSpending();
 
         try {
             $validated = $request->validate([
@@ -658,66 +704,46 @@ class ExpenseController extends Controller
             $custody = Custody::findOrFail($validated['custody_id']);
             $user = auth()->user();
 
-            // Agents can only spend from their own custodies
-            if ($user->hasRole('مندوب') && $custody->agent_id !== $user->id) {
+            // المندوب ومالك العهدة عبر الاستلام الخارجي (T28 rev2) يصرفان من عهداتهما فقط
+            if ($this->restrictedToOwnCustodies($user) && $custody->agent_id !== $user->id) {
                 return response()->json(['success' => false, 'message' => 'غير مصرح لك بصرف من هذه العهدة'], 403);
             }
             // Managers and accountants can spend from any custody
 
 
-            // Check custody has enough balance
-            $remaining = $custody->getRemainingBalance();
-            if ($validated['amount'] > $remaining) {
+            // T27: نفس قاعدة التوزيع — الحد الأقصى إجمالي المتاح عبر عهدات المندوب
+            $totalAvailable = $this->service->totalAvailableForCustody($custody->id);
+            if (round((float) $validated['amount'], 2) > $totalAvailable) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'المبلغ يتجاوز الرصيد المتاح. الرصيد المتاح: ' . number_format($remaining, 2) . ' ج.م'
+                    'message' => 'المبلغ يتجاوز إجمالي الرصيد المتاح في عهداتك (قد يوزَّع المبلغ على أكثر من عهدة). إجمالي المتاح: ' . number_format($totalAvailable, 2) . ' ج.م'
                 ], 422);
             }
 
-            // Use transaction to ensure all operations succeed or all fail
-            $expense = DB::transaction(function () use ($validated, $custody) {
-                // Create expense with quick flag
-                $expense = Expense::create([
-                    'custody_id' => $validated['custody_id'],
-                    'treasury_id' => $custody->treasury_id,
-                    'user_id' => auth()->id(),
-                    'expense_date' => $validated['expense_date'],
-                    'amount' => $validated['amount'],
-                    'description' => $validated['description'],
-                    'type' => 'general',
-                    'approval_status' => 'pending_edit',
-                    'is_quick_expense' => true,
-                    'line_items' => $validated['line_items'] ? json_encode(['raw_text' => $validated['line_items']]) : null,
-                ]);
+            // نفس منطق التوزيع في الخدمة (عقدة مختارة أولاً ثم بقية عهدات المالك الأقدم فالأحدث)
+            $expense = $this->service->recordExpenseWithItems(
+                $custody->id,
+                auth()->id(),
+                $validated['amount'],
+                null,
+                null,
+                $validated['description'],
+                null,
+                null,
+                null,
+                'general',
+                $validated['line_items'] ? json_encode(['raw_text' => $validated['line_items']]) : null,
+                $validated['expense_date'],
+                true
+            );
 
-                // Update custody spent amount
-                $custody->increment('spent', $validated['amount']);
-
-                // Create treasury transaction for tracking
-                if ($custody->treasury_id) {
-                    DB::table('treasury_transactions')->insert([
-                        'treasury_id' => $custody->treasury_id,
-                        'custody_id' => $custody->id,
-                        'type' => 'expense',
-                        'amount' => $validated['amount'],
-                        'description' => 'مصروف سريع: ' . $validated['description'],
-                        'transaction_date' => now(),
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                }
-
-                // Log the activity
-                ActivityLogService::created($expense, 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
-
-                return $expense;
-            });
+            // Log the activity
+            ActivityLogService::created($expense, 'تم تسجيل مصروف سريع بمبلغ ' . number_format($validated['amount'], 2) . ' ج.م من العهدة #' . $custody->id);
 
             // Send notification to managers and accountants for review
             $user = auth()->user();
             $notificationMessage = "المستخدم: {$user->name} - سجل مصروفاً سريعاً بمبلغ " . number_format($expense->amount, 2) . " ج.م - الوصف: {$expense->description}";
-            NotificationService::notifyByRole('مدير', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
-            NotificationService::notifyByRole('محاسب', 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
+            NotificationService::notifyByRoles(['مدير', 'محاسب'], 'مصروف جديد للمراجعة', $notificationMessage, 'warning', $expense->id, 'expense');
 
             return response()->json(['success' => true, 'message' => 'تم تسجيل المصروف بنجاح']);
         } catch (\Exception $e) {

@@ -164,7 +164,7 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong style="color: var(--primary);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
+                        return '<strong style="color: var(--primary);">' + formatMoney(data) + ' ج.م</strong>';
                     }
                 }, 
                 { data: 'user.name', defaultContent: '-' },

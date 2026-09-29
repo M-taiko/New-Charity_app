@@ -112,8 +112,7 @@ class CustodyTransferController extends Controller
             return redirect()->route('custody-transfers.index')
                 ->with('success', 'تم إنشاء طلب التحويل بنجاح');
         } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', $e->getMessage());
+            return $this->formBackOrJson($request, 'error', $e->getMessage());
         }
     }
 
@@ -147,8 +146,7 @@ class CustodyTransferController extends Controller
             return redirect()->route('custody-transfers.show', $custodyTransfer)
                 ->with('success', 'تم قبول التحويل بنجاح');
         } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', $e->getMessage());
+            return $this->formBackOrJson($request, 'error', $e->getMessage());
         }
     }
 
@@ -160,8 +158,7 @@ class CustodyTransferController extends Controller
         $this->authorize('approve_custody_transfer');
 
         if ($custodyTransfer->status !== 'pending') {
-            return redirect()->back()
-                ->with('error', 'يمكن فقط رفض الطلبات المعلقة');
+            return $this->formBackOrJson($request, 'error', 'يمكن فقط رفض الطلبات المعلقة');
         }
 
         $request->validate([
@@ -175,11 +172,9 @@ class CustodyTransferController extends Controller
                 $request->rejection_reason
             );
 
-            return redirect()->route('custody-transfers.show', $custodyTransfer)
-                ->with('success', 'تم رفض التحويل');
+            return $this->formBackOrJson($request, 'success', 'تم رفض التحويل');
         } catch (\Exception $e) {
-            return redirect()->back()
-                ->with('error', $e->getMessage());
+            return $this->formBackOrJson($request, 'error', $e->getMessage());
         }
     }
 

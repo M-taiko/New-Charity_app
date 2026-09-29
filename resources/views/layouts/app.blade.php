@@ -224,15 +224,45 @@
             }
         };
 
+        // نسخة معزولة الاتجاه (T29): نعرض التاريخ داخل عنصر dir="ltr" ليُقرأ بالترتيب الصحيح في صفحة RTL
+        window.formatLocalDateTimeHtml = function(iso, mode) {
+            return '<span dir="ltr">' + window.formatLocalDateTime(iso, mode) + '</span>';
+        };
+
+        // الوقت النسبي بالعربية (T29) محسوب في المتصفح من الطابع الزمني UTC
+        window.formatRelativeTimeAr = function(iso) {
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            const diffSeconds = Math.round((d.getTime() - Date.now()) / 1000);
+            const abs = Math.abs(diffSeconds);
+            try {
+                const rtf = new Intl.RelativeTimeFormat('ar-u-nu-latn', { numeric: 'auto' });
+                if (abs < 60) return rtf.format(Math.round(diffSeconds), 'second');
+                if (abs < 3600) return rtf.format(Math.round(diffSeconds / 60), 'minute');
+                if (abs < 86400) return rtf.format(Math.round(diffSeconds / 3600), 'hour');
+                if (abs < 2592000) return rtf.format(Math.round(diffSeconds / 86400), 'day');
+                if (abs < 31536000) return rtf.format(Math.round(diffSeconds / 2592000), 'month');
+                return rtf.format(Math.round(diffSeconds / 31536000), 'year');
+            } catch (e) {
+                return window.formatLocalDateTime(iso);
+            }
+        };
+
         function applyLocalDateTimes(root) {
             (root || document).querySelectorAll('[data-utc-datetime]').forEach(el => {
+                el.setAttribute('dir', 'ltr');
                 el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-datetime'));
             });
             (root || document).querySelectorAll('[data-utc-date]').forEach(el => {
+                el.setAttribute('dir', 'ltr');
                 el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-date'), 'date');
             });
             (root || document).querySelectorAll('[data-utc-time]').forEach(el => {
+                el.setAttribute('dir', 'ltr');
                 el.textContent = window.formatLocalDateTime(el.getAttribute('data-utc-time'), 'time');
+            });
+            (root || document).querySelectorAll('.rel-time-ar[data-utc-rel]').forEach(el => {
+                el.textContent = window.formatRelativeTimeAr(el.getAttribute('data-utc-rel'));
             });
         }
 

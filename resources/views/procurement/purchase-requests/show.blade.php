@@ -279,7 +279,7 @@ function calculateTotal() {
     });
 
     const totalElement = document.getElementById('totalEntered');
-    totalElement.textContent = total.toFixed(2) + ' ج.م';
+    totalElement.textContent = formatMoney(total) + ' ج.م';
 
     // Update button state
     const approveButton = document.getElementById('approveButton');

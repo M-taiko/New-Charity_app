@@ -144,19 +144,19 @@
                 {
                     data: 'amount',
                     render: function(data) {
-                        return '<strong>' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</strong>';
+                        return '<strong>' + formatMoney(data) + ' ج.م</strong>';
                     }
                 },
                 {
                     data: 'spent',
                     render: function(data) {
-                        return '<span style="color: var(--danger);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</span>';
+                        return '<span style="color: var(--danger);">' + formatMoney(data) + ' ج.م</span>';
                     }
                 },
                 {
                     data: 'remaining',
                     render: function(data) {
-                        return '<span style="color: var(--success);">' + parseFloat(data).toLocaleString('ar', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ج.م</span>';
+                        return '<span style="color: var(--success);">' + formatMoney(data) + ' ج.م</span>';
                     }
                 },
                 {

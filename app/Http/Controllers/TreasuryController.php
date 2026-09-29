@@ -155,9 +155,9 @@ class TreasuryController extends Controller
                 auth()->id()
             );
 
-            return back()->with('success', 'تم إضافة التبرع بنجاح');
+            return $this->formBackOrJson($request, 'success', 'تم إضافة التبرع بنجاح');
         } catch (\Exception $e) {
-            return back()->withInput()->with('error', 'حدث خطأ أثناء إضافة التبرع: ' . $e->getMessage());
+            return $this->formBackOrJson($request, 'error', 'حدث خطأ أثناء إضافة التبرع: ' . $e->getMessage(), true);
         }
     }
 
