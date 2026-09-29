@@ -1318,16 +1318,33 @@
                     ctx.resume();
                 }
                 const t0 = ctx.currentTime;
-                // limiter: يسمح برفع الصوت لأقصى مستوى دون تشويه عند تداخل النغمتين
-                const limiter = ctx.createDynamicsCompressor();
-                limiter.threshold.value = -6;
-                limiter.knee.value = 0;
-                limiter.ratio.value = 12;
-                limiter.attack.value = 0.002;
-                limiter.release.value = 0.15;
-                limiter.connect(ctx.destination);
-                playChimeNote(ctx, limiter, t0, 783.99, 0.32);          // G5 - "ding"
-                playChimeNote(ctx, limiter, t0 + 0.22, 1174.66, 0.6);   // D6 - higher "dong", total ~0.8s
+                // سلسلة إصدار عالية: رفع قوي ← ضاغط ← تعويض ← قاصّ ناعم يمنع أي قطع/تشويه ← الخرج
+                // المتوسط يرتفع كثيراً (أعلى صوتاً بوضوح) مع بقاء القمم دون القطع
+                const preGain = ctx.createGain();
+                preGain.gain.value = 2.0;
+                const comp = ctx.createDynamicsCompressor();
+                comp.threshold.value = -4;
+                comp.knee.value = 6;
+                comp.ratio.value = 6;
+                comp.attack.value = 0.001;
+                comp.release.value = 0.12;
+                const makeup = ctx.createGain();
+                makeup.gain.value = 1.4;
+                const clipper = ctx.createWaveShaper();
+                const clipCurve = new Float32Array(1024);
+                for (let i = 0; i < 1024; i++) {
+                    const x = (i / 1023) * 2 - 1;
+                    // 0.98: سقف أقل قليلاً من 1.0 حتى لا يتجاوز الاستيفاء في oversample حد القطع
+                    clipCurve[i] = 0.98 * Math.tanh(1.5 * x) / Math.tanh(1.5);
+                }
+                clipper.curve = clipCurve;
+                clipper.oversample = '2x';
+                preGain.connect(comp);
+                comp.connect(makeup);
+                makeup.connect(clipper);
+                clipper.connect(ctx.destination);
+                playChimeNote(ctx, preGain, t0, 783.99, 0.32);          // G5 - "ding"
+                playChimeNote(ctx, preGain, t0 + 0.22, 1174.66, 0.6);   // D6 - higher "dong", total ~0.8s
             } catch(e) {
                 console.log('Notification sound not supported');
             }
@@ -1341,13 +1358,21 @@
             envelope.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
             envelope.connect(destination);
 
+            // نغمتان أساسيتان متقاربتان قليلاً في الطبقة (unison): صوت أمتلأ وأعلى إحساساً دون رفع القمم
             const carrier = ctx.createGain();
-            carrier.gain.value = 0.88; // أعلى نغمة أساسية (كانت 0.72)
+            carrier.gain.value = 0.88;
 
             const osc = ctx.createOscillator();
-            osc.type = 'triangle'; // brighter than the old sine
+            osc.type = 'triangle';
             osc.frequency.value = freq;
+            osc.detune.value = -7;
             osc.connect(carrier);
+
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'triangle';
+            osc2.frequency.value = freq;
+            osc2.detune.value = 7;
+            osc2.connect(carrier);
             carrier.connect(envelope);
 
             // octave shimmer + a brief high sparkle: لمعان ووضوح أعلى يُسمع بوضوح حتى على مكبرات ضعيفة
@@ -1371,6 +1396,7 @@
 
             const stopAt = startTime + duration + 0.02;
             osc.start(startTime); osc.stop(stopAt);
+            osc2.start(startTime); osc2.stop(stopAt);
             shimmerOsc.start(startTime); shimmerOsc.stop(stopAt);
             sparkleOsc.start(startTime); sparkleOsc.stop(stopAt);
         }
