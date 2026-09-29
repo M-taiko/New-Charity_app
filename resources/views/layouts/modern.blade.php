@@ -1318,42 +1318,61 @@
                     ctx.resume();
                 }
                 const t0 = ctx.currentTime;
-                playChimeNote(ctx, t0, 783.99, 0.28);          // G5 - "ding"
-                playChimeNote(ctx, t0 + 0.22, 1174.66, 0.5);   // D6 - higher "dong", total ~0.7s
+                // limiter: يسمح برفع الصوت لأقصى مستوى دون تشويه عند تداخل النغمتين
+                const limiter = ctx.createDynamicsCompressor();
+                limiter.threshold.value = -6;
+                limiter.knee.value = 0;
+                limiter.ratio.value = 12;
+                limiter.attack.value = 0.002;
+                limiter.release.value = 0.15;
+                limiter.connect(ctx.destination);
+                playChimeNote(ctx, limiter, t0, 783.99, 0.32);          // G5 - "ding"
+                playChimeNote(ctx, limiter, t0 + 0.22, 1174.66, 0.6);   // D6 - higher "dong", total ~0.8s
             } catch(e) {
                 console.log('Notification sound not supported');
             }
         }
 
-        function playChimeNote(ctx, startTime, freq, duration) {
+        function playChimeNote(ctx, destination, startTime, freq, duration) {
             const envelope = ctx.createGain();
             // fast attack (no click) then smooth exponential decay (no distortion)
             envelope.gain.setValueAtTime(0.0001, startTime);
             envelope.gain.exponentialRampToValueAtTime(1.0, startTime + 0.015);
             envelope.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-            envelope.connect(ctx.destination);
+            envelope.connect(destination);
 
-            const carrier = ctx.createOscillator();
-            carrier.type = 'triangle'; // brighter than the old sine
-            carrier.frequency.value = freq;
-            const carrierGain = ctx.createGain();
-            carrierGain.gain.value = 0.72;
-            carrier.connect(carrierGain);
-            carrierGain.connect(envelope);
+            const carrier = ctx.createGain();
+            carrier.gain.value = 0.88; // أعلى نغمة أساسية (كانت 0.72)
 
-            // quiet octave shimmer for distinctiveness (keeps the peak below clipping)
-            const shimmer = ctx.createOscillator();
-            shimmer.type = 'sine';
-            shimmer.frequency.value = freq * 2;
-            const shimmerGain = ctx.createGain();
-            shimmerGain.gain.value = 0.18;
-            shimmer.connect(shimmerGain);
-            shimmerGain.connect(envelope);
+            const osc = ctx.createOscillator();
+            osc.type = 'triangle'; // brighter than the old sine
+            osc.frequency.value = freq;
+            osc.connect(carrier);
+            carrier.connect(envelope);
 
-            carrier.start(startTime);
-            carrier.stop(startTime + duration + 0.02);
-            shimmer.start(startTime);
-            shimmer.stop(startTime + duration + 0.02);
+            // octave shimmer + a brief high sparkle: لمعان ووضوح أعلى يُسمع بوضوح حتى على مكبرات ضعيفة
+            const shimmer = ctx.createGain();
+            shimmer.gain.value = 0.12;
+            const shimmerOsc = ctx.createOscillator();
+            shimmerOsc.type = 'sine';
+            shimmerOsc.frequency.value = freq * 2;
+            shimmerOsc.connect(shimmer);
+            shimmer.connect(envelope);
+
+            const sparkle = ctx.createGain();
+            sparkle.gain.setValueAtTime(0.0, startTime);
+            sparkle.gain.linearRampToValueAtTime(0.14, startTime + 0.01);
+            sparkle.gain.exponentialRampToValueAtTime(0.0001, startTime + Math.min(duration, 0.12));
+            const sparkleOsc = ctx.createOscillator();
+            sparkleOsc.type = 'sine';
+            sparkleOsc.frequency.value = freq * 4;
+            sparkleOsc.connect(sparkle);
+            sparkle.connect(envelope);
+
+            const stopAt = startTime + duration + 0.02;
+            osc.start(startTime); osc.stop(stopAt);
+            shimmerOsc.start(startTime); shimmerOsc.stop(stopAt);
+            sparkleOsc.start(startTime); sparkleOsc.stop(stopAt);
         }
 
         // Notification Polling
