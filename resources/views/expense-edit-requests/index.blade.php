@@ -59,22 +59,30 @@
     </div>
 </div>
 
+@push('scripts')
 <script>
-$(document).ready(function() {
-    $('#editRequestsTable').DataTable({
-        processing: true,
-        serverSide: true,
-        ajax: '{{ route("api.expense-edit-requests.data") }}',
-        columns: [
-            { data: 'expense_id' },
-            { data: 'requester_name' },
-            { data: 'expense_amount' },
-            { data: 'requested_amount' },
-            { data: 'requested_at' },
-            { data: 'status_badge', orderable: false },
-            { data: 'actions', orderable: false }
-        ]
+    $(document).ready(function() {
+        $('#editRequestsTable').DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: '{{ route("api.expense-edit-requests.data") }}',
+            columns: [
+                { data: 'expense_id' },
+                { data: 'requester_name' },
+                { data: 'expense_amount' },
+                { data: 'requested_amount' },
+                {
+                    data: 'requested_at',
+                    render: function(data) { return data ? (window.formatLocalDateTime ? window.formatLocalDateTime(data) : data) : '-'; }
+                },
+                { data: 'status_badge', orderable: false },
+                { data: 'actions', orderable: false }
+            ],
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
+            }
+        });
     });
-});
 </script>
+@endpush
 @endsection

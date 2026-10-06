@@ -84,6 +84,11 @@ class ExpenseController extends Controller
                 ->get();
         }
 
+        // إظهار العهد ذات رصيد متبقٍ فقط (رصيد صفر = مخفية من القائمة)
+        $custodies = $custodies
+            ->filter(fn($custody) => round((float) $custody->getRemainingBalance(), 2) > 0)
+            ->values();
+
         // T27: إجمالي المتاح لكل عهدة (هي أولاً ثم بقية عهدات مالكها) لعرضه في النموذج
         $custodies->each(function ($c) {
             $c->total_available = $this->service->totalAvailableForCustody($c->id);
@@ -133,6 +138,7 @@ class ExpenseController extends Controller
                     'location' => 'nullable|string',
                     'social_case_id' => 'nullable|exists:social_cases,id',
                     'expense_item_id' => 'nullable|exists:expense_items,id',
+                    'expense_date' => 'required|date',
                     'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
                 ];
 
@@ -166,7 +172,8 @@ class ExpenseController extends Controller
                 $request->social_case_id,
                 $attachmentPath,
                 $request->expense_type,
-                $lineItems
+                $lineItems,
+                $request->expense_date
             );
 
             ActivityLogService::created($expense, 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');
@@ -198,6 +205,7 @@ class ExpenseController extends Controller
                     'location' => 'nullable|string',
                     'social_case_id' => 'nullable|exists:social_cases,id',
                     'expense_item_id' => 'nullable|exists:expense_items,id',
+                    'expense_date' => 'required|date',
                     'attachment' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
                 ];
 
@@ -231,7 +239,8 @@ class ExpenseController extends Controller
                     $request->social_case_id,
                     $attachmentPath,
                     $request->expense_type,
-                    $lineItems
+                    $lineItems,
+                    $request->expense_date
                 );
 
                 ActivityLogService::created($expense, 'تم تسجيل مصروف جديد بمبلغ ' . number_format($request->amount, 2) . ' ج.م');

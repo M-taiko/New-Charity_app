@@ -8,6 +8,7 @@ use App\Models\Expense;
 use App\Models\TreasuryTransaction;
 use App\Models\Notification;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class TreasuryService
@@ -861,6 +862,8 @@ class TreasuryService
     public function recordExpenseWithItems($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null, $expenseDate = null, $isQuick = false)
     {
         return DB::transaction(function () use ($custodyId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type, $lineItems, $expenseDate, $isQuick) {
+            // تاريخ المصروف الفعلي كما اختاره المستخدم (أو وقت التسجيل إن لم يُحدد)
+            $expensedAt = $expenseDate ? Carbon::parse($expenseDate) : now();
             // Load and lock ONLY the selected custody first
             $custody = Custody::where('id', $custodyId)->lockForUpdate()->first();
 
@@ -924,7 +927,7 @@ class TreasuryService
                 'description' => $description,
                 'location' => $location,
                 'source' => 'custody',
-                'expense_date' => $expenseDate ?? now(),
+                'expense_date' => $expensedAt,
                 'attachment' => $attachment,
                 'line_items' => $lineItems,
                 'is_quick_expense' => $isQuick,
@@ -953,7 +956,7 @@ class TreasuryService
                     'expense_id' => $expense->id,
                     'expense_category_id' => $categoryId,
                     'expense_item_id' => $itemId,
-                    'transaction_date' => now(),
+                    'transaction_date' => $expensedAt,
                 ]);
 
                 // Close the custody if its balance reaches zero and nothing is frozen for a pending transfer (T26)
@@ -1080,9 +1083,11 @@ class TreasuryService
         });
     }
 
-    public function recordDirectExpenseFromTreasury($treasuryId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null)
+    public function recordDirectExpenseFromTreasury($treasuryId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId = null, $attachment = null, $type = 'general', $lineItems = null, $expenseDate = null)
     {
-        return DB::transaction(function () use ($treasuryId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type, $lineItems) {
+        return DB::transaction(function () use ($treasuryId, $userId, $amount, $categoryId, $itemId, $description, $location, $socialCaseId, $attachment, $type, $lineItems, $expenseDate) {
+            // تاريخ المصروف الفعلي كما اختاره المستخدم (أو وقت التسجيل إن لم يُحدد)
+            $expensedAt = $expenseDate ? Carbon::parse($expenseDate) : now();
             // Lock the treasury for update to prevent race conditions
             $treasury = Treasury::where('id', $treasuryId)->lockForUpdate()->first();
 
@@ -1110,7 +1115,7 @@ class TreasuryService
                 'description' => $description,
                 'location' => $location,
                 'source' => 'treasury',
-                'expense_date' => now(),
+                'expense_date' => $expensedAt,
                 'attachment' => $attachment,
                 'line_items' => $lineItems,
             ]);
@@ -1128,7 +1133,7 @@ class TreasuryService
                 'expense_id' => $expense->id,
                 'expense_category_id' => $categoryId,
                 'expense_item_id' => $itemId,
-                'transaction_date' => now(),
+                'transaction_date' => $expensedAt,
             ]);
 
             // Don't notify the user who created the expense about their own action

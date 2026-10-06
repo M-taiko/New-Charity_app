@@ -25,31 +25,31 @@
     <!-- Summary Cards (affected by filters) -->
     <div class="row g-4 mb-4" data-aos="fade-up">
         <div class="col-12 col-sm-6 col-lg">
-            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="stat-card success">
                 <div class="stat-icon"><i class="fas fa-hand-holding-heart"></i></div>
                 <div class="stat-label">المستلم من الخزينة</div>
-                <div class="stat-number" id="sumReceived">0.00</div>
+                <div class="stat-number" style="color: var(--success);" id="sumReceived">0.00</div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg">
-            <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+            <div class="stat-card info">
                 <div class="stat-icon"><i class="fas fa-undo"></i></div>
                 <div class="stat-label">المردود للخزينة</div>
-                <div class="stat-number" id="sumReturned">0.00</div>
+                <div class="stat-number" style="color: var(--info);" id="sumReturned">0.00</div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg">
-            <div class="stat-card" style="background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%); color: white;">
+            <div class="stat-card warning">
                 <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
                 <div class="stat-label">المحوّل بين المناديب</div>
-                <div class="stat-number" id="sumTransferred">0.00</div>
+                <div class="stat-number" style="color: var(--warning);" id="sumTransferred">0.00</div>
             </div>
         </div>
         <div class="col-12 col-sm-6 col-lg">
-            <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white;">
+            <div class="stat-card danger">
                 <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
                 <div class="stat-label">المصروف</div>
-                <div class="stat-number" id="sumSpent">0.00</div>
+                <div class="stat-number" style="color: var(--danger);" id="sumSpent">0.00</div>
             </div>
         </div>
     </div>
