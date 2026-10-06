@@ -12,6 +12,17 @@
                     </h1>
                 </div>
                 <div class="d-flex gap-2">
+                    @can('manage_treasury')
+                    @php
+                        $pendingEditRequestsCount = \App\Models\ExpenseEditRequest::where('status', 'pending')->count();
+                    @endphp
+                    <a href="{{ route('expense-edit-requests.index') }}" class="btn btn-warning">
+                        <i class="fas fa-pen-to-square"></i> طلبات تعديل المصروفات
+                        @if($pendingEditRequestsCount > 0)
+                            <span class="badge bg-danger rounded-pill">{{ $pendingEditRequestsCount }}</span>
+                        @endif
+                    </a>
+                    @endcan
                     @can('spend_money')
                     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#quickExpenseModal">
                         <i class="fas fa-bolt"></i> مصروف سريع

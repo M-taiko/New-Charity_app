@@ -951,21 +951,6 @@
                 </li>
                 @endcan
 
-                @can('manage_treasury')
-                @php
-                    $pendingEditRequestsCount = \App\Models\ExpenseEditRequest::where('status', 'pending')->count();
-                @endphp
-                <li>
-                    <a href="{{ route('expense-edit-requests.index') }}" class="@if(str_starts_with(Route::current()->getName() ?? '', 'expense-edit-requests')) active @endif">
-                        <i class="fas fa-pen-to-square"></i>
-                        <span>طلبات تعديل المصروفات</span>
-                        @if($pendingEditRequestsCount > 0)
-                            <span class="badge bg-danger rounded-pill" style="margin-inline-start: auto;">{{ $pendingEditRequestsCount }}</span>
-                        @endif
-                    </a>
-                </li>
-                @endcan
-
                 @can('manage_expense_items')
                 <li>
                     <a href="{{ route('expense-items.index') }}" class="@if(Route::current()->getName() == 'expense-items.index') active @endif">
