@@ -54,6 +54,28 @@ class ExpenseEditRequestService
     }
 
     /**
+     * سجل تدقيق لتعديل مباشر من محاسب/مدير: طلب تعديل "موافق تلقائياً"
+     * (نفس الطالب والمراجع) ليبقى أثر التعديل في تاريخ المصروف وصفحة الطلبات.
+     * لا ينشئ سجلاً إذا لم تتغير أي قيمة.
+     */
+    public function recordDirectEditAudit(Expense $expense, User $editor, array $originalData, array $requestedChanges): ?ExpenseEditRequest
+    {
+        if (empty($requestedChanges)) {
+            return null;
+        }
+
+        return ExpenseEditRequest::create([
+            'expense_id' => $expense->id,
+            'requested_by' => $editor->id,
+            'original_data' => $originalData,
+            'requested_changes' => $requestedChanges,
+            'status' => 'approved',
+            'reviewed_by' => $editor->id,
+            'reviewed_at' => now(),
+        ]);
+    }
+
+    /**
      * الموافقة على طلب التعديل
      */
     public function approveEdit(ExpenseEditRequest $editRequest, User $reviewer)

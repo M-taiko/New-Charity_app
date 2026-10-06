@@ -10,16 +10,18 @@ use App\Models\ExpenseItem;
 use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
 use App\Services\TreasuryService;
+use App\Services\ExpenseEditRequestService;
 use App\Support\LineItemsSanitizer;
 use App\Services\ActivityLogService;
 use App\Services\NotificationService;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ExpenseController extends Controller
 {
-    public function __construct(private TreasuryService $service) {}
+    public function __construct(private TreasuryService $service, private ExpenseEditRequestService $editRequestService) {}
 
     /**
      * T28 rev2: صرف من عهدة بلا صلاحية spend_money
@@ -423,6 +425,64 @@ class ExpenseController extends Controller
                         ]);
                     }
                 }
+
+                // لقطة البيانات الأصلية قبل التعديل + التغييرات الفعلية فقط (أثر تدقيق للتعديل المباشر)
+                $originalData = [
+                    'amount' => $expense->amount,
+                    'description' => $expense->description,
+                    'location' => $expense->location,
+                    'expense_category_id' => $expense->expense_category_id,
+                    'expense_category_name' => $expense->category?->name,
+                    'expense_category_path' => $expense->category?->full_path,
+                    'expense_item_id' => $expense->expense_item_id,
+                    'expense_item_name' => $expense->item?->name,
+                    'social_case_id' => $expense->social_case_id,
+                    'social_case_name' => $expense->socialCase?->name,
+                    'attachment' => $expense->attachment,
+                    'expense_date' => $expense->expense_date?->toDateString(),
+                    'line_items' => $expense->line_items,
+                    'type' => $expense->type,
+                ];
+
+                $newLineItems = $request->has('line_items')
+                    ? LineItemsSanitizer::fromRequest($request)
+                    : $expense->line_items;
+                $newSocialCaseId = $request->expense_type === 'social_case' ? $request->social_case_id : null;
+                $newExpenseDate = Carbon::parse($request->expense_date)->toDateString();
+
+                $requestedChanges = [];
+                if ($amountChanged) {
+                    $requestedChanges['amount'] = $newAmount;
+                }
+                if ($expense->description !== $request->description) {
+                    $requestedChanges['description'] = $request->description;
+                }
+                if ($expense->location !== $request->location) {
+                    $requestedChanges['location'] = $request->location;
+                }
+                if ((int) $expense->expense_category_id !== (int) $request->expense_category_id) {
+                    $requestedChanges['expense_category_id'] = (int) $request->expense_category_id;
+                }
+                if (($expense->expense_item_id ?? null) != ($itemId ?? null)) {
+                    $requestedChanges['expense_item_id'] = $itemId;
+                }
+                if (($expense->social_case_id ?? null) != ($newSocialCaseId ?? null)) {
+                    $requestedChanges['social_case_id'] = $newSocialCaseId;
+                }
+                if ($attachmentPath !== $expense->attachment) {
+                    $requestedChanges['attachment'] = $attachmentPath;
+                }
+                if ($expense->expense_date?->toDateString() !== $newExpenseDate) {
+                    $requestedChanges['expense_date'] = $newExpenseDate;
+                }
+                if ($newLineItems != ($expense->line_items ?? [])) {
+                    $requestedChanges['line_items'] = $newLineItems;
+                }
+                if ($expense->type !== $request->expense_type) {
+                    $requestedChanges['type'] = $request->expense_type;
+                }
+
+                $this->editRequestService->recordDirectEditAudit($expense, auth()->user(), $originalData, $requestedChanges);
 
                 $expense->update([
                     'expense_category_id' => $request->expense_category_id,

@@ -106,6 +106,9 @@ class ExpenseEditRequest extends Model
             'expense_item_id' => 'بند المصروف',
             'social_case_id' => 'الحالة الاجتماعية',
             'attachment' => 'المرفق',
+            'expense_date' => 'تاريخ المصروف',
+            'line_items' => 'بنود المصروف',
+            'type' => 'النوع',
         ];
     }
 

@@ -1474,8 +1474,8 @@
             });
         }
 
-        // Auto-hide alerts
-        document.querySelectorAll('.alert').forEach(alert => {
+        // Auto-hide dismissible flash alerts only — static .alert blocks (e.g. data comparison) must stay
+        document.querySelectorAll('.alert-dismissible').forEach(alert => {
             setTimeout(() => {
                 const bsAlert = new bootstrap.Alert(alert);
                 bsAlert.close();

@@ -344,6 +344,24 @@
                                                         $newCase = \App\Models\SocialCase::find($newValue);
                                                         $newValue = ($newCase?->name ?? '-') . ' (ID: ' . $newValue . ')';
                                                     }
+                                                } elseif ($field === 'line_items') {
+                                                    $fieldLabel = 'بنود المصروف';
+                                                    $summarizeItems = function ($v) {
+                                                        if (!is_array($v)) {
+                                                            return $v ?: '-';
+                                                        }
+                                                        if (isset($v['raw_text'])) {
+                                                            return $v['raw_text'];
+                                                        }
+                                                        return collect($v)->map(fn($i) => ($i['description'] ?? '') . (isset($i['quantity']) ? ' × ' . $i['quantity'] : ''))->implode('، ');
+                                                    };
+                                                    $oldValueDisplay = $summarizeItems($oldValue);
+                                                    $newValue = $summarizeItems($newValue);
+                                                } elseif ($field === 'type') {
+                                                    $fieldLabel = 'النوع';
+                                                    $typeLabels = ['social_case' => 'حالة اجتماعية', 'general' => 'مصروف عام'];
+                                                    $oldValueDisplay = is_string($oldValue) ? ($typeLabels[$oldValue] ?? $oldValue) : $oldValue;
+                                                    $newValue = is_string($newValue) ? ($typeLabels[$newValue] ?? $newValue) : $newValue;
                                                 } else {
                                                     $fieldLabel = $field;
                                                 }
