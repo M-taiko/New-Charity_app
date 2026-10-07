@@ -59,13 +59,26 @@ class TreasuryController extends Controller
         $this->authorize('manage_treasury');
         $transactions = $treasury->transactions()->latest()->paginate(20);
 
-        // Calculate statistics
+        // Calculate statistics — تدفق نقدي حقيقي للخزينة فقط:
+        // الوارد: تبرعات دخلت الخزينة فعلاً (غير المرتبطة بعهدة) + مرتجعات العهد + تحويلات بين الخزائن
+        // الصادر: عهد مصروفة للمندوبين + مصاريف مباشرة من الخزينة + تحويلات بين الخزائن
+        // (مصاريف المندوبين من عهداتهم لا تُحتسب هنا: خرجت من الخزينة سابقاً ضمن صرف العهدة)
         $stats = [
             'total_in' => $treasury->transactions()
-                ->whereIn('type', ['donation', 'transfer_in'])
+                ->where(function ($q) {
+                    $q->where(function ($sq) {
+                        $sq->where('type', 'donation')->whereNull('custody_id');
+                    })->orWhereIn('type', ['custody_return', 'transfer_in']);
+                })
                 ->sum('amount'),
             'total_out' => $treasury->transactions()
-                ->whereIn('type', ['expense', 'transfer_out', 'custody_out'])
+                ->where(function ($q) {
+                    $q->where('type', 'custody_out')
+                        ->orWhere(function ($sq) {
+                            $sq->where('type', 'expense')->whereNull('custody_id');
+                        })
+                        ->orWhere('type', 'transfer_out');
+                })
                 ->sum('amount'),
             'total_transactions' => $treasury->transactions()->count(),
         ];

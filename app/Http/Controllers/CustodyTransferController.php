@@ -140,11 +140,17 @@ class CustodyTransferController extends Controller
                 ->with('error', 'يمكن فقط الموافقة على الطلبات المعلقة');
         }
 
-        try {
-            $this->service->approveTransfer($custodyTransfer, auth()->id());
+        // عهدة الاستلام التي يختارها المستقبل (اختياري — null يعني الأقدم تلقائياً)
+        $request->validate([
+            'custody_id' => 'nullable|integer|exists:custodies,id',
+        ]);
 
+        try {
+            $this->service->approveTransfer($custodyTransfer, auth()->id(), $request->input('custody_id'));
+
+            $target = $custodyTransfer->receivedCustody()->first();
             return redirect()->route('custody-transfers.show', $custodyTransfer)
-                ->with('success', 'تم قبول التحويل بنجاح');
+                ->with('success', 'تم قبول التحويل وإضافة المبلغ للعهدة #' . ($target?->id ?? '-'));
         } catch (\Exception $e) {
             return $this->formBackOrJson($request, 'error', $e->getMessage());
         }

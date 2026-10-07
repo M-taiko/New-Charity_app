@@ -183,20 +183,20 @@
                             <form action="{{ route('expenses.mark-reviewed', $expense) }}" method="POST" class="d-inline">
                                 @csrf
                                 <button type="submit" class="btn btn-success"
-                                        onclick="return confirm('تأكيد المراجعة وقفل التعديل من المندوب؟')">
+                                        onclick="return confirm('تأكيد المراجعة؟ بعد المراجعة ستحتاج تعديلات المندوب على هذا المصروف إلى موافقة المحاسب/المدير')">
                                     <i class="fas fa-user-check"></i> تمت المراجعة
                                 </button>
                             </form>
                         @endif
 
-                        <!-- زر طلب التعديل (للمندوب فقط وقبل المراجعة) -->
-                        @if(auth()->user()->hasRole('مندوب') && $expense->user_id === auth()->id() && !$expense->isReviewed() && !$expense->isApproved() && !$expense->hasPendingEdit())
+                        <!-- زر طلب التعديل (المندوب صاحب المصروف: فوري قبل المراجعة، وينتظر الموافقة بعدها) -->
+                        @if(auth()->user()->hasRole('مندوب') && $expense->user_id === auth()->id() && !$expense->isApproved() && !$expense->hasPendingEdit())
                             <a href="{{ route('expense-edit-requests.create', $expense) }}" class="btn btn-warning">
-                                <i class="fas fa-edit"></i> طلب تعديل
+                                <i class="fas fa-edit"></i> {{ $expense->isReviewed() ? 'طلب تعديل (ينتظر الموافقة)' : 'تعديل' }}
                             </a>
                         @endif
 
-                        <!-- زر التعديل المباشر (للمحاسب/المدير) -->
+                        <!-- زر التعديل المباشر (للمحاسب/المدير — يُطبق فوراً) -->
                         @if((auth()->user()->hasRole('محاسب') || (auth()->user()->hasRole('مدير') && $expense->isApproved())) && !$expense->hasPendingEdit())
                             <a href="{{ route('expenses.edit', $expense) }}" class="btn btn-info">
                                 <i class="fas fa-pencil"></i> تعديل
@@ -237,8 +237,10 @@
                                 </small>
                             </div>
                             <div class="col-md-6 text-end">
-                                <span class="badge {{ $editRequest->status === 'approved' ? 'bg-success' : ($editRequest->status === 'rejected' ? 'bg-danger' : 'bg-warning') }}">
-                                    {{ $editRequest->status === 'approved' ? 'تم الموافقة على التعديل' : ($editRequest->status === 'rejected' ? 'تم الرفض' : 'قيد الانتظار') }}
+                                <span class="badge {{ $editRequest->status === 'approved' ? ((int) $editRequest->reviewed_by === (int) $editRequest->requested_by ? 'bg-info' : 'bg-success') : ($editRequest->status === 'rejected' ? 'bg-danger' : 'bg-warning') }}">
+                                    {{ $editRequest->status === 'approved'
+                                        ? ((int) $editRequest->reviewed_by === (int) $editRequest->requested_by ? 'تعديل مباشر' : 'تم الموافقة على التعديل')
+                                        : ($editRequest->status === 'rejected' ? 'تم الرفض' : 'قيد الانتظار') }}
                                 </span>
                             </div>
                         </div>

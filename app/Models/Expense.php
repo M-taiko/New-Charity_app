@@ -168,12 +168,7 @@ class Expense extends Model
             return false;
         }
 
-        // بعد مراجعة المحاسب: لا يمكن للمندوب التعديل
-        if ($this->isReviewed() && $user->hasRole('مندوب')) {
-            return false;
-        }
-
-        // المندوب صاحب المصروف فقط
+        // المندوب صاحب المصروف فقط (تعديل فوري قبل المراجعة، وطلب ينتظر الموافقة بعدها)
         if ($user->hasRole('مندوب')) {
             return $this->user_id === $user->id;
         }

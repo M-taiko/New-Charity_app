@@ -18,9 +18,14 @@
     <div class="row" data-aos="fade-up">
         <div class="col-lg-8">
             <!-- تحذير -->
-            <div class="alert alert-info mb-4">
+            <div class="alert {{ $expense->isReviewed() ? 'alert-warning' : 'alert-info' }} mb-4">
                 <i class="fas fa-info-circle"></i>
-                <strong>ملاحظة:</strong> عدّل البيانات التي تريد تغييرها فقط. سيتم إرسال طلب التعديل للمحاسب والمدير للموافقة عليه.
+                <strong>ملاحظة:</strong> عدّل البيانات التي تريد تغييرها فقط.
+                @if($expense->isReviewed())
+                    هذا المصروف <strong>مراجع</strong>، لذا سيتم إرسال طلب التعديل وينتظر موافقة المحاسب/المدير قبل تطبيقه.
+                @else
+                    هذا المصروف <strong>غير مراجع</strong>، لذا سيتم تطبيق التعديل فوراً بدون موافقة.
+                @endif
             </div>
 
             <div class="card">

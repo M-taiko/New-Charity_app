@@ -29,7 +29,7 @@
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
             <div class="stat-card success">
                 <div class="stat-icon"><i class="fas fa-arrow-down"></i></div>
-                <div class="stat-label">إجمالي العهد المستلمة</div>
+                <div class="stat-label">إجمالي المستلم (عهد + تحويلات)</div>
                 <div class="stat-number" style="color: var(--success);">{{ number_format($totalReceived, 2) }}</div>
                 <small style="color: #6b7280;">ج.م</small>
             </div>
@@ -47,6 +47,30 @@
                 <div class="stat-icon"><i class="fas fa-arrow-up"></i></div>
                 <div class="stat-label">إجمالي المبالغ المردودة</div>
                 <div class="stat-number" style="color: var(--warning);">{{ number_format($totalReturned, 2) }}</div>
+                <small style="color: #6b7280;">ج.م</small>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up">
+            <div class="stat-card success">
+                <div class="stat-icon"><i class="fas fa-exchange-alt fa-rotate-90"></i></div>
+                <div class="stat-label">تحويلات واردة إليّ</div>
+                <div class="stat-number" style="color: var(--success);">{{ number_format($totalTransferredIn, 2) }}</div>
+                <small style="color: #6b7280;">ج.م</small>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
+            <div class="stat-card danger">
+                <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
+                <div class="stat-label">تحويلات صادرة مني</div>
+                <div class="stat-number" style="color: var(--danger);">{{ number_format($totalTransferredOut, 2) }}</div>
+                <small style="color: #6b7280;">ج.م</small>
+            </div>
+        </div>
+        <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="200">
+            <div class="stat-card primary">
+                <div class="stat-icon"><i class="fas fa-wallet"></i></div>
+                <div class="stat-label">رصيدي الحالي (المتبقي لديّ)</div>
+                <div class="stat-number" style="color: var(--primary);">{{ number_format($totalRemaining, 2) }}</div>
                 <small style="color: #6b7280;">ج.م</small>
             </div>
         </div>
@@ -115,9 +139,12 @@
                                     <thead>
                                         <tr>
                                             <th>التاريخ</th>
-                                            <th>المبلغ</th>
+                                            <th>المبلغ الأصلي</th>
+                                            <th>تحويلات واردة</th>
+                                            <th>تحويلات صادرة</th>
+                                            <th>المصروف</th>
+                                            <th>المتبقي</th>
                                             <th>الحالة</th>
-                                            <th>الملاحظات</th>
                                             <th>الإجراءات</th>
                                         </tr>
                                     </thead>
@@ -127,6 +154,35 @@
                                             <td>{{ $custody->created_at->toDateString() }}</td>
                                             <td>
                                                 <strong style="color: var(--success);">{{ number_format($custody->amount, 2) }} ج.م</strong>
+                                            </td>
+                                            <td>
+                                                @if((float) $custody->transferred_in > 0)
+                                                    <span class="badge bg-success">{{ number_format($custody->transferred_in, 2) }} ج.م</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if((float) $custody->transferred_out > 0)
+                                                    <span class="badge bg-danger">{{ number_format($custody->transferred_out, 2) }} ج.م</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if((float) $custody->spent > 0)
+                                                    <span class="badge bg-warning">{{ number_format($custody->spent, 2) }} ج.م</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <strong style="color: var(--primary);">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</strong>
+                                                @if((float) $custody->pending_transfer_out > 0)
+                                                    <small class="d-block text-muted" style="font-size: .7rem;">
+                                                        مجمّد لتحويل معلق: {{ number_format($custody->pending_transfer_out, 2) }} ج.م
+                                                    </small>
+                                                @endif
                                             </td>
                                             <td>
                                                 @switch($custody->status)
@@ -156,7 +212,6 @@
                                                         @break
                                                 @endswitch
                                             </td>
-                                            <td>{{ $custody->notes ? Str::limit($custody->notes, 30) : '-' }}</td>
                                             <td>
                                                 <a href="{{ route('custodies.show', $custody->id) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-eye"></i>

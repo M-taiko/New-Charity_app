@@ -115,6 +115,8 @@
                                     <th class="text-center">النشطة</th>
                                     <th class="text-center">المغلقة</th>
                                     <th class="text-end">المستلم</th>
+                                    <th class="text-end">تحويلات واردة</th>
+                                    <th class="text-end">تحويلات صادرة</th>
                                     <th class="text-end">المصروف</th>
                                     <th class="text-end">المرتجع</th>
                                     <th class="text-end">الرصيد الحالي</th>
@@ -148,6 +150,16 @@
                                     <td class="text-end">
                                         <span style="color: #3b82f6; font-weight: 600;">
                                             {{ number_format($data['total_received'], 2) }} ج.م
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span style="color: #059669; font-weight: 600;">
+                                            {{ number_format($data['total_transferred_in'], 2) }} ج.م
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span style="color: #db2777; font-weight: 600;">
+                                            {{ number_format($data['total_transferred_out'], 2) }} ج.م
                                         </span>
                                     </td>
                                     <td class="text-end">

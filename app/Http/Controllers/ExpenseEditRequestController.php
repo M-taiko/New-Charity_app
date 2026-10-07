@@ -85,11 +85,16 @@ class ExpenseEditRequestController extends Controller
                 $validated['line_items'] = LineItemsSanitizer::fromRequest($request);
             }
 
-            // إنشاء طلب التعديل
+            // إنشاء طلب التعديل: يُطبق فوراً إن كان المصروف غير مراجع،
+            // وينتظر موافقة المحاسب/المدير إن كان مراجعاً
             $editRequest = $this->service->requestEdit($expense, $validated, auth()->user());
 
+            $message = $editRequest->status === 'approved'
+                ? 'تم تعديل المصروف فوراً (المصروف غير مراجع)'
+                : 'تم إرسال طلب التعديل — سينتظر موافقة المحاسب/المدير (المصروف مراجع)';
+
             return redirect()->route('expenses.show', $expense)
-                ->with('success', 'تم إرسال طلب التعديل للمحاسب والمدير بنجاح');
+                ->with('success', $message);
         } catch (\Exception $e) {
             return $this->formBackOrJson($request, 'error', 'حدث خطأ: ' . $e->getMessage());
         }
@@ -132,6 +137,9 @@ class ExpenseEditRequestController extends Controller
             ->addColumn('expense_amount', fn($row) => number_format($row->expense->amount, 2) . ' ج.م')
             ->addColumn('requested_amount', fn($row) => number_format($row->requested_changes['amount'] ?? 0, 2) . ' ج.م')
             ->addColumn('status_badge', function($row) {
+                if ($row->status === 'approved' && (int)$row->reviewed_by === (int)$row->requested_by) {
+                    return '<span class="badge bg-info">تعديل مباشر</span>';
+                }
                 $badges = [
                     'pending' => '<span class="badge bg-warning">معلق</span>',
                     'approved' => '<span class="badge bg-success">موافق</span>',
@@ -175,7 +183,7 @@ class ExpenseEditRequestController extends Controller
             return redirect()->route('expenses.show', $editRequest->expense_id)
                 ->with('success', 'تمت الموافقة على التعديل بنجاح');
         } catch (\Exception $e) {
-            return $this->formBackOrJson($request, 'error', 'حدث خطأ: ' . $e->getMessage());
+            return back()->with('error', 'حدث خطأ: ' . $e->getMessage());
         }
     }
 

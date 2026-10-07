@@ -141,6 +141,42 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle p-3" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                                <i class="fas fa-exchange-alt fa-rotate-90 text-white" style="font-size: 1.5rem;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">إجمالي التحويلات الواردة</div>
+                            <h4 class="mb-0 text-success">{{ number_format($stats['total_transferred_in'] ?? 0, 2) }} ج.م</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="rounded-circle p-3" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);">
+                                <i class="fas fa-paper-plane text-white" style="font-size: 1.5rem;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="text-muted small">إجمالي التحويلات الصادرة</div>
+                            <h4 class="mb-0 text-danger">{{ number_format($stats['total_transferred_out'] ?? 0, 2) }} ج.م</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Custodies List -->
@@ -185,6 +221,8 @@
                                         <th>#</th>
                                         <th>التاريخ</th>
                                         <th>المبلغ الأصلي</th>
+                                        <th>تحويلات واردة</th>
+                                        <th>تحويلات صادرة</th>
                                         <th>المصروف</th>
                                         <th>المرتجع</th>
                                         <th>المتبقي</th>
@@ -198,6 +236,20 @@
                                         <td>{{ $custody->id }}</td>
                                         <td>{!! dt_span($custody->created_at, 'date') !!}</td>
                                         <td>{{ number_format($custody->amount, 2) }} ج.م</td>
+                                        <td>
+                                            @if((float) $custody->transferred_in > 0)
+                                                <span class="badge bg-success">{{ number_format($custody->transferred_in, 2) }} ج.م</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if((float) $custody->transferred_out > 0)
+                                                <span class="badge bg-danger">{{ number_format($custody->transferred_out, 2) }} ج.م</span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </td>
                                         <td>
                                             <span class="badge bg-danger">
                                                 {{ number_format($custody->spent, 2) }} ج.م
@@ -353,14 +405,14 @@
     </div>
     @endif
 
-    <!-- Received Transfers (معلقة) -->
+    <!-- Received Transfers (المعلقة بانتظار الموافقة + السابق استقبالها) -->
     @if($receivedTransfers->isNotEmpty())
     <div class="row mt-4" data-aos="fade-up">
         <div class="col-12">
             <div class="card border-0 shadow-sm">
                 <div class="card-header" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border: none;">
                     <h5 style="margin: 0; color: white;">
-                        <i class="fas fa-arrow-left"></i> التحويلات المستقبلة (بانتظار الموافقة)
+                        <i class="fas fa-arrow-left"></i> التحويلات الواردة إليّ
                     </h5>
                 </div>
                 <div class="card-body">
@@ -369,10 +421,11 @@
                             <thead>
                                 <tr>
                                     <th>#</th>
-                                    <th>العهدة</th>
-                                    <th>المُرسل من</th>
+                                    <th>العهدة المحوِّلة</th>
+                                    <th>المُرسل</th>
                                     <th>المبلغ</th>
                                     <th>التاريخ</th>
+                                    <th>الحالة</th>
                                     <th>الإجراءات</th>
                                 </tr>
                             </thead>
@@ -386,15 +439,39 @@
                                         </a>
                                     </td>
                                     <td>{{ $transfer->fromAgent->name }}</td>
-                                    <td><strong>{{ number_format($transfer->amount, 2) }} ج.م</strong></td>
+                                    <td><strong class="text-success">{{ number_format($transfer->amount, 2) }} ج.م</strong></td>
                                     <td>{!! dt_span($transfer->created_at) !!}</td>
                                     <td>
-                                        <button type="button" class="btn btn-sm btn-success" onclick="approveCustodyTransfer({{ $transfer->id }})">
-                                            <i class="fas fa-check"></i> قبول
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-danger" onclick="rejectCustodyTransfer({{ $transfer->id }})">
-                                            <i class="fas fa-times"></i> رفض
-                                        </button>
+                                        @if($transfer->status === 'pending')
+                                            <span class="badge bg-warning">بانتظار موافقتك</span>
+                                        @elseif($transfer->status === 'approved')
+                                            @php
+                                                $rc = $transfer->receivedCustody()->first();
+                                            @endphp
+                                            <span class="badge bg-success">
+                                                @if ($rc)
+                                                    تم استلامه على العهدة #{{ $rc->id }}
+                                                @else
+                                                    تم استلامه ضمن رصيد عهداتك
+                                                @endif
+                                            </span>
+                                        @else
+                                            <span class="badge bg-danger">مرفوض</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($transfer->status === 'pending')
+                                            <button type="button" class="btn btn-sm btn-success" onclick="openReceiveTransferModal({{ $transfer->id }})">
+                                                <i class="fas fa-check"></i> قبول
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="rejectCustodyTransfer({{ $transfer->id }})">
+                                                <i class="fas fa-times"></i> رفض
+                                            </button>
+                                        @else
+                                            <a href="{{ route('custody-transfers.show', $transfer->id) }}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        @endif
                                     </td>
                                 </tr>
                                 @endforeach
@@ -422,25 +499,37 @@
             <div class="modal-body">
                 <!-- Summary -->
                 <div class="row mb-4">
-                    <div class="col-md-3">
+                    <div class="col-md-4 col-6">
                         <div class="text-center p-3 border rounded">
                             <div class="text-muted small">المبلغ الأصلي</div>
                             <h5 class="mb-0">{{ number_format($custody->amount, 2) }} ج.م</h5>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4 col-6">
+                        <div class="text-center p-3 border rounded">
+                            <div class="text-muted small">تحويلات واردة</div>
+                            <h5 class="mb-0 text-success">{{ number_format($custody->transferred_in, 2) }} ج.م</h5>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6">
+                        <div class="text-center p-3 border rounded">
+                            <div class="text-muted small">تحويلات صادرة</div>
+                            <h5 class="mb-0 text-danger">{{ number_format($custody->transferred_out, 2) }} ج.م</h5>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-6">
                         <div class="text-center p-3 border rounded">
                             <div class="text-muted small">المصروف</div>
                             <h5 class="mb-0 text-danger">{{ number_format($custody->spent, 2) }} ج.م</h5>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4 col-6">
                         <div class="text-center p-3 border rounded">
                             <div class="text-muted small">المرتجع</div>
                             <h5 class="mb-0 text-success">{{ number_format($custody->returned, 2) }} ج.م</h5>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4 col-6">
                         <div class="text-center p-3 border rounded">
                             <div class="text-muted small">المتبقي</div>
                             <h5 class="mb-0 text-primary">{{ number_format($custody->getRemainingBalance(), 2) }} ج.م</h5>
@@ -613,9 +702,14 @@
             <form action="{{ route('custodies.external-donation', $custody->id) }}" method="POST" data-ajax-modal novalidate>
                 @csrf
                 <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>ملاحظة:</strong> سيتم إنشاء <strong>عهدة جديدة مستقلة</strong> بمبلغ هذا التبرع (بنفس خزينتك) — لا يُضاف المبلغ لرصيد عهدة قائمة، حتى تبقى حسابات كل عهدة واضحة ومنفصلة
+                    </div>
+
                     <p class="text-muted mb-3">
-                        <strong>العهدة:</strong> #{{ $custody->id }}<br>
-                        <strong>الرصيد الحالي:</strong> {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                        <strong>العهدة المرجعية:</strong> #{{ $custody->id }}<br>
+                        <strong>الخزينة:</strong> {{ $custody->treasury?->name ?? 'غير محددة' }}
                     </p>
 
                     <div class="mb-3">
@@ -774,20 +868,21 @@
             <form id="quickDonationForm" method="POST" novalidate>
                 @csrf
                 <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        سيتم إنشاء <strong>عهدة جديدة مستقلة</strong> بمبلغ التبرع — لا يُضاف لرصيد عهدة قائمة
+                    </div>
+
                     <div class="mb-3">
-                        <label class="form-label"><strong>اختر العهدة</strong></label>
+                        <label class="form-label"><strong>العهدة المرجعية (لتحديد الخزينة)</strong></label>
                         <select id="donationCustodySelect" class="form-select" required onchange="updateDonationBalance()">
-                            <option value="">-- اختر العهدة --</option>
+                            <option value="">-- اختر عهدة مرجعية --</option>
                             @foreach($myCustodies->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed']) as $custody)
                                 <option value="{{ $custody->id }}" data-balance="{{ $custody->getRemainingBalance() }}">
-                                    #{{ $custody->id }} - الرصيد: {{ number_format($custody->getRemainingBalance(), 2) }} ج.م
+                                    #{{ $custody->id }} - {{ $custody->treasury?->name ?? 'بدون خزينة' }}
                                 </option>
                             @endforeach
                         </select>
-                    </div>
-
-                    <div class="alert alert-info" id="donationBalanceInfo" style="display: none;">
-                        <strong>الرصيد الحالي:</strong> <span id="donationCurrentBalance">0.00</span> ج.م
                     </div>
 
                     <div class="mb-3">
@@ -818,6 +913,43 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-check"></i> تسجيل التبرع
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Receive Transfer Modal (قبول تحويل واختيار عهدة الاستلام) -->
+<div class="modal fade" id="receiveTransferModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <h5 class="modal-title" style="color: white;">
+                    <i class="fas fa-check-circle"></i> قبول التحويل
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="receiveTransferForm" method="POST" novalidate>
+                @csrf
+                <div class="modal-body">
+                    <p class="text-muted mb-3" id="receiveTransferInfo"></p>
+
+                    <div class="mb-3" id="receiveCustodyField">
+                        <label class="form-label"><strong>استلام المبلغ على عهدة</strong></label>
+                        <select id="receiveCustodySelect" name="custody_id" class="form-select"></select>
+                        <small class="text-muted d-block mt-1">سيُضاف المبلغ كتحويل وارد على العهدة المختارة</small>
+                    </div>
+
+                    <div class="alert alert-info mb-0" id="receiveNewCustodyNote" style="display: none;">
+                        <i class="fas fa-info-circle"></i>
+                        ليس لديك عهدة مفتوحة بنفس خزينة المُرسل — سيتم إنشاء <strong>عهدة جديدة</strong> تلقائياً بهذا المبلغ
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check"></i> تأكيد الاستلام
                     </button>
                 </div>
             </form>
@@ -967,19 +1099,9 @@
 function updateDonationBalance() {
     const select = document.getElementById('donationCustodySelect');
     const custodyId = document.getElementById('donationCustodyId');
-    const balanceInfo = document.getElementById('donationBalanceInfo');
-    const currentBalance = document.getElementById('donationCurrentBalance');
 
-    if (select.value) {
-        const option = select.options[select.selectedIndex];
-        const balance = parseFloat(option.dataset.balance) || 0;
-        custodyId.value = select.value;
-        currentBalance.textContent = formatMoney(balance);
-        balanceInfo.style.display = 'block';
-    } else {
-        balanceInfo.style.display = 'none';
-        custodyId.value = '';
-    }
+    // التبرع الخارجي ينشئ عهدة مستقلة جديدة — العهدة المختارة مرجعية فقط (لتحديد الخزينة)
+    custodyId.value = select.value || '';
 }
 
 function updateRecoveryBalance() {
@@ -1028,7 +1150,7 @@ document.getElementById('quickDonationForm').addEventListener('submit', function
     e.preventDefault();
     const custodyId = document.getElementById('donationCustodyId').value;
     if (!custodyId) {
-        alert('يرجى اختيار عهدة');
+        alert('يرجى اختيار عهدة مرجعية لتحديد الخزينة');
         return;
     }
     this.action = `/custodies/${custodyId}/external-donation`;
@@ -1106,22 +1228,62 @@ document.getElementById('quickRefundForm').addEventListener('submit', function(e
 </style>
 
 <script>
-function approveCustodyTransfer(transferId) {
-    if (confirm('هل تريد قبول هذا التحويل؟')) {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = `/custody-transfers/${transferId}/approve`;
-
-        const csrf = document.createElement('input');
-        csrf.type = 'hidden';
-        csrf.name = '_token';
-        csrf.value = document.querySelector('meta[name="csrf-token"]').content;
-        form.appendChild(csrf);
-
-        document.body.appendChild(form);
-        form.submit();
+// قبول تحويل وارد: اختيار عهدة الاستلام أولاً ثم الإرسال
+// خيارات العهدات لكل تحويل معلق (عهداتي المفتوحة بنفس خزينة المُرسل)
+window.receiveTransferOptions = @php
+    $receiveOptions = [];
+    foreach ($receivedTransfers->where('status', 'pending') as $pendingTransfer) {
+        $tid = $pendingTransfer->id;
+        $treasuryId = $pendingTransfer->custody?->treasury_id;
+        $receiveOptions[$tid] = $myCustodies
+            ->whereIn('status', ['accepted', 'active'])
+            ->filter(fn ($c) => (int) $c->treasury_id === (int) $treasuryId)
+            ->map(fn ($c) => [
+                'id' => $c->id,
+                'label' => 'عهدة #' . $c->id . ' — الرصيد الحالي: ' . number_format($c->getRemainingBalance(), 2) . ' ج.م',
+            ])
+            ->values()
+            ->toArray();
     }
+    echo json_encode($receiveOptions, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT);
+@endphp;
+
+function openReceiveTransferModal(transferId) {
+    const options = (window.receiveTransferOptions && window.receiveTransferOptions[transferId]) || [];
+    const info = document.getElementById('receiveTransferInfo');
+    const field = document.getElementById('receiveCustodyField');
+    const select = document.getElementById('receiveCustodySelect');
+    const newNote = document.getElementById('receiveNewCustodyNote');
+
+    // تفاصيل التحويل من صف الجدول (المُرسل والمبلغ)
+    const row = document.querySelector(`button[onclick="openReceiveTransferModal(${transferId})"]`)?.closest('tr');
+    const sender = row ? (row.children[2]?.textContent.trim() || '') : '';
+    const amount = row ? (row.children[3]?.textContent.trim() || '') : '';
+    info.textContent = `المُرسل: ${sender} — المبلغ: ${amount}`;
+
+    select.innerHTML = '';
+    if (options.length > 0) {
+        field.style.display = '';
+        newNote.style.display = 'none';
+        options.forEach(opt => {
+            const o = document.createElement('option');
+            o.value = opt.id;
+            o.textContent = opt.label;
+            select.appendChild(o);
+        });
+    } else {
+        field.style.display = 'none';
+        newNote.style.display = '';
+    }
+
+    document.getElementById('receiveTransferForm').action = `/custody-transfers/${transferId}/approve`;
+    new bootstrap.Modal(document.getElementById('receiveTransferModal')).show();
 }
+
+document.getElementById('receiveTransferForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (window.submitModalFormAjax) { window.submitModalFormAjax(this); } else { this.submit(); }
+});
 
 function rejectCustodyTransfer(transferId) {
     const reason = prompt('أدخل سبب الرفض:');

@@ -685,8 +685,8 @@ class ExpenseController extends Controller
 
         // إشعار المندوب
         $notificationMessage = $isQuickExpense
-            ? 'قام ' . $user->name . ' بمراجعة المصروف السريع رقم #' . $expense->id . ' وتحويله إلى مصروف عادي وتم قفل التعديل'
-            : 'قام ' . $user->name . ' بمراجعة المصروف رقم #' . $expense->id . ' وتم قفل التعديل';
+            ? 'قام ' . $user->name . ' بمراجعة المصروف السريع رقم #' . $expense->id . ' وتحويله إلى مصروف عادي. أي تعديل تطلبه بعد المراجعة سينتظر موافقة المحاسب/المدير'
+            : 'قام ' . $user->name . ' بمراجعة المصروف رقم #' . $expense->id . '. أي تعديل تطلبه بعد المراجعة سينتظر موافقة المحاسب/المدير';
 
         \App\Services\NotificationService::notifyUser(
             $expense->user_id,
@@ -704,8 +704,8 @@ class ExpenseController extends Controller
         ActivityLogService::reviewed($expense, $logMessage);
 
         $message = $isQuickExpense
-            ? 'تمت مراجعة المصروف وتحويله من مصروف سريع إلى مصروف عادي وتم قفل التعديل'
-            : 'تمت مراجعة المصروف وتم قفل التعديل';
+            ? 'تمت مراجعة المصروف وتحويله من مصروف سريع إلى مصروف عادي'
+            : 'تمت مراجعة المصروف';
 
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'message' => $message]);

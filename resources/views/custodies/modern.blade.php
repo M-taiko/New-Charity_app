@@ -117,6 +117,8 @@
                                 <tr>
                                     <th>المندوب</th>
                                     <th>المبلغ</th>
+                                    <th>تحويلات واردة</th>
+                                    <th>تحويلات صادرة</th>
                                     <th>المصروف</th>
                                     <th>المتبقي</th>
                                     <th>نسبة الإنفاق</th>
@@ -145,6 +147,22 @@
                     data: 'amount',
                     render: function(data) {
                         return '<strong>' + formatMoney(data) + ' ج.م</strong>';
+                    }
+                },
+                {
+                    data: 'transferred_in',
+                    render: function(data) {
+                        return data > 0
+                            ? '<span style="color: var(--success);">' + formatMoney(data) + ' ج.م</span>'
+                            : '<span class="text-muted">-</span>';
+                    }
+                },
+                {
+                    data: 'transferred_out',
+                    render: function(data) {
+                        return data > 0
+                            ? '<span style="color: var(--danger);">' + formatMoney(data) + ' ج.م</span>'
+                            : '<span class="text-muted">-</span>';
                     }
                 },
                 {

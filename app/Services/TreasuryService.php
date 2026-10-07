@@ -836,6 +836,76 @@ class TreasuryService
         });
     }
 
+    /**
+     * تبرع خارجي يُسجَّل كعهدة جديدة مستقلة (لا يُضاف لرصيد عهدة قائمة)
+     * حتى تبقى أرقام كل عهدة نظيفة: مصدرها ومصروفاتها واضحة منفصلة
+     */
+    public function addExternalDonationAsNewCustody($custody, $amount, $description, $type = 'external_donation')
+    {
+        return DB::transaction(function () use ($custody, $amount, $description, $type) {
+            $amount = round((float) $amount, 2);
+
+            $typeMapping = [
+                'external_donation' => ['label' => 'تبرع خارجي', 'enum' => 'donation'],
+                'expense_refund' => ['label' => 'استرداد مصروف', 'enum' => 'donation'],
+                'recovery' => ['label' => 'استرداد', 'enum' => 'recovery'],
+            ];
+            $typeConfig = $typeMapping[$type] ?? $typeMapping['external_donation'];
+            $typeLabel = $typeConfig['label'];
+            $enumType = $typeConfig['enum'];
+
+            $source = Custody::where('id', $custody->id)->lockForUpdate()->first();
+            $source->load('agent');
+            $agentName = $source->agent?->name ?? 'غير محدد';
+
+            // عهدة فورية مستقلة بنفس خزينة ومندوب العهدة المرجعية
+            $newCustody = Custody::create([
+                'treasury_id' => $source->treasury_id,
+                'agent_id' => $source->agent_id,
+                'accountant_id' => $source->accountant_id,
+                'initiated_by' => auth()->user() && !auth()->user()->hasRole('مندوب') ? 'accountant' : 'agent',
+                'amount' => $amount,
+                'spent' => 0,
+                'transferred_out' => 0,
+                'transferred_in' => 0,
+                'returned' => 0,
+                'pending_return' => 0,
+                'pending_transfer_out' => 0,
+                'status' => 'active',
+                'notes' => "{$typeLabel}: {$description} (عهدة مستقلة)",
+                'accepted_at' => now(),
+                'received_at' => now(),
+            ]);
+
+            // حركة دفتر مرتبطة بالعهدة الجديدة — لا تمس رصيد الخزينة
+            TreasuryTransaction::create([
+                'treasury_id' => $source->treasury_id,
+                'type' => $enumType,
+                'amount' => $amount,
+                'description' => "{$typeLabel} لعهدة مستقلة #{$newCustody->id} للمندوب {$agentName}: {$description}",
+                'user_id' => auth()->id(),
+                'custody_id' => $newCustody->id,
+                'transaction_date' => now(),
+            ]);
+
+            \App\Services\ActivityLogService::created(
+                $newCustody,
+                "{$typeLabel} كعهدة مستقلة بمبلغ " . number_format($amount, 2) . " ج.م - {$description}"
+            );
+
+            $this->notifyUser(
+                $source->agent_id,
+                "تم إنشاء عهدة جديدة بـ{$typeLabel}",
+                "تم إنشاء عهدة مستقلة #{$newCustody->id} بمبلغ " . number_format($amount, 2) . " ج.م. {$description}",
+                'success',
+                $newCustody->id,
+                'custody'
+            );
+
+            return $newCustody;
+        });
+    }
+
     public function addDonation($treasuryId, $amount, $source, $description, $userId)
     {
         return DB::transaction(function () use ($treasuryId, $amount, $source, $description, $userId) {

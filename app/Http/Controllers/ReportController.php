@@ -367,6 +367,8 @@ class ReportController extends Controller
             $totalReceived = $custodies->sum('amount') + $custodies->sum('transferred_in');
             $totalSpent = $custodies->sum('spent');
             $totalReturned = $custodies->sum('returned');
+            $totalTransferredIn = $custodies->sum('transferred_in');
+            $totalTransferredOut = $custodies->sum('transferred_out');
             $currentBalance = $custodies->sum(function ($custody) {
                 return $custody->getRemainingBalance();
             });
@@ -379,6 +381,8 @@ class ReportController extends Controller
                 'total_received' => $totalReceived,
                 'total_spent' => $totalSpent,
                 'total_returned' => $totalReturned,
+                'total_transferred_in' => $totalTransferredIn,
+                'total_transferred_out' => $totalTransferredOut,
                 'current_balance' => $currentBalance,
             ];
         })->filter(function ($data) {
@@ -392,6 +396,8 @@ class ReportController extends Controller
             'total_received' => $agentsData->sum('total_received'),
             'total_spent' => $agentsData->sum('total_spent'),
             'total_returned' => $agentsData->sum('total_returned'),
+            'total_transferred_in' => $agentsData->sum('total_transferred_in'),
+            'total_transferred_out' => $agentsData->sum('total_transferred_out'),
             'total_balance' => $agentsData->sum('current_balance'),
         ];
 
@@ -405,61 +411,72 @@ class ReportController extends Controller
     {
         $this->authorize('manage_treasury');
 
-        $treasury = Treasury::first();
-
-        if (!$treasury) {
+        $treasuries = Treasury::orderBy('id')->get();
+        if ($treasuries->isEmpty()) {
             abort(404, 'لم يتم العثور على خزينة');
         }
 
-        // 1. Current treasury balance
-        $treasuryCurrentBalance = $treasury->balance;
+        // مطابقة لكل خزينة على حدة (جاهزية لتعدد الخزائن):
+        // المتوقع = تبرعات دخلت الخزينة (غير المرتبطة بعهدة) + مرتجعات العهد
+        //          - عهد مصروفة - مصاريف مباشرة - تحويلات صادرة + تحويلات واردة من خزائن أخرى
+        $treasuriesData = $treasuries->map(function ($treasury) {
+            $donations = \App\Models\TreasuryTransaction::where('treasury_id', $treasury->id)
+                ->where('type', 'donation')->whereNull('custody_id')->sum('amount');
 
-        // 2. Total donations received
-        $totalDonations = \App\Models\TreasuryTransaction::where('type', 'donation')
-            ->sum('amount');
+            $issued = \App\Models\TreasuryTransaction::where('treasury_id', $treasury->id)
+                ->where('type', 'custody_out')->sum('amount');
 
-        // 3. Total custodies issued (amount given to agents)
-        $totalCustodiesIssued = Custody::whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
-            ->sum('amount');
+            $returned = \App\Models\TreasuryTransaction::where('treasury_id', $treasury->id)
+                ->where('type', 'custody_return')->sum('amount');
 
-        // 4. Total custodies returned
-        $totalCustodiesReturned = Custody::whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
-            ->sum('returned');
+            $directExpenses = \App\Models\TreasuryTransaction::where('treasury_id', $treasury->id)
+                ->where('type', 'expense')->whereNull('custody_id')->sum('amount');
 
-        // 5. Active custody balances (still with agents)
+            $transfersIn = \App\Models\TreasuryTransaction::where('treasury_id', $treasury->id)
+                ->where('type', 'transfer_in')->sum('amount');
+
+            $transfersOut = \App\Models\TreasuryTransaction::where('treasury_id', $treasury->id)
+                ->where('type', 'transfer_out')->sum('amount');
+
+            $expected = $donations + $returned + $transfersIn - $issued - $directExpenses - $transfersOut;
+            $difference = (float) $treasury->balance - (float) $expected;
+
+            return [
+                'treasury' => $treasury,
+                'donations' => $donations,
+                'issued' => $issued,
+                'returned' => $returned,
+                'direct_expenses' => $directExpenses,
+                'transfers_in' => $transfersIn,
+                'transfers_out' => $transfersOut,
+                'actual_balance' => (float) $treasury->balance,
+                'expected_balance' => $expected,
+                'difference' => $difference,
+                'is_reconciled' => abs($difference) < 0.01,
+            ];
+        });
+
+        // إجماليات عامة (كل الخزائن)
         $activeCustodyBalance = Custody::whereIn('status', ['accepted', 'active', 'partially_returned'])
             ->get()
             ->sum(function ($custody) {
                 return $custody->getRemainingBalance();
             });
 
-        // 6. Total direct expenses from treasury
-        $totalDirectExpenses = Expense::where('source', 'treasury')
-            ->sum('amount');
+        $totalCustodyExpenses = Expense::where('source', 'custody')->sum('amount');
+        $totalDirectExpenses = (float) $treasuriesData->sum('direct_expenses');
 
-        // 7. Total expenses from custodies
-        $totalCustodyExpenses = Expense::where('source', 'custody')
-            ->sum('amount');
-
-        // 8. Calculate expected treasury balance
-        // Formula: Balance = Donations - (Custodies Issued - Custodies Returned) - Direct Expenses
-        $expectedBalance = $totalDonations - ($totalCustodiesIssued - $totalCustodiesReturned) - $totalDirectExpenses;
-
-        // 9. Calculate difference
-        $difference = $treasuryCurrentBalance - $expectedBalance;
-
-        // 10. Check reconciliation
-        $isReconciled = abs($difference) < 0.01; // Allow for 0.01 due to rounding
-
-        // Detailed breakdown
         $reconciliation = [
-            'actual_balance' => $treasuryCurrentBalance,
-            'expected_balance' => $expectedBalance,
-            'difference' => $difference,
-            'is_reconciled' => $isReconciled,
-            'total_donations' => $totalDonations,
-            'total_custodies_issued' => $totalCustodiesIssued,
-            'total_custodies_returned' => $totalCustodiesReturned,
+            'treasuries' => $treasuriesData,
+            'actual_balance' => $treasuriesData->sum('actual_balance'),
+            'expected_balance' => $treasuriesData->sum('expected_balance'),
+            'difference' => $treasuriesData->sum('difference'),
+            'is_reconciled' => $treasuriesData->every(fn ($t) => $t['is_reconciled']),
+            'total_donations' => $treasuriesData->sum('donations'),
+            'total_custodies_issued' => $treasuriesData->sum('issued'),
+            'total_custodies_returned' => $treasuriesData->sum('returned'),
+            'total_transfers_in' => $treasuriesData->sum('transfers_in'),
+            'total_transfers_out' => $treasuriesData->sum('transfers_out'),
             'active_custody_balance' => $activeCustodyBalance,
             'total_direct_expenses' => $totalDirectExpenses,
             'total_custody_expenses' => $totalCustodyExpenses,

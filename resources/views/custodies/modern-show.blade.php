@@ -87,27 +87,41 @@
                     @php
                         $totalSpent = $custody->getTotalSpent();
                         $remaining = $custody->getRemainingBalance();
-                        $spendingPercent = $custody->amount > 0 ? round(($totalSpent / $custody->amount) * 100) : 0;
-                        $returnedPercent = $custody->amount > 0 ? round(($custody->returned / $custody->amount) * 100) : 0;
+                        // نسبة الإنفاق تُحسب على إجمالي ما دخل العهدة فعلياً (المبلغ + التحويلات الواردة)
+                        $spendBase = (float) $custody->amount + (float) $custody->transferred_in;
+                        $spendingPercent = $spendBase > 0 ? round(($totalSpent / $spendBase) * 100) : 0;
+                        $returnedPercent = $spendBase > 0 ? round(($custody->returned / $spendBase) * 100) : 0;
                     @endphp
 
                     <div class="row">
-                        <div class="col-md-4">
+                        <div class="col-md-4 col-6">
+                            <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-left: 4px solid #667eea; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">تحويلات واردة (من مندوبين)</p>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #667eea;">{{ number_format($custody->transferred_in, 2) }} ج.م</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(219, 39, 119, 0.1)); border-left: 4px solid #ec4899; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">تحويلات صادرة (إلى مندوبين)</p>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #ec4899;">{{ number_format($custody->transferred_out, 2) }} ج.م</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
+                            <div style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1)); border-left: 4px solid #4caf50; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">المبلغ المتبقي</p>
+                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #4caf50;">{{ number_format($remaining, 2) }} ج.م</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-6">
                             <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-left: 4px solid #667eea; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                                 <p style="margin: 0; font-size: 0.85rem; color: #666;">إجمالي المصروفات</p>
                                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #667eea;">{{ number_format($totalSpent, 2) }} ج.م</h3>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-4 col-6">
                             <div style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(251, 140, 0, 0.1)); border-left: 4px solid #ff9800; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
                                 <p style="margin: 0; font-size: 0.85rem; color: #666;">المبالغ المردودة</p>
                                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #ff9800;">{{ number_format($custody->returned, 2) }} ج.م</h3>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1)); border-left: 4px solid #4caf50; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-                                <p style="margin: 0; font-size: 0.85rem; color: #666;">المبلغ المتبقي</p>
-                                <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #4caf50;">{{ number_format($remaining, 2) }} ج.م</h3>
                             </div>
                         </div>
                     </div>
@@ -299,10 +313,14 @@
                         </div>
                         <div class="mb-3">
                             <strong>نسبة الإنفاق:</strong><br>
+                            @php
+                                $statusSpendBase = (float) $custody->amount + (float) $custody->transferred_in;
+                                $statusSpendPercent = $statusSpendBase > 0 ? min(100, round(($custody->getTotalSpent() / $statusSpendBase) * 100)) : 0;
+                            @endphp
                             <div class="progress" style="height: 8px; margin-top: 5px;">
-                                <div class="progress-bar" style="width: {{ ($custody->getTotalSpent() / $custody->amount) * 100 }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                <div class="progress-bar" style="width: {{ $statusSpendPercent }}%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
                             </div>
-                            <small style="color: #666;">{{ round(($custody->getTotalSpent() / $custody->amount) * 100) }}%</small>
+                            <small style="color: #666;">{{ $statusSpendPercent }}%</small>
                         </div>
                     </div>
                 </div>
@@ -345,7 +363,8 @@
                                 <div style="margin-top: 0.5rem;">
                                     <div class="progress" style="height: 10px; margin-bottom: 0.5rem;">
                                         @php
-                                            $spendingPercentage = ($custody->getTotalSpent() / $custody->amount) * 100;
+                                            $summarySpendBase = (float) $custody->amount + (float) $custody->transferred_in;
+                                            $spendingPercentage = $summarySpendBase > 0 ? min(100, ($custody->getTotalSpent() / $summarySpendBase) * 100) : 0;
                                         @endphp
                                         <div class="progress-bar" style="width: {{ $spendingPercentage }}%; background: linear-gradient(135deg, #f57c00 0%, #ff6f00 100%);"></div>
                                     </div>
@@ -410,21 +429,15 @@
                                             'object' => $custody
                                         ];
 
-                                        // Add transactions
+                                        // Add transactions (تغطي كل الحركات المرتبطة بالعهدة:
+                                        // الصرف الأولي، المصروفات، التحويلات، الردود، التبرعات، الاستردادات)
+                                        // ملاحظة: لا نضيف موديلات المصاريف منفصلة — حركة الخزينة تحمل مبلغ
+                                        // حصة هذه العهدة تحديداً (مصروفات المشاركة تُقسم عبر العهدات)
                                         foreach($transactions as $trans) {
                                             $allEvents[] = [
                                                 'type' => 'transaction',
                                                 'date' => $trans->transaction_date,
                                                 'object' => $trans
-                                            ];
-                                        }
-
-                                        // Add expenses
-                                        foreach($expenses as $exp) {
-                                            $allEvents[] = [
-                                                'type' => 'expense',
-                                                'date' => $exp->created_at,
-                                                'object' => $exp
                                             ];
                                         }
 
@@ -443,6 +456,8 @@
                                         });
 
                                         // Calculate running balances in ascending order (for display in descending order)
+                                        // رصيد العهدة = amount (يشمل الصرف الأولي والتبرعات والاستردادات)
+                                        // + التحويلات الواردة - المصروف - التحويلات الصادرة - المرتجعات - طلبات الرد المعلقة
                                         $balancesMap = [];
                                         $tempBalance = $custody->amount;
                                         $eventsAscending = array_reverse($allEvents);
@@ -450,11 +465,20 @@
                                         foreach ($eventsAscending as $idx => $event) {
                                             if ($event['type'] === 'transaction') {
                                                 $trans = $event['object'];
-                                                $isIncome = in_array($trans->type, ['donation', 'recovery', 'transfer_in']);
-                                                $tempBalance += $isIncome ? $trans->amount : -$trans->amount;
+                                                if ($trans->type === 'custody_transfer_in') {
+                                                    $tempBalance += $trans->amount;
+                                                } elseif (in_array($trans->type, ['custody_transfer_out', 'expense', 'custody_return'])) {
+                                                    $tempBalance -= $trans->amount;
+                                                }
+                                                // custody_out / donation / recovery محسوبة أصلاً ضمن amount الأساسي
                                             } elseif ($event['type'] === 'expense') {
                                                 $exp = $event['object'];
                                                 $tempBalance -= $exp->amount;
+                                            } elseif ($event['type'] === 'return_request') {
+                                                $returnReq = $event['object'];
+                                                if ($returnReq->status === 'pending') {
+                                                    $tempBalance -= $returnReq->amount;
+                                                }
                                             }
                                             $balancesMap[$idx] = $tempBalance;
                                         }
@@ -506,7 +530,7 @@
                                                     @endif
                                                 </td>
                                                 <td style="text-align: center; color: #0369a1; font-weight: bold;">
-                                                    -
+                                                    {{ isset($balancesMap[$idx]) ? number_format($balancesMap[$idx], 2) : '-' }}
                                                 </td>
                                                 <td style="text-align: right; font-size: 0.85rem;">
                                                     @if($returnReq->reason)
@@ -522,9 +546,10 @@
                                         @elseif($event['type'] === 'transaction')
                                             @php
                                                 $trans = $event['object'];
-                                                // Income: donation, recovery, transfer_in
-                                                // Outgoing: custody_out, custody_return (returns reduce the custody amount)
-                                                $isIncome = in_array($trans->type, ['donation', 'recovery', 'transfer_in']);
+                                                // وارد على العهدة: تحويل من مندوب آخر
+                                                $isIncome = $trans->type === 'custody_transfer_in';
+                                                // لا يؤثر على الرصيد (محسوب ضمن المبلغ الأساسي): الصرف الأولي والتبرع والاسترداد
+                                                $isNeutral = in_array($trans->type, ['custody_out', 'donation', 'recovery', 'custody_close']);
                                                 $amount = $trans->amount;
                                                 $displayBalance = isset($balancesMap[$idx]) ? $balancesMap[$idx] : 0;
                                             @endphp
@@ -542,9 +567,17 @@
                                                     @elseif($trans->type === 'recovery')
                                                         <span class="badge" style="background-color: #06b6d4;"><i class="fas fa-arrow-left"></i> استرداد</span>
                                                     @elseif($trans->type === 'custody_out')
-                                                        <span class="badge bg-danger"><i class="fas fa-arrow-down"></i> صرف</span>
+                                                        <span class="badge bg-success"><i class="fas fa-hand-holding-heart"></i> استلام العهدة من الخزينة</span>
                                                     @elseif($trans->type === 'custody_return')
                                                         <span class="badge bg-success"><i class="fas fa-arrow-up"></i> رد</span>
+                                                    @elseif($trans->type === 'custody_transfer_in')
+                                                        <span class="badge" style="background-color: #059669;"><i class="fas fa-arrow-down"></i> تحويل واصل</span>
+                                                    @elseif($trans->type === 'custody_transfer_out')
+                                                        <span class="badge bg-danger"><i class="fas fa-arrow-up"></i> تحويل صادر</span>
+                                                    @elseif($trans->type === 'expense')
+                                                        <span class="badge bg-warning"><i class="fas fa-shopping-cart"></i> مصروف</span>
+                                                    @elseif($trans->type === 'custody_close')
+                                                        <span class="badge bg-dark"><i class="fas fa-lock"></i> إغلاق عهدة</span>
                                                     @else
                                                         <span class="badge bg-secondary">{{ $trans->type }}</span>
                                                     @endif
@@ -553,7 +586,7 @@
                                                     {{ $isIncome ? number_format($amount, 2) : '-' }}
                                                 </td>
                                                 <td style="text-align: center; color: #dc2626; font-weight: bold;">
-                                                    {{ !$isIncome ? number_format($amount, 2) : '-' }}
+                                                    {{ (!$isIncome && !$isNeutral) ? number_format($amount, 2) : '-' }}
                                                 </td>
                                                 <td style="text-align: center; color: #0369a1; font-weight: bold;">
                                                     {{ number_format($displayBalance, 2) }}
@@ -600,31 +633,47 @@
 
                         <!-- Summary Statistics -->
                         <div class="row mt-4 pt-3 border-top">
-                            <div class="col-md-3">
+                            <div class="col-md-4 col-6">
                                 <div style="text-align: center; padding: 15px;">
-                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي الدخل</p>
-                                    <h4 style="margin: 0.5rem 0; color: #059669; font-weight: bold;">
-                                        {{ number_format($transactions->whereIn('type', ['donation', 'recovery', 'custody_return'])->sum('amount'), 2) }} ج.م
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">المبلغ الأساسي (خزينة + تبرعات + استردادات)</p>
+                                    <h4 style="margin: 0.5rem 0; color: #667eea; font-weight: bold;">
+                                        {{ number_format($custody->amount, 2) }} ج.م
                                     </h4>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4 col-6">
                                 <div style="text-align: center; padding: 15px;">
-                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي الصرف</p>
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">تحويلات واردة من مندوبين</p>
+                                    <h4 style="margin: 0.5rem 0; color: #059669; font-weight: bold;">
+                                        {{ number_format($custody->transferred_in, 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">تحويلات صادرة إلى مندوبين</p>
+                                    <h4 style="margin: 0.5rem 0; color: #dc2626; font-weight: bold;">
+                                        {{ number_format($custody->transferred_out, 2) }} ج.م
+                                    </h4>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-6">
+                                <div style="text-align: center; padding: 15px;">
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي المصروف</p>
                                     <h4 style="margin: 0.5rem 0; color: #dc2626; font-weight: bold;">
                                         {{ number_format($custody->spent, 2) }} ج.م
                                     </h4>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4 col-6">
                                 <div style="text-align: center; padding: 15px;">
-                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي المسترجع</p>
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">إجمالي المرتجع للخزينة</p>
                                     <h4 style="margin: 0.5rem 0; color: #0369a1; font-weight: bold;">
                                         {{ number_format($custody->returned, 2) }} ج.م
                                     </h4>
                                 </div>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4 col-6">
                                 <div style="text-align: center; padding: 15px;">
                                     <p style="margin: 0; color: #666; font-size: 0.9rem;">الرصيد المتبقي</p>
                                     <h4 style="margin: 0.5rem 0; color: #0369a1; font-weight: bold;">
@@ -1368,13 +1417,14 @@ document.addEventListener('shown.bs.modal', function (event) {
                 <div class="modal-body">
                     <div class="alert alert-info" style="font-size:.9rem;">
                         <i class="fas fa-info-circle"></i>
-                        المبلغ المضاف سيزيد رصيد عهدة <strong>{{ $custody->agent->name }}</strong> مباشرة دون المرور بالخزينة
+                        <strong>تبرع خارجي:</strong> سيتم إنشاء <strong>عهدة جديدة مستقلة</strong> للمندوب {{ $custody->agent->name }} (نفس الخزينة) دون المرور بالخزينة — لا يُضاف لرصيد هذه العهدة.<br>
+                        <strong>استرداد مصروف:</strong> يُعاد المبلغ لرصيد هذه العهدة مباشرة (المبلغ أصلاً صُرف منها).
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">نوع العملية</label>
                         <select name="type" class="form-select" required>
-                            <option value="external_donation">تبرع خارجي</option>
-                            <option value="expense_refund">استرداد مصروف</option>
+                            <option value="external_donation">تبرع خارجي (عهدة جديدة مستقلة)</option>
+                            <option value="expense_refund">استرداد مصروف (يضاف لهذه العهدة)</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -1386,13 +1436,13 @@ document.addEventListener('shown.bs.modal', function (event) {
                         <input type="text" name="description" class="form-control" required placeholder="مثال: تبرع من جمعية X">
                     </div>
                     <div class="mb-0">
-                        <small class="text-muted">رصيد العهدة الحالي: <strong>{{ number_format($custody->amount, 2) }} ج.م</strong></small>
+                        <small class="text-muted">رصيد هذه العهدة الحالي: <strong>{{ number_format($custody->amount, 2) }} ج.م</strong></small>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                     <button type="submit" class="btn btn-success">
-                        <i class="fas fa-plus"></i> إضافة المبلغ
+                        <i class="fas fa-plus"></i> تنفيذ
                     </button>
                 </div>
             </form>

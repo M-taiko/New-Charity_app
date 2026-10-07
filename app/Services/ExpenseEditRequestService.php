@@ -14,31 +14,22 @@ use Illuminate\Support\Facades\DB;
 class ExpenseEditRequestService
 {
     /**
-     * طلب تعديل المصروف من المندوب
+     * طلب تعديل المصروف من المندوب:
+     * - مصروف غير مراجع: التعديل يُطبق فوراً بدون موافقة (يُسجَّل كـ"تعديل مباشر")
+     * - مصروف مراجع: طلب معلق ينتظر موافقة المحاسب/المدير
      */
     public function requestEdit(Expense $expense, array $changes, User $requester)
     {
-        return DB::transaction(function () use ($expense, $changes, $requester) {
-            // حفظ البيانات الأصلية (مع الأسماء والمسارات الكاملة للعرض)
-            $originalData = [
-                'amount' => $expense->amount,
-                'description' => $expense->description,
-                'location' => $expense->location,
-                'expense_category_id' => $expense->expense_category_id,
-                'expense_category_name' => $expense->category?->name,
-                'expense_category_path' => $expense->category?->full_path,
-                'expense_item_id' => $expense->expense_item_id,
-                'expense_item_name' => $expense->item?->name,
-                'social_case_id' => $expense->social_case_id,
-                'social_case_name' => $expense->socialCase?->name,
-                'attachment' => $expense->attachment,
-            ];
+        if (!$expense->isReviewed()) {
+            return $this->autoApplyEdit($expense, $changes, $requester);
+        }
 
+        return DB::transaction(function () use ($expense, $changes, $requester) {
             // إنشاء طلب التعديل
             $editRequest = ExpenseEditRequest::create([
                 'expense_id' => $expense->id,
                 'requested_by' => $requester->id,
-                'original_data' => $originalData,
+                'original_data' => $this->snapshotOriginalData($expense),
                 'requested_changes' => $changes,
                 'status' => 'pending',
             ]);
@@ -51,6 +42,50 @@ class ExpenseEditRequestService
 
             return $editRequest;
         });
+    }
+
+    /**
+     * تطبيق فوري لتعديل المندوب على مصروف غير مراجع: يُنشأ السجل ويُطبق التعديل
+     * في نفس اللحظة بنفس منطق الموافقة (قواعد العهدة والخزينة). لا يُرسل إشعار
+     * موافقة ولا يحوّل المصروف إلى "معتمد" — الاعتماد يبدأ بعد المراجعة فقط.
+     */
+    private function autoApplyEdit(Expense $expense, array $changes, User $requester): ExpenseEditRequest
+    {
+        $editRequest = ExpenseEditRequest::create([
+            'expense_id' => $expense->id,
+            'requested_by' => $requester->id,
+            'original_data' => $this->snapshotOriginalData($expense),
+            'requested_changes' => $changes,
+            'status' => 'pending',
+        ]);
+
+        try {
+            return $this->approveEdit($editRequest, $requester, autoApplied: true);
+        } catch (\Throwable $e) {
+            // فشل تطبيق التعديل: لا نترك طلباً معلقاً خلفنا
+            $editRequest->delete();
+            throw $e;
+        }
+    }
+
+    /**
+     * لقطة البيانات الأصلية (مع الأسماء والمسارات الكاملة للعرض)
+     */
+    private function snapshotOriginalData(Expense $expense): array
+    {
+        return [
+            'amount' => $expense->amount,
+            'description' => $expense->description,
+            'location' => $expense->location,
+            'expense_category_id' => $expense->expense_category_id,
+            'expense_category_name' => $expense->category?->name,
+            'expense_category_path' => $expense->category?->full_path,
+            'expense_item_id' => $expense->expense_item_id,
+            'expense_item_name' => $expense->item?->name,
+            'social_case_id' => $expense->social_case_id,
+            'social_case_name' => $expense->socialCase?->name,
+            'attachment' => $expense->attachment,
+        ];
     }
 
     /**
@@ -78,13 +113,13 @@ class ExpenseEditRequestService
     /**
      * الموافقة على طلب التعديل
      */
-    public function approveEdit(ExpenseEditRequest $editRequest, User $reviewer)
+    public function approveEdit(ExpenseEditRequest $editRequest, User $reviewer, bool $autoApplied = false)
     {
         $oldAttachment = $editRequest->expense->attachment;
         $newAttachment = $oldAttachment;
         $attachmentKeyPresent = array_key_exists('attachment', $editRequest->requested_changes ?? []);
 
-        $result = DB::transaction(function () use ($editRequest, $reviewer, $attachmentKeyPresent, &$newAttachment) {
+        $result = DB::transaction(function () use ($editRequest, $reviewer, $attachmentKeyPresent, $autoApplied, &$newAttachment) {
             $expense = $editRequest->expense;
 
             // تطبيق التغييرات
@@ -190,6 +225,11 @@ class ExpenseEditRequestService
                 'reviewed_by' => $reviewer->id,
                 'reviewed_at' => now(),
             ]);
+
+            if ($autoApplied) {
+                // تطبيق فوري على مصروف غير مراجع: لا "اعتماد" للمصروف ولا إشعار موافقة
+                return $editRequest;
+            }
 
             // تغيير حالة المصروف إلى معتمد
             $expense->update(['approval_status' => 'approved']);

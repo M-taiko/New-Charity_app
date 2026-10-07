@@ -137,17 +137,33 @@
                                                 'custody_return' => ['text' => 'عهدة إرجاع', 'color' => 'primary'],
                                                 'transfer_in' => ['text' => 'تحويل وارد', 'color' => 'primary'],
                                                 'transfer_out' => ['text' => 'تحويل صادر', 'color' => 'warning'],
+                                                'custody_transfer_in' => ['text' => 'تحويل عهدة (وارد للعهدة)', 'color' => 'secondary'],
+                                                'custody_transfer_out' => ['text' => 'تحويل عهدة (صادر من العهدة)', 'color' => 'secondary'],
+                                                'recovery' => ['text' => 'استرداد لعهدة', 'color' => 'secondary'],
+                                                'custody_close' => ['text' => 'إغلاق عهدة', 'color' => 'secondary'],
                                             ];
                                             $type = $typeLabels[$transaction->type] ?? ['text' => 'غير محدد', 'color' => 'secondary'];
+
+                                            // أثر حقيقي على رصيد الخزينة: التبرع/المصروف المرتبط بعهدة لا يمس الخزينة
+                                            // (دخل العهدة مباشرة أو صُرف من رصيد العهدة)، وكذلك تحويلات العهد بين المندوبين
+                                            $cashIn = in_array($transaction->type, ['custody_return', 'transfer_in'])
+                                                || ($transaction->type === 'donation' && !$transaction->custody_id);
+                                            $cashOut = in_array($transaction->type, ['custody_out', 'transfer_out'])
+                                                || ($transaction->type === 'expense' && !$transaction->custody_id);
                                         @endphp
                                         <span class="badge bg-{{ $type['color'] }}">{{ $type['text'] }}</span>
                                     </td>
                                     <td>{{ $transaction->description }}</td>
                                     <td>
-                                        <strong style="color: {{ in_array($transaction->type, ['donation', 'custody_return', 'transfer_in']) ? '#4caf50' : '#f44336' }}">
-                                            {{ in_array($transaction->type, ['donation', 'custody_return', 'transfer_in']) ? '+' : '-' }}
-                                            {{ number_format($transaction->amount, 2) }} ج.م
-                                        </strong>
+                                        @if($cashIn)
+                                            <strong style="color: #4caf50">+ {{ number_format($transaction->amount, 2) }} ج.م</strong>
+                                        @elseif($cashOut)
+                                            <strong style="color: #f44336">- {{ number_format($transaction->amount, 2) }} ج.م</strong>
+                                        @else
+                                            <strong style="color: #9e9e9e" title="حركة داخل عهدة — لا تمس رصيد الخزينة">
+                                                {{ number_format($transaction->amount, 2) }} ج.م
+                                            </strong>
+                                        @endif
                                     </td>
                                     <td>
                                         <small class="text-muted">{{ $transaction->source ?? '-' }}</small>

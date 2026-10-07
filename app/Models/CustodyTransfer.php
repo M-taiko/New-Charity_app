@@ -72,6 +72,22 @@ class CustodyTransfer extends Model
     }
 
     /**
+     * العهدة التي استقر فيها المبلغ لدى المستقبل
+     * (تُعرف من حركة الدفتر custody_transfer_in المرتبطة بهذا التحويل)
+     */
+    public function receivedCustody()
+    {
+        return $this->hasOneThrough(
+            Custody::class,
+            TreasuryTransaction::class,
+            'custody_transfer_id', // حركة الدفتر → التحويل
+            'id',                  // العهدة
+            'id',
+            'custody_id'
+        )->where('treasury_transactions.type', 'custody_transfer_in');
+    }
+
+    /**
      * Scope to get pending transfers.
      */
     public function scopePending($query)

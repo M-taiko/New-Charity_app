@@ -39,7 +39,11 @@
                                 @if($editRequest->isPending())
                                     <span class="badge bg-warning">معلق</span>
                                 @elseif($editRequest->isApproved())
-                                    <span class="badge bg-success">موافق</span>
+                                    @if((int) $editRequest->reviewed_by === (int) $editRequest->requested_by)
+                                        <span class="badge bg-info">تعديل مباشر (طُبّق فوراً)</span>
+                                    @else
+                                        <span class="badge bg-success">موافق</span>
+                                    @endif
                                 @else
                                     <span class="badge bg-danger">مرفوض</span>
                                 @endif

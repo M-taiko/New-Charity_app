@@ -356,6 +356,18 @@ class CustodyController extends Controller
         ]);
 
         try {
+            // التبرع الخارجي = عهدة مستقلة جديدة (أدق في الحسابات وأوضح)
+            // استرداد المصروف = يُعاد لنفس العهدة (المبلغ أصلاً صُرف منها)
+            if ($request->type === 'external_donation') {
+                $newCustody = $this->service->addExternalDonationAsNewCustody(
+                    $custody,
+                    $request->amount,
+                    $request->description,
+                    $request->type
+                );
+                return $this->formBackOrJson($request, 'success', 'تم إنشاء عهدة جديدة مستقلة #' . $newCustody->id . ' بمبلغ التبرع');
+            }
+
             $this->service->addExternalDonationToCustody($custody, $request->amount, $request->description, $request->type);
             return $this->formBackOrJson($request, 'success', 'تم إضافة المبلغ لرصيد العهدة بنجاح');
         } catch (\Exception $e) {
@@ -782,7 +794,12 @@ class CustodyController extends Controller
 
         return DataTables::of($custodies)
             ->addColumn('agent_name', fn($row) => $row->agent?->name ?? '-')
-            ->addColumn('spent_percent', fn($row) => $row->amount > 0 ? (int)round(($row->spent / $row->amount) * 100) : 0)
+            ->addColumn('transferred_in', fn($row) => (float)$row->transferred_in)
+            ->addColumn('transferred_out', fn($row) => (float)$row->transferred_out)
+            // نسبة الإنفاق على إجمالي ما دخل العهدة فعلياً (المبلغ + التحويلات الواردة)
+            ->addColumn('spent_percent', fn($row) => ((float)$row->amount + (float)$row->transferred_in) > 0
+                ? (int)round(($row->spent / ((float)$row->amount + (float)$row->transferred_in)) * 100)
+                : 0)
             ->addColumn('remaining', fn($row) => (float)$row->getRemainingBalance())
             ->addColumn('status_label', fn($row) => $this->getStatusLabel($row->status))
             ->addColumn('status_detail', fn($row) => $row->status_detail)
@@ -811,11 +828,24 @@ class CustodyController extends Controller
 
         // Calculate totals only for activated custodies (exclude pending/rejected)
         $activeCustodies = $custodies->whereIn('status', ['active', 'accepted', 'partially_returned', 'closed']);
-        $totalReceived = $activeCustodies->sum('amount');
+        // العهد المستلم = المصروف من الخزينة + التحويلات الواردة من مندوبين آخرين
+        $totalReceived = $activeCustodies->sum('amount') + $activeCustodies->sum('transferred_in');
         $totalSpent    = $activeCustodies->sum('spent');
         $totalReturned = $activeCustodies->sum('returned');
+        $totalTransferredIn  = $activeCustodies->sum('transferred_in');
+        $totalTransferredOut = $activeCustodies->sum('transferred_out');
+        $totalRemaining = $activeCustodies->sum(fn ($c) => $c->getRemainingBalance());
 
-        return view('custodies.agent-transactions', compact('custodies', 'custodiesCount', 'totalReceived', 'totalSpent', 'totalReturned'));
+        return view('custodies.agent-transactions', compact(
+            'custodies',
+            'custodiesCount',
+            'totalReceived',
+            'totalSpent',
+            'totalReturned',
+            'totalTransferredIn',
+            'totalTransferredOut',
+            'totalRemaining'
+        ));
     }
 
     public function agentTransactionsData()
@@ -890,10 +920,12 @@ class CustodyController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Get transfers received by this agent (pending only - approved ones become new custodies)
+        // Get transfers received by this agent (pending for action + approved history
+        // — approved ones are credited to an existing custody via transferred_in,
+        // so they must stay visible here or the money appears nowhere)
         $receivedTransfers = \App\Models\CustodyTransfer::where('to_agent_id', $user->id)
             ->with(['fromAgent', 'custody.treasury'])
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'approved'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -906,11 +938,14 @@ class CustodyController extends Controller
             'active_custodies' => $myCustodies->whereIn('status', ['accepted', 'active'])->count(),
             'pending_custodies' => $myCustodies->where('status', 'pending')->count(),
             'pending_transfers_sent' => $sentTransfers->where('status', 'pending')->count(),
-            'pending_transfers_received' => $receivedTransfers->count(),
+            'pending_transfers_received' => $receivedTransfers->where('status', 'pending')->count(),
             // Financial stats only for accepted custodies (exclude rejected and pending)
             'total_amount' => $acceptedCustodies->sum('amount'),
             'total_spent' => $acceptedCustodies->sum('spent'),
             'total_returned' => $acceptedCustodies->sum('returned'),
+            // التحويلات جزء من رصيد العهدة ولا تظهر ضمن amount — تُعرض منفصلة حتى يعرف صاحبها مصدر كل جنيه
+            'total_transferred_in' => $acceptedCustodies->sum('transferred_in'),
+            'total_transferred_out' => $acceptedCustodies->sum('transferred_out'),
             'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
         ];
 
@@ -960,6 +995,8 @@ class CustodyController extends Controller
             'total_amount' => $acceptedCustodies->sum('amount'),
             'total_spent' => $acceptedCustodies->sum('spent'),
             'total_returned' => $acceptedCustodies->sum('returned'),
+            'total_transferred_in' => $acceptedCustodies->sum('transferred_in'),
+            'total_transferred_out' => $acceptedCustodies->sum('transferred_out'),
             'total_remaining' => $acceptedCustodies->sum(fn($c) => $c->getRemainingBalance()),
             'pending_returns' => $acceptedCustodies->sum('pending_return'),
             // Breakdown by status with amounts
@@ -989,6 +1026,8 @@ class CustodyController extends Controller
                     'agent' => $agent,
                     'count' => $agentCustodies->count(),
                     'total_amount' => $agentCustodies->sum('amount'),
+                    'total_transferred_in' => $agentCustodies->sum('transferred_in'),
+                    'total_transferred_out' => $agentCustodies->sum('transferred_out'),
                     'total_spent' => $agentCustodies->sum('spent'),
                     'total_returned' => $agentCustodies->sum('returned'),
                     'total_remaining' => $agentCustodies->sum(fn($c) => $c->getRemainingBalance()),
@@ -996,6 +1035,8 @@ class CustodyController extends Controller
                         'id' => $c->id,
                         'amount' => $c->amount,
                         'spent' => $c->spent,
+                        'transferred_in' => $c->transferred_in,
+                        'transferred_out' => $c->transferred_out,
                         'returned' => $c->returned,
                         'remaining' => $c->getRemainingBalance(),
                         'status' => $c->status,

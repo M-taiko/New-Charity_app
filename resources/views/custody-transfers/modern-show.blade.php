@@ -72,12 +72,38 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-4">
-                            <p class="text-muted small mb-1">العهدة</p>
-                            <h6 class="mb-0">عهدة #{{ $custodyTransfer->custody->id }}</h6>
+                            <p class="text-muted small mb-1">عهدة الإرسال</p>
+                            <h6 class="mb-0">
+                                <a href="{{ route('custodies.show', $custodyTransfer->custody->id) }}" style="text-decoration: none;">
+                                    عهدة #{{ $custodyTransfer->custody->id }}
+                                </a>
+                            </h6>
                             <small class="text-muted">
                                 المبلغ: {{ number_format($custodyTransfer->custody->amount, 2) }} ج.م
                             </small>
                         </div>
+                        <div class="col-md-6 mb-4">
+                            @php
+                                $receivedCustody = $custodyTransfer->receivedCustody()->first();
+                            @endphp
+                            <p class="text-muted small mb-1">عهدة الاستلام</p>
+                            @if ($receivedCustody)
+                                <h6 class="mb-0">
+                                    <a href="{{ route('custodies.show', $receivedCustody->id) }}" style="text-decoration: none; color: #10b981;">
+                                        عهدة #{{ $receivedCustody->id }}
+                                    </a>
+                                </h6>
+                            @elseif ($custodyTransfer->status === 'pending')
+                                <h6 class="mb-0 text-muted">تُحدَّد عند القبول</h6>
+                            @else
+                                <h6 class="mb-0 text-muted">-</h6>
+                            @endif
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
                         <div class="col-md-6 mb-4">
                             <p class="text-muted small mb-1">التاريخ</p>
                             <h6 class="mb-0">{!! dt_span($custodyTransfer->created_at) !!}</h6>
@@ -127,10 +153,43 @@
                 </div>
                 <div class="card-body">
                     @if ($custodyTransfer->status === 'pending' && auth()->id() === $custodyTransfer->to_agent_id)
-                        <p class="text-muted small mb-3">أنت المندوب المستقبل. اختر ما تريد:</p>
+                        @php
+                            // عهدات المستقبل المفتوحة بنفس خزينة المُرسل — مرشحة لاستلام المبلغ
+                            $receiverCustodies = \App\Models\Custody::where('agent_id', $custodyTransfer->to_agent_id)
+                                ->where('treasury_id', $custodyTransfer->custody->treasury_id)
+                                ->whereIn('status', ['accepted', 'active'])
+                                ->orderBy('accepted_at')
+                                ->orderBy('id')
+                                ->get();
+                        @endphp
+                        <p class="text-muted small mb-3">أنت المندوب المستقبل. اختر:</p>
 
                         <form action="{{ route('custody-transfers.approve', $custodyTransfer) }}" method="POST" class="mb-3">
                             @csrf
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">
+                                    استلام المبلغ على عهدة
+                                    <span class="text-danger">*</span>
+                                </label>
+                                @if ($receiverCustodies->isNotEmpty())
+                                    <select name="custody_id" class="form-select" required>
+                                        @foreach ($receiverCustodies as $rc)
+                                            <option value="{{ $rc->id }}">
+                                                عهدة #{{ $rc->id }} — الرصيد الحالي: {{ number_format($rc->getRemainingBalance(), 2) }} ج.م
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <small class="text-muted d-block mt-1">
+                                        سيُضاف المبلغ ({{ number_format($custodyTransfer->amount, 2) }} ج.م) كتحويل وارد على العهدة المختارة
+                                    </small>
+                                @else
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-info-circle"></i>
+                                        ليس لديك عهدة مفتوحة بنفس خزينة المُرسل — سيتم إنشاء <strong>عهدة جديدة</strong> تلقائياً بهذا المبلغ
+                                    </div>
+                                @endif
+                            </div>
+
                             <button type="submit" class="btn btn-success w-100">
                                 <i class="fas fa-check"></i> قبول التحويل
                             </button>

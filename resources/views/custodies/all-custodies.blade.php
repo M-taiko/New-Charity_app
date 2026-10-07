@@ -141,7 +141,7 @@
 
     <!-- Financial Summary -->
     <div class="row mb-4" data-aos="fade-up">
-        <div class="col-md-3 mb-3">
+        <div class="col-md-4 col-lg-2 mb-3">
             <div class="card border-0 shadow-sm" style="border-right: 4px solid #667eea !important;">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">إجمالي المبالغ</h6>
@@ -149,7 +149,23 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
+        <div class="col-md-4 col-lg-2 mb-3">
+            <div class="card border-0 shadow-sm" style="border-right: 4px solid #10b981 !important;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">تحويلات واردة</h6>
+                    <h4 class="mb-0" style="color: #10b981;">{{ number_format($stats['total_transferred_in'] ?? 0, 2) }} ج.م</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-lg-2 mb-3">
+            <div class="card border-0 shadow-sm" style="border-right: 4px solid #ec4899 !important;">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">تحويلات صادرة</h6>
+                    <h4 class="mb-0" style="color: #ec4899;">{{ number_format($stats['total_transferred_out'] ?? 0, 2) }} ج.م</h4>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 col-lg-2 mb-3">
             <div class="card border-0 shadow-sm" style="border-right: 4px solid #ef4444 !important;">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">إجمالي المصروف</h6>
@@ -157,7 +173,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
+        <div class="col-md-4 col-lg-2 mb-3">
             <div class="card border-0 shadow-sm" style="border-right: 4px solid #4caf50 !important;">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">إجمالي المرتجع</h6>
@@ -165,7 +181,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
+        <div class="col-md-4 col-lg-2 mb-3">
             <div class="card border-0 shadow-sm" style="border-right: 4px solid #f59e0b !important;">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">انتظار الرد</h6>
@@ -293,13 +309,15 @@
                                 <table class="table table-hover">
                                     <thead class="table-light">
                                         <tr>
-                                            <th width="30%">المندوب</th>
-                                            <th width="10%" class="text-center">عدد العهدات</th>
-                                            <th width="15%" class="text-end">إجمالي المبالغ</th>
-                                            <th width="12%" class="text-end">المصروف</th>
-                                            <th width="12%" class="text-end">المرتجع</th>
-                                            <th width="15%" class="text-end text-success fw-bold">المتبقي</th>
-                                            <th width="6%" class="text-center"></th>
+                                            <th width="22%">المندوب</th>
+                                            <th width="8%" class="text-center">عدد العهدات</th>
+                                            <th width="12%" class="text-end">إجمالي المبالغ</th>
+                                            <th width="12%" class="text-end">تحويلات واردة</th>
+                                            <th width="12%" class="text-end">تحويلات صادرة</th>
+                                            <th width="11%" class="text-end">المصروف</th>
+                                            <th width="11%" class="text-end">المرتجع</th>
+                                            <th width="12%" class="text-end text-success fw-bold">المتبقي</th>
+                                            <th width="5%" class="text-center"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -317,6 +335,8 @@
                                                 <span class="badge bg-primary">{{ $item['count'] }}</span>
                                             </td>
                                             <td class="text-end">{{ number_format($item['total_amount'], 2) }} ج.م</td>
+                                            <td class="text-end text-success">{{ number_format($item['total_transferred_in'], 2) }} ج.م</td>
+                                            <td class="text-end text-danger">{{ number_format($item['total_transferred_out'], 2) }} ج.م</td>
                                             <td class="text-end text-danger">{{ number_format($item['total_spent'], 2) }} ج.م</td>
                                             <td class="text-end text-warning">{{ number_format($item['total_returned'], 2) }} ج.م</td>
                                             <td class="text-end text-success fw-bold">{{ number_format($item['total_remaining'], 2) }} ج.م</td>
@@ -327,18 +347,20 @@
 
                                         <!-- Agent Detail Row (Hidden by default) -->
                                         <tr id="agentDetail{{ $item['agent']->id }}" style="display: none;">
-                                            <td colspan="7">
+                                            <td colspan="9">
                                                 <table class="table table-sm table-bordered mb-0" style="background-color: #f8f9fa;">
                                                     <thead style="background-color: #e9ecef;">
                                                         <tr>
-                                                            <th width="10%">#</th>
-                                                            <th width="15%">تاريخ الإنشاء</th>
-                                                            <th width="15%">الحالة</th>
-                                                            <th width="15%" class="text-end">المبلغ</th>
-                                                            <th width="12%" class="text-end">المصروف</th>
-                                                            <th width="12%" class="text-end">المرتجع</th>
+                                                            <th width="8%">#</th>
+                                                            <th width="12%">تاريخ الإنشاء</th>
+                                                            <th width="12%">الحالة</th>
+                                                            <th width="12%" class="text-end">المبلغ</th>
+                                                            <th width="11%" class="text-end">تحويلات واردة</th>
+                                                            <th width="11%" class="text-end">تحويلات صادرة</th>
+                                                            <th width="11%" class="text-end">المصروف</th>
+                                                            <th width="11%" class="text-end">المرتجع</th>
                                                             <th width="12%" class="text-end text-success fw-bold">المتبقي</th>
-                                                            <th width="9%"></th>
+                                                            <th width="8%"></th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -363,6 +385,8 @@
                                                                 <span class="badge {{ $status['class'] }}">{{ $status['label'] }}</span>
                                                             </td>
                                                             <td class="text-end">{{ number_format($custody['amount'], 2) }} ج.م</td>
+                                                            <td class="text-end text-success">{{ number_format($custody['transferred_in'], 2) }} ج.م</td>
+                                                            <td class="text-end text-danger">{{ number_format($custody['transferred_out'], 2) }} ج.م</td>
                                                             <td class="text-end text-danger">{{ number_format($custody['spent'], 2) }} ج.م</td>
                                                             <td class="text-end text-warning">{{ number_format($custody['returned'], 2) }} ج.م</td>
                                                             <td class="text-end text-success fw-bold">{{ number_format($custody['remaining'], 2) }} ج.م</td>
@@ -454,6 +478,8 @@
                                     <th>المندوب</th>
                                     <th>التاريخ</th>
                                     <th>المبلغ</th>
+                                    <th>تحويلات واردة</th>
+                                    <th>تحويلات صادرة</th>
                                     <th>المصروف</th>
                                     <th>المرتجع</th>
                                     <th>المتبقي</th>
@@ -479,6 +505,20 @@
                                     </td>
                                     <td>{!! dt_span($custody->created_at, 'date') !!}</td>
                                     <td>{{ number_format($custody->amount, 2) }} ج.م</td>
+                                    <td>
+                                        @if((float) $custody->transferred_in > 0)
+                                            <span class="badge bg-success">{{ number_format($custody->transferred_in, 2) }} ج.م</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if((float) $custody->transferred_out > 0)
+                                            <span class="badge bg-danger">{{ number_format($custody->transferred_out, 2) }} ج.م</span>
+                                        @else
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                    </td>
                                     <td>
                                         <span class="badge bg-danger">
                                             {{ number_format($custody->spent, 2) }} ج.م
@@ -1088,11 +1128,11 @@ function updateCustodySummary() {
         // Extract values from cells (1-indexed: # / المندوب / التاريخ / المبلغ / المصروف / المرتجع / المتبقي / الحالة / الإجراءات)
         const cells = row.querySelectorAll('td');
 
-        // Cell indices: 0=# | 1=المندوب | 2=التاريخ | 3=المبلغ | 4=المصروف | 5=المرتجع | 6=المتبقي | 7=الحالة | 8=الإجراءات
+        // Cell indices: 0=# | 1=المندوب | 2=التاريخ | 3=المبلغ | 4=تحويلات واردة | 5=تحويلات صادرة | 6=المصروف | 7=المرتجع | 8=المتبقي | 9=الحالة | 10=الإجراءات
         const amountCell = cells[3]?.textContent || '0';
-        const spentCell = cells[4]?.textContent || '0';
-        const returnedCell = cells[5]?.textContent || '0';
-        const remainingCell = cells[6]?.textContent || '0';
+        const spentCell = cells[6]?.textContent || '0';
+        const returnedCell = cells[7]?.textContent || '0';
+        const remainingCell = cells[8]?.textContent || '0';
 
         // Parse numbers (remove "ج.م" and extra spaces)
         const amount = parseFloat(amountCell.replace('ج.م', '').replace(/,/g, '').trim()) || 0;

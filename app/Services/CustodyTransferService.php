@@ -95,11 +95,14 @@ class CustodyTransferService
 
     /**
      * Approve the transfer from the receiving agent
+     *
+     * @param  int|null  $targetCustodyId  العهدة التي يختارها المستقبل لاستلام المبلغ عليها
+     *                                      (null = الأقدم تلقائياً — السلوك السابق)
      */
-    public function approveTransfer($transfer, $approverId)
+    public function approveTransfer($transfer, $approverId, $targetCustodyId = null)
     {
         try {
-            return DB::transaction(function () use ($transfer, $approverId) {
+            return DB::transaction(function () use ($transfer, $approverId, $targetCustodyId) {
                 // Verify receiving agent is approving
                 if ($transfer->to_agent_id !== $approverId) {
                     throw new \Exception('فقط المندوب المستقبل يمكنه الموافقة على التحويل');
@@ -146,10 +149,28 @@ class CustodyTransferService
                 }
 
             // Check if receiving agent has an existing active custody for the same treasury
-            $toAgentCustody = Custody::where('treasury_id', $custody->treasury_id)
-                ->where('agent_id', $transfer->to_agent_id)
-                ->whereIn('status', ['accepted', 'active'])
-                ->first();
+            // (الأقدم أولاً: اختيار حتمي حتى لا يتوزع المبلغ عشوائياً بين عدة عهد نشطة لنفس الخزينة)
+            $toAgentCustody = null;
+            if ($targetCustodyId) {
+                // المستقبل حدد العهدة بنفسه — نتحقق من ملكيتها وتوافق الخزينة وكونها مفتوحة
+                $toAgentCustody = Custody::where('id', $targetCustodyId)
+                    ->where('agent_id', $transfer->to_agent_id)
+                    ->whereIn('status', ['accepted', 'active'])
+                    ->first();
+                if (!$toAgentCustody) {
+                    throw new \Exception('العهدة المختارة للاستلام غير صالحة (يجب أن تكون عهدتك المفتوحة وبنفس خزينة المُرسل)');
+                }
+                if ((int) $toAgentCustody->treasury_id !== (int) $custody->treasury_id) {
+                    throw new \Exception('لا يمكن الاستلام على عهدة بخزينة مختلفة عن خزينة المُحوِّل');
+                }
+            } else {
+                $toAgentCustody = Custody::where('treasury_id', $custody->treasury_id)
+                    ->where('agent_id', $transfer->to_agent_id)
+                    ->whereIn('status', ['accepted', 'active'])
+                    ->orderBy('accepted_at')
+                    ->orderBy('id')
+                    ->first();
+            }
 
             if ($toAgentCustody) {
                 // Lock the receiving custody for update
