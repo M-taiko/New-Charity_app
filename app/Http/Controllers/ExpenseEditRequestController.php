@@ -6,6 +6,7 @@ use App\Models\Expense;
 use App\Models\ExpenseEditRequest;
 use App\Services\ExpenseEditRequestService;
 use App\Support\LineItemsSanitizer;
+use App\Support\ExpenseDirectionRule;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 
@@ -66,6 +67,15 @@ class ExpenseEditRequestController extends Controller
         ];
 
         $validated = $request->validate($rules);
+
+        // T30: قاعدة اكتمال التوجيه حتى آخر مستوى — فقط حين يحمل الطلب تغييراً في التوجيه
+        // (وجود الفئة أو البند في الطلب)؛ حين تغيب الحقول لا شيء يتغير
+        if ($request->filled('expense_category_id') || $request->filled('expense_item_id')) {
+            ExpenseDirectionRule::assertComplete(
+                (int) $request->input('expense_category_id') ?: null,
+                $request->filled('expense_item_id') ? (int) $request->expense_item_id : null
+            );
+        }
 
         try {
             // معالجة المرفق: ملف جديد يفوز دائماً؛ وإن لم يُرفع ملف وتحديد "حذف المرفق"

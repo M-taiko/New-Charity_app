@@ -12,6 +12,7 @@ use App\Models\TreasuryTransaction;
 use App\Services\TreasuryService;
 use App\Services\ExpenseEditRequestService;
 use App\Support\LineItemsSanitizer;
+use App\Support\ExpenseDirectionRule;
 use App\Services\ActivityLogService;
 use App\Services\NotificationService;
 use Yajra\DataTables\DataTables;
@@ -155,6 +156,12 @@ class ExpenseController extends Controller
                     'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
                 ]);
 
+                // T30: التوجيه المحاسبي إلزامي حتى آخر مستوى
+                ExpenseDirectionRule::assertComplete(
+                    (int) $request->input('expense_category_id') ?: null,
+                    $request->filled('expense_item_id') ? (int) $request->expense_item_id : null
+                );
+
                 // Handle file upload
                 $attachmentPath = null;
                 if ($request->hasFile('attachment')) {
@@ -222,6 +229,12 @@ class ExpenseController extends Controller
                     'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
                 ]);
 
+                // T30: التوجيه المحاسبي إلزامي حتى آخر مستوى
+                ExpenseDirectionRule::assertComplete(
+                    (int) $request->input('expense_category_id') ?: null,
+                    $request->filled('expense_item_id') ? (int) $request->expense_item_id : null
+                );
+
                 // Handle file upload
                 $attachmentPath = null;
                 if ($request->hasFile('attachment')) {
@@ -254,6 +267,9 @@ class ExpenseController extends Controller
             }
 
             return redirect()->route('expenses.agent')->with('success', 'تم تسجيل المصروف');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // أخطاء التحقيق تُترك للافتراضي في Laravel: رجوع مع old + أخطاء الحقول
+            throw $e;
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'حدث خطأ أثناء تسجيل المصروف: ' . $e->getMessage());
         }
@@ -300,13 +316,6 @@ class ExpenseController extends Controller
                 abort(403, 'المصروفات المعتمدة لا يمكن تعديلها إلا من قِبَل المدير');
             }
 
-            $category = ExpenseCategory::find($request->expense_category_id);
-            $isOtherExpense = $category && $category->code === 'OTHER';
-
-            // البند إلزامي فقط إذا كانت الفئة المختارة تحتوي على بنود نشطة (و ليست OTHER)
-            $categoryHasItems = $category
-                && \App\Models\ExpenseItem::active()->where('expense_category_id', $category->id)->exists();
-
             $rules = [
                 'expense_category_id' => 'required|exists:expense_categories,id',
                 'expense_type'        => 'required|in:social_case,general',
@@ -317,23 +326,25 @@ class ExpenseController extends Controller
                 'expense_date'        => 'required|date',
                 'attachment'          => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:2048',
                 'remove_attachment'   => 'nullable|boolean',
+                'expense_item_id'     => 'nullable|exists:expense_items,id',
             ];
 
             if ($request->expense_type === 'social_case') {
                 $rules['social_case_id'] = 'required|exists:social_cases,id';
             }
 
-            $rules['expense_item_id'] = ($isOtherExpense || !$categoryHasItems)
-                ? 'nullable'
-                : 'required';
-
             $request->validate($rules, [
-                'expense_item_id.required' => 'يجب اختيار التوجيه النهائي (المستوى الرابع) لأن هذه الفئة تحتوي على بنود',
                 'expense_category_id.required' => 'يجب اختيار فئة المصروف',
                 'expense_category_id.exists' => 'الفئة المختارة غير موجودة',
                 'attachment.max'   => 'حجم الملف يجب أن يكون أقل من 2 ميجابايت',
                 'attachment.mimes' => 'الملفات المسموحة فقط: PDF, JPG, PNG, DOC, DOCX',
             ]);
+
+            // T30: التوجيه المحاسبي إلزامي حتى آخر مستوى (يشمل قاعدة البند T2)
+            ExpenseDirectionRule::assertComplete(
+                (int) $request->input('expense_category_id') ?: null,
+                $request->filled('expense_item_id') ? (int) $request->expense_item_id : null
+            );
 
             // عند إرسال بند: التحقق أنه ينتمي للفئة المختارة
             $itemId = $request->filled('expense_item_id') ? (int) $request->expense_item_id : null;
@@ -511,6 +522,9 @@ class ExpenseController extends Controller
 
             return redirect()->route('expenses.show', $expense)
                 ->with('success', 'تم تعديل المصروف بنجاح');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // أخطاء التحقيق تُترك للافتراضي في Laravel: رجوع مع old + أخطاء الحقول
+            throw $e;
         } catch (\Exception $e) {
             return back()->withInput()->with('error', 'حدث خطأ أثناء تعديل المصروف: ' . $e->getMessage());
         }

@@ -109,4 +109,20 @@ class ExpenseCategory extends Model
 
         return $current->level === $targetLevel ? $current : null;
     }
+
+    /**
+     * هل للفئة فئات أبناء نشطة؟ (يتوجب النزول مستوى أعمق — T30)
+     */
+    public function hasActiveChildren(): bool
+    {
+        return $this->children()->active()->exists();
+    }
+
+    /**
+     * هل للفئة بنود نشطة؟ (قاعدة T2: البند إلزامي)
+     */
+    public function hasActiveItems(): bool
+    {
+        return $this->items()->active()->exists();
+    }
 }

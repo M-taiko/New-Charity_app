@@ -23,7 +23,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('expenses.store') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('expenses.store') }}" method="POST" enctype="multipart/form-data" id="expenseForm">
                         @csrf
 
                         <!-- Source Selection (for accountants only) -->
@@ -109,7 +109,7 @@
                             <label class="form-label fw-bold">
                                 <i class="fas fa-sitemap"></i> التوجيه المحاسبي
                             </label>
-                            <small class="text-muted d-block mb-2">اختر المستوى الأول ثم تحديد التوجيه النهائي</small>
+                            <small class="text-muted d-block mb-2">التوجيه إلزامي حتى آخر مستوى متاح من الفئات والبنود</small>
                         </div>
 
                         <div class="row g-2 mb-3">
@@ -121,32 +121,39 @@
                                     <option value="{{ $root->id }}">{{ $root->name }}</option>
                                     @endforeach
                                 </select>
+                                <div class="text-danger small mt-1" id="dirErr1" style="display:none;"></div>
                             </div>
                             <div class="col-md-6" id="level2Wrap" style="display:none;">
-                                <label class="form-label small text-muted">المستوى الثاني</label>
+                                <label class="form-label small text-muted">المستوى الثاني *</label>
                                 <select id="cat_level2" class="form-select" onchange="catLoadChildren(2, this.value)">
                                     <option value="">-- اختر --</option>
                                 </select>
+                                <div class="text-danger small mt-1" id="dirErr2" style="display:none;"></div>
                             </div>
                             <div class="col-md-6" id="level3Wrap" style="display:none;">
-                                <label class="form-label small text-muted">المستوى الثالث (اختياري)</label>
+                                <label class="form-label small text-muted">المستوى الثالث *</label>
                                 <select id="cat_level3" class="form-select" onchange="catSetLevel3(this.value)">
-                                    <option value="">-- بدون --</option>
+                                    <option value="">-- اختر --</option>
                                 </select>
+                                <div class="text-danger small mt-1" id="dirErr3" style="display:none;"></div>
                             </div>
                             <div class="col-md-6" id="itemWrap" style="display:none;">
-                                <label class="form-label small text-muted">البند النهائي</label>
+                                <label class="form-label small text-muted">البند النهائي *</label>
                                 <select id="cat_item" name="expense_item_id"
                                         class="form-select @error('expense_item_id') is-invalid @enderror"
                                         onchange="setDefaultAmount(this)">
                                     <option value="">-- اختر بند --</option>
                                 </select>
                                 @error('expense_item_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                                <div class="text-danger small mt-1" id="dirErrItem" style="display:none;"></div>
                                 <small class="text-muted mt-1 d-block" id="default-amount-info"></small>
                             </div>
                         </div>
                         {{-- Hidden field for expense_category_id (set by JS to the deepest selected category) --}}
                         <input type="hidden" name="expense_category_id" id="final_category_id">
+                        @error('expense_category_id')
+                            <div class="text-danger small">{{ $message }}</div>
+                        @enderror
 
                         <!-- Expense Type Selection -->
                         <div class="mb-3">
@@ -297,8 +304,9 @@
 
 @push('scripts')
 <script>
-    // ──── Cascading 4-Level Category Logic ────
+    // ──── Cascading 4-Level Category Logic (T30: التوجيه إلزامي حتى آخر مستوى) ────
     async function catLoadChildren(fromLevel, parentId) {
+        clearDirectionErrors();
         if (!parentId) {
             hideCatFrom(fromLevel + 1);
             document.getElementById('final_category_id').value = '';
@@ -309,28 +317,31 @@
 
         if (fromLevel === 1) {
             const sel2 = document.getElementById('cat_level2');
-            sel2.innerHTML = '<option value="">-- اختر (اختياري) --</option>';
+            sel2.innerHTML = '<option value="">-- اختر --</option>';
             children.forEach(c => sel2.innerHTML += `<option value="${c.id}">${c.name}</option>`);
             document.getElementById('level2Wrap').style.display = children.length ? '' : 'none';
             document.getElementById('level3Wrap').style.display = 'none';
             document.getElementById('itemWrap').style.display = 'none';
             document.getElementById('final_category_id').value = parentId;
-            loadItemsFor(parentId);
+            // T30: لا بنود لفئة لها أبناء — يجب النزول مستوى أعمق أولاً
+            if (!children.length) loadItemsFor(parentId);
         } else if (fromLevel === 2) {
             const sel3 = document.getElementById('cat_level3');
-            sel3.innerHTML = '<option value="">-- بدون مستوى ثالث --</option>';
+            sel3.innerHTML = '<option value="">-- اختر --</option>';
             children.forEach(c => sel3.innerHTML += `<option value="${c.id}">${c.name}</option>`);
             document.getElementById('level3Wrap').style.display = children.length ? '' : 'none';
+            document.getElementById('itemWrap').style.display = 'none';
             document.getElementById('final_category_id').value = parentId;
-            loadItemsFor(parentId);
+            if (!children.length) loadItemsFor(parentId);
         }
     }
 
     function catSetLevel3(level3Id) {
-        const level2Id = document.getElementById('cat_level2').value;
-        const targetId = level3Id || level2Id;
-        document.getElementById('final_category_id').value = targetId || '';
-        if (targetId) loadItemsFor(targetId);
+        clearDirectionErrors();
+        // T30: حين تظهر قائمة المستوى الثالث فهي إلزامية — لا تراجع لمستوى ثانٍ له أبناء
+        if (!level3Id) return;
+        document.getElementById('final_category_id').value = level3Id;
+        loadItemsFor(level3Id);
     }
 
     async function loadItemsFor(categoryId) {
@@ -353,6 +364,60 @@
         if (level <= 3) { document.getElementById('level3Wrap').style.display = 'none'; }
         document.getElementById('itemWrap').style.display = 'none';
     }
+
+    // ──── T30: منع الإرسال والتوجيه ناقص + رسالة تحت أول مستوى ناقص ────
+    const DIRECTION_ERRORS = {
+        cat_level1: ['dirErr1', 'اختر المستوى الأول من التوجيه المحاسبي'],
+        cat_level2: ['dirErr2', 'اختر المستوى التالي من التوجيه المحاسبي'],
+        cat_level3: ['dirErr3', 'اختر المستوى التالي من التوجيه المحاسبي'],
+        cat_item:   ['dirErrItem', 'يجب اختيار التوجيه النهائي (المستوى الرابع) لأن هذه الفئة تحتوي على بنود'],
+    };
+
+    function clearDirectionErrors() {
+        ['dirErr1', 'dirErr2', 'dirErr3', 'dirErrItem'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.style.display = 'none'; el.textContent = ''; }
+        });
+    }
+
+    function firstIncompleteDirection() {
+        const l1 = document.getElementById('cat_level1');
+        if (!l1.value) return 'cat_level1';
+        if (document.getElementById('level2Wrap').style.display !== 'none'
+            && !document.getElementById('cat_level2').value) return 'cat_level2';
+        if (document.getElementById('level3Wrap').style.display !== 'none'
+            && !document.getElementById('cat_level3').value) return 'cat_level3';
+        if (document.getElementById('itemWrap').style.display !== 'none'
+            && !document.getElementById('cat_item').value) return 'cat_item';
+        return null;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('expenseForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                clearDirectionErrors();
+                const missing = firstIncompleteDirection();
+                if (missing) {
+                    e.preventDefault();
+                    const [errId, msg] = DIRECTION_ERRORS[missing];
+                    const errEl = document.getElementById(errId);
+                    errEl.textContent = msg;
+                    errEl.style.display = 'block';
+                    const sel = document.getElementById(missing);
+                    sel.classList.add('is-invalid');
+                    sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    sel.focus({ preventScroll: true });
+                }
+            });
+        }
+        ['cat_level1', 'cat_level2', 'cat_level3', 'cat_item'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', function() {
+                this.classList.remove('is-invalid');
+                clearDirectionErrors();
+            });
+        });
+    });
 
     function setDefaultAmount(sel) {
         const opt = sel ? sel.selectedOptions[0] : null;

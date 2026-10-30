@@ -36,13 +36,14 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form action="{{ route('expenses.update', $expense) }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('expenses.update', $expense) }}" method="POST" enctype="multipart/form-data" id="expenseForm">
                         @csrf
                         @method('PUT')
 
                         <!-- 4-Level Cascading Category / Item -->
                         <div class="mb-3">
                             <label class="form-label fw-bold"><i class="fas fa-sitemap"></i> التوجيه المحاسبي</label>
+                            <small class="text-muted d-block mb-2">التوجيه إلزامي حتى آخر مستوى متاح من الفئات والبنود</small>
                             <div class="row g-2">
                                 <div class="col-md-6">
                                     <select id="cat_level1" class="form-select" onchange="catLoadChildren(1, this.value)">
@@ -51,21 +52,28 @@
                                             <option value="{{ $root->id }}">{{ $root->name }}</option>
                                         @endforeach
                                     </select>
+                                    <div class="text-danger small mt-1" id="dirErr1" style="display:none;"></div>
                                 </div>
                                 <div class="col-md-6">
                                     <select id="cat_level2" class="form-select" onchange="catLoadChildren(2, this.value)" disabled>
                                         <option value="">م2: اختر القائمة الفرعية</option>
                                     </select>
+                                    <div class="text-danger small mt-1" id="dirErr2" style="display:none;"></div>
                                 </div>
                                 <div class="col-md-6">
                                     <select id="cat_level3" class="form-select" onchange="catSetLevel3(this.value)" disabled>
-                                        <option value="">م3: اختر البيان (اختياري)</option>
+                                        <option value="">م3: اختر البيان</option>
                                     </select>
+                                    <div class="text-danger small mt-1" id="dirErr3" style="display:none;"></div>
                                 </div>
                                 <div class="col-md-6">
                                     <select id="cat_item" name="expense_item_id" class="form-select" onchange="setDefaultAmount()" disabled>
                                         <option value="">م4: اختر التوجيه النهائي</option>
                                     </select>
+                                    @error('expense_item_id')
+                                        <div class="text-danger small mt-1">{{ $message }}</div>
+                                    @enderror
+                                    <div class="text-danger small mt-1" id="dirErrItem" style="display:none;"></div>
                                 </div>
                             </div>
                             <input type="hidden" name="expense_category_id" id="final_category_id">
@@ -363,9 +371,10 @@
 
         // Reset downstream selects
         if (fromLevel <= 1) { resetSelect(sel2, 'م2: اختر القائمة الفرعية'); sel2.disabled = !parentId; }
-        if (fromLevel <= 2) { resetSelect(sel3, 'م3: اختر البيان (اختياري)'); sel3.disabled = true; }
+        if (fromLevel <= 2) { resetSelect(sel3, 'م3: اختر البيان'); sel3.disabled = true; }
         resetSelect(selItem, 'م4: اختر التوجيه النهائي'); selItem.disabled = true;
         hiddenCat.value = '';
+        clearDirectionErrors();
 
         if (!parentId) return;
 
@@ -374,12 +383,11 @@
             const res = await fetch(`/api/expense-categories/${parentId}/children`);
             const data = await res.json();
 
+            hiddenCat.value = parentId;
+
             if (data.length === 0) {
-                // No level-3 children → load items directly
-                if (fromLevel === 2) {
-                    hiddenCat.value = parentId;
-                    await loadItemsFor(parentId);
-                }
+                // فئة طرفية: هي آخر مستوى — تُحمَّل بنودها إن وجدت (T30)
+                await loadItemsFor(parentId);
                 return;
             }
 
@@ -391,11 +399,7 @@
             });
             targetSel.disabled = false;
 
-            // If level 2 loaded: set category hidden + try loading items
-            if (fromLevel === 2) {
-                hiddenCat.value = parentId;
-                await loadItemsFor(parentId);
-            }
+            // T30: لا بنود لفئة لها أبناء — يجب اختيار الابن أولاً
         } catch(e) { console.error(e); }
     }
 
@@ -404,14 +408,13 @@
         const hiddenCat = document.getElementById('final_category_id');
         resetSelect(selItem, 'م4: اختر التوجيه النهائي');
         selItem.disabled = true;
-        hiddenCat.value = catId || document.getElementById('cat_level2').value || '';
-        if (catId) {
-            await loadItemsFor(catId);
-        } else {
-            // Fallback to level-2's items
-            const l2 = document.getElementById('cat_level2').value;
-            if (l2) await loadItemsFor(l2);
-        }
+        clearDirectionErrors();
+
+        // T30: حين تُفعَّل قائمة المستوى الثالث فهي إلزامية — الفراغ يُحجَب عند الإرسال
+        if (!catId) return;
+
+        hiddenCat.value = catId;
+        await loadItemsFor(catId);
     }
 
     async function loadItemsFor(categoryId) {
@@ -448,6 +451,34 @@
         } else {
             info.innerHTML = '';
         }
+    }
+
+    // ──── T30: منع الإرسال والتوجيه ناقص + رسالة تحت أول مستوى ناقص ────
+    const DIRECTION_ERRORS = {
+        cat_level1: ['dirErr1', 'اختر المستوى الأول من التوجيه المحاسبي'],
+        cat_level2: ['dirErr2', 'اختر المستوى التالي من التوجيه المحاسبي'],
+        cat_level3: ['dirErr3', 'اختر المستوى التالي من التوجيه المحاسبي'],
+        cat_item:   ['dirErrItem', 'يجب اختيار التوجيه النهائي (المستوى الرابع) لأن هذه الفئة تحتوي على بنود'],
+    };
+
+    function clearDirectionErrors() {
+        ['dirErr1', 'dirErr2', 'dirErr3', 'dirErrItem'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) { el.style.display = 'none'; el.textContent = ''; }
+        });
+    }
+
+    // المستوى إلزامي متى فُعِّلت قائمته وفيها خيارات (الخيار الوحيد هو العنصر النائب)
+    function firstIncompleteDirection() {
+        const sel1 = document.getElementById('cat_level1');
+        const sel2 = document.getElementById('cat_level2');
+        const sel3 = document.getElementById('cat_level3');
+        const selItem = document.getElementById('cat_item');
+        if (!sel1.value) return 'cat_level1';
+        if (!sel2.disabled && sel2.options.length > 1 && !sel2.value) return 'cat_level2';
+        if (!sel3.disabled && sel3.options.length > 1 && !sel3.value) return 'cat_level3';
+        if (!selItem.disabled && selItem.options.length > 1 && !selItem.value) return 'cat_item';
+        return null;
     }
 
     function toggleExpenseType() {
@@ -532,6 +563,32 @@
         }
         // If the expense has neither category nor item (a quick expense),
         // the dropdowns stay empty and a choice is required.
+
+        // T30: حجب الحفظ حتى يكتمل التوجيه مع رسالة تحت أول مستوى ناقص
+        const form = document.getElementById('expenseForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                clearDirectionErrors();
+                const missing = firstIncompleteDirection();
+                if (missing) {
+                    e.preventDefault();
+                    const [errId, msg] = DIRECTION_ERRORS[missing];
+                    const errEl = document.getElementById(errId);
+                    errEl.textContent = msg;
+                    errEl.style.display = 'block';
+                    const sel = document.getElementById(missing);
+                    sel.classList.add('is-invalid');
+                    sel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    sel.focus({ preventScroll: true });
+                }
+            });
+        }
+        ['cat_level1', 'cat_level2', 'cat_level3', 'cat_item'].forEach(id => {
+            document.getElementById(id)?.addEventListener('change', function() {
+                this.classList.remove('is-invalid');
+                clearDirectionErrors();
+            });
+        });
     });
 </script>
 @endpush
