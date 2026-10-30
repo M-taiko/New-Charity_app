@@ -272,12 +272,12 @@
         </div>
 
         <!-- Admin/Accountant Statistics -->
-        {{-- الصف الأول: إجمالي الأصول + رصيد الخزينة + إجمالي العهد --}}
+        {{-- الصف الأول: إجمالي الخزينة والعهد + رصيد الخزينة + إجمالي العهد --}}
         <div class="row g-4 mb-3">
             <div class="col-12 col-lg-4" data-aos="fade-up" data-aos-delay="0">
                 <div class="stat-card" style="border-right: 4px solid #6366f1; background: linear-gradient(135deg, #f8f7ff 0%, #eef2ff 100%);">
                     <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #8b5cf6);"><i class="fas fa-landmark"></i></div>
-                    <div class="stat-label" style="font-weight:700;">إجمالي الأصول (الكلي)</div>
+                    <div class="stat-label" style="font-weight:700;">إجمالي الخزينة والعهد</div>
                     <div class="stat-number" style="color: #6366f1; font-size: 1.8rem;">{{ number_format($totalAssets, 2) }}</div>
                     <small style="color: #6b7280;">ج.م &nbsp;|&nbsp; خزينة + عهد نشطة</small>
                 </div>

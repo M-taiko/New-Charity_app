@@ -23,7 +23,7 @@ class DashboardController extends Controller
         $todayExpenses   = Expense::whereDate('created_at', today())->sum('amount');
         $totalSpent      = Expense::sum('amount');
 
-        // إجمالي الأصول = رصيد الخزينة + مجموع العهد النشطة
+        // إجمالي الخزينة والعهد = رصيد الخزينة + مجموع العهد النشطة
         $totalCustodiesAmount = Custody::whereIn('status', ['accepted', 'active', 'partially_returned'])->sum('amount');
         $totalAssets          = ($treasury ? $treasury->balance : 0) + $totalCustodiesAmount;
 

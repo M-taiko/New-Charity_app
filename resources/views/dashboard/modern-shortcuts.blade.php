@@ -59,7 +59,7 @@
             <div class="col-12 col-sm-6 col-lg-3">
                 <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
                     <div class="stat-icon"><i class="fas fa-piggy-bank"></i></div>
-                    <div class="stat-label">الأصول الكلية</div>
+                    <div class="stat-label">إجمالي الخزينة والعهد</div>
                     <div class="stat-number">{{ number_format($totalAssets, 2) }} ج.م</div>
                 </div>
             </div>
