@@ -48,6 +48,36 @@
         </div>
     </div>
 
+    {{-- T34: تصفية المحافظة مع رقاقة مرئية --}}
+    @php
+        $cityFilter = trim((string) request()->input('city', ''));
+        $cityCanonical = $cityFilter !== '' ? (\App\Support\EgyptianGovernorates::match($cityFilter) ?? $cityFilter) : '';
+    @endphp
+    <div class="row mb-3" data-aos="fade-up" data-aos-delay="350">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body py-3 d-flex flex-wrap gap-3 align-items-end">
+                    <div style="min-width: 220px;">
+                        <label class="form-label small mb-1"><i class="fas fa-map-marker-alt"></i> المحافظة</label>
+                        <select id="filter_city" class="form-select form-select-sm">
+                            <option value="">الكل</option>
+                            @foreach(\App\Support\EgyptianGovernorates::LIST as $governorate)
+                                <option value="{{ $governorate }}" {{ $cityCanonical === $governorate ? 'selected' : '' }}>{{ $governorate }}</option>
+                            @endforeach
+                            @if($cityCanonical !== '' && !in_array($cityCanonical, \App\Support\EgyptianGovernorates::LIST, true))
+                                <option value="{{ $cityCanonical }}" selected>{{ $cityCanonical }}</option>
+                            @endif
+                        </select>
+                    </div>
+                    <div id="cityFilterChip" style="display: {{ $cityCanonical !== '' ? 'inline-flex' : 'none' }};" class="align-items-center badge bg-primary fs-6 fw-normal p-2 gap-2">
+                        <span><i class="fas fa-filter"></i> المحافظة: <strong id="cityFilterChipLabel">{{ $cityCanonical }}</strong></span>
+                        <button type="button" class="btn-close btn-close-white btn-sm" onclick="clearCityFilter()" aria-label="إزالة تصفية المحافظة"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row" data-aos="fade-up" data-aos-delay="400">
         <div class="col-12">
             <div class="card">
@@ -294,7 +324,12 @@
         $('#casesTable').DataTable({
             processing: true,
             serverSide: true,
-            ajax: '{{ route("api.social_cases.data") }}',
+            ajax: {
+                url: '{{ route("api.social_cases.data") }}',
+                data: function(d) {
+                    d.city = $('#filter_city').val();
+                }
+            },
             columns: [
                 {
                     data: 'name',
@@ -435,6 +470,34 @@
                     }
                 });
             }
+        });
+
+        // T34: تصفية المحافظة — تحديث الجدول والرقاقة والرابط
+        function syncCityChip() {
+            const value = $('#filter_city').val();
+            const label = $('#filter_city option:selected').text();
+            if (value) {
+                $('#cityFilterChipLabel').text(label === 'الكل' ? value : label);
+                $('#cityFilterChip').css('display', 'inline-flex');
+            } else {
+                $('#cityFilterChip').css('display', 'none');
+            }
+            // حفظ التصفية في رابط الصفحة حتى تبقى بعد التحديث
+            const url = new URL(window.location.href);
+            if (value) { url.searchParams.set('city', value); } else { url.searchParams.delete('city'); }
+            history.replaceState(null, '', url);
+        }
+
+        window.clearCityFilter = function() {
+            $('#filter_city').val('');
+            syncCityChip();
+            casesTable.ajax.reload();
+        };
+
+        const casesTable = $('#casesTable').DataTable();
+        $('#filter_city').on('change', function() {
+            syncCityChip();
+            casesTable.ajax.reload();
         });
     });
 </script>

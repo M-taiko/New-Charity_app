@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
+use App\Models\SocialCase;
 use App\Support\ExpenseDirectionFilter;
+use App\Support\EgyptianGovernorates;
 
 /**
  * الأرقام المتأثرة بالتوجيه المحاسبي (T33) — مشتركة بين لوحة المعلومات المالية
@@ -96,6 +98,12 @@ class DirectionalStatsService
                 'count' => (int) $row->cnt,
             ])->values()->all();
 
+        // T34: بطاقة الحالات حسب المحافظة — المصروفات تتبع التوجيه/الفترة، والعدد ثابت
+        $governoratesTop = collect($this->governoratesSummary($categoryId, $itemId, $dateFrom, $dateTo))
+            ->sortByDesc('expenses_total')
+            ->take(5)
+            ->values()->all();
+
         return [
             'today' => $today,
             'this_month' => $thisMonth,
@@ -106,7 +114,93 @@ class DirectionalStatsService
             'by_day' => $byDay,
             'by_month' => $byMonth,
             'by_agent' => $byAgent,
+            'governorates_top' => $governoratesTop,
         ];
+    }
+
+    /**
+     * T34: ملخص الحالات حسب المحافظة — صف لكل محافظة (عدد الحالات بحالاتها
+     * وإجمالي المصروف عليها ومتوسطه). التجميع بعد تسوية القيم القديمة، والقيم
+     * الفارغة تظهر كـ"غير محدد" وغير المطابقة كصفوف "قيمة غير معيارية".
+     * المصروفات تُحسب عبر المساعد المشترك (توجيه) ونطاق التاريخ، والأعداد ثابتة.
+     */
+    public function governoratesSummary(?int $categoryId, ?int $itemId, ?string $dateFrom = null, ?string $dateTo = null): array
+    {
+        $cases = SocialCase::query()->get(['id', 'city', 'status']);
+
+        // تجميع الحالات بعد التسوية
+        $groups = [];
+        $groupCaseIds = [];
+        foreach ($cases as $case) {
+            $city = trim((string) $case->city);
+            if ($city === '') {
+                $key = '';
+                $meta = ['label' => 'غير محدد', 'standard' => true, 'order' => 9999];
+            } else {
+                $canonical = EgyptianGovernorates::match($city);
+                if ($canonical !== null) {
+                    $key = EgyptianGovernorates::normalize($canonical);
+                    $order = array_search($canonical, EgyptianGovernorates::LIST, true);
+                    $meta = ['label' => $canonical, 'standard' => true, 'order' => $order];
+                } else {
+                    $key = EgyptianGovernorates::normalize($city);
+                    $meta = ['label' => $city, 'standard' => false, 'order' => 9000];
+                }
+            }
+
+            $groups[$key] = $groups[$key] ?? $meta + [
+                'total' => 0, 'approved' => 0, 'pending' => 0, 'rejected' => 0,
+            ];
+            $groups[$key]['total']++;
+            if (in_array($case->status, ['approved', 'pending', 'rejected'], true)) {
+                $groups[$key][$case->status]++;
+            }
+            $groupCaseIds[$key][] = $case->id;
+        }
+
+        if ($groups === []) {
+            return [];
+        }
+
+        // مجموعات المصروفات لكل حالة استعداداً للتوزيع على المحافظات (استعلام واحد)
+        $expenseQuery = Expense::query();
+        ExpenseDirectionFilter::applyToQuery($expenseQuery, $categoryId, $itemId);
+        if ($dateFrom) {
+            $expenseQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $expenseQuery->whereDate('created_at', '<=', $dateTo);
+        }
+        $sumsByCase = (clone $expenseQuery)->whereNotNull('social_case_id')
+            ->selectRaw('social_case_id, COALESCE(SUM(amount),0) AS total')
+            ->groupBy('social_case_id')
+            ->pluck('total', 'social_case_id');
+
+        // بناء الصفوف: المحافظات المعيارية بترتيب القائمة، ثم غير المعيارية، ثم "غير محدد"
+        $rows = [];
+        foreach ($groups as $key => $group) {
+            $expensesTotal = 0.0;
+            foreach ($groupCaseIds[$key] as $caseId) {
+                $expensesTotal += (float) ($sumsByCase[$caseId] ?? 0);
+            }
+            $expensesTotal = round($expensesTotal, 2);
+            $rows[] = [
+                'label' => $group['label'],
+                'standard' => $group['standard'],
+                'total' => $group['total'],
+                'approved' => $group['approved'],
+                'pending' => $group['pending'],
+                'rejected' => $group['rejected'],
+                'expenses_total' => $expensesTotal,
+                'average' => $group['total'] > 0 ? round($expensesTotal / $group['total'], 2) : 0.0,
+                '_order' => $group['order'],
+            ];
+        }
+
+        usort($rows, fn ($a, $b) => [$a['standard'] === false, $a['_order']] <=> [$b['standard'] === false, $b['_order']]);
+
+        // إزالة مفتاح الترتيب الداخلي
+        return array_map(fn ($row) => array_diff_key($row, ['_order' => null]), $rows);
     }
 
     /**

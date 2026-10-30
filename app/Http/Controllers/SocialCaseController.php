@@ -7,6 +7,7 @@ use App\Models\SocialCaseDocument;
 use App\Models\FamilyMember;
 use App\Models\Notification;
 use App\Services\ActivityLogService;
+use App\Support\EgyptianGovernorates;
 use Yajra\DataTables\DataTables;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,24 @@ use Illuminate\Support\Facades\Storage;
 
 class SocialCaseController extends Controller
 {
+    /**
+     * T34: قاعدة المحافظة — قيمة من القائمة أو القيمة المخزنة نفسها (حتى لا تمسح عند التعديل)
+     */
+    private function cityRules(?SocialCase $socialCase): array
+    {
+        return ['nullable', 'string', 'max:100', function ($attribute, $value, $fail) use ($socialCase) {
+            if ($value === null || $value === '') {
+                return;
+            }
+            if (in_array($value, EgyptianGovernorates::LIST, true)) {
+                return;
+            }
+            if ($socialCase && $value === $socialCase->city) {
+                return;
+            }
+            $fail('المحافظة المختارة غير صحيحة');
+        }];
+    }
     public function index()
     {
         return view('social-cases.modern');
@@ -34,6 +53,7 @@ class SocialCaseController extends Controller
             'assistance_type' => 'required|string|max:100',
             'researcher_id' => 'required|exists:users,id',
             'description' => 'nullable|string|max:1000',
+            'city' => $this->cityRules(null),
             'family_members_count' => 'nullable|integer|min:0|max:20',
             'family_members' => 'nullable|array',
             'family_members.*.name' => 'required_with:family_members|string|max:100',
@@ -57,7 +77,7 @@ class SocialCaseController extends Controller
                 ],
                 $request->only([
                     'name', 'phone', 'affiliated_to', 'case_intake_status',
-                    'nationality', 'national_id', 'address', 'house_type',
+                    'nationality', 'national_id', 'address', 'city', 'house_type',
                     'house_condition', 'monthly_income', 'income_source',
                     'monthly_expenses', 'family_composition', 'children_count',
                     'disabled_count', 'disability_type', 'health_conditions',
@@ -168,7 +188,7 @@ class SocialCaseController extends Controller
                 'assistance_type' => 'required|in:cash,monthly_salary,medicine,treatment,other',
                 'researcher_id' => 'required|exists:users,id',
                 'address' => 'nullable|string|max:500',
-                'city' => 'nullable|string|max:100',
+                'city' => $this->cityRules($socialCase),
                 'district' => 'nullable|string|max:100',
                 'birth_date' => 'nullable|date',
                 'gender' => 'nullable|in:male,female',
@@ -226,6 +246,7 @@ class SocialCaseController extends Controller
             'nationality' => 'nullable|in:egyptian,other',
             'national_id' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:500',
+            'city' => $this->cityRules($socialCase),
             'house_type' => 'nullable|string|max:100',
             'house_condition' => 'nullable|string|max:100',
             'monthly_income' => 'nullable|numeric|min:0',
@@ -257,7 +278,7 @@ class SocialCaseController extends Controller
                 ['phase' => $newPhase],
                 $request->only([
                     'name', 'phone', 'affiliated_to', 'case_intake_status', 'researcher_id',
-                    'nationality', 'national_id', 'address', 'house_type',
+                    'nationality', 'national_id', 'address', 'city', 'house_type',
                     'house_condition', 'monthly_income', 'income_source',
                     'monthly_expenses', 'family_composition', 'children_count',
                     'disabled_count', 'disability_type', 'health_conditions',
@@ -368,9 +389,24 @@ class SocialCaseController extends Controller
             ->with('success', $statusMessage);
     }
 
-    public function tableData()
+    public function tableData(Request $request)
     {
-        $cases = SocialCase::with(['researcher', 'familyMembers', 'expenses'])->get();
+        $query = SocialCase::with(['researcher', 'familyMembers', 'expenses']);
+
+        // T34: تصفية المحافظة — تجمع كل الصيغ المكافئة بعد التسوية
+        // (مثل "القاهره" و"القاهرة") حتى لا تخفي القيم القديمة
+        if ($request->filled('city')) {
+            $canonical = EgyptianGovernorates::match($request->input('city')) ?? trim((string) $request->input('city'));
+            $canonicalKey = EgyptianGovernorates::normalize($canonical);
+            $variants = SocialCase::query()->whereNotNull('city')->where('city', '!=', '')
+                ->pluck('city')->unique()
+                ->filter(fn ($city) => EgyptianGovernorates::normalize($city) === $canonicalKey)
+                ->push($canonical)
+                ->values()->all();
+            $query->whereIn('city', $variants);
+        }
+
+        $cases = $query->get();
 
         return DataTables::of($cases)
             ->addColumn('researcher_name', fn($row) => $row->researcher->name)

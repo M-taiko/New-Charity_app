@@ -1016,6 +1016,12 @@
                         <span>تحليل التوجيهات</span>
                     </a>
                 </li>
+                <li>
+                    <a href="{{ route('reports.governorates') }}" class="@if(Route::current()->getName() == 'reports.governorates') active @endif">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span>الحالات حسب المحافظة</span>
+                    </a>
+                </li>
                 @endif
 
                 <!-- Social Cases Module -->

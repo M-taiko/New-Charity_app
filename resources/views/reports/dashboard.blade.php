@@ -317,6 +317,37 @@
         </div>
     </div>
 
+    <!-- T34: بطاقة الحالات حسب المحافظة (المصروفات تتبع التوجيه/الفترة، والعدد ثابت) -->
+    <div class="row g-4 mt-2">
+        <div class="col-12" data-aos="fade-up" data-aos-delay="900">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #4facfe 0%, #00c6fb 100%); border: none;">
+                    <h5 style="margin: 0; color: white;">
+                        <i class="fas fa-map-marked-alt"></i> الحالات حسب المحافظة
+                    </h5>
+                    <a href="{{ route('reports.governorates') }}" class="btn btn-sm btn-light">
+                        <i class="fas fa-table"></i> التقرير الكامل
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>المحافظة</th>
+                                    <th class="text-center">عدد الحالات <i class="fas fa-lock text-muted" title="لا يتأثر بالتوجيه"></i></th>
+                                    <th class="text-end">إجمالي المصروف <span class="badge bg-info" style="font-size: 0.6rem;">يتأثر بالتوجيه</span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="govCardRows"></tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted d-block mt-2"><i class="fas fa-info-circle"></i> أعلى 5 محافظات بالمصروف — عدد الحالات ثابت والمبالغ تتبع التوجيه ونطاق التاريخ المختارين.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Expenses Summary -->
     <div class="row g-4 mt-2">
         <div class="col-12" data-aos="fade-up" data-aos-delay="800">
@@ -534,6 +565,26 @@
                 window.expensesDateChart.update();
                 window.dateFullDates = figures.by_day.map(d => d.date);
             }
+
+            renderGovernoratesCard(figures.governorates_top || []);
+        }
+
+        // T34: بطاقة المحافظات — المصروفات تتبع التوجيه/الفترة والعدد ثابت
+        function renderGovernoratesCard(rows) {
+            const el = document.getElementById('govCardRows');
+            if (!el) return;
+            if (!rows.length) {
+                el.innerHTML = '<tr><td colspan="3" class="text-muted text-center py-3">لا توجد حالات مسجلة بعد</td></tr>';
+                return;
+            }
+            el.innerHTML = rows.map(r => `<tr>
+                <td>
+                    <a href="{{ route('social_cases.index') }}?city=${encodeURIComponent(r.label)}">${r.label}</a>
+                    ${r.standard ? '' : ' <span class="badge bg-warning text-dark">قيمة غير معيارية</span>'}
+                </td>
+                <td class="text-center">${r.total}</td>
+                <td class="text-end" dir="ltr">${formatMoney(r.expenses_total)} ج.م</td>
+            </tr>`).join('');
         }
 
         async function dirSelect(categoryId, itemId) {
@@ -578,6 +629,7 @@
 
         // العرض الأول من الخادم — نفس أرقام نقطة JSON
         renderExplorer(@json($directionExplorer));
+        renderGovernoratesCard(@json($directionFigures['governorates_top'] ?? []));
 
         // Custodies by Agents Chart - showing remaining balance after spending
         const agentsData = @json($custodiesByAgents);

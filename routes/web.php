@@ -126,6 +126,7 @@ Route::get('/', function () {
     Route::post('/profile/picture', [ProfileController::class, 'updateProfilePicture'])->name('profile.update-picture');
 
     Route::get('/reports', [ReportController::class, 'dashboard'])->name('reports.dashboard');
+    Route::get('/reports/governorates', [ReportController::class, 'governoratesReport'])->name('reports.governorates');
     Route::get('/analytics/researchers', [ReportController::class, 'researcherStats'])->name('analytics.researcher');
     Route::get('/reports/social-case-expenses', [ReportController::class, 'socialCaseExpensesReport'])->name('reports.social-case-expenses');
     Route::get('/reports/agents-balance', [ReportController::class, 'agentsBalanceReport'])->name('reports.agents-balance');

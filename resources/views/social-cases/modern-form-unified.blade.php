@@ -122,6 +122,29 @@
                             </h6>
 
                             <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    @php
+                                        $currentCity = old('city', $socialCase->city ?? '');
+                                        $cityIsStandard = in_array($currentCity, \App\Support\EgyptianGovernorates::LIST, true);
+                                    @endphp
+                                    <label class="form-label"><strong>المحافظة</strong></label>
+                                    <select name="city" class="form-select @error('city') is-invalid @enderror">
+                                        <option value="">-- اختر المحافظة --</option>
+                                        @foreach(\App\Support\EgyptianGovernorates::LIST as $governorate)
+                                            <option value="{{ $governorate }}" {{ $currentCity === $governorate ? 'selected' : '' }}>{{ $governorate }}</option>
+                                        @endforeach
+                                        {{-- قيمة قديمة غير موجودة في القائمة تبقى ظاهرة كخيار حتى لا تمسح عند التعديل --}}
+                                        @if($currentCity !== '' && $currentCity !== null && !$cityIsStandard)
+                                            <option value="{{ $currentCity }}" selected>{{ $currentCity }}</option>
+                                        @endif
+                                    </select>
+                                    @error('city')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="row">
                                 <div class="col-md-12 mb-3">
                                     <label class="form-label"><strong>العنوان <span class="text-danger">*</span></strong></label>
                                     <textarea name="address" class="form-control @error('address') is-invalid @enderror" rows="2" placeholder="العنوان الكامل">{{ old('address', $socialCase->address ?? '') }}</textarea>

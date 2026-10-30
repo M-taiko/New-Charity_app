@@ -186,6 +186,45 @@ class ReportController extends Controller
         return view('analytics.researcher-stats');
     }
 
+    /**
+     * T34: تقرير الحالات حسب المحافظة — صف لكل محافظة (مع تجميع الصيغ المكتوبة
+     * بشكل مختلف بعد التسوية)، وفلاتر نطاق التاريخ والتوجيه (المساعد المشترك)
+     */
+    public function governoratesReport(Request $request): View
+    {
+        $this->authorize('manage_treasury');
+
+        $directionId = (int) $request->input('direction') ?: null;
+        if ($directionId && !ExpenseCategory::whereKey($directionId)->exists()) {
+            $directionId = null;
+        }
+        $directionItemId = (int) $request->input('item') ?: null;
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+
+        $governorates = $this->directionStats->governoratesSummary($directionId, $directionItemId, $dateFrom, $dateTo);
+
+        $grandTotal = [
+            'total' => array_sum(array_column($governorates, 'total')),
+            'approved' => array_sum(array_column($governorates, 'approved')),
+            'pending' => array_sum(array_column($governorates, 'pending')),
+            'rejected' => array_sum(array_column($governorates, 'rejected')),
+            'expenses_total' => round((float) array_sum(array_column($governorates, 'expenses_total')), 2),
+        ];
+        $grandTotal['average'] = $grandTotal['total'] > 0
+            ? round($grandTotal['expenses_total'] / $grandTotal['total'], 2)
+            : 0.0;
+
+        return view('reports.governorates', compact(
+            'governorates',
+            'grandTotal',
+            'directionId',
+            'directionItemId',
+            'dateFrom',
+            'dateTo'
+        ));
+    }
+
     public function socialCaseExpensesReport(Request $request): View
     {
         $this->authorize('manage_treasury');
