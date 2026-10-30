@@ -34,8 +34,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::middleware(['auth', 'verified'])->group(function () {
+    Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // T33: أرقام التوجيه المشتركة (لوحة المعلومات + التقارير)
+    Route::get('/api/directional-stats', [DashboardController::class, 'directionalStats'])->name('api.directional-stats');
 
     // Treasury management (multiple treasuries)
     Route::resource('treasury', TreasuryController::class); // Full CRUD

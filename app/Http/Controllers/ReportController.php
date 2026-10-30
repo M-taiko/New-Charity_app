@@ -9,14 +9,30 @@ use App\Models\SocialCase;
 use App\Models\ExpenseCategory;
 use App\Models\ExpenseItem;
 use App\Models\User;
+use App\Services\DirectionalStatsService;
 use Illuminate\View\View;
 use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    public function dashboard(): View
+    public function __construct(private DirectionalStatsService $directionStats) {}
+
+    public function dashboard(Request $request): View
     {
         $this->authorize('manage_treasury');
+
+        // T33: التوجيه ونطاق التاريخ المختاران (يُحفظان في رابط الصفحة)
+        $directionId = (int) $request->input('direction') ?: null;
+        if ($directionId && !ExpenseCategory::whereKey($directionId)->exists()) {
+            $directionId = null;
+        }
+        $directionItemId = (int) $request->input('item') ?: null;
+        $directionDateFrom = $request->input('date_from');
+        $directionDateTo = $request->input('date_to');
+
+        // أرقام المصروفات المتأثرة بالتوجيه/الفترة (بلا توجيه تساوي قيمها الأصلية)
+        $directionFigures = $this->directionStats->figures($directionId, $directionItemId, $directionDateFrom, $directionDateTo);
+        $directionExplorer = $this->directionStats->explorer($directionId, $directionItemId, $directionDateFrom, $directionDateTo);
 
         // Treasury data
         $treasury = Treasury::first();
@@ -32,12 +48,12 @@ class ReportController extends Controller
         $custodySpent = Custody::sum('spent');
         $custodyReturned = Custody::sum('returned');
 
-        // Expense statistics
-        $totalExpenses = Expense::sum('amount');
-        $expensesToday = Expense::whereDate('created_at', now()->today())->sum('amount');
-        $expensesThisMonth = Expense::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)->sum('amount');
-        $expensesThisYear = Expense::whereYear('created_at', now()->year)->sum('amount');
+        // Expense statistics (T33: عبر المساعد المشترك — نوافذ ثابتة تتبع التوجيه فقط)
+        $totalExpenses = $directionFigures['grand_total'];
+        $expensesToday = $directionFigures['today'];
+        $expensesThisMonth = $directionFigures['this_month'];
+        $expensesThisYear = $directionFigures['this_year'];
+        $periodExpenses = $directionFigures['period_total'];
 
         $socialCaseExpenses = Expense::where('type', 'social_case')->sum('amount');
         $custodyExpenses = Expense::where('source', 'custody')->sum('amount');
@@ -50,69 +66,21 @@ class ReportController extends Controller
         $rejectedCases = SocialCase::where('status', 'rejected')->count();
         $socialCaseSpent = Expense::where('type', 'social_case')->sum('amount');
 
-        // Expenses by main category (root level only)
-        try {
-            $expensesByCategory = ExpenseCategory::roots()
-                ->active()
-                ->get()
-                ->map(function($root) {
-                    // Get all child category IDs recursively
-                    $childCategoryIds = collect([$root->id]);
+        // T33: رسم "المصروفات حسب التوجيه" أصبح مستكشف التوجيه (doughnut + قائمة + مسار تنقل)
+        // يُغذَّى من directionExplorer ويحفر للأسفل داخل الصفحة دون مغادرتها
 
-                    // Helper function to get all descendants
-                    $getDescendants = function($category) use (&$getDescendants) {
-                        $ids = collect();
-                        foreach ($category->children as $child) {
-                            $ids->push($child->id);
-                            $ids = $ids->merge($getDescendants($child));
-                        }
-                        return $ids;
-                    };
-
-                    $childCategoryIds = $childCategoryIds->merge($getDescendants($root));
-
-                    // Sum expenses from items under this category tree + direct category expenses
-                    $expenses = Expense::query()
-                        ->where(function($q) use ($childCategoryIds) {
-                            // Expenses directly on categories in this tree
-                            $q->whereIn('expense_category_id', $childCategoryIds->toArray())
-                              // OR expenses on items under categories in this tree
-                              ->orWhereHas('item', function($q) use ($childCategoryIds) {
-                                  $q->whereIn('expense_category_id', $childCategoryIds->toArray());
-                              });
-                        })
-                        ->get();
-
-                    $totalAmount = $expenses->sum('amount');
-
-                    return [
-                        'id' => $root->id,
-                        'name' => $root->name,
-                        'amount' => $totalAmount,
-                        'count' => $expenses->count(),
-                    ];
-                })
-                ->filter(fn($cat) => $cat['amount'] > 0)
-                ->sortByDesc('amount')
-                ->values();
-        } catch (\Exception $e) {
-            \Log::error('Category expenses error: ' . $e->getMessage());
-            $expensesByCategory = collect([]);
-        }
-
-        // Expenses by date (last 7 days)
+        // Expenses by date (last 7 days) — T33: تتبع التوجيه ونطاق التاريخ
         try {
             $expensesByDate = collect();
-            for ($i = 6; $i >= 0; $i--) {
-                $date = now()->subDays($i)->format('Y-m-d');
-                $amount = Expense::whereDate('created_at', $date)->sum('amount');
+            foreach ($directionFigures['by_day'] as $day) {
                 $expensesByDate->push([
-                    'date' => now()->subDays($i)->format('d-m'),
-                    'fullDate' => now()->subDays($i)->format('Y-m-d'),
-                    'amount' => $amount,
+                    'date' => $day['label'],
+                    'fullDate' => $day['date'],
+                    'amount' => $day['amount'],
                 ]);
             }
         } catch (\Exception $e) {
+            \Log::error('Date expenses error: ' . $e->getMessage());
             $expensesByDate = collect([]);
         }
 
@@ -188,6 +156,7 @@ class ReportController extends Controller
             'expensesToday',
             'expensesThisMonth',
             'expensesThisYear',
+            'periodExpenses',
             'socialCaseExpenses',
             'custodyExpenses',
             'treasuryExpenses',
@@ -196,12 +165,17 @@ class ReportController extends Controller
             'pendingCases',
             'rejectedCases',
             'socialCaseSpent',
-            'expensesByCategory',
             'expensesByDate',
             'agentsWithCustodies',
             'averageCustodyAmount',
             'custodiesByAgents',
-            'casesByResearchers'
+            'casesByResearchers',
+            'directionId',
+            'directionItemId',
+            'directionDateFrom',
+            'directionDateTo',
+            'directionFigures',
+            'directionExplorer'
         ));
     }
 

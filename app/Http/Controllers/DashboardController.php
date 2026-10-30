@@ -5,23 +5,40 @@ namespace App\Http\Controllers;
 use App\Models\Treasury;
 use App\Models\Custody;
 use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\SocialCase;
 use App\Models\User;
+use App\Services\DirectionalStatsService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    public function __construct(private DirectionalStatsService $directionStats) {}
+
     public function index(Request $request): View
     {
         $user = auth()->user();
+
+        // T33: التوجيه المختار (يُحفظ في رابط الصفحة) — يُقبل فقط إن كانت الفئة موجودة
+        $directionId = (int) $request->input('direction') ?: null;
+        if ($directionId && !ExpenseCategory::whereKey($directionId)->exists()) {
+            $directionId = null;
+        }
+        $directionItemId = (int) $request->input('item') ?: null;
 
         // بيانات مشتركة
         $treasury        = Treasury::first();
         $activeCustodies = Custody::whereIn('status', ['accepted', 'active', 'partially_returned'])->count();
         $pendingCases    = SocialCase::where('status', 'pending')->count();
-        $todayExpenses   = Expense::whereDate('created_at', today())->sum('amount');
-        $totalSpent      = Expense::sum('amount');
+
+        // T33: أرقام المصروفات عبر المساعد المشترك — بلا توجيه تساوي قيمها الأصلية
+        $isFinanceView = $user->hasRole('محاسب') || $user->hasRole('مدير') || $user->hasRole('مشرف');
+        $directionFigures = $isFinanceView ? $this->directionStats->figures($directionId, $directionItemId) : null;
+        $directionExplorer = $isFinanceView ? $this->directionStats->explorer($directionId, $directionItemId) : null;
+
+        $todayExpenses = $directionFigures['today'] ?? Expense::whereDate('created_at', today())->sum('amount');
+        $totalSpent    = $directionFigures['grand_total'] ?? Expense::sum('amount');
 
         // إجمالي الخزينة والعهد = رصيد الخزينة + مجموع العهد النشطة
         $totalCustodiesAmount = Custody::whereIn('status', ['accepted', 'active', 'partially_returned'])->sum('amount');
@@ -165,8 +182,30 @@ class DashboardController extends Controller
             'treasury', 'activeCustodies', 'pendingCases', 'todayExpenses', 'totalSpent',
             'totalCustodiesAmount', 'totalAssets', 'agentStats',
             'agentsStats', 'researchersStats', 'yearStats', 'selectedYear', 'availableYears',
-            'researcherStats'
+            'researcherStats',
+            'directionId', 'directionItemId', 'directionFigures', 'directionExplorer'
         ));
+    }
+
+    /**
+     * T33: نقطة JSON مشتركة لتحديث أرقام التوجيه في الصفحتين دون مغادرتها
+     */
+    public function directionalStats(Request $request)
+    {
+        $this->authorize('view_all_expenses');
+
+        $categoryId = (int) $request->input('direction') ?: null;
+        if ($categoryId && !ExpenseCategory::whereKey($categoryId)->exists()) {
+            $categoryId = null;
+        }
+        $itemId   = (int) $request->input('item') ?: null;
+        $dateFrom = $request->input('date_from');
+        $dateTo   = $request->input('date_to');
+
+        return response()->json([
+            'figures'  => $this->directionStats->figures($categoryId, $itemId, $dateFrom, $dateTo),
+            'explorer' => $this->directionStats->explorer($categoryId, $itemId, $dateFrom, $dateTo),
+        ]);
     }
 
     /**

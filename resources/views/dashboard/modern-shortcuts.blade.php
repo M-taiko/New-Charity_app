@@ -52,8 +52,8 @@
             <div class="col-12 col-sm-6 col-lg-3">
                 <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
                     <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
-                    <div class="stat-label">إجمالي المصروفات</div>
-                    <div class="stat-number">{{ number_format($totalSpent, 2) }} ج.م</div>
+                    <div class="stat-label">إجمالي المصروفات <span class="badge bg-light text-dark" style="font-size: 0.6rem;">يتأثر بالتوجيه</span></div>
+                    <div class="stat-number" id="dashTotalExpenses">{{ number_format($totalSpent, 2) }} ج.م</div>
                 </div>
             </div>
             <div class="col-12 col-sm-6 col-lg-3">
@@ -90,8 +90,8 @@
             <div class="col-12 col-sm-6 col-lg-3">
                 <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
                     <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
-                    <div class="stat-label">المصروفات اليوم</div>
-                    <div class="stat-number">{{ number_format($todayExpenses, 2) }} ج.م</div>
+                            <div class="stat-label">المصروفات اليوم <span class="badge bg-light text-dark" style="font-size: 0.6rem;">يتأثر بالتوجيه</span></div>
+                            <div class="stat-number" id="dashTodayExpenses">{{ number_format($todayExpenses, 2) }} ج.م</div>
                 </div>
             </div>
 
@@ -177,6 +177,45 @@
         @endif
     </div>
 
+    {{-- T33: مستكشف التوجيه المحاسبي — للعرض المالي (محاسب/مدير/مشرف) --}}
+    @php $isFinanceView = auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير') || auth()->user()->hasRole('مشرف'); @endphp
+    @if($isFinanceView)
+    <div class="mb-5" data-aos="fade-up">
+        <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+            <div class="card-header" style="background: linear-gradient(135deg, #4caf50 0%, #45a049 100%); border: none;">
+                <h5 style="margin: 0; color: white;">
+                    <i class="fas fa-sitemap"></i> مستكشف التوجيه المحاسبي
+                </h5>
+            </div>
+            <div class="card-body p-3">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    <nav id="dirTrail" aria-label="مسار التوجيه" class="small" style="line-height: 1.8;"></nav>
+                    <button type="button" id="dirClear" class="btn btn-sm btn-outline-secondary" onclick="dirClearFilter()">
+                        <i class="fas fa-times"></i> إلغاء التصفية
+                    </button>
+                    <a href="{{ route('reports.categories-analytics') }}" id="dirAnalyticsLink" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-external-link-alt"></i> فتح تحليل التوجيهات
+                    </a>
+                    <span id="dirLoading" class="text-muted small" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i> جارٍ التحديث...
+                    </span>
+                </div>
+                <div class="row">
+                    <div class="col-12 col-md-5">
+                        <div style="position: relative; height: 250px;">
+                            <canvas id="directionExplorerChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-7">
+                        <div id="directionExplorerList" style="max-height: 250px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+                <small class="text-muted d-block mt-2"><i class="fas fa-info-circle"></i> اختر توجيهاً لتصفية الأرقام والرسوم المتأثرة به في هذه الصفحة.</small>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Charts Section (للمحاسب والمدير فقط) -->
     @if(auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير'))
     <div class="mb-5" data-aos="fade-up">
@@ -197,14 +236,15 @@
             }
         </style>
 
-        <div class="row g-3">
-            <!-- Row 1: First 3 Charts -->
+        {{-- الرسوم المتأثرة بالتوجيه (T33) --}}
+        <div class="row g-3 mb-1" id="reactingGroup">
             <!-- Expense Distribution Chart -->
             <div class="col-12 col-sm-6 col-lg-4">
                 <div class="card border-0 shadow-sm h-100 chart-card">
                     <div class="card-body p-3">
                         <h6 class="card-title mb-2 fw-bold" style="font-size: 0.85rem;">
                             <i class="fas fa-chart-pie" style="color: #667eea; margin-left: 0.5rem;"></i> توزيع المصروفات
+                            <span class="badge bg-info" style="font-size: 0.6rem;">يتأثر بالتوجيه</span>
                         </h6>
                         <div style="position: relative; height: 180px;">
                             <canvas id="expenseChart"></canvas>
@@ -213,6 +253,59 @@
                 </div>
             </div>
 
+            <!-- Monthly Expenses Chart -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100 chart-card">
+                    <div class="card-body p-3">
+                        <h6 class="card-title mb-2 fw-bold" style="font-size: 0.85rem;">
+                            <i class="fas fa-line-chart" style="color: #43e97b; margin-left: 0.5rem;"></i> المصروفات الشهرية
+                            <span class="badge bg-info" style="font-size: 0.6rem;">يتأثر بالتوجيه</span>
+                        </h6>
+                        <div style="position: relative; height: 180px;">
+                            <canvas id="monthlyExpenseChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expense Type Distribution Chart -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100 chart-card">
+                    <div class="card-body p-3">
+                        <h6 class="card-title mb-2 fw-bold" style="font-size: 0.85rem;">
+                            <i class="fas fa-sitemap" style="color: #ff9800; margin-left: 0.5rem;"></i> أنواع المصروفات
+                            <span class="badge bg-info" style="font-size: 0.6rem;">يتأثر بالتوجيه</span>
+                        </h6>
+                        <div style="position: relative; height: 180px;">
+                            <canvas id="expenseTypeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Agents Performance -->
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm h-100 chart-card">
+                    <div class="card-body p-3">
+                        <h6 class="card-title mb-2 fw-bold" style="font-size: 0.85rem;">
+                            <i class="fas fa-users" style="color: #fa709a; margin-left: 0.5rem;"></i> مصروفات المناديب
+                            <span class="badge bg-info" style="font-size: 0.6rem;">يتأثر بالتوجيه</span>
+                        </h6>
+                        <div style="position: relative; height: 180px;">
+                            <canvas id="agentsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- فاصل واضح: الأرقام الثابتة لا تتأثر بالتوجيه (T33) --}}
+        <div class="d-flex align-items-center gap-2 my-3">
+            <span class="badge bg-secondary"><i class="fas fa-lock"></i> الأرقام الثابتة لا تتأثر بالتوجيه</span>
+            <hr class="flex-grow-1 m-0">
+        </div>
+
+        <div class="row g-3">
             <!-- Custody Status Chart -->
             <div class="col-12 col-sm-6 col-lg-4">
                 <div class="card border-0 shadow-sm h-100 chart-card">
@@ -241,21 +334,6 @@
                 </div>
             </div>
 
-            <!-- Row 2: Next 3 Charts -->
-            <!-- Monthly Expenses Chart -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100 chart-card">
-                    <div class="card-body p-3">
-                        <h6 class="card-title mb-2 fw-bold" style="font-size: 0.85rem;">
-                            <i class="fas fa-line-chart" style="color: #43e97b; margin-left: 0.5rem;"></i> المصروفات الشهرية
-                        </h6>
-                        <div style="position: relative; height: 180px;">
-                            <canvas id="monthlyExpenseChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Social Cases Expenses Chart -->
             <div class="col-12 col-sm-6 col-lg-4">
                 <div class="card border-0 shadow-sm h-100 chart-card">
@@ -279,35 +357,6 @@
                         </h6>
                         <div style="position: relative; height: 180px;">
                             <canvas id="socialVsOtherChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Row 3: Last 2 Charts -->
-            <!-- Expense Type Distribution Chart -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100 chart-card">
-                    <div class="card-body p-3">
-                        <h6 class="card-title mb-2 fw-bold" style="font-size: 0.85rem;">
-                            <i class="fas fa-sitemap" style="color: #ff9800; margin-left: 0.5rem;"></i> أنواع المصروفات
-                        </h6>
-                        <div style="position: relative; height: 180px;">
-                            <canvas id="expenseTypeChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Top Agents Performance -->
-            <div class="col-12 col-sm-6 col-lg-4">
-                <div class="card border-0 shadow-sm h-100 chart-card">
-                    <div class="card-body p-3">
-                        <h6 class="card-title mb-2 fw-bold" style="font-size: 0.85rem;">
-                            <i class="fas fa-users" style="color: #fa709a; margin-left: 0.5rem;"></i> أفضل المناديب
-                        </h6>
-                        <div style="position: relative; height: 180px;">
-                            <canvas id="agentsChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -465,20 +514,27 @@
     }
 </style>
 
-@if(auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير'))
+@if($isFinanceView ?? (auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير') || auth()->user()->hasRole('مشرف')))
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
 <script>
-    // Expense Chart
+    // T33: أرقام التوجيه الحالية من الخادم + إجمالي الخزينة والعهد (ثابت)
+    const dashFigures = @json($directionFigures);
+    const dashExplorerData = @json($directionExplorer);
+    const dashTotalAssets = {{ $totalAssets ?? 0 }};
+    const homeCharts = {};
+
+    @if(auth()->user()->hasRole('محاسب') || auth()->user()->hasRole('مدير'))
+    // Expense Chart (يتأثر بالتوجيه)
     const expenseCtx = document.getElementById('expenseChart');
     if (expenseCtx) {
-        new Chart(expenseCtx, {
+        homeCharts.expense = new Chart(expenseCtx, {
             type: 'doughnut',
             data: {
                 labels: ['المصروفات', 'الرصيد المتبقي'],
                 datasets: [{
                     data: [
-                        {{ $totalSpent ?? 0 }},
-                        {{ ($totalAssets ?? 0) - ($totalSpent ?? 0) }}
+                        dashFigures.grand_total,
+                        Math.max(dashTotalAssets - dashFigures.grand_total, 0)
                     ],
                     backgroundColor: ['#f5576c', '#43e97b'],
                     borderColor: '#fff',
@@ -526,20 +582,13 @@
         });
     }
 
-    // Monthly Expenses Chart
+    // Monthly Expenses Chart (يتأثر بالتوجيه)
     const monthlyCtx = document.getElementById('monthlyExpenseChart');
     if (monthlyCtx) {
         const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'];
-        const data = [
-            {{ \App\Models\Expense::whereMonth('created_at', 1)->sum('amount') }},
-            {{ \App\Models\Expense::whereMonth('created_at', 2)->sum('amount') }},
-            {{ \App\Models\Expense::whereMonth('created_at', 3)->sum('amount') }},
-            {{ \App\Models\Expense::whereMonth('created_at', 4)->sum('amount') }},
-            {{ \App\Models\Expense::whereMonth('created_at', 5)->sum('amount') }},
-            {{ \App\Models\Expense::whereMonth('created_at', 6)->sum('amount') }}
-        ];
+        const data = dashFigures.by_month.slice(0, 6);
 
-        new Chart(monthlyCtx, {
+        homeCharts.monthly = new Chart(monthlyCtx, {
             type: 'line',
             data: {
                 labels: months,
@@ -566,37 +615,16 @@
         });
     }
 
-    // Top Agents Chart
+    // Top Agents Chart — مصروفات المنديب (يتأثر بالتوجيه)
     const agentsCtx = document.getElementById('agentsChart');
     if (agentsCtx) {
-        @php
-            $topAgents = \App\Models\User::role('مندوب')
-                ->get()
-                ->map(function($agent) {
-                    return (object)[
-                        'name' => $agent->name,
-                        'custody_count' => \App\Models\Custody::where('agent_id', $agent->id)->count()
-                    ];
-                })
-                ->sortByDesc('custody_count')
-                ->take(5);
-        @endphp
-
-        new Chart(agentsCtx, {
+        homeCharts.agents = new Chart(agentsCtx, {
             type: 'bar',
             data: {
-                labels: [
-                    @foreach($topAgents as $agent)
-                        '{{ $agent->name }}',
-                    @endforeach
-                ],
+                labels: dashFigures.by_agent.map(a => a.name),
                 datasets: [{
-                    label: 'عدد العهد',
-                    data: [
-                        @foreach($topAgents as $agent)
-                            {{ $agent->custody_count }},
-                        @endforeach
-                    ],
+                    label: 'المصروفات (ج.م)',
+                    data: dashFigures.by_agent.map(a => a.amount),
                     backgroundColor: '#667eea',
                     borderColor: '#fff',
                     borderWidth: 1
@@ -697,17 +725,17 @@
         });
     }
 
-    // Expense Type Distribution
+    // Expense Type Distribution (يتأثر بالتوجيه)
     const expenseTypeCtx = document.getElementById('expenseTypeChart');
     if (expenseTypeCtx) {
-        new Chart(expenseTypeCtx, {
+        homeCharts.type = new Chart(expenseTypeCtx, {
             type: 'doughnut',
             data: {
                 labels: ['حالات اجتماعية', 'مصروفات عامة'],
                 datasets: [{
                     data: [
-                        {{ \App\Models\Expense::where('type', 'social_case')->sum('amount') }},
-                        {{ \App\Models\Expense::where('type', 'general')->sum('amount') }}
+                        dashFigures.by_type.social_case,
+                        dashFigures.by_type.general
                     ],
                     backgroundColor: ['#e91e63', '#2196f3'],
                     borderColor: '#fff',
@@ -814,6 +842,146 @@
             }
         });
     }
+    @endif
+
+    // ──── T33: مستكشف التوجيه + تحديث الأرقام المتأثرة ────
+    const dirState = {
+        direction: {{ $directionId ?: 'null' }},
+        item: {{ $directionItemId ?: 'null' }},
+    };
+    const EXPLORER_COLORS = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140', '#ff9800', '#9c27b0'];
+    let explorerChart = null;
+
+    function dirRows(explorer) {
+        return explorer.children.length ? explorer.children : explorer.items;
+    }
+
+    function renderExplorer(explorer) {
+        const rows = dirRows(explorer);
+        const labels = rows.map(r => r.name);
+        const amounts = rows.map(r => r.amount);
+
+        if (!explorerChart) {
+            explorerChart = new Chart(document.getElementById('directionExplorerChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: amounts,
+                        backgroundColor: EXPLORER_COLORS.slice(0, labels.length),
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: function(e, els) {
+                        if (els.length) {
+                            const row = rows[els[0].index];
+                            dirSelect(row.is_item ? null : row.id, row.is_item ? row.id : null);
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 10 } } }
+                    }
+                }
+            });
+        } else {
+            explorerChart.data.labels = labels;
+            explorerChart.data.datasets[0].data = amounts;
+            explorerChart.data.datasets[0].backgroundColor = EXPLORER_COLORS.slice(0, labels.length);
+            explorerChart.update();
+        }
+        document.getElementById('directionExplorerChart').style.cursor = rows.length ? 'pointer' : 'default';
+
+        const total = amounts.reduce((a, b) => a + b, 0);
+        let html = '';
+        rows.forEach(r => {
+            const share = total > 0 ? (r.amount / total * 100).toFixed(1) : '0.0';
+            const selected = r.is_item && r.id == dirState.item;
+            html += `<button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-1 ${selected ? 'active' : ''}" onclick="dirSelect(${r.is_item ? 'null, ' + r.id : r.id + ', null'})">
+                <span class="small">${r.name}</span>
+                <span dir="ltr" class="small">${formatMoney(r.amount)} <small>(${share}%)</small></span>
+            </button>`;
+        });
+        if (explorer.direct_amount > 0 && rows.length) {
+            html += `<div class="list-group-item d-flex justify-content-between text-muted py-1 small">
+                <span>مصروفات على الفئة نفسها مباشرة</span>
+                <span dir="ltr">${formatMoney(explorer.direct_amount)}</span>
+            </div>`;
+        }
+        if (!rows.length) {
+            html = '<div class="text-muted small p-2">لا توجد مستويات أدنى تحت هذه العقدة — استخدم مسار التنقل للرجوع.</div>';
+        }
+        document.getElementById('directionExplorerList').innerHTML = html;
+
+        let trail = '<button type="button" class="btn btn-sm btn-link p-0" onclick="dirSelect(null, null)">الكل</button>';
+        explorer.trail.forEach(t => {
+            trail += ' ‹ <button type="button" class="btn btn-sm btn-link p-0" onclick="dirSelect(' + t.id + ', null)">' + t.name + '</button>';
+        });
+        document.getElementById('dirTrail').innerHTML = trail;
+
+        document.getElementById('dirAnalyticsLink').href =
+            '{{ route('reports.categories-analytics') }}' + (dirState.direction ? '?category_id=' + dirState.direction : '');
+    }
+
+    function applyFigures(figures) {
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = formatMoney(v) + ' ج.م'; };
+        set('dashTotalExpenses', figures.grand_total);
+        set('dashTodayExpenses', figures.today);
+
+        if (homeCharts.expense) {
+            homeCharts.expense.data.datasets[0].data = [figures.grand_total, Math.max(dashTotalAssets - figures.grand_total, 0)];
+            homeCharts.expense.update();
+        }
+        if (homeCharts.monthly) {
+            homeCharts.monthly.data.datasets[0].data = figures.by_month.slice(0, 6);
+            homeCharts.monthly.update();
+        }
+        if (homeCharts.type) {
+            homeCharts.type.data.datasets[0].data = [figures.by_type.social_case, figures.by_type.general];
+            homeCharts.type.update();
+        }
+        if (homeCharts.agents) {
+            homeCharts.agents.data.labels = figures.by_agent.map(a => a.name);
+            homeCharts.agents.data.datasets[0].data = figures.by_agent.map(a => a.amount);
+            homeCharts.agents.update();
+        }
+    }
+
+    async function dirSelect(categoryId, itemId) {
+        dirState.direction = categoryId;
+        dirState.item = itemId;
+        document.getElementById('dirLoading').style.display = '';
+        try {
+            const params = new URLSearchParams();
+            if (categoryId) params.set('direction', categoryId);
+            if (itemId) params.set('item', itemId);
+            const res = await fetch('{{ route('api.directional-stats') }}?' + params.toString(), { headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            applyFigures(data.figures);
+            renderExplorer(data.explorer);
+
+            // حفظ التصفية في رابط الصفحة: التحديث أو المشاركة يعيدان نفس الشاشة
+            const url = new URL(window.location.href);
+            ['direction', 'item'].forEach(k => url.searchParams.delete(k));
+            if (categoryId) url.searchParams.set('direction', categoryId);
+            if (itemId) url.searchParams.set('item', itemId);
+            history.replaceState(null, '', url);
+        } catch (e) {
+            console.error('فشل تحديث أرقام التوجيه', e);
+        } finally {
+            document.getElementById('dirLoading').style.display = 'none';
+        }
+    }
+    window.dirSelect = dirSelect;
+
+    function dirClearFilter() { dirSelect(null, null); }
+    window.dirClearFilter = dirClearFilter;
+
+    // العرض الأول من الخادم — نفس أرقام نقطة JSON
+    renderExplorer(dashExplorerData);
 </script>
 @endif
 
