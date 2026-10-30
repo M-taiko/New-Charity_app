@@ -74,7 +74,7 @@
                         <!-- Receiving Agent Selection -->
                         <div class="mb-4">
                             <label class="form-label fw-600">
-                                <i class="fas fa-user-tie"></i> المندوب المستقبل
+                                <i class="fas fa-user-tie"></i> المندوب المستلم
                             </label>
                             <select name="to_agent_id" class="form-select @error('to_agent_id') is-invalid @enderror" required>
                                 <option value="">-- اختر مندوب --</option>
@@ -141,7 +141,7 @@
                         </p>
                         <ol class="small" style="padding-right: 20px; margin: 10px 0 0 0;">
                             <li>اختر العهدة التي تريد تحويل جزء منها</li>
-                            <li>اختر المندوب المستقبل للتحويل</li>
+                            <li>اختر المندوب المستلم للتحويل</li>
                             <li>أدخل المبلغ المراد تحويله</li>
                             <li>أضف ملاحظات إن لزم الأمر</li>
                             <li>أرسل الطلب للموافقة</li>
@@ -153,7 +153,7 @@
                             <strong><i class="fas fa-exclamation-triangle"></i> تنبيه:</strong>
                         </p>
                         <p class="small mb-0" style="margin-top: 8px;">
-                            المندوب المستقبل يجب أن يوافق على التحويل لكي ينفذ. بعد الموافقة، سيتم خصم المبلغ من عهدتك تلقائياً.
+                            المندوب المستلم يجب أن يوافق على التحويل لكي ينفذ. بعد الموافقة، سيتم خصم المبلغ من عهدتك تلقائياً.
                         </p>
                     </div>
                 </div>

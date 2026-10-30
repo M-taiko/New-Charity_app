@@ -101,7 +101,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="text-muted small mb-1">التحويلات المستقبلة</p>
+                            <p class="text-muted small mb-1">التحويلات المستلمة</p>
                             <h4 class="mb-0" style="color: #764ba2;">{{ $receivedTransfersCount }}</h4>
                         </div>
                         <div style="font-size: 2.5rem; color: #764ba2; opacity: 0.2;">
@@ -164,7 +164,7 @@
                 </li>
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="received-tab" data-bs-toggle="tab" data-bs-target="#received" type="button" role="tab" aria-controls="received" aria-selected="false">
-                        <i class="fas fa-arrow-left"></i> التحويلات المستقبلة
+                        <i class="fas fa-arrow-left"></i> التحويلات المستلمة
                     </button>
                 </li>
             </ul>

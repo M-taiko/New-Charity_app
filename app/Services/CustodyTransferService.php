@@ -105,7 +105,7 @@ class CustodyTransferService
             return DB::transaction(function () use ($transfer, $approverId, $targetCustodyId) {
                 // Verify receiving agent is approving
                 if ($transfer->to_agent_id !== $approverId) {
-                    throw new \Exception('فقط المندوب المستقبل يمكنه الموافقة على التحويل');
+                    throw new \Exception('فقط المندوب المستلم يمكنه الموافقة على التحويل');
                 }
 
                 // Lock the custody for update to prevent race conditions
@@ -298,7 +298,7 @@ class CustodyTransferService
         return DB::transaction(function () use ($transfer, $rejecterId, $rejectionReason) {
             // Verify receiving agent is rejecting
             if ($transfer->to_agent_id !== $rejecterId) {
-                throw new \Exception('فقط المندوب المستقبل يمكنه رفض التحويل');
+                throw new \Exception('فقط المندوب المستلم يمكنه رفض التحويل');
             }
 
             // T26: تحرير تجميد هذا التحويل (لا ينزل عن صفر للتحويلات القديمة غير المجمّدة)

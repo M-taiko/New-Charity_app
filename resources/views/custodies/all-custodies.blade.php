@@ -152,7 +152,7 @@
         <div class="col-md-4 col-lg-2 mb-3">
             <div class="card border-0 shadow-sm" style="border-right: 4px solid #10b981 !important;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2">تحويلات واردة</h6>
+                    <h6 class="text-muted mb-2">تحويلات مستلمة</h6>
                     <h4 class="mb-0" style="color: #10b981;">{{ number_format($stats['total_transferred_in'] ?? 0, 2) }} ج.م</h4>
                 </div>
             </div>
@@ -160,7 +160,7 @@
         <div class="col-md-4 col-lg-2 mb-3">
             <div class="card border-0 shadow-sm" style="border-right: 4px solid #ec4899 !important;">
                 <div class="card-body">
-                    <h6 class="text-muted mb-2">تحويلات صادرة</h6>
+                    <h6 class="text-muted mb-2">تحويلات مرسلة</h6>
                     <h4 class="mb-0" style="color: #ec4899;">{{ number_format($stats['total_transferred_out'] ?? 0, 2) }} ج.م</h4>
                 </div>
             </div>
@@ -312,8 +312,8 @@
                                             <th width="22%">المندوب</th>
                                             <th width="8%" class="text-center">عدد العهدات</th>
                                             <th width="12%" class="text-end">إجمالي المبالغ</th>
-                                            <th width="12%" class="text-end">تحويلات واردة</th>
-                                            <th width="12%" class="text-end">تحويلات صادرة</th>
+                                            <th width="12%" class="text-end">تحويلات مستلمة</th>
+                                            <th width="12%" class="text-end">تحويلات مرسلة</th>
                                             <th width="11%" class="text-end">المصروف</th>
                                             <th width="11%" class="text-end">المرتجع</th>
                                             <th width="12%" class="text-end text-success fw-bold">المتبقي</th>
@@ -355,8 +355,8 @@
                                                             <th width="12%">تاريخ الإنشاء</th>
                                                             <th width="12%">الحالة</th>
                                                             <th width="12%" class="text-end">المبلغ</th>
-                                                            <th width="11%" class="text-end">تحويلات واردة</th>
-                                                            <th width="11%" class="text-end">تحويلات صادرة</th>
+                                                            <th width="11%" class="text-end">تحويلات مستلمة</th>
+                                                            <th width="11%" class="text-end">تحويلات مرسلة</th>
                                                             <th width="11%" class="text-end">المصروف</th>
                                                             <th width="11%" class="text-end">المرتجع</th>
                                                             <th width="12%" class="text-end text-success fw-bold">المتبقي</th>
@@ -478,8 +478,8 @@
                                     <th>المندوب</th>
                                     <th>التاريخ</th>
                                     <th>المبلغ</th>
-                                    <th>تحويلات واردة</th>
-                                    <th>تحويلات صادرة</th>
+                                    <th>تحويلات مستلمة</th>
+                                    <th>تحويلات مرسلة</th>
                                     <th>المصروف</th>
                                     <th>المرتجع</th>
                                     <th>المتبقي</th>
@@ -1128,7 +1128,7 @@ function updateCustodySummary() {
         // Extract values from cells (1-indexed: # / المندوب / التاريخ / المبلغ / المصروف / المرتجع / المتبقي / الحالة / الإجراءات)
         const cells = row.querySelectorAll('td');
 
-        // Cell indices: 0=# | 1=المندوب | 2=التاريخ | 3=المبلغ | 4=تحويلات واردة | 5=تحويلات صادرة | 6=المصروف | 7=المرتجع | 8=المتبقي | 9=الحالة | 10=الإجراءات
+        // Cell indices: 0=# | 1=المندوب | 2=التاريخ | 3=المبلغ | 4=تحويلات مستلمة | 5=تحويلات مرسلة | 6=المصروف | 7=المرتجع | 8=المتبقي | 9=الحالة | 10=الإجراءات
         const amountCell = cells[3]?.textContent || '0';
         const spentCell = cells[6]?.textContent || '0';
         const returnedCell = cells[7]?.textContent || '0';

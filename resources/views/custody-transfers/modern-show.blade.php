@@ -44,7 +44,7 @@
                             <h6 class="mb-0" style="color: #667eea;">{{ $custodyTransfer->fromAgent->name }}</h6>
                         </div>
                         <div class="col-md-6 mb-4">
-                            <p class="text-muted small mb-1">إلى (المندوب المستقبل)</p>
+                            <p class="text-muted small mb-1">إلى (المندوب المستلم)</p>
                             <h6 class="mb-0" style="color: #764ba2;">{{ $custodyTransfer->toAgent->name }}</h6>
                         </div>
                     </div>
@@ -162,7 +162,7 @@
                                 ->orderBy('id')
                                 ->get();
                         @endphp
-                        <p class="text-muted small mb-3">أنت المندوب المستقبل. اختر:</p>
+                        <p class="text-muted small mb-3">أنت المندوب المستلم. اختر:</p>
 
                         <form action="{{ route('custody-transfers.approve', $custodyTransfer) }}" method="POST" class="mb-3">
                             @csrf
@@ -180,7 +180,7 @@
                                         @endforeach
                                     </select>
                                     <small class="text-muted d-block mt-1">
-                                        سيُضاف المبلغ ({{ number_format($custodyTransfer->amount, 2) }} ج.م) كتحويل وارد على العهدة المختارة
+                                        سيُضاف المبلغ ({{ number_format($custodyTransfer->amount, 2) }} ج.م) كتحويل مستلم على العهدة المختارة
                                     </small>
                                 @else
                                     <div class="alert alert-info mb-0">
@@ -200,7 +200,7 @@
                         </button>
                     @elseif ($custodyTransfer->status === 'pending')
                         <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> في انتظار موافقة المندوب المستقبل
+                            <i class="fas fa-info-circle"></i> في انتظار موافقة المندوب المستلم
                         </div>
                     @elseif ($custodyTransfer->status === 'approved')
                         <div class="alert alert-success">

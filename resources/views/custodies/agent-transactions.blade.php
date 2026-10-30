@@ -53,7 +53,7 @@
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up">
             <div class="stat-card success">
                 <div class="stat-icon"><i class="fas fa-exchange-alt fa-rotate-90"></i></div>
-                <div class="stat-label">تحويلات واردة إليّ</div>
+                <div class="stat-label">تحويلات مستلمة</div>
                 <div class="stat-number" style="color: var(--success);">{{ number_format($totalTransferredIn, 2) }}</div>
                 <small style="color: #6b7280;">ج.م</small>
             </div>
@@ -61,7 +61,7 @@
         <div class="col-12 col-sm-6 col-lg-3" data-aos="fade-up" data-aos-delay="100">
             <div class="stat-card danger">
                 <div class="stat-icon"><i class="fas fa-paper-plane"></i></div>
-                <div class="stat-label">تحويلات صادرة مني</div>
+                <div class="stat-label">تحويلات مرسلة مني</div>
                 <div class="stat-number" style="color: var(--danger);">{{ number_format($totalTransferredOut, 2) }}</div>
                 <small style="color: #6b7280;">ج.م</small>
             </div>
@@ -140,8 +140,8 @@
                                         <tr>
                                             <th>التاريخ</th>
                                             <th>المبلغ الأصلي</th>
-                                            <th>تحويلات واردة</th>
-                                            <th>تحويلات صادرة</th>
+                                            <th>تحويلات مستلمة</th>
+                                            <th>تحويلات مرسلة</th>
                                             <th>المصروف</th>
                                             <th>المتبقي</th>
                                             <th>الحالة</th>
@@ -328,9 +328,9 @@
                             'custody_out': 'عهدة مستلمة',
                             'expense': 'مصروف',
                             'custody_return': 'مبلغ مردود',
-                            'custody_transfer_in': 'تحويل واصل',
+                            'custody_transfer_in': 'تحويل مستلم',
                             'custody_transfer_out': 'تحويل مرسل',
-                            'transfer_in': 'تحويل واصل',
+                            'transfer_in': 'تحويل مستلم',
                             'transfer_out': 'تحويل مرسل',
                             'donation': 'تبرع',
                             'custody_close': 'إغلاق عهدة',
@@ -362,9 +362,9 @@
                             'custody_out': '<span class="badge bg-success">دخول</span>',
                             'expense': '<span class="badge bg-danger">خروج</span>',
                             'custody_return': '<span class="badge bg-warning">رد</span>',
-                            'custody_transfer_in': '<span class="badge bg-info">تحويل واصل</span>',
+                            'custody_transfer_in': '<span class="badge bg-info">تحويل مستلم</span>',
                             'custody_transfer_out': '<span class="badge bg-secondary">تحويل مرسل</span>',
-                            'transfer_in': '<span class="badge bg-info">تحويل واصل</span>',
+                            'transfer_in': '<span class="badge bg-info">تحويل مستلم</span>',
                             'transfer_out': '<span class="badge bg-secondary">تحويل مرسل</span>',
                             'donation': '<span class="badge bg-success">تبرع</span>',
                             'custody_close': '<span class="badge bg-dark">إغلاق</span>',
@@ -471,7 +471,7 @@
                 {
                     data: 'transfer_type',
                     render: function(data) {
-                        return data === 'sent' ? '<span class="badge bg-danger">مرسل</span>' : '<span class="badge bg-success">مستقبل</span>';
+                        return data === 'sent' ? '<span class="badge bg-danger">مرسل</span>' : '<span class="badge bg-success">مستلم</span>';
                     }
                 },
                 {

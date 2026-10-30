@@ -115,8 +115,8 @@
                                     <th class="text-center">النشطة</th>
                                     <th class="text-center">المغلقة</th>
                                     <th class="text-end">المستلم</th>
-                                    <th class="text-end">تحويلات واردة</th>
-                                    <th class="text-end">تحويلات صادرة</th>
+                                    <th class="text-end">تحويلات مستلمة</th>
+                                    <th class="text-end">تحويلات مرسلة</th>
                                     <th class="text-end">المصروف</th>
                                     <th class="text-end">المرتجع</th>
                                     <th class="text-end">الرصيد الحالي</th>

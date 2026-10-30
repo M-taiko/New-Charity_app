@@ -137,8 +137,8 @@
                                                 'custody_return' => ['text' => 'عهدة إرجاع', 'color' => 'primary'],
                                                 'transfer_in' => ['text' => 'تحويل وارد', 'color' => 'primary'],
                                                 'transfer_out' => ['text' => 'تحويل صادر', 'color' => 'warning'],
-                                                'custody_transfer_in' => ['text' => 'تحويل عهدة (وارد للعهدة)', 'color' => 'secondary'],
-                                                'custody_transfer_out' => ['text' => 'تحويل عهدة (صادر من العهدة)', 'color' => 'secondary'],
+                                                'custody_transfer_in' => ['text' => 'تحويل عهدة (مستلم)', 'color' => 'secondary'],
+                                                'custody_transfer_out' => ['text' => 'تحويل عهدة (مرسل)', 'color' => 'secondary'],
                                                 'recovery' => ['text' => 'استرداد لعهدة', 'color' => 'secondary'],
                                                 'custody_close' => ['text' => 'إغلاق عهدة', 'color' => 'secondary'],
                                             ];

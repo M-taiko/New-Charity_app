@@ -96,13 +96,13 @@
                     <div class="row">
                         <div class="col-md-4 col-6">
                             <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-left: 4px solid #667eea; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-                                <p style="margin: 0; font-size: 0.85rem; color: #666;">تحويلات واردة (من مندوبين)</p>
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">تحويلات مستلمة (من مندوبين)</p>
                                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #667eea;">{{ number_format($custody->transferred_in, 2) }} ج.م</h3>
                             </div>
                         </div>
                         <div class="col-md-4 col-6">
                             <div style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(219, 39, 119, 0.1)); border-left: 4px solid #ec4899; padding: 15px; border-radius: 4px; margin-bottom: 15px;">
-                                <p style="margin: 0; font-size: 0.85rem; color: #666;">تحويلات صادرة (إلى مندوبين)</p>
+                                <p style="margin: 0; font-size: 0.85rem; color: #666;">تحويلات مرسلة (إلى مندوبين)</p>
                                 <h3 style="margin: 5px 0 0; font-size: 1.5rem; font-weight: bold; color: #ec4899;">{{ number_format($custody->transferred_out, 2) }} ج.م</h3>
                             </div>
                         </div>
@@ -571,9 +571,9 @@
                                                     @elseif($trans->type === 'custody_return')
                                                         <span class="badge bg-success"><i class="fas fa-arrow-up"></i> رد</span>
                                                     @elseif($trans->type === 'custody_transfer_in')
-                                                        <span class="badge" style="background-color: #059669;"><i class="fas fa-arrow-down"></i> تحويل واصل</span>
+                                                        <span class="badge" style="background-color: #059669;"><i class="fas fa-arrow-down"></i> تحويل مستلم</span>
                                                     @elseif($trans->type === 'custody_transfer_out')
-                                                        <span class="badge bg-danger"><i class="fas fa-arrow-up"></i> تحويل صادر</span>
+                                                        <span class="badge bg-danger"><i class="fas fa-arrow-up"></i> تحويل مرسل</span>
                                                     @elseif($trans->type === 'expense')
                                                         <span class="badge bg-warning"><i class="fas fa-shopping-cart"></i> مصروف</span>
                                                     @elseif($trans->type === 'custody_close')
@@ -643,7 +643,7 @@
                             </div>
                             <div class="col-md-4 col-6">
                                 <div style="text-align: center; padding: 15px;">
-                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">تحويلات واردة من مندوبين</p>
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">تحويلات مستلمة من مندوبين</p>
                                     <h4 style="margin: 0.5rem 0; color: #059669; font-weight: bold;">
                                         {{ number_format($custody->transferred_in, 2) }} ج.م
                                     </h4>
@@ -651,7 +651,7 @@
                             </div>
                             <div class="col-md-4 col-6">
                                 <div style="text-align: center; padding: 15px;">
-                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">تحويلات صادرة إلى مندوبين</p>
+                                    <p style="margin: 0; color: #666; font-size: 0.9rem;">تحويلات مرسلة إلى مندوبين</p>
                                     <h4 style="margin: 0.5rem 0; color: #dc2626; font-weight: bold;">
                                         {{ number_format($custody->transferred_out, 2) }} ج.م
                                     </h4>

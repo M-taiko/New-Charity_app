@@ -134,7 +134,7 @@
                             </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <div class="text-muted small">تحويلات معلقة (مستقبلة)</div>
+                            <div class="text-muted small">تحويلات معلقة (بانتظار الاستلام)</div>
                             <h4 class="mb-0">{{ $stats['pending_transfers_received'] ?? 0 }}</h4>
                         </div>
                     </div>
@@ -152,7 +152,7 @@
                             </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <div class="text-muted small">إجمالي التحويلات الواردة</div>
+                            <div class="text-muted small">إجمالي التحويلات المستلمة</div>
                             <h4 class="mb-0 text-success">{{ number_format($stats['total_transferred_in'] ?? 0, 2) }} ج.م</h4>
                         </div>
                     </div>
@@ -170,7 +170,7 @@
                             </div>
                         </div>
                         <div class="flex-grow-1 ms-3">
-                            <div class="text-muted small">إجمالي التحويلات الصادرة</div>
+                            <div class="text-muted small">إجمالي التحويلات المرسلة</div>
                             <h4 class="mb-0 text-danger">{{ number_format($stats['total_transferred_out'] ?? 0, 2) }} ج.م</h4>
                         </div>
                     </div>
@@ -221,8 +221,8 @@
                                         <th>#</th>
                                         <th>التاريخ</th>
                                         <th>المبلغ الأصلي</th>
-                                        <th>تحويلات واردة</th>
-                                        <th>تحويلات صادرة</th>
+                                        <th>تحويلات مستلمة</th>
+                                        <th>تحويلات مرسلة</th>
                                         <th>المصروف</th>
                                         <th>المرتجع</th>
                                         <th>المتبقي</th>
@@ -357,7 +357,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border: none;">
                     <h5 style="margin: 0; color: white;">
-                        <i class="fas fa-arrow-right"></i> التحويلات المرسلة (معلقة الاستقبال)
+                        <i class="fas fa-arrow-right"></i> التحويلات المرسلة (بانتظار الاستلام)
                     </h5>
                 </div>
                 <div class="card-body">
@@ -412,7 +412,7 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-header" style="background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border: none;">
                     <h5 style="margin: 0; color: white;">
-                        <i class="fas fa-arrow-left"></i> التحويلات الواردة إليّ
+                        <i class="fas fa-arrow-left"></i> التحويلات المستلمة
                     </h5>
                 </div>
                 <div class="card-body">
@@ -507,13 +507,13 @@
                     </div>
                     <div class="col-md-4 col-6">
                         <div class="text-center p-3 border rounded">
-                            <div class="text-muted small">تحويلات واردة</div>
+                            <div class="text-muted small">تحويلات مستلمة</div>
                             <h5 class="mb-0 text-success">{{ number_format($custody->transferred_in, 2) }} ج.م</h5>
                         </div>
                     </div>
                     <div class="col-md-4 col-6">
                         <div class="text-center p-3 border rounded">
-                            <div class="text-muted small">تحويلات صادرة</div>
+                            <div class="text-muted small">تحويلات مرسلة</div>
                             <h5 class="mb-0 text-danger">{{ number_format($custody->transferred_out, 2) }} ج.م</h5>
                         </div>
                     </div>
@@ -938,7 +938,7 @@
                     <div class="mb-3" id="receiveCustodyField">
                         <label class="form-label"><strong>استلام المبلغ على عهدة</strong></label>
                         <select id="receiveCustodySelect" name="custody_id" class="form-select"></select>
-                        <small class="text-muted d-block mt-1">سيُضاف المبلغ كتحويل وارد على العهدة المختارة</small>
+                        <small class="text-muted d-block mt-1">سيُضاف المبلغ كتحويل مستلم على العهدة المختارة</small>
                     </div>
 
                     <div class="alert alert-info mb-0" id="receiveNewCustodyNote" style="display: none;">
