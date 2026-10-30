@@ -81,39 +81,98 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-body py-3">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-12 col-sm-6 col-md-3">
-                            <label class="form-label small mb-1"><i class="fas fa-user"></i> المستخدم</label>
-                            <input type="text" id="filter_user" class="form-control form-control-sm" placeholder="ابحث بالاسم...">
+                    <!-- زر الطي للشاشات الصغيرة فقط -->
+                    <button type="button" class="btn btn-sm btn-outline-primary mb-2 d-md-none" data-bs-toggle="collapse" data-bs-target="#expenseFiltersBody">
+                        <i class="fas fa-filter"></i> أدوات التصفية
+                    </button>
+                    <div class="collapse show" id="expenseFiltersBody">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <label class="form-label small mb-1"><i class="fas fa-user"></i> المستخدم</label>
+                                <input type="text" id="filter_user" class="form-control form-control-sm" placeholder="ابحث بالاسم...">
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-2">
+                                <label class="form-label small mb-1"><i class="fas fa-tags"></i> النوع</label>
+                                <select id="filter_type" class="form-select form-select-sm">
+                                    <option value="">الكل</option>
+                                    <option value="general">مصروف عام</option>
+                                    <option value="social_case">حالة اجتماعية</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-2">
+                                <label class="form-label small mb-1"><i class="fas fa-check-circle"></i> حالة المراجعة</label>
+                                <select id="filter_reviewed" class="form-select form-select-sm">
+                                    <option value="">الكل</option>
+                                    <option value="reviewed">مراجع</option>
+                                    <option value="not_reviewed">غير مراجع</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-sm-3 col-md-2">
+                                <label class="form-label small mb-1"><i class="fas fa-calendar"></i> من تاريخ</label>
+                                <input type="date" id="filter_date_from" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6 col-sm-3 col-md-2">
+                                <label class="form-label small mb-1"><i class="fas fa-calendar"></i> إلى تاريخ</label>
+                                <input type="date" id="filter_date_to" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-1">
+                                <button type="button" id="filter_reset" class="btn btn-sm btn-outline-secondary w-100">
+                                    <i class="fas fa-times"></i> إعادة
+                                </button>
+                            </div>
                         </div>
-                        <div class="col-12 col-sm-6 col-md-2">
-                            <label class="form-label small mb-1"><i class="fas fa-tags"></i> النوع</label>
-                            <select id="filter_type" class="form-select form-select-sm">
-                                <option value="">الكل</option>
-                                <option value="general">مصروف عام</option>
-                                <option value="social_case">حالة اجتماعية</option>
-                            </select>
-                        </div>
-                        <div class="col-12 col-sm-6 col-md-2">
-                            <label class="form-label small mb-1"><i class="fas fa-check-circle"></i> حالة المراجعة</label>
-                            <select id="filter_reviewed" class="form-select form-select-sm">
-                                <option value="">الكل</option>
-                                <option value="reviewed">مراجع</option>
-                                <option value="not_reviewed">غير مراجع</option>
-                            </select>
-                        </div>
-                        <div class="col-12 col-sm-6 col-md-2">
-                            <label class="form-label small mb-1"><i class="fas fa-calendar"></i> من تاريخ</label>
-                            <input type="date" id="filter_date_from" class="form-control form-control-sm">
-                        </div>
-                        <div class="col-12 col-sm-6 col-md-2">
-                            <label class="form-label small mb-1"><i class="fas fa-calendar"></i> إلى تاريخ</label>
-                            <input type="date" id="filter_date_to" class="form-control form-control-sm">
-                        </div>
-                        <div class="col-12 col-sm-6 col-md-1">
-                            <button type="button" id="filter_reset" class="btn btn-sm btn-outline-secondary w-100">
-                                <i class="fas fa-times"></i> إعادة
-                            </button>
+                        <hr class="my-3">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <label class="form-label small mb-1"><i class="fas fa-sitemap"></i> التوجيه: المستوى الأول</label>
+                                <select id="filter_cat1" class="form-select form-select-sm">
+                                    <option value="">الكل</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <label class="form-label small mb-1">التوجيه: المستوى الثاني</label>
+                                <select id="filter_cat2" class="form-select form-select-sm">
+                                    <option value="">الكل</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <label class="form-label small mb-1">التوجيه: المستوى الثالث</label>
+                                <select id="filter_cat3" class="form-select form-select-sm">
+                                    <option value="">الكل</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <label class="form-label small mb-1"><i class="fas fa-tag"></i> البند</label>
+                                <select id="filter_item" class="form-select form-select-sm">
+                                    <option value="">الكل</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-2">
+                                <div class="form-check form-switch mb-2">
+                                    <input class="form-check-input" type="checkbox" role="switch" id="filter_no_direction">
+                                    <label class="form-check-label small" for="filter_no_direction">بدون توجيه</label>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <label class="form-label small mb-1"><i class="fas fa-briefcase"></i> العهدة</label>
+                                <select id="filter_custody" class="form-select form-select-sm">
+                                    <option value="">الكل</option>
+                                    @foreach($custodiesForFilter ?? [] as $c)
+                                        <option value="{{ $c->id }}">#{{ $c->id }}، {{ $c->agent?->name ?? 'غير معروف' }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-6 col-sm-3 col-md-2">
+                                <label class="form-label small mb-1"><i class="fas fa-coins"></i> المبلغ من</label>
+                                <input type="number" step="0.01" min="0" id="filter_amount_from" class="form-control form-control-sm" placeholder="0.00">
+                            </div>
+                            <div class="col-6 col-sm-3 col-md-2">
+                                <label class="form-label small mb-1">المبلغ إلى</label>
+                                <input type="number" step="0.01" min="0" id="filter_amount_to" class="form-control form-control-sm" placeholder="0.00">
+                            </div>
+                            <div class="col-12 col-md-3 d-flex align-items-center">
+                                <small class="text-muted"><i class="fas fa-info-circle"></i> اختيار توجيه يشمل كل ما تحته من مستويات وبنود</small>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -182,6 +241,10 @@
                                 </tr>
                             </thead>
                         </table>
+                    </div>
+                    {{-- T31: إجمالي مبالغ النتيجة المصفاة --}}
+                    <div class="text-end px-3 py-2 border-top">
+                        <strong>إجمالي نتائج التصفية: <span id="filteredTotal" dir="ltr">0.00</span> ج.م</strong>
                     </div>
                 </div>
             </div>
@@ -367,6 +430,19 @@
                     d.reviewed_filter = $('#filter_reviewed').val();
                     d.date_from       = $('#filter_date_from').val();
                     d.date_to         = $('#filter_date_to').val();
+                    // T31: التوجيه والعهدة ونطاق المبلغ
+                    d.custody_id      = $('#filter_custody').val();
+                    d.amount_from     = $('#filter_amount_from').val();
+                    d.amount_to       = $('#filter_amount_to').val();
+                    if ($('#filter_no_direction').is(':checked')) {
+                        d.no_direction = 1;
+                        d.category_id  = '';
+                        d.item_id      = '';
+                    } else {
+                        d.no_direction = '';
+                        d.category_id  = filterDeepestCategory();
+                        d.item_id      = $('#filter_item').val();
+                    }
                 }
             },
             columns: [
@@ -512,6 +588,72 @@
         $('#filter_type, #filter_reviewed').on('change', function() { expensesTable.ajax.reload(); });
         $('#filter_date_from, #filter_date_to').on('change', function() { expensesTable.ajax.reload(); });
 
+        // ──── T31: تصفية التوجيه المتتالية ────
+        function filterDeepestCategory() {
+            return $('#filter_cat3').val() || $('#filter_cat2').val() || $('#filter_cat1').val() || '';
+        }
+
+        function resetFilterDirectionFrom(level) {
+            for (let l = level; l <= 3; l++) {
+                $('#filter_cat' + l).val('').find('option:not(:first)').remove();
+            }
+            $('#filter_item').val('').find('option:not(:first)').remove();
+        }
+        async function loadFilterOptions(url, $select) {
+            try {
+                const res = await fetch(url);
+                const rows = await res.json();
+                rows.forEach(r => $select.append(`<option value="${r.id}">${r.name}</option>`));
+            } catch (e) {
+                console.error('خطأ في تحميل خيارات التصفية', e);
+            }
+        }
+
+        async function onFilterCategoryChange(level) {
+            const catId = $('#filter_cat' + level).val();
+            // امسح كل ما بعد هذا المستوى
+            for (let l = level + 1; l <= 3; l++) {
+                $('#filter_cat' + l).val('').find('option:not(:first)').remove();
+            }
+            $('#filter_item').val('').find('option:not(:first)').remove();
+            if (catId) {
+                if (level < 3) {
+                    await loadFilterOptions(`/api/expense-categories/${catId}/children`, $('#filter_cat' + (level + 1)));
+                }
+                await loadFilterOptions(`/api/expense-categories/${catId}/items`, $('#filter_item'));
+            }
+            expensesTable.ajax.reload();
+        }
+
+        // تحميل المستوى الأول مرة واحدة
+        loadFilterOptions('{{ route("api.expense-categories.roots") }}', $('#filter_cat1'));
+        $('#filter_cat1').on('change', function() { onFilterCategoryChange(1); });
+        $('#filter_cat2').on('change', function() { onFilterCategoryChange(2); });
+        $('#filter_cat3').on('change', function() { onFilterCategoryChange(3); });
+        $('#filter_item').on('change', function() { expensesTable.ajax.reload(); });
+
+        // "بدون توجيه": تعطيل قوائم التوجيه وإلغاء اختياراتها
+        $('#filter_no_direction').on('change', function() {
+            if (this.checked) {
+                // إلغاء الاختيارات مع إبقاء خيارات المستوى الأول محملة
+                resetFilterDirectionFrom(2);
+                $('#filter_cat1').val('');
+            }
+            $('#filter_cat1, #filter_cat2, #filter_cat3, #filter_item').prop('disabled', this.checked);
+            expensesTable.ajax.reload();
+        });
+
+        // العهدة ونطاق المبلغ
+        $('#filter_custody').on('change', function() { expensesTable.ajax.reload(); });
+        $('#filter_amount_from, #filter_amount_to').on('input', debounce(function() { expensesTable.ajax.reload(); }, 400));
+
+        // T31: إجمالي نتائج التصفية مع كل رد
+        expensesTable.on('xhr', function(e, settings, json) {
+            if (json && json.filtered_total !== undefined) {
+                $('#filteredTotal').text(formatMoney(json.filtered_total));
+            }
+        });
+
         // Reset all filters
         $('#filter_reset').on('click', function() {
             $('#filter_user').val('');
@@ -519,8 +661,17 @@
             $('#filter_reviewed').val('');
             $('#filter_date_from').val('');
             $('#filter_date_to').val('');
+            $('#filter_no_direction').prop('checked', false).trigger('change');
+            $('#filter_custody').val('');
+            $('#filter_amount_from').val('');
+            $('#filter_amount_to').val('');
             expensesTable.ajax.reload();
         });
+
+        // T31: طي منطقة التصفية على الشاشات الصغيرة
+        if (window.innerWidth < 768) {
+            document.getElementById('expenseFiltersBody')?.classList.remove('show');
+        }
 
         // Initialize Purchases Table
         $('#purchasesTable').DataTable({

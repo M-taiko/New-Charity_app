@@ -63,7 +63,12 @@ class ExpenseController extends Controller
 
         // المدير والمحاسب يرون كل المصروفات
         if ($user->can('view_all_expenses')) {
-            return view('expenses.modern');
+            // T31: عهد التصفية — كل العهد بلا استثناء (تصفية على التاريخ كله)
+            $custodiesForFilter = Custody::with('agent:id,name')
+                ->orderBy('id')
+                ->get(['id', 'agent_id']);
+
+            return view('expenses.modern', compact('custodiesForFilter'));
         }
 
         // المندوب يُوجَّه لصفحة مصروفاته الخاصة
@@ -589,6 +594,36 @@ class ExpenseController extends Controller
             $query->whereHas('user', fn($q) => $q->where('name', 'like', '%' . $request->user_filter . '%'));
         }
 
+        // T31: التوجيه المحاسبي — العقدة المختارة وكل ما تحتها (المساعد المشترك)
+        if ($request->boolean('no_direction')) {
+            $query->whereNull('expense_category_id')->whereNull('expense_item_id');
+        } elseif ($request->filled('category_id') || $request->filled('item_id')) {
+            $query->inDirection(
+                $request->filled('category_id') ? (int) $request->category_id : null,
+                $request->filled('item_id') ? (int) $request->item_id : null
+            );
+        }
+
+        // T31: العهدة — المصروف المرتبط بها مباشرة أو عبر جدول التوزيع expense_custody (T27)
+        if ($request->filled('custody_id')) {
+            $custodyId = (int) $request->custody_id;
+            $query->where(function ($q) use ($custodyId) {
+                $q->where('custody_id', $custodyId)
+                    ->orWhereHas('custodies', fn($qc) => $qc->where('custodies.id', $custodyId));
+            });
+        }
+
+        // T31: نطاق المبلغ — شامل الحدين، مقارنة على خانتين عشريتين
+        if ($request->filled('amount_from')) {
+            $query->where('amount', '>=', round((float) $request->amount_from, 2));
+        }
+        if ($request->filled('amount_to')) {
+            $query->where('amount', '<=', round((float) $request->amount_to, 2));
+        }
+
+        // T31: إجمالي مبالغ النتيجة المصفاة (قبل ترقيم DataTables)
+        $filteredTotal = round((float) (clone $query)->sum('amount'), 2);
+
         // طلبات التعديل المعلقة باستعلام واحد مجمع (لا استعلام لكل صف)
         $user = auth()->user();
         $isAccountant = $user->hasRole('محاسب');
@@ -618,6 +653,7 @@ class ExpenseController extends Controller
             // هذه الأعمدة تُهرَّب من جهة العميل في دوال render (esc) — تُرسل خام لتجنب الإescaping المزدوج
             ->rawColumns(['item_direction', 'first_item', 'reviewer_name', 'reviewed_at_formatted'])
             ->filterColumn('user_name', fn($q, $k) => $q->whereHas('user', fn($q2) => $q2->where('name', 'like', "%$k%")))
+            ->with('filtered_total', $filteredTotal)
             ->toJson();
     }
 

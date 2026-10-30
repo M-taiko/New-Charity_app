@@ -122,6 +122,14 @@ class Expense extends Model
         return $this->reviewed_at !== null;
     }
 
+    /**
+     * تصفية حسب التوجيه المحاسبي: كل مصروفات العقدة المختارة وما تحتها (T31)
+     */
+    public function scopeInDirection(\Illuminate\Database\Eloquent\Builder $query, ?int $categoryId, ?int $itemId): \Illuminate\Database\Eloquent\Builder
+    {
+        return \App\Support\ExpenseDirectionFilter::applyToQuery($query, $categoryId, $itemId);
+    }
+
     public function isApproved(): bool
     {
         return $this->approval_status === 'approved';
