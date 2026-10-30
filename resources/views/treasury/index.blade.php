@@ -38,7 +38,7 @@
     @else
     <!-- Summary Cards -->
     <div class="row mb-4">
-        <div class="col-md-4">
+        <div class="col-12 col-md-6">
             <div class="card" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(139, 195, 74, 0.1)); border: 1px solid rgba(76, 175, 80, 0.3);">
                 <div class="card-body text-center">
                     <h6 style="color: #666; margin: 0;">إجمالي الأرصدة</h6>
@@ -46,19 +46,11 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-12 col-md-6">
             <div class="card" style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.1), rgba(13, 71, 161, 0.1)); border: 1px solid rgba(33, 150, 243, 0.3);">
                 <div class="card-body text-center">
                     <h6 style="color: #666; margin: 0;">عدد الخزائن</h6>
                     <h3 style="color: #2196f3; margin: 10px 0 0 0;">{{ $treasuries->count() }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card" style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(255, 111, 0, 0.1)); border: 1px solid rgba(255, 152, 0, 0.3);">
-                <div class="card-body text-center">
-                    <h6 style="color: #666; margin: 0;">متوسط الرصيد</h6>
-                    <h3 style="color: #ff9800; margin: 10px 0 0 0;">{{ number_format($treasuries->avg('balance'), 2) }} ج.م</h3>
                 </div>
             </div>
         </div>
