@@ -95,15 +95,23 @@ jobs:
           ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "cd '$DEPLOY_PATH' && bash -s" <<'SCRIPT'
           set -euo pipefail
 
-          # PHP dependencies — the host provides composer + PHP 8.2
+          # The host CLI php disables proc_open via disable_functions, which
+          # breaks composer's post-autoload scripts (artisan package:discover
+          # uses Symfony Process). Override it for every php invocation.
+          PHP="php -d disable_functions="
+
+          # PHP dependencies — the host provides composer. Scripts run
+          # explicitly below with the proc_open override.
           export COMPOSER_HOME="$HOME/.composer"
-          composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+          composer install --no-dev --optimize-autoloader --no-interaction \
+            --no-progress --no-scripts
+          $PHP artisan package:discover --ansi
 
           # DATABASE SAFETY: additive migrations only.
           # NEVER migrate:fresh / db:wipe / db:seed on this server.
-          php artisan migrate --force --no-interaction
+          $PHP artisan migrate --force --no-interaction
 
-          php artisan optimize:clear
+          $PHP artisan optimize:clear
 
           # Runtime dirs. No storage:link — symlinks are blocked on this
           # host (see HOSTING_NOTES.md; public/storage serves the files).
@@ -118,9 +126,11 @@ jobs:
           code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$SITE_URL/login")
           [ "$code" = 200 ] || { echo "::error::Blade app /login returned $code"; exit 1; }
 
-          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$SITE_URL/app")
-          [ "$code" = 200 ] || { echo "::error::SPA /app returned $code"; exit 1; }
-          curl -sS --max-time 30 "$SITE_URL/app" | grep -q '<app-root>' \
+          # /app 301-redirects to /app/ (Apache DirectorySlash on the real
+          # app/ code dir) — follow it and expect the SPA shell.
+          curl -sSLf --max-time 30 "$SITE_URL/app" -o /tmp/spa.html \
+            || { echo "::error::SPA /app is not reachable"; exit 1; }
+          grep -q '<app-root>' /tmp/spa.html \
             || { echo "::error::/app did not serve the SPA index.html"; exit 1; }
 
           # POST-only API route: a GET must not be 404 (missing route) or 500
