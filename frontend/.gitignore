@@ -1,0 +1,13 @@
+/node_modules
+/dist
+/.angular
+coverage
+*.log
+.DS_Store
+playwright-report
+test-results
+.angular/cache/
+build.txt
+build.log
+serve.log
+b.txt

@@ -1,0 +1,275 @@
+/* The ledger table (plan 11.1): hairline rules, margin double-rule, decimal-aligned numerals */
+.ledger-table {
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+}
+
+/* widened columns (expand resize mode) scroll instead of blowing out the page */
+.ledger-table .p-datatable-table-container {
+  overflow-x: auto;
+}
+
+/* fixed layout: column widths are exact — saved/specified widths are honored
+   verbatim (auto layout would redistribute them), cells clip gracefully */
+.ledger-table .p-datatable-table {
+  table-layout: fixed;
+}
+
+.ledger-table .p-datatable-table td,
+.ledger-table .p-datatable-table th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ledger-table__header {
+  padding: var(--space-2) var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  background: var(--color-surface-inset);
+  border-block-end: 1px solid var(--color-hairline);
+}
+
+.ledger-table__title {
+  font-weight: 600;
+  margin-inline-end: auto;
+}
+
+.ledger-table__summary {
+  padding: var(--space-2) var(--space-4);
+  border-block-start: 1px solid var(--color-hairline);
+  background: var(--color-surface-inset);
+  font-size: var(--text-xs);
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* numeric cells: shared decimal edge, LTR-isolated */
+.ledger-table__cell-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* hairline horizontal rules — no vertical grid lines */
+.ledger-table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.ledger-table th {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  border-block-end: 1.5px solid var(--color-margin-rule);
+  white-space: nowrap;
+}
+
+.ledger-table td {
+  padding: var(--space-2) var(--space-3);
+  border-block-end: 1px solid var(--color-hairline);
+  font-size: var(--text-sm);
+}
+
+/* the double margin rule on the reading-start side (right in RTL) */
+.ledger-table tbody tr td:first-child {
+  box-shadow: inset 3px 0 0 0 var(--color-hairline), inset 4px 0 0 0 var(--color-margin-rule);
+}
+
+.ledger-table tbody tr:hover td {
+  background: var(--color-surface-raised);
+}
+
+.ledger-table--compact td {
+  padding-block: var(--space-1);
+}
+
+/* flash once for newly created rows (plan 12.2) */
+.ledger-table__row-flash td {
+  animation: ledger-flash 900ms var(--ease-out) 1;
+}
+
+@keyframes ledger-flash {
+  0% {
+    background-color: var(--color-primary-soft);
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
+
+.ledger-table__actions {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+}
+
+/* Phones: the SAME table as desktop — one layout everywhere — inside a
+   horizontally scrollable container instead of a stacked-cards variant */
+.ledger-table__stacked {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .ledger-table .p-datatable-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ledger-table table {
+    min-width: max-content;
+  }
+
+  .ledger-table th,
+  .ledger-table td {
+    white-space: nowrap;
+  }
+
+  .ledger-table .p-paginator {
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+}
+
+.ledger-table__empty {
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+/* ── Sortable / resizable / reorderable columns ────────────────── */
+.ledger-table th {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.ledger-table th:hover {
+  color: var(--color-text);
+}
+
+.ledger-table__header-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* resize handle — PrimeNG 20 class names */
+.ledger-table th .p-datatable-column-resizer {
+  position: absolute;
+  inset-inline-end: -4px;
+  top: 0;
+  height: 100%;
+  width: 8px;
+  cursor: col-resize;
+  background: transparent;
+}
+
+/* RTL: move the handle to the column's RIGHT edge so "drag away from the
+   row start = widen" matches PrimeNG's LTR width math */
+[dir='rtl'] .ledger-table th .p-datatable-column-resizer {
+  inset-inline-end: auto;
+  inset-inline-start: -4px;
+}
+
+.ledger-table th .p-datatable-column-resizer:hover,
+.ledger-table th .p-datatable-column-resizer:active,
+.ledger-table .p-datatable-column-resize-indicator {
+  background: var(--color-primary);
+}
+
+/* reorder cursor */
+.ledger-table th.p-reorderable-column {
+  cursor: grab;
+}
+
+.ledger-table th.p-reorderable-column:active {
+  cursor: grabbing;
+}
+
+/* sort icon */
+.ledger-table th .p-sortable-column-icon {
+  font-size: 10px;
+  margin-inline-start: 2px;
+  opacity: 0.5;
+}
+
+.ledger-table th.p-highlight .p-sortable-column-icon {
+  opacity: 1;
+  color: var(--color-primary);
+}
+
+/* global filter input in header */
+.ledger-table__filter {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-control-border);
+  border-radius: var(--radius-s);
+  font-size: var(--text-xs);
+  background: var(--color-surface-inset);
+  color: var(--color-text);
+  width: 140px;
+  transition: width var(--dur-base) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+
+.ledger-table__filter:focus {
+  width: 200px;
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.ledger-table__filter::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* row that deep-links somewhere (e.g. notifications) */
+.ledger-table .ledger-table__row--link {
+  cursor: pointer;
+}
+
+.ledger-table .ledger-table__row--link:hover td {
+  background: var(--color-surface-inset);
+}
+
+/* drag ghost */
+.ledger-table th.p-dragging {
+  opacity: 0.5;
+}
+
+/* column reorder indicator */
+.ledger-table .p-reorder-indicator-up,
+.ledger-table .p-reorder-indicator-down {
+  position: absolute;
+  color: var(--color-primary);
+  font-size: 10px;
+}
+
+.ledger-table__spacer {
+  flex: 1;
+  min-width: var(--space-2);
+}
+
+/* ── Ledger table inside a card (detail pages) ─────────────────── */
+.ledger-table--borderless {
+  border: 0;
+  border-radius: 0;
+}
+
+.ledger-table--borderless tfoot .ledger-table__total td {
+  font-weight: 700;
+  border-block-start: 2px solid var(--color-margin-rule);
+  border-block-end: 0;
+  padding-block: var(--space-3);
+}
+
+/* columns that cannot sort (computed values) — no pointer, no hover hint */
+.ledger-table th.ledger-table__th--nosort {
+  cursor: default;
+}

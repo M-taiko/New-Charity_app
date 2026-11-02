@@ -1,0 +1,22 @@
+.key-value-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-2) var(--space-6);
+}
+
+.key-value-list__item {
+  display: flex;
+  flex-direction: column;
+  border-inline-start: 2px solid var(--color-margin-rule);
+  padding-inline-start: var(--space-2);
+}
+
+.key-value-list__key {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.key-value-list__value {
+  font-size: var(--text-sm);
+  min-height: 1.4em;
+}

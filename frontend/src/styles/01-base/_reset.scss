@@ -1,0 +1,171 @@
+// Minimal reset + document defaults. Logical properties only (plan 15.7).
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: 1.7;
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+// Native UI follows the palette (10.1.6)
+::selection {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-hairline);
+  border-radius: var(--radius-m);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-inset);
+}
+
+
+/* ── All SVG icons: no fill, stroke follows parent color ──────── */
+/* This must be global because SVGs appear in many components     */
+/* that don't use the <app-icon> wrapper component.               */
+svg {
+  &[viewBox] {
+    display: inline-block;
+    vertical-align: middle;
+  }
+}
+
+/* Every SVG that references the sprite gets outline-style icons */
+svg:has(use[href*='sprite.svg']) {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Inline SVGs in buttons and links also follow parent color */
+button svg,
+a svg,
+.sidebar__link svg,
+.topbar__icon-btn svg,
+.bottom-nav__item svg,
+.notification-bell svg,
+.login__eye svg,
+.login__input-icon svg,
+.login__error svg,
+.stat-tile__label svg,
+.empty-state svg {
+  fill: none;
+  stroke: currentColor;
+}
+
+/* PrimeNG icons (pi pi-*) inherit button color */
+.p-button .pi {
+  color: inherit;
+}
+
+// ── Scroll lock when a modal overlay is open (Chrome 105+ `:has()`) ──
+body:has(.p-dialog-mask),
+body:has(.p-sidebar-mask) {
+  overflow: hidden;
+}
+
+// ── PrimeNG overlay positioning (appendTo="body" — needs fixed z-index) ──
+.p-select-overlay,
+.p-menu,
+.p-dialog,
+.p-datepicker-panel {
+  font-family: var(--font-ui);
+}
+
+// ── Dark mode overlays use the mid surface, not PrimeNG default grey ──
+
+
+/* ── Skip to content (a11y) — visible only on keyboard focus ── */
+.skip-link {
+  position: fixed;
+  inset-block-start: var(--space-2);
+  inset-inline-start: var(--space-2);
+  z-index: 9999;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  border-radius: var(--radius-m);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* ── No underlines anywhere: links, hints, all states ── */
+a,
+a:hover,
+a:focus,
+a:visited,
+a:active,
+u,
+.text-link,
+[role='link'] {
+  text-decoration: none;
+}

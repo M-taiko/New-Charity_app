@@ -21,18 +21,18 @@ class ReportController extends Controller
     {
         $this->authorize('manage_treasury');
 
-        // T33: التوجيه ونطاق التاريخ المختاران (يُحفظان في رابط الصفحة)
-        $directionId = (int) $request->input('direction') ?: null;
-        if ($directionId && !ExpenseCategory::whereKey($directionId)->exists()) {
-            $directionId = null;
-        }
-        $directionItemId = (int) $request->input('item') ?: null;
-        $directionDateFrom = $request->input('date_from');
-        $directionDateTo = $request->input('date_to');
+        // أرقام المصروفات الكلية (بلا تصفية) + بطاقة المحافظات (T34)
+        $directionFigures = $this->directionStats->figures(null, null);
 
-        // أرقام المصروفات المتأثرة بالتوجيه/الفترة (بلا توجيه تساوي قيمها الأصلية)
-        $directionFigures = $this->directionStats->figures($directionId, $directionItemId, $directionDateFrom, $directionDateTo);
-        $directionExplorer = $this->directionStats->explorer($directionId, $directionItemId, $directionDateFrom, $directionDateTo);
+        // فئات المستوى الأول بمجاميعها (عبر المساعد المشترك) لرسم المصروفات حسب الفئة
+        $expensesByCategory = collect($this->directionStats->explorer(null, null)['children'])
+            ->map(fn ($child) => [
+                'id' => $child['id'],
+                'name' => $child['name'],
+                'amount' => $child['amount'],
+            ])
+            ->filter(fn ($cat) => $cat['amount'] > 0)
+            ->values();
 
         // Treasury data
         $treasury = Treasury::first();
@@ -53,7 +53,6 @@ class ReportController extends Controller
         $expensesToday = $directionFigures['today'];
         $expensesThisMonth = $directionFigures['this_month'];
         $expensesThisYear = $directionFigures['this_year'];
-        $periodExpenses = $directionFigures['period_total'];
 
         $socialCaseExpenses = Expense::where('type', 'social_case')->sum('amount');
         $custodyExpenses = Expense::where('source', 'custody')->sum('amount');
@@ -66,8 +65,7 @@ class ReportController extends Controller
         $rejectedCases = SocialCase::where('status', 'rejected')->count();
         $socialCaseSpent = Expense::where('type', 'social_case')->sum('amount');
 
-        // T33: رسم "المصروفات حسب التوجيه" أصبح مستكشف التوجيه (doughnut + قائمة + مسار تنقل)
-        // يُغذَّى من directionExplorer ويحفر للأسفل داخل الصفحة دون مغادرتها
+        // رسم "المصروفات حسب الفئة": فئات الجذر بمجاميعها — النقر يفتح صفحة تحليل التوجيهات
 
         // Expenses by date (last 7 days) — T33: تتبع التوجيه ونطاق التاريخ
         try {
@@ -156,7 +154,6 @@ class ReportController extends Controller
             'expensesToday',
             'expensesThisMonth',
             'expensesThisYear',
-            'periodExpenses',
             'socialCaseExpenses',
             'custodyExpenses',
             'treasuryExpenses',
@@ -165,17 +162,13 @@ class ReportController extends Controller
             'pendingCases',
             'rejectedCases',
             'socialCaseSpent',
+            'expensesByCategory',
             'expensesByDate',
             'agentsWithCustodies',
             'averageCustodyAmount',
             'custodiesByAgents',
             'casesByResearchers',
-            'directionId',
-            'directionItemId',
-            'directionDateFrom',
-            'directionDateTo',
-            'directionFigures',
-            'directionExplorer'
+            'directionFigures'
         ));
     }
 

@@ -1,0 +1,38 @@
+.form-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-l);
+  padding: var(--space-5);
+  margin-block-end: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.form-section__title {
+  font-size: var(--text-md);
+  font-weight: 600;
+  padding-block-end: var(--space-2);
+  border-block-end: 1px solid var(--color-hairline);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.form-section__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+
+/* grid children may not force tracks wider than their cell (RTL blowout) */
+.form-section__grid > * {
+  min-width: 0;
+}
+
+.form-section__grid .p-inputnumber,
+.form-section__grid .p-inputtext,
+.form-section__grid .p-select,
+.form-section__grid .p-datepicker {
+  width: 100%;
+}

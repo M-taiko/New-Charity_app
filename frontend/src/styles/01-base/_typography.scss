@@ -1,0 +1,30 @@
+// Typography (plan 10.3): numerals are heroes — display face, tabular figures.
+body {
+  font-variant-numeric: tabular-nums;
+}
+
+.u-display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+// Bidi isolation for numbers, codes and amounts inside Arabic sentences (23 RTL)
+.u-bidi {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+
+h1 {
+  font-size: var(--text-xl);
+}
+
+h2 {
+  font-size: var(--text-lg);
+}
+
+h3 {
+  font-size: var(--text-md);
+}

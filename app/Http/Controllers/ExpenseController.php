@@ -170,7 +170,7 @@ class ExpenseController extends Controller
                 // Handle file upload
                 $attachmentPath = null;
                 if ($request->hasFile('attachment')) {
-                    $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+                    $attachmentPath = $request->file('attachment')->store('expense_attachments');
                 }
 
                 $lineItems = LineItemsSanitizer::fromRequest($request);
@@ -243,7 +243,7 @@ class ExpenseController extends Controller
                 // Handle file upload
                 $attachmentPath = null;
                 if ($request->hasFile('attachment')) {
-                    $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+                    $attachmentPath = $request->file('attachment')->store('expense_attachments');
                 }
 
                 $lineItems = LineItemsSanitizer::fromRequest($request);
@@ -386,7 +386,7 @@ class ExpenseController extends Controller
             $oldAttachment = $expense->attachment;
             $attachmentPath = $expense->attachment;
             if ($request->hasFile('attachment')) {
-                $attachmentPath = $request->file('attachment')->store('expense_attachments', 'public');
+                $attachmentPath = $request->file('attachment')->store('expense_attachments');
             } elseif ($request->boolean('remove_attachment') && $expense->attachment) {
                 $attachmentPath = null;
             }
@@ -703,13 +703,23 @@ class ExpenseController extends Controller
 
     public function downloadAttachment(Expense $expense)
     {
-        $this->authorize('spend_money');
+        // IDOR: attachments follow the expense-show policy (viewers of all or the owner)
+        $user = auth()->user();
+        abort_unless(
+            $user->hasRole('مدير') || $user->hasRole('محاسب') || $user->hasRole('مشرف') || $expense->user_id === $user->id,
+            403,
+            'غير مصرح لك بتحميل مرفق هذا المصروف'
+        );
 
         if (!$expense->attachment) {
             abort(404, 'لا يوجد مرفق لهذا المصروف');
         }
 
-        $filePath = storage_path('app/public/' . $expense->attachment);
+        // new uploads live on the private disk; legacy ones under app/public
+        $privatePath = storage_path('app/' . $expense->attachment);
+        $filePath = file_exists($privatePath)
+            ? $privatePath
+            : storage_path('app/public/' . $expense->attachment);
 
         if (!file_exists($filePath)) {
             abort(404, 'الملف غير موجود');

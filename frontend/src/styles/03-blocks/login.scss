@@ -1,0 +1,560 @@
+/* ═══ Login — the Naguib Selim Charity identity on full display (plan 9, 12.2) ═══
+   Ink-brown side panel with repeating eight-point star lattice,
+   cream form panel, staggered reveal, eight colors only. */
+
+.login {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 5fr 4fr;
+}
+
+/* ── Left panel: ink brown + star lattice ─────────────────────── */
+.login__side {
+  background: var(--palette-brand);
+  color: var(--palette-cream);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-10) var(--space-8);
+  position: relative;
+  overflow: hidden;
+}
+
+.login__lattice {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* the double margin rule on the reading-start edge (right in RTL) */
+.login__margin-rule {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: var(--space-6);
+  width: 0;
+  border-inline-start: 2px solid var(--palette-taupe);
+  border-inline-end: 1px solid var(--palette-taupe);
+  margin-inline-start: 2px;
+  opacity: 0.5;
+}
+
+.login__side-content {
+  position: relative;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  max-width: 380px;
+}
+
+.login__monogram-wrap {
+  padding: var(--space-3);
+  border: 2px solid var(--palette-taupe);
+  border-radius: var(--radius-l);
+  position: relative;
+  animation: login-stamp-in 400ms var(--ease-out) both;
+}
+
+.login__monogram-wrap::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid var(--palette-taupe);
+  border-radius: calc(var(--radius-l) - 2px);
+}
+
+.login__monogram {
+  display: block;
+}
+
+.login__side-title {
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--palette-cream);
+  animation: login-slide-up 400ms 100ms var(--ease-out) both;
+}
+
+/* the triple-dot ledger separator */
+.login__rule-sep {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  animation: login-fade-in 400ms 200ms var(--ease-out) both;
+}
+
+.login__rule-sep span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--palette-taupe);
+}
+
+.login__rule-sep span:nth-child(2) {
+  background: var(--palette-light);
+}
+
+.login__side-tagline {
+  font-size: var(--text-md);
+  line-height: 1.8;
+  color: var(--palette-sand);
+  animation: login-slide-up 400ms 250ms var(--ease-out) both;
+}
+
+.login__side-features {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block-start: var(--space-4);
+  animation: login-slide-up 400ms 350ms var(--ease-out) both;
+}
+
+.login__feature {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: start;
+  font-size: var(--text-sm);
+  color: var(--palette-sand);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--palette-taupe);
+  border-radius: var(--radius-m);
+  background: var(--palette-ink);
+  transition: border-color var(--dur-base) var(--ease-out);
+}
+
+.login__feature svg {
+  color: var(--palette-taupe);
+  flex-shrink: 0;
+}
+
+.login__side-version {
+  position: absolute;
+  bottom: var(--space-4);
+  inset-inline-start: 0;
+  width: 100%;
+  text-align: center;
+  font-size: var(--text-2xs);
+  color: var(--palette-light);
+  opacity: 0.7;
+}
+
+/* ── Right panel: cream paper + form card ─────────────────────── */
+.login__form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4);
+  background: var(--palette-cream);
+  position: relative;
+}
+
+/* subtle texture: a faint grid suggesting ledger paper */
+.login__form-side::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to inline-end, transparent 47px, var(--palette-sand) 47px, var(--palette-sand) 48px, transparent 48px),
+    linear-gradient(to block-end, transparent 47px, var(--palette-sand) 47px, var(--palette-sand) 48px, transparent 48px);
+  background-size: 48px 48px;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.login__form {
+  width: min(420px, 100%);
+  background: var(--palette-white);
+  border: 1px solid var(--palette-light);
+  border-radius: var(--radius-l);
+  padding: var(--space-8) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: relative;
+  box-shadow: 4px 4px 0 var(--palette-sand);
+  animation: login-form-reveal 500ms 150ms var(--ease-out) both;
+}
+
+.login__form-brand {
+  display: flex;
+  justify-content: center;
+  margin-block-end: var(--space-1);
+}
+
+.login__form-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  text-align: center;
+  color: var(--palette-ink);
+  line-height: 1.3;
+}
+
+.login__form-subtitle {
+  font-size: var(--text-xs);
+  text-align: center;
+  color: var(--palette-mid);
+  margin-block: calc(-1 * var(--space-2)) 0;
+}
+
+/* ── Inputs with icons ─────────────────────────────────────────── */
+.login__input-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.login__label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--palette-ink);
+}
+
+.login__input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.login__input-icon {
+  position: absolute;
+  inset-inline-start: var(--space-3);
+  color: var(--palette-light);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.login__input {
+  width: 100%;
+  /* icon on inline-start, eye toggle on inline-end */
+  padding: var(--space-3);
+  padding-inline-start: calc(var(--space-3) + var(--space-6) + var(--space-1));
+  padding-inline-end: calc(var(--space-3) + var(--space-6));
+  border: 1.5px solid var(--palette-light);
+  border-radius: var(--radius-m);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  color: var(--palette-ink);
+  background: var(--palette-cream);
+  outline: none;
+  transition:
+    border-color var(--dur-base) var(--ease-out),
+    background-color var(--dur-base) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out);
+}
+
+.login__input:focus {
+  border-color: var(--color-control-border);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.login__input::placeholder {
+  color: var(--palette-taupe);
+  font-size: var(--text-xs);
+}
+
+.login__input:invalid:not(:placeholder-shown) {
+  border-color: var(--palette-ink);
+}
+
+/* ── Eye toggle (show/hide password) ───────────────────────────── */
+.login__eye {
+  position: absolute;
+  inset-inline-end: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--palette-light);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+}
+
+.login__eye:hover {
+  color: var(--palette-brand);
+  background: var(--palette-sand);
+}
+
+.login__eye:focus-visible {
+  outline: 2px solid var(--palette-brand);
+  outline-offset: 1px;
+}
+
+/* ── Remember checkbox ─────────────────────────────────────────── */
+.login__remember {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--palette-mid);
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+  }
+
+  .login__checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .login__checkbox-box {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--color-control-border);
+    border-radius: 5px;
+    background: var(--color-surface-inset);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: border-color 120ms ease, background-color 120ms ease;
+    flex-shrink: 0;
+  }
+
+  .login__remember:hover .login__checkbox-box {
+    border-color: var(--color-primary);
+  }
+
+  .login__checkbox:checked + .login__checkbox-box {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  .login__checkbox:checked + .login__checkbox-box::after {
+    content: '';
+    position: absolute;
+    width: 5px;
+    height: 9px;
+    border: solid var(--color-on-primary);
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+    margin-top: -2px;
+  }
+
+  .login__checkbox:focus-visible + .login__checkbox-box {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+/* ── Submit button ─────────────────────────────────────────────── */
+.login__submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--palette-brand);
+  color: var(--palette-white);
+  border: none;
+  border-radius: var(--radius-m);
+  font-family: inherit;
+  font-size: var(--text-md);
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition:
+    background-color var(--dur-base) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+
+.login__submit:hover:not(:disabled) {
+  background: var(--palette-ink);
+}
+
+.login__submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login__submit:disabled {
+  background: var(--palette-light);
+  color: var(--palette-taupe);
+  cursor: not-allowed;
+}
+
+.login__submit:focus-visible {
+  outline: 2px solid var(--palette-ink);
+  outline-offset: 2px;
+}
+
+/* spinner */
+.login__spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--palette-taupe);
+  border-top-color: var(--palette-white);
+  border-radius: 50%;
+  animation: login-spin 0.8s linear infinite;
+}
+
+/* ── Error banner ──────────────────────────────────────────────── */
+.login__error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 2px solid var(--palette-ink);
+  border-radius: var(--radius-m);
+  background: var(--palette-sand);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--palette-ink);
+  animation: login-shake 300ms var(--ease-in-out);
+}
+
+.login__error svg {
+  flex-shrink: 0;
+  margin-block-start: 2px;
+}
+
+/* ── Ledger rule + footer ──────────────────────────────────────── */
+.login__ledger-rule {
+  height: 0;
+  border-block-start: 1px solid var(--palette-light);
+  position: relative;
+  margin-block: var(--space-1);
+}
+
+.login__ledger-rule::after {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 2px;
+  width: 100%;
+  border-block-start: 1px solid var(--palette-sand);
+}
+
+.login__footer-note {
+  font-size: var(--text-2xs);
+  text-align: center;
+  color: var(--palette-light);
+}
+
+/* ── Animations (staggered, one-shot, motion-safe) ─────────────── */
+@keyframes login-stamp-in {
+  0% {
+    transform: scale(1.1) rotate(-2deg);
+    opacity: 0;
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes login-slide-up {
+  0% {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes login-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes login-form-reveal {
+  0% {
+    transform: translateY(24px) scale(0.98);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes login-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes login-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  75% {
+    transform: translateX(4px);
+  }
+}
+
+/* respect reduced motion */
+:root[data-motion='off'] .login__side-content > *,
+:root[data-motion='off'] .login__form {
+  animation: none !important;
+}
+
+:root[data-motion='lite'] .login__side-content > *,
+:root[data-motion='lite'] .login__form {
+  animation-duration: 0.01ms !important;
+}
+
+/* ── Mobile: hide brand panel, show compact header ────────────── */
+@media (max-width: 900px) {
+  .login {
+    grid-template-columns: 1fr;
+  }
+
+  .login__side {
+    display: none;
+  }
+
+  .login__form-side {
+    padding: var(--space-6) var(--space-4);
+    min-height: 100vh;
+  }
+
+  .login__form-side::before {
+    display: none;
+  }
+
+  .login__form {
+    padding: var(--space-6) var(--space-5);
+    box-shadow: 2px 2px 0 var(--palette-sand);
+  }
+
+  .login__form-brand {
+    display: flex;
+  }
+}
+
+@media (min-width: 901px) {
+  .login__form-brand {
+    display: none;
+  }
+}

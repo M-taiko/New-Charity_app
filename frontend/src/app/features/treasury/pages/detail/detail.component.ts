@@ -1,0 +1,197 @@
+import { ChangeDetectionStrategy, Component, computed, inject, input, resource, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { TranslatePipe } from '@ngx-translate/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
+import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
+import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
+import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
+import { MoneyPipe } from '@shared/pipes/money.pipe';
+import { DatetimePipe } from '@shared/pipes/datetime.pipe';
+import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { ItemResponse, ListResponse } from '@shared/models/api.models';
+
+interface TreasuryDetail {
+  id: number;
+  name: string;
+  balance: string;
+  notes: string | null;
+  created_at: string | null;
+  stats: { total_in: string; total_out: string; total_transactions: number };
+  transactions: ListResponse<TransactionRow>;
+}
+
+interface TransactionRow {
+  id: number;
+  type: string;
+  amount: string;
+  description: string | null;
+  user: string | null;
+  date: string | null;
+}
+
+/** Treasury details and transactions (plan 20: replaces /treasury/{id}). */
+@Component({
+  selector: 'app-treasury-detail',
+  standalone: true,
+  imports: [
+    TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent,
+    StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective, EmptyStateComponent,
+    PrintSheetComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
+  ],
+  template: `
+    @if (safeValue(); as treasury) {
+      <app-print-sheet [title]="'treasury.detail.title' | translate">
+        <app-page-header [title]="treasury.name" [subtitle]="treasury.notes ?? ''">
+          <div actions class="u-flex u-gap-2">
+            <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="print()" />
+            <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/treasury', treasury.id, 'edit']" />
+          </div>
+        </app-page-header>
+
+        <div class="kpi-grid">
+          <app-stat-tile [label]="'treasury.list.balance'" [value]="treasury.balance" [money]="true" />
+          <app-stat-tile [label]="'treasury.detail.total_in'" [value]="treasury.stats.total_in" [money]="true" />
+          <app-stat-tile [label]="'treasury.detail.total_out'" [value]="treasury.stats.total_out" [money]="true" />
+          <app-stat-tile [label]="'treasury.list.transactions_count'" [value]="treasury.stats.total_transactions" />
+        </div>
+
+        <app-data-table
+          [title]="'treasury.detail.transactions' | translate"
+          [columns]="columns"
+          [rows]="treasury.transactions.data"
+          [total]="treasury.transactions.meta.total"
+          [perPage]="params().per_page"
+          (pageChange)="onPage($event)"
+        >
+          <div toolbar class="u-flex u-gap-2">
+            <p-select appendTo="body"
+              [options]="typeOptions ?? []"
+              optionLabel="label"
+              optionValue="value"
+              [(ngModel)]="typeFilter" name="typeFilter"
+              (ngModelChange)="onTypeChange()"
+              [placeholder]="'common.type' | translate"
+              size="small"
+            />
+          </div>
+          <ng-template appTableBody let-row>
+            <tr class="ledger-table__row">
+              <td appTableCol="date" class="u-bidi">{{ row.date | datetime }}</td>
+              <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
+              <td appTableCol="description">{{ row.description }}</td>
+              <td appTableCol="amount" class="ledger-table__cell-num">{{ row.amount | money }}</td>
+              <td appTableCol="user">{{ row.user?.name ?? '—' }}</td>
+            </tr>
+            <tr class="ledger-table__stacked">
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_date' | translate }}</span>
+                <span class="u-bidi">{{ row.date | datetime }}</span>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_type' | translate }}</span>
+                <span>{{ row.type | enumLabel: 'transaction_type' }}</span>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
+                <span class="u-bidi">{{ row.amount | money }}</span>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_description' | translate }}</span>
+                <span>{{ row.description }}</span>
+              </div>
+            </tr>
+          </ng-template>
+          <div empty>
+            <app-empty-state [title]="'treasury.detail.empty' | translate" [text]="'common.no_data' | translate" />
+          </div>
+        </app-data-table>
+      </app-print-sheet>
+    } @else if (data.isLoading()) {
+      <div class="skeleton skeleton--title u-mb-4"></div>
+      <div class="skeleton skeleton--tile"></div>
+    } @else {
+      <app-empty-state [title]="'common.not_found' | translate" [text]="'common.not_found_text' | translate" />
+
+    }
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class TreasuryDetailPage {
+  private http = inject(HttpClient);
+
+  id = input.required<number>();
+  typeFilter = signal('all');
+  params = signal<{ page: number; per_page: number }>({ page: 1, per_page: 25 });
+
+  readonly tableKey = 'detail.component';
+
+  readonly columns = [
+    { field: 'date', header: 'treasury.detail.col_date', sortable: true },
+    { field: 'type', header: 'treasury.detail.col_type', sortable: true },
+    { field: 'description', header: 'treasury.detail.col_description', sortable: true },
+    { field: 'amount', header: 'common.amount', numeric: true, sortable: true },
+    { field: 'user', searchField: 'user.name', header: 'treasury.detail.col_user', sortable: true },
+  ];
+
+  readonly typeOptions = [
+    { label: 'الكل', value: 'all' },
+    { label: 'تبرع', value: 'donation' },
+    { label: 'صرف عهدة', value: 'custody_out' },
+    { label: 'رد عهدة', value: 'custody_return' },
+    { label: 'مصروف', value: 'expense' },
+    { label: 'تحويل وارد', value: 'transfer_in' },
+    { label: 'تحويل صادر', value: 'transfer_out' },
+  ];
+
+  data = resource<TreasuryDetail, void>({
+    loader: () =>
+      firstValueFrom(
+        this.http.get<ItemResponse<TreasuryDetail>>(`/treasury/${this.id()}`, {
+          params: clean({ id: this.id(), ...this.params(), type: this.typeFilter() }),
+        }),
+      ).then((res: ItemResponse<TreasuryDetail>) => res.data),
+  });
+
+  /** data.value() throws on an errored resource (e.g. 404) — null keeps the template alive */
+  readonly safeValue = computed(() => {
+    try {
+      return this.data.value() ?? null;
+    } catch {
+      return null;
+    }
+  });
+
+  onTypeChange(): void {
+    this.params.update((p) => ({ ...p, page: 1 }));
+    this.reload();
+  }
+
+  reload(): void {
+    this.data.reload();
+  }
+
+  onPage(event: { page: number; per_page: number }): void {
+    this.params.update((p) => ({ ...p, page: event.page, per_page: event.per_page }));
+    this.reload();
+  }
+
+  print(): void {
+    window.print();
+  }
+}
+
+function clean(params: Record<string, unknown>): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== 'all' && value !== null && value !== undefined) {
+      result[key] = String(value);
+    }
+  }
+  return result;
+}

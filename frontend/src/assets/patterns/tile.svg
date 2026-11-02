@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Eight-point star lattice, single hairline stroke, no fill/opacity (plan 9.3.7).
+       Stroke color comes from currentColor so the theme token drives it. -->
+  <symbol id="tile" viewBox="0 0 64 64">
+    <g fill="none" stroke="currentColor" stroke-width="1">
+      <path d="M32 6 38.5 25.5 58 32 38.5 38.5 32 58 25.5 38.5 6 32 25.5 25.5Z"/>
+      <path d="M32 14 36 28 50 32 36 36 32 50 28 36 14 32 28 28Z"/>
+      <path d="M4 4h8v8H4zM52 4h8v8h-8zM4 52h8v8H4zM52 52h8v8h-8z" opacity="1"/>
+      <circle cx="32" cy="32" r="3"/>
+    </g>
+  </symbol>
+  <use href="#tile" width="64" height="64" color="#BEAFA7"/>
+</svg>

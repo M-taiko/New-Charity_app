@@ -1,0 +1,6 @@
+# The Chrome 109 gate (plan 3.4): Windows 7 users run Chrome 109, Edge 109, Firefox ESR 115.
+# Safari 15.4 covers iOS/macOS visitors. The build downlevels anything newer than these.
+chrome >= 109
+edge >= 109
+firefox >= 115
+safari >= 15.4

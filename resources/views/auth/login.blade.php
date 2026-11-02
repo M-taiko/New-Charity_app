@@ -411,5 +411,6 @@
             btn.disabled = true;
         });
     </script>
-</body>
+@include('partials.orientation-lock')
+    </body>
 </html>

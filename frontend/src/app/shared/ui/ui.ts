@@ -1,0 +1,23 @@
+/** The shared UI catalog barrel (plan 16.2) — the reuse-first entry point. */
+export { PageHeaderComponent } from './page-header/page-header.component';
+export { StatTileComponent } from './stat-tile/stat-tile.component';
+export { StatusStampComponent } from './status-stamp/status-stamp.component';
+export { DataTableComponent, TableBodyDirective, TableColumn, TablePageEvent } from './data-table/data-table.component';
+export { EmptyStateComponent } from './empty-state/empty-state.component';
+export { FormDialogComponent } from './form-dialog/form-dialog.component';
+export { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';
+export { DirectionTrailComponent } from './direction-trail/direction-trail.component';
+export { DirectionPickerComponent, DirectionSelection } from './direction-picker/direction-picker.component';
+export { BalanceRingComponent, RingSegment } from './balance-ring/balance-ring.component';
+export { FlowRibbonComponent, RibbonStep } from './flow-ribbon/flow-ribbon.component';
+export { TimelineComponent, TimelineEvent } from './timeline/timeline.component';
+export { ChartCardComponent, ChartSeries } from './chart-card/chart-card.component';
+export { KeyValueListComponent } from './key-value-list/key-value-list.component';
+export { ToastHostComponent } from './toast-host/toast-host.component';
+export { AttachmentFieldComponent } from './attachment-field/attachment-field.component';
+export { LineItemsEditorComponent, LineItem } from './line-items-editor/line-items-editor.component';
+export { UserChipComponent } from './user-chip/user-chip.component';
+export { PrintSheetComponent } from './print-sheet/print-sheet.component';
+export { SegmentedBarComponent } from './segmented-bar/segmented-bar.component';
+export { IconComponent } from './icon/icon.component';
+export { CanDirective } from '@core/permissions/permissions';

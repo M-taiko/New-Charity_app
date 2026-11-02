@@ -18,24 +18,25 @@ class DashboardController extends Controller
 
     public function index(Request $request): View
     {
-        $user = auth()->user();
+        return view('dashboard.modern-shortcuts', $this->buildDashboardData($request));
+    }
 
-        // T33: التوجيه المختار (يُحفظ في رابط الصفحة) — يُقبل فقط إن كانت الفئة موجودة
-        $directionId = (int) $request->input('direction') ?: null;
-        if ($directionId && !ExpenseCategory::whereKey($directionId)->exists()) {
-            $directionId = null;
-        }
-        $directionItemId = (int) $request->input('item') ?: null;
+    /**
+     * كل أرقام لوحة المعلومات في مصدر واحد — تستخدمها صفحة Blade ونقطة /api/v1 معاً
+     * @return array<string, mixed>
+     */
+    protected function buildDashboardData(Request $request): array
+    {
+        $user = auth()->user();
 
         // بيانات مشتركة
         $treasury        = Treasury::first();
         $activeCustodies = Custody::whereIn('status', ['accepted', 'active', 'partially_returned'])->count();
         $pendingCases    = SocialCase::where('status', 'pending')->count();
 
-        // T33: أرقام المصروفات عبر المساعد المشترك — بلا توجيه تساوي قيمها الأصلية
+        // أرقام المصروفات للعرض المالي (بلا تصفية توجيه — القيم الكلية)
         $isFinanceView = $user->hasRole('محاسب') || $user->hasRole('مدير') || $user->hasRole('مشرف');
-        $directionFigures = $isFinanceView ? $this->directionStats->figures($directionId, $directionItemId) : null;
-        $directionExplorer = $isFinanceView ? $this->directionStats->explorer($directionId, $directionItemId) : null;
+        $directionFigures = $isFinanceView ? $this->directionStats->figures(null, null) : null;
 
         $todayExpenses = $directionFigures['today'] ?? Expense::whereDate('created_at', today())->sum('amount');
         $totalSpent    = $directionFigures['grand_total'] ?? Expense::sum('amount');
@@ -55,6 +56,8 @@ class DashboardController extends Controller
                 'spent'          => $myCustodies->sum('spent'),
                 'returned'       => $myCustodies->sum('returned'),
                 'transferred_out' => $myCustodies->sum('transferred_out'),
+                // T26: المبلغ المجمّد لتحويلات معلقة
+                'pending_transfer_out' => $myCustodies->sum('pending_transfer_out'),
                 'pending_return' => $myCustodies->sum('pending_return'),
                 'remaining'      => $myCustodies->sum(fn($c) => $c->getRemainingBalance()),
             ];
@@ -86,7 +89,11 @@ class DashboardController extends Controller
             ];
         }
 
-        if (!$user->hasRole('مندوب') && !$user->hasRole('باحث اجتماعي')) {
+        // السنوات/الإحصاءات السنوية: لكل من ليس مندوبًا/باحثًا خالصًا —
+        // المدير لديه كل الأدوار في بيانات الإنتاج فلا يُستثنى
+        $pureAgent = $user->hasRole('مندوب') && ! $user->hasAnyRole(['مدير', 'محاسب']);
+        $pureResearcher = $user->hasRole('باحث اجتماعي') && ! $user->hasAnyRole(['مدير', 'محاسب']);
+        if (! $pureAgent && ! $pureResearcher) {
             // السنوات المتاحة بناءً على بيانات الخزينة والمصروفات
             $firstYear = (int) min(
                 Custody::min(\DB::raw('YEAR(created_at)')) ?? now()->year,
@@ -178,13 +185,13 @@ class DashboardController extends Controller
             usort($researchersStats, fn($a, $b) => $b['rating'] <=> $a['rating']);
         }
 
-        return view('dashboard.modern-shortcuts', compact(
+        return compact(
             'treasury', 'activeCustodies', 'pendingCases', 'todayExpenses', 'totalSpent',
             'totalCustodiesAmount', 'totalAssets', 'agentStats',
             'agentsStats', 'researchersStats', 'yearStats', 'selectedYear', 'availableYears',
             'researcherStats',
-            'directionId', 'directionItemId', 'directionFigures', 'directionExplorer'
-        ));
+            'directionFigures'
+        );
     }
 
     /**

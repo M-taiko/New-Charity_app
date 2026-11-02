@@ -1,0 +1,155 @@
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--color-surface);
+  border-inline-end: 1px solid var(--color-hairline);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  transition: width var(--dur-base) var(--ease-out);
+  z-index: 950;
+}
+
+.sidebar--collapsed {
+  width: var(--sidebar-w-collapsed);
+}
+
+.sidebar__brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-block-end: 1px solid var(--color-hairline);
+  min-height: var(--topbar-h);
+}
+
+.sidebar__brand-logo {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.sidebar__brand-name {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sidebar__group-label {
+  padding: var(--space-4) var(--space-4) var(--space-1);
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.sidebar--collapsed .sidebar__group-label,
+.sidebar--collapsed .sidebar__brand-name,
+.sidebar--collapsed .sidebar__link-label {
+  display: none;
+}
+
+/* collapsed: center the icons — no horizontal padding so 22px icons fit 64px */
+.sidebar--collapsed .sidebar__link {
+  justify-content: center;
+  padding-inline: 0;
+  margin-inline: var(--space-1);
+  border-inline-end: 0;
+  border-radius: var(--radius-m);
+}
+
+.sidebar--collapsed .sidebar__link--active {
+  border-inline-end: 0;
+}
+
+.sidebar--collapsed .sidebar__brand {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.sidebar--collapsed .sidebar__toggle svg {
+  transform: rotate(180deg);
+}
+
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  margin: 1px var(--space-2);
+  border-radius: var(--radius-m);
+  color: var(--color-text);
+  text-decoration: none;
+  white-space: nowrap;
+  border-inline-end: 3px solid transparent;
+}
+
+.sidebar__link:hover {
+  background: var(--color-surface-raised);
+}
+
+.sidebar__link--active {
+  background: var(--color-primary-soft);
+  border-inline-end-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.sidebar__link-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.sidebar__toggle {
+  margin-block-start: auto;
+  border-block-start: 1px solid var(--color-hairline);
+  border-radius: 0;
+  justify-content: center;
+  /* strip the browser's default button chrome — theme colors apply cleanly */
+  appearance: none;
+  background: transparent;
+  border-inline: 0;
+  border-block-end: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sidebar__toggle:hover {
+  background: var(--color-surface-raised);
+}
+
+.sidebar__toggle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+/* Phones: the sidebar is an overlay drawer opened from the topbar */
+@media (max-width: 1023px) {
+  .sidebar {
+    display: flex;
+    position: fixed;
+    inset-block: 0;
+    /* RTL: inline-START is the right edge — the drawer opens from the side
+       the sidebar lives on, then slides +100% off-screen */
+    inset-inline-start: 0;
+    width: min(300px, 84vw);
+    /* +16px clears the classic scrollbar sliver on Windows */
+    transform: translateX(calc(100% + 16px));
+    transition: transform var(--dur-base) var(--ease-out);
+    box-shadow: -6px 0 24px rgb(0 0 0 / 0.25);
+    z-index: 1200;
+  }
+
+  .sidebar.sidebar--open {
+    transform: translateX(0);
+  }
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.45);
+  z-index: 1100;
+}

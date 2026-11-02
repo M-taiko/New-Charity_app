@@ -1,0 +1,335 @@
+/* ═══ Visual polish — hover, checkboxes, icons, scrollbars, placeholders ═══
+   Explicit color rules for every interactive element in both themes. */
+
+/* ── Scrollbars ─────────────────────────────────────────────────── */
+:root[data-theme='light'] {
+  &::-webkit-scrollbar { width: 10px; height: 10px; }
+  &::-webkit-scrollbar-track { background: var(--palette-cream); }
+  &::-webkit-scrollbar-thumb {
+    background: var(--palette-taupe);
+    border-radius: 6px;
+    border: 2px solid var(--palette-cream);
+    &:hover { background: var(--palette-light); }
+  }
+  scrollbar-color: var(--palette-taupe) var(--palette-cream);
+}
+
+:root[data-theme='dark'] {
+  &::-webkit-scrollbar { width: 10px; height: 10px; }
+  &::-webkit-scrollbar-track { background: var(--dark-0); }
+  &::-webkit-scrollbar-thumb {
+    background: var(--dark-4);
+    border-radius: 6px;
+    border: 2px solid var(--dark-0);
+    &:hover { background: var(--dark-5); }
+  }
+  scrollbar-color: var(--dark-4) var(--dark-0);
+}
+
+/* ── Input placeholders ─────────────────────────────────────────── */
+:root[data-theme='light'] {
+  .p-inputtext::placeholder,
+  .p-textarea::placeholder,
+  .login__input::placeholder,
+  .ledger-table__filter::placeholder {
+    color: var(--palette-light);
+    opacity: 1;
+  }
+}
+
+:root[data-theme='dark'] {
+  .p-inputtext::placeholder,
+  .p-textarea::placeholder,
+  .login__input::placeholder,
+  .ledger-table__filter::placeholder {
+    color: var(--dark-5);
+    opacity: 1;
+  }
+}
+
+/* ── Checkboxes — one unified design app-wide (same as the login page) ── */
+/* PrimeNG 20 marks the root with data-p-checked; a hidden native input sits
+   inside — both selectors cover every state. */
+
+.p-checkbox {
+  width: 22px;
+  height: 22px;
+  position: relative;
+}
+
+.p-checkbox .p-checkbox-box {
+  width: 22px;
+  height: 22px;
+  background: var(--color-surface-inset);
+  border: 2px solid var(--color-control-border);
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.p-checkbox .p-checkbox-box:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+/* checked — PrimeNG attribute, native input, and legacy class */
+.p-checkbox[data-p-checked='true'] .p-checkbox-box,
+.p-checkbox input:checked + .p-checkbox-box,
+.p-checkbox .p-checkbox-box.p-highlight {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  box-shadow: none;
+}
+
+.p-checkbox[data-p-checked='true'] .p-checkbox-box::after,
+.p-checkbox input:checked + .p-checkbox-box::after,
+.p-checkbox .p-checkbox-box.p-highlight::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 9px;
+  border: solid var(--color-on-primary);
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+  margin-top: -2px;
+}
+
+.p-checkbox input:focus-visible + .p-checkbox-box {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.p-checkbox + span {
+  font-size: 14px;
+}
+
+/* ── Hover states ───────────────────────────────────────────────── */
+
+/* Sidebar links */
+:root[data-theme='light'] .sidebar__link {
+  color: var(--palette-ink);
+  &:hover {
+    background: var(--palette-sand);
+    color: var(--palette-ink);
+  }
+  &.sidebar__link--active {
+    background: var(--palette-sand);
+    border-inline-end-color: var(--palette-brand);
+    color: var(--palette-brand);
+  }
+}
+
+:root[data-theme='dark'] .sidebar__link {
+  color: var(--palette-taupe);
+  &:hover {
+    background: var(--dark-3);
+    color: var(--palette-cream);
+  }
+  &.sidebar__link--active {
+    background: var(--dark-3);
+    border-inline-end-color: var(--palette-cream);
+    color: var(--palette-cream);
+  }
+}
+
+/* Table rows */
+:root[data-theme='light'] .ledger-table tbody tr:hover td {
+  background: var(--palette-cream);
+}
+
+:root[data-theme='dark'] .ledger-table tbody tr:hover td {
+  background: var(--dark-3);
+}
+
+/* Table sortable column header hover */
+:root[data-theme='light'] .ledger-table th:hover {
+  color: var(--palette-brand);
+}
+
+:root[data-theme='dark'] .ledger-table th:hover {
+  color: var(--palette-cream);
+}
+
+/* Topbar icon buttons */
+:root[data-theme='light'] .topbar__icon-btn {
+  background: var(--palette-white);
+  border: 1px solid var(--palette-sand);
+  color: var(--palette-mid);
+  &:hover {
+    background: var(--palette-sand);
+    color: var(--palette-ink);
+  }
+}
+
+:root[data-theme='dark'] .topbar__icon-btn {
+  background: var(--dark-2);
+  border: 1px solid var(--dark-4);
+  color: var(--palette-taupe);
+  &:hover {
+    background: var(--dark-3);
+    color: var(--palette-cream);
+  }
+}
+
+/* ── SVG icons ──────────────────────────────────────────────────── */
+/* Icons inherit from parent — ensure parent color is always set */
+:root[data-theme='light'] {
+  .sidebar__link-icon { color: inherit; }
+  .topbar svg { color: inherit; }
+  .stat-tile__label svg { color: var(--palette-light); }
+  .empty-state__pattern { color: var(--palette-sand); }
+}
+
+:root[data-theme='dark'] {
+  .sidebar__link-icon { color: inherit; }
+  .topbar svg { color: inherit; }
+  .stat-tile__label svg { color: var(--palette-taupe); }
+  .empty-state__pattern { color: var(--dark-4); }
+}
+
+/* ── Focus rings ────────────────────────────────────────────────── */
+:root[data-theme='light'] {
+  :focus-visible {
+    outline: 2px solid var(--palette-brand);
+    outline-offset: 2px;
+  }
+  .p-button:focus-visible {
+    box-shadow: 0 0 0 3px var(--palette-taupe);
+  }
+  .p-inputtext:focus,
+  .p-select:focus,
+  .p-textarea:focus {
+    border-color: var(--palette-brand);
+    box-shadow: 0 0 0 2px var(--palette-sand);
+  }
+}
+
+:root[data-theme='dark'] {
+  :focus-visible {
+    outline: 2px solid var(--palette-taupe);
+    outline-offset: 2px;
+  }
+  .p-button:focus-visible {
+    box-shadow: 0 0 0 3px var(--dark-5);
+  }
+  .p-inputtext:focus,
+  .p-select:focus,
+  .p-textarea:focus {
+    border-color: var(--palette-taupe);
+    box-shadow: 0 0 0 2px var(--dark-4);
+  }
+}
+
+/* ── Selection ──────────────────────────────────────────────────── */
+:root[data-theme='light'] ::selection {
+  background: var(--palette-sand);
+  color: var(--palette-ink);
+}
+
+:root[data-theme='dark'] ::selection {
+  background: var(--dark-4);
+  color: var(--palette-cream);
+}
+
+/* ── Disabled states ────────────────────────────────────────────── */
+:root[data-theme='light'] {
+  .p-button:disabled {
+    background: var(--palette-sand);
+    border-color: var(--palette-sand);
+    color: var(--palette-taupe);
+    cursor: not-allowed;
+  }
+  .p-inputtext:disabled,
+  .p-select.p-disabled {
+    background: var(--palette-cream);
+    color: var(--palette-taupe);
+  }
+}
+
+:root[data-theme='dark'] {
+  .p-button:disabled {
+    background: var(--dark-3);
+    border-color: var(--dark-3);
+    color: var(--dark-5);
+    cursor: not-allowed;
+  }
+  .p-inputtext:disabled,
+  .p-select.p-disabled {
+    background: var(--dark-1);
+    color: var(--dark-5);
+  }
+}
+
+/* ── Outlined / text button hover ───────────────────────────────── */
+:root[data-theme='light'] {
+  .p-button-outlined {
+    background: transparent;
+    border-color: var(--palette-light);
+    color: var(--palette-brand);
+    &:hover {
+      background: var(--palette-cream);
+      border-color: var(--palette-brand);
+      color: var(--palette-brand);
+    }
+  }
+  .p-button-text {
+    background: transparent;
+    color: var(--palette-brand);
+    &:hover { background: var(--palette-cream); }
+  }
+}
+
+:root[data-theme='dark'] {
+  .p-button-outlined {
+    background: transparent;
+    border-color: var(--dark-5);
+    color: var(--palette-cream);
+    &:hover {
+      background: var(--dark-2);
+      border-color: var(--palette-taupe);
+      color: var(--palette-cream);
+    }
+  }
+  .p-button-text {
+    background: transparent;
+    color: var(--palette-cream);
+    &:hover { background: var(--dark-2); }
+  }
+}
+
+/* ── RTL: datepicker month arrows ────────────────────────────────
+   PrimeNG ships fixed LTR chevrons (prev ‹ / next ›). In RTL the header
+   buttons sit on the correct sides, but both glyphs point inward at the
+   month title — mirror them so each arrow points outward, away from the
+   title, the way every native RTL calendar behaves.
+   No .p-datepicker ancestor in the selector: PrimeNG 20 appends the
+   panel to <body> without the component wrapper class. */
+[dir='rtl'] {
+  .p-datepicker-prev-button .p-icon,
+  .p-datepicker-next-button .p-icon {
+    transform: scaleX(-1);
+  }
+}
+
+/* ── Danger text/outlined buttons in LIGHT mode ───────────────────
+   The preset leaves these cream — invisible on light surfaces (the
+   trash action in the line-items editor). Follow the stamp--danger
+   convention: ink on light. Dark mode already renders cream on dark
+   (see _dark-overrides .p-button-danger). */
+:root:not([data-theme='dark']) {
+  .p-button.p-button-danger.p-button-text,
+  .p-button.p-button-danger.p-button-outlined {
+    background: transparent;
+    border-color: transparent;
+    color: var(--palette-ink);
+
+    &:hover:enabled {
+      background: var(--palette-cream);
+      border-color: var(--palette-ink);
+      color: var(--palette-ink);
+    }
+  }
+}

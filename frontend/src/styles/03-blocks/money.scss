@@ -1,0 +1,28 @@
+.money {
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.money__value {
+  font-weight: inherit;
+}
+
+.money__currency {
+  font-size: 0.75em;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  margin-inline-start: 4px;
+}
+
+.money--negative .money__value {
+  font-weight: 700;
+}
+
+.money--hero {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 700;
+}

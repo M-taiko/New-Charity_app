@@ -1,0 +1,38 @@
+.skeleton {
+  background: var(--color-surface-inset);
+  border-radius: var(--radius-m);
+  animation: skeleton-fade 1.4s var(--ease-in-out) infinite alternate;
+}
+
+.skeleton--text {
+  height: 14px;
+}
+
+.skeleton--title {
+  height: 24px;
+  width: 40%;
+}
+
+.skeleton--tile {
+  height: 96px;
+}
+
+.skeleton--row {
+  height: 42px;
+  margin-block-end: var(--space-2);
+}
+
+@keyframes skeleton-fade {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0.55;
+  }
+}
+
+:root[data-motion='off'] .skeleton,
+:root[data-motion='lite'] .skeleton {
+  animation: none;
+}

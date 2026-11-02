@@ -1,324 +1,228 @@
-# 🤝 نظام إدارة المؤسسة الخيرية
+# Naguib Selim Charity — نظام العهد والمصروفات (مؤسسة نجيب سليم الخيرية)
 
-نظام متكامل لإدارة الجمعيات والمؤسسات الخيرية - مبني على Laravel مع واجهة حديثة وآمنة.
+A complete charity-fund management system (Arabic, fully RTL) covering treasuries, custody (عهد), expenses, accounting directions, and social cases. The project has two halves working together:
 
-![Laravel](https://img.shields.io/badge/Laravel-12-ff2d20?style=for-the-badge)
-![PHP](https://img.shields.io/badge/PHP-8.2+-777bb4?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+1. **The new SPA frontend** — an Angular 20 + PrimeNG app in `frontend/`, built locally, packed as static files into `public/app`, and served directly by PHP at `/app` (no Node.js needed on the server). Full per-file documentation lives in [`frontend/README.md`](frontend/README.md).
+2. **The Laravel 12 backend** — the complete business logic (Blade + MySQL) as-is, plus a modern JSON layer under `/api/v1` (`routes/api_v1.php`) consumed by the new frontend. The legacy Blade system keeps running in parallel at `/` until final cutover.
 
-## ✨ المميزات الرئيسية
+## Quick Start
 
-### 📊 إدارة الموارد المالية
-- **الخزينة**: تتبع الأرصدة والمعاملات
-- **العهد**: إدارة العهد المالية والمتابعة
-- **المصروفات**: تسجيل وتتبع جميع المصروفات
-- **التقارير**: تقارير مالية شاملة وإحصائيات
-
-### 👥 إدارة الحالات الاجتماعية
-- إنشاء وتتبع الحالات الاجتماعية
-- رفع الملفات والمستندات
-- تصنيف حسب نوع المساعدة (مالية، راتب، أدوية، علاج...)
-- متابعة حالة الحالات
-
-### 🔐 نظام الأدوار والصلاحيات المتقدم
-- **مدير**: صلاحيات كاملة
-- **محاسب**: إدارة الموارد المالية
-- **مندوب**: تسجيل المصروفات والعهد
-- **باحث اجتماعي**: إدارة الحالات الاجتماعية
-
-### 🎨 واجهة المستخدم
-- تصميم حديث وجميل (Modern UI/UX)
-- واجهة عربية (RTL) محسّنة
-- سهولة الاستخدام على جميع الأجهزة
-- تصميم responsive
-
-### 🔔 نظام الإخطارات
-- إخطارات فورية للعمليات المهمة
-- لوحة تحكم مركزية
-- سهولة المتابعة والتتبع
-
----
-
-## 🚀 البدء السريع
-
-### المتطلبات
-```
-PHP >= 8.2
-Composer
-MySQL 5.7+
-```
-
-### التثبيت المحلي
-
-1. **استنساخ المستودع**
 ```bash
-git clone https://github.com/M-taiko/New-Charity_app.git
-cd New-Charity_app
-```
-
-2. **تثبيت التبعيات**
-```bash
+# 1) Backend (PHP >= 8.2 + MySQL)
 composer install
+cp .env.example .env && php artisan key:generate
+php artisan migrate --seed
+php artisan serve            # http://127.0.0.1:8000
+
+# 2) Frontend development (optional — proxies to 127.0.0.1:8000)
+cd frontend && npm install && npm start    # http://localhost:4200/app
+
+# 3) Build the SPA and deploy it to public/app
+cd frontend && npm run build && npm run pack
 ```
 
-3. **إعداد متغيرات البيئة**
-```bash
-cp .env.example .env
-php artisan key:generate
-```
+After building: the new interface is served at `/app`, the legacy Blade system stays at `/` — a safe, reversible migration path.
 
-4. **إعداد قاعدة البيانات**
-```bash
-# تحديث بيانات الـ database في .env
-php artisan migrate
-php artisan db:seed
-```
+## Roles & Permissions
 
-5. **تشغيل الخادم**
-```bash
-php artisan serve
-```
+Manager (مدير), Accountant (محاسب), Agent (مندوب), Social Researcher (باحث اجتماعي), Supervisor (مشرف — read-only) — via `spatie/laravel-permission` (see `database/seeders/RoleAndPermissionSeeder.php`). The API is always the authority for validation; the frontend mirrors permissions only to improve UX.
 
-افتح المتصفح وادخل: `http://localhost:8000`
+## Demo account (`DemoDataSeeder` data)
+
+- Email: `donia.a5ra2019@gmail.com` — Password: `123456789` (carries every role).
 
 ---
 
-## 🌐 الرفع على الإنتاج
+# Complete File Index
 
-المشروع مضبوط للرفع على `https://charity.masarsoft.io/`
+## Root-level files
 
-### دليل الرفع السريع
-اقرأ **QUICK_START.txt** للخطوات السريعة
+| File | Description |
+|---|---|
+| `.env` / `.env.example` | Environment settings (DB, mail, APP_KEY) — `.example` is the reference kept in sync with every new variable |
+| `.htaccess` | Root Apache rules (redirect everything into `public/`) |
+| `.editorconfig` / `.gitattributes` / `.gitignore` | Editor formatting, git attributes, ignored files |
+| `AGENTS.md` | AI coding-assistant instructions (PHP/Laravel + TypeScript conventions) |
+| `artisan` | Laravel CLI entry point |
+| `composer.json` / `composer.lock` | PHP dependencies (Laravel 12, spatie/permission, DOMPDF, …) |
+| `index.php` / `server.php` | Framework request entry (`server.php` for serving without htaccess) |
+| `package.json` / `package-lock.json` / `node_modules` | Build tooling for the legacy Blade assets (Vite + Tailwind 4) |
+| `phpunit.xml` | Test configuration (test database) |
+| `vite.config.js` | Builds `resources/css` and `resources/js` for Blade screens |
+| `DatabaseSeeder.php` | Root-level copy of the main seeder (canonical copy in `database/seeders/`) |
+| `seed_test_data.php` | Standalone script that seeds demo data |
+| `test_db.php` / `test_treasury_donation.php` | Manual check scripts (DB connectivity / treasury donation deposit) |
+| `final_test.sh` | Runs a full post-deploy verification suite |
+| `serve.log` | Log of the last `php artisan serve` run |
+| `TEST_DATABASE.sql` | Ready-made SQL snapshot of a test database |
+| `الجمعية.xlsx` / `temp_xlsx/` | Original imported organization data and temp import folder |
+| `.compat-109` / `.kilo` / `.zcode` / `.claude` / `.vscode` | Tooling and editor configuration |
 
-### دليل الرفع التفصيلي
-اقرأ **MASARSOFT_DEPLOYMENT.md** للتفاصيل الكاملة
+### Historical task & fix reports (root)
 
----
-
-## 📖 الوثائق
-
-| الملف | الوصف |
-|------|-------|
-| **QUICK_START.txt** | ملخص سريع بالعربية |
-| **MASARSOFT_DEPLOYMENT.md** | دليل شامل للرفع على masarsoft.io |
-| **HOSTING_SETUP.md** | إرشادات hosting عام |
-| **PRE_DEPLOYMENT.md** | قائمة تحقق قبل الرفع |
-| **HOSTING_NOTES.md** | شرح مفصل لمشكلة storage:link |
-| **DEPLOYMENT_SUMMARY.txt** | ملخص الحل |
-
----
-
-## 🔑 بيانات الدخول الافتراضية
-
-```
-البريد الإلكتروني: donia.a5ra2019@gmail.com
-كلمة المرور: 123456789
-الدور: مدير
-```
-
-⚠️ **غيّر كلمة المرور بعد أول تسجيل دخول!**
-
----
-
-## 📱 الأدوار والمستخدمون
-
-### المدير (Manager)
-- صلاحيات كاملة
-- إدارة المستخدمين
-- إدارة الإعدادات
-- عرض التقارير الشاملة
-
-### المحاسب (Accountant)
-- إدارة الخزينة والعهد
-- تتبع المصروفات
-- عرض التقارير المالية
-- تعديل الحالات الاجتماعية
-
-### المندوب (Agent)
-- تسجيل المصروفات
-- إدارة العهد المالية
-- عرض إحصائياته الخاصة
-
-### الباحث الاجتماعي (Researcher)
-- إنشاء وتعديل الحالات الاجتماعية
-- رفع المستندات
-- عرض حالاته الخاصة
+| File | Topic |
+|---|---|
+| `Task.md` / `CLIENT_FEEDBACK_TASKS.md` | Task lists and client feedback (T30–T36, …) |
+| `IMPLEMENTATION.md` / `IMPLEMENTATION_SUMMARY.md` / `.txt` | Implementation plan and summary |
+| `PROJECT_SUMMARY.md` / `COMPLETE_SYSTEM_SUMMARY.md` / `COMPLETE_FINAL_SUMMARY.md` / `FEATURES_IMPLEMENTED.md` / `README_NEW_FEATURES.md` | System/feature overviews |
+| `SETUP_GUIDE.md` / `QUICK_START.md` / `QUICK_START.txt` / `QUICK_REFERENCE.md` / `START_HERE.txt` | Getting-started guides |
+| `DEPLOYMENT_SUMMARY.txt` / `FINAL_DEPLOYMENT_CHECKLIST.md` / `FINAL_DEPLOYMENT_STATUS.md` / `PRE_DEPLOYMENT.md` / `VERIFICATION_CHECKLIST.md` / `TEST_CYCLE.md` / `TEST_RESULTS.md` / `URGENT_ACTION_REQUIRED.md` | Deployment, auditing, testing |
+| `HOSTING_NOTES.md` / `HOSTING_SETUP.md` / `MASARSOFT_DEPLOYMENT.md` / `HOSTING_MBSTRING_FIX.md` / `MBSTRING_POLYFILL_WORKAROUND.md` | Masarsoft hosting and the missing-mbstring workaround |
+| `ACCOUNTING_FIXES_PLAN.md` / `BLADE_CALCULATION_FIX.md` / `CUSTODY_RETURN_FIX.md` / `DONATION_FIX.md` / `IMAGE_SERVING_FIX.md` / `PERSISTENT_SESSION_IMPLEMENTATION.md` / `PRODUCTION_FIXES_SUMMARY.md` / `FIXES_README.md` / `QUICK_FIX_GUIDE.txt` / `STORAGE_CONFIGURATION_FIX.md` / `STORAGE_USAGE_GUIDE.md` | Documented production-fix write-ups |
+| `REFACTORING_GUIDE.md` / `PRE_IMPLEMENTATION_VERIFICATION.md` | Refactoring guide and pre-implementation verification |
 
 ---
 
-## 🏗️ البنية المعمارية
+## `app/` — Laravel logic
 
-```
-New-Charity_app/
-├── app/
-│   ├── Http/Controllers/     # وحدات التحكم
-│   ├── Models/               # نماذج قاعدة البيانات
-│   └── Services/             # الخدمات المساعدة
-├── database/
-│   ├── migrations/           # تعديلات قاعدة البيانات
-│   └── seeders/              # بيانات افتراضية
-├── resources/
-│   ├── views/                # واجهات المستخدم
-│   ├── css/                  # أنماط
-│   └── lang/                 # الترجمات
-├── public/
-│   ├── index.php             # نقطة دخول التطبيق
-│   └── storage/              # حفظ الملفات المرفوعة
-├── routes/
-│   ├── web.php               # مسارات الويب
-│   └── auth.php              # مسارات المصادقة
-└── storage/
-    ├── app/                  # ملفات التطبيق
-    ├── logs/                 # سجلات الأخطاء
-    └── cache/                # ملفات التخزين المؤقت
-```
+### `app/Http/Controllers/` — Blade controllers (legacy system)
 
----
+| File | Description |
+|---|---|
+| `Controller.php` | Shared base controller |
+| `AuthenticatedSessionController.php` / `RegisteredUserController.php` | Web login / registration / logout |
+| `TreasuryController.php` | Treasuries: balance, transfers, donations, deposits & spending |
+| `CustodyController.php` | Full custody lifecycle: create, accept, spend, return, close |
+| `CustodyTransferController.php` | Custody transfer between agents (sender/receiver) |
+| `CustodyMovementController.php` | Custody movements ledger |
+| `CustodyReturnRequestController.php` | Custody return requests |
+| `ExpenseController.php` | Expenses: record, edit, review, quick expense, multi-custody split |
+| `ExpenseEditRequestController.php` | Expense edit-request workflow (approve/reject) |
+| `ExpenseItemController.php` | Accounting-direction items (CRUD) |
+| `SocialCaseController.php` | Social cases (research, approval, documents, family members) |
+| `DashboardController.php` | Role-specific dashboards |
+| `ReportController.php` | All reports (treasury, custody, directions, governorates, reconciliation, …) |
+| `ChatController.php` / `ChatPollController.php` | Team chat and its polls |
+| `BroadcastController.php` | Urgent broadcast messages |
+| `NotificationController.php` | Notifications (read / mark all) |
+| `TaskController.php` | Tasks and comments |
+| `HrController.php` / `SalaryController.php` | HR, salaries, and allowances |
+| `PurchaseRequestController.php` / `MaintenanceRequestController.php` / `SupplierController.php` | Procurement, maintenance, suppliers |
+| `UserController.php` / `ProfileController.php` | User management and profile |
+| `ActivityLogController.php` | Activity log |
+| `SettingsController.php` | Organization settings |
 
-## 🛠️ التكنولوجيات المستخدمة
+### `app/Http/Controllers/Api/` — the `/api/v1` layer (new frontend)
 
-### الخادم
-- **Laravel 12**: إطار العمل الرئيسي
-- **PHP 8.2+**: لغة البرمجة
-- **MySQL**: قاعدة البيانات
+| File | Description |
+|---|---|
+| `README.md` | Documentation of the API layer and its contract |
+| `V1/AuthController.php` | SPA login, `/me` with roles & abilities |
+| `V1/TreasuryController.php` | Treasuries / transactions / transfer / donation over JSON |
+| `V1/CustodyController.php` | Custody lists, detail, movements, per-user custody balances (`user-custodies`) |
+| `V1/CustodyTransferController.php` | Custody transfers |
+| `V1/ExpenseController.php` | Expense list with the full T31 filter set + `filtered_total`, my-expenses, edit requests |
+| `V1/ExpenseItemController.php` | Direction items |
+| `V1/LookupController.php` | One cacheable call: roles, governorates, direction tree, users, expense types actually present in the DB |
+| `V1/SocialCaseController.php` | Social cases (T34 governorate filter) |
+| `V1/DashboardController.php` | Dashboard cards + directional stats (T33) |
+| `V1/ReportController.php` | JSON reports for the new frontend |
+| `V1/HrController.php` | HR & salaries |
+| `V1/ProcurementController.php` | Purchase / maintenance / suppliers |
+| `V1/SystemController.php` | Tasks & system endpoints for the SPA |
 
-### الواجهة الأمامية
-- **Bootstrap 5 RTL**: إطار عمل للتصميم
-- **DataTables**: جداول البيانات
-- **Font Awesome**: الرموز
+### `app/Models/` — Eloquent models (28)
 
-### الحزم الإضافية
-- **Spatie Laravel Permission**: نظام الأدوار والصلاحيات
-- **Yajra DataTables**: عرض البيانات المتقدم
-- **Maatwebsite Excel**: (اختياري) التعامل مع ملفات Excel
+`User`, `Treasury`, `TreasuryTransaction` (every financial movement by type), `Custody` (incl. `scopeInDirection` and remaining-balance math), `CustodyTransfer`, `CustodyReturnRequest`, `Expense` (review, approvals, line items, custody split), `ExpenseCategory` / `ExpenseItem` (the accounting-direction tree), `ExpenseEditRequest`, `SocialCase` / `SocialCaseDocument` / `FamilyMember`, `Employee` / `AttendanceRecord` / `KpiMetric` / `SalaryCalculation` / `SalaryAllowance`, `PurchaseRequest` / `MaintenanceRequest` / `Supplier`, `Task` / `TaskComment`, `ChatMessage` / `ChatPoll` / `ChatPollVote`, `Broadcast`, `Notification`, `ActivityLog`, `Setting`.
 
----
+### Rest of `app/`
 
-## 🔐 الأمان
-
-- ✅ نظام مصادقة آمن
-- ✅ تشفير كلمات المرور
-- ✅ حماية CSRF
-- ✅ حماية XSS
-- ✅ نظام أدوار وصلاحيات متقدم
-- ✅ تسجيل جميع العمليات
-- ✅ دعم HTTPS
-
----
-
-## 🧪 الاختبار
-
-```bash
-# تشغيل الاختبارات
-php artisan test
-
-# اختبار محدد
-php artisan test tests/Feature/ExampleTest.php
-```
-
----
-
-## 📊 قاعدة البيانات
-
-### جداول رئيسية
-- `users` - المستخدمون
-- `treasuries` - الخزينة
-- `custodies` - العهد
-- `expenses` - المصروفات
-- `social_cases` - الحالات الاجتماعية
-- `notifications` - الإخطارات
+| Path | Description |
+|---|---|
+| `Services/TreasuryService.php` | The heart of all money math: treasury & custody movements inside DB transactions |
+| `Services/CustodyTransferService.php` | Custody-transfer logic and amount freezing |
+| `Services/ExpenseEditRequestService.php` | Expense edit-request workflow |
+| `Services/SalaryCalculationService.php` | Salary & allowance calculation |
+| `Services/DirectionalStatsService.php` | Direction statistics for dashboards and reports |
+| `Services/NotificationService.php` / `ActivityLogService.php` / `StatusLabelService.php` | Notifications, activity log, unified status wording |
+| `Support/Api/ApiList.php` | The shared list contract: pagination (max 100), sort, search, filters, `{data, meta, links}` envelope |
+| `Support/Api/NotificationLink.php` | Maps a notification to an SPA link |
+| `Support/ExpenseDirectionFilter.php` / `ExpenseDirectionRule.php` | Direction filtering/validation (a node + all its descendants) |
+| `Support/LineItemsSanitizer.php` | Expense line-item sanitization |
+| `Support/EgyptianGovernorates.php` | Egypt governorate list |
+| `Support/AttachmentFileCleanup.php` | Cleanup of orphaned attachments |
+| `Helpers/functions.php` / `MbstringPolyfill.php` / `StorageHelper.php` | Helpers, mbstring polyfill for the host, storage paths |
+| `Http/Middleware/ApiV1Response.php` | Normalizes JSON error shapes for the v1 layer |
+| `Http/Middleware/TrackLastPageUrl.php` / `RedirectIfAuthenticated.php` | Last-page tracking, guest-only guard |
+| `Policies/CustodyTransferPolicy.php` | Transfer authorization policy |
+| `Providers/AppServiceProvider.php` | Service registration and extra gates (e.g. `view_all_expenses`) |
+| `Traits/DataTableTrait.php` / `HasStatusScopes.php` | Blade table pagination and status scopes |
+| `Console/Commands/BackfillExpenseLinks.php` | Command backfilling old expenses onto directions |
+| `Exceptions/TransferBalanceException.php` | Insufficient-balance exception |
 
 ---
 
-## 🐛 استكشاف الأخطاء
+## `bootstrap/` and `config/`
 
-### مشكلة: 500 Error
-```bash
-tail -f storage/logs/laravel.log
-php artisan cache:clear
-php artisan config:clear
-```
+| File | Description |
+|---|---|
+| `bootstrap/app.php` / `providers.php` | Laravel 12 bootstrapping: middleware, exceptions, service providers |
+| `bootstrap/cache/*` | Cached packages & services (generated) |
+| `config/app.php` … `config/permission.php` | 12 standard config files: app, auth, cache, database, filesystems, logging, mail, queue, session, services, and spatie permissions |
 
-### مشكلة: Composer Platform Check
-```bash
-# تعديل composer.json إذا لزم الأمر
-composer install --ignore-platform-req=php
-```
+## `database/`
 
-### مشكلة: الصور لا تظهر
-```bash
-chmod -R 755 storage/
-php artisan storage:link  # على سيرفر يدعم symlinks
-```
+| Path | Description |
+|---|---|
+| `factories/UserFactory.php` | User factory for tests |
+| `seeders/DatabaseSeeder.php` | Main seeder entry point |
+| `seeders/DemoDataSeeder.php` | Main treasury + demo manager account |
+| `seeders/RoleAndPermissionSeeder.php` | The five roles and sixteen permissions |
+| `seeders/ExpenseCategoriesSeeder.php` | The accounting-direction tree (zakat/sadaqa and their items) |
+| `seeders/SocialCasesExcelSeeder.php` | Imports social cases from Excel files |
 
----
+### `database/migrations/` — 73 time-ordered migrations
 
-## 📝 الملفات المهمة
+- **Foundation (2026_01_31):** create `users`, `cache`, `jobs`, the spatie permission tables, `treasuries`, `treasury_transactions`, `custodies`, `expenses`, `notifications`, `social_cases`, `social_case_documents`, auth tables, expense↔case foreign key, `pending_return`, case active flag, `settings`.
+- **2026_02:** hidden user & profile picture; pending custody status and logo-path fix; `expense_categories` + `expense_items` trees, `custody_transfers`, expense→direction link, detailed case fields, expense tracking on treasury transactions, received-at dates, custody status enum update, `family_members`, `initiated_by`; `expense_custody` pivot (expense split T27), expense attachments, closure & transfer transaction types; transfer fields, transaction-type updates, expense approval status, `expense_edit_requests`; tasks & comments.
+- **2026_04:** external donations, direction-hierarchy rebuild, expense review & line items, activity log, broadcasts, chat messages, procurement tables (requests/suppliers/maintenance), broadcast target & case phases, chat polls & votes, employees/attendance/KPIs, salary calculations (soft deletes + defaults), purchase-request treasury & category, transaction reference fields, unified case form, `treasury_id` on expenses.
+- **2026_05 → 2026_09:** custody return requests, nullable custody `treasury_id`, recovery transaction type, quick-expense flag, transaction type → varchar, Excel fields on cases, transaction source as text, `cancelled` custody status, family-member status, item-code uniqueness per category, and `pending_transfer_out` (transfer freezing).
+- `.gitignore` for the folder.
 
-| الملف | الدور |
-|------|-------|
-| `.env` | متغيرات البيئة والإعدادات الحساسة |
-| `.htaccess` | إعادة توجيه الطلبات |
-| `composer.json` | التبعيات والحزم |
-| `package.json` | حزم Node.js (اختياري) |
+## `routes/`
 
----
+| File | Description |
+|---|---|
+| `web.php` | All Blade routes + serving the SPA from `public/app` at `/app` with path-traversal protection |
+| `api_v1.php` | 169 JSON routes under `/api/v1`, grouped by domain, wrapped in `ApiV1Response` middleware |
+| `auth.php` / `console.php` | Web auth and command scheduling |
 
-## 🤝 المساهمة
+## `resources/` — legacy Blade screens (116 files)
 
-المساهمات مرحب بها! يرجى:
+- `layouts/app.blade.php` / `layouts/modern.blade.php` — the two base layouts (legacy / modern).
+- `partials/` — `pagination`, `orientation-lock` (portrait-only lock), edit-request action buttons.
+- `auth/` — `login`, `register`.
+- `dashboard/` — modern home, per-role shortcuts (manager/accountant/agent/researcher), activities, stars partial.
+- `treasury/` — list/create/show/edit/transfer + modern variants.
+- `custodies/` — 14 screens: all custodies, mine, every creation flow, show/edit, movements, agent & personal requests, returns.
+- `custody-transfers/` / `custody-return-requests/` — transfers and return requests.
+- `expenses/` + `expense-items/` + `expense-edit-requests/` — list/create/edit/show, quick expense, direction items, edit-request workflow.
+- `social-cases/` — list/create/show/edit + unified form and researcher cases.
+- `reports/` — 7 reports: dashboard, agent balances, direction analytics, items, governorates, reconciliation, case expenses.
+- `hr/` — dashboard, employees & form, attendance, KPIs, salaries (list/show/edit).
+- `procurement/` — purchase requests, maintenance requests, suppliers.
+- `tasks/`, `chat/`, `broadcasts/`, `notifications/`, `activity-logs/`, `users/` (incl. modern variants), `profile/`, `settings/`, `errors/` (403/404/419/500), `components/data-table`, `welcome`.
+- `lang/ar|en/` — validation and app messages. — `css/app.css`, `js/app.js`, `js/bootstrap.js` — Vite entry points.
 
-1. عمل Fork للمستودع
-2. إنشاء branch للميزة الجديدة
-3. Commit التغييرات
-4. Push إلى Branch
-5. فتح Pull Request
+## `public/`, `storage/`, `tests/`
 
----
+| Path | Description |
+|---|---|
+| `public/index.php` / `.htaccess` / `robots.txt` / `favicon.ico` / `hot` | Framework entry and server rules |
+| `public/app/` | **Generated** by `npm run pack` — never hand-edited (SPA files + checksums.txt) |
+| `public/storage/` → `storage/app/public` | Uploaded attachments and images |
+| `storage/app/attachments/` | Expense & document attachments |
+| `storage/logs/` | Laravel logs |
+| `tests/Unit/ExampleTest.php`, `tests/Feature/BladeCompilationTest.php`, `Feature/ExampleTest.php`, `TestCase.php` | PHPUnit tests (Blade compilation checked for every screen) |
 
-## 📄 الترخيص
+## `docs/` — engineering documentation
 
-هذا المشروع مرخص تحت رخصة MIT. اقرأ ملف LICENSE للمزيد.
+| File | Description |
+|---|---|
+| `adr/0001…0005` | Architecture decisions: project structure, frontend state, API strategy, auth, Blade→SPA migration strategy |
+| `audits/` | Compatibility audit & prototype, security audit, UI/accessibility audit |
+| `definition-of-ready.md` | Definition of ready for tasks |
 
----
+## `frontend/` — the new frontend
 
-## 👨‍💻 الدعم والمساعدة
-
-- 📖 اقرأ الوثائق في مجلد root
-- 🔍 افحص سجل الأخطاء: `storage/logs/laravel.log`
-- 💬 افتح issue في GitHub
-- 📧 تواصل عبر البريد الإلكتروني
-
----
-
-## 🎯 خارطة الطريق
-
-- [ ] إضافة تقارير PDF
-- [ ] تصدير البيانات إلى Excel
-- [ ] نظام الرسائل النصية
-- [ ] تطبيق جوال
-- [ ] نسخة ويب متقدمة
-
----
-
-## 📞 معلومات الاتصال
-
-- **الدومين**: https://charity.masarsoft.io/
-- **الدعم**: masarsoft.io
-- **الترخيص**: MIT
-
----
-
-## ✅ آخر تحديث
-
-- **التاريخ**: 2026-02-01
-- **النسخة**: 1.0.0
-- **الحالة**: متاح للإنتاج
-
----
-
-**شكراً لاستخدامك نظام إدارة المؤسسة الخيرية! 🙏**
-
----
-
-*تم تطويره بعناية بواسطة [masarsoft.io](https://masarsoft.io)*
+A complete Angular 20 project — **detailed per-file documentation in [`frontend/README.md`](frontend/README.md)**.

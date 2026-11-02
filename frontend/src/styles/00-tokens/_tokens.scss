@@ -1,0 +1,117 @@
+// The brand palette — the light theme uses these exclusively (plan 10.1).
+// The dark theme uses dark neutral bases + brand accents (user decision).
+:root {
+  --palette-ink: #4f2f1d;
+  --palette-brand: #5d3722;
+  --palette-mid: #7d5f4e;
+  --palette-light: #9e877a;
+  --palette-taupe: #beafa7;
+  --palette-sand: #dfd7d3;
+  --palette-white: #ffffff;
+  --palette-cream: #f7f3ef;
+
+  // Dark theme neutrals (not brand colors — proper dark greys with warm tint)
+  --dark-0: #12100e;
+  --dark-1: #1a1815;
+  --dark-2: #201e1b;
+  --dark-3: #2a2825;
+  --dark-4: #3a3835;
+  --dark-5: #4a4845;
+
+  // Shape (10.2)
+  --radius-s: 3px;
+  --radius-m: 6px;
+  --radius-l: 10px;
+  --radius-full: 999px;
+
+  // Spacing scale — 4px base (10.2)
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-14: 56px;
+  --space-18: 72px;
+
+  // Type scale (10.3)
+  --font-ui: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
+  --font-display: 'Amiri', 'Times New Roman', serif;
+  --text-2xs: 12px;
+  --text-xs: 13px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-hero: 40px;
+
+  // Motion (10.4)
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  // Layout (10.2)
+  --content-max: 1440px;
+  --sidebar-w: 300px;
+  --sidebar-w-collapsed: 64px;
+  --topbar-h: 56px;
+  --gutter: 24px;
+
+  color-scheme: light;
+}
+
+// ── Light theme (brand palette, plan 10.1.2) ──────────────────────
+:root,
+:root[data-theme='light'] {
+  --color-bg: var(--palette-cream);
+  --color-surface: var(--palette-white);
+  --color-surface-inset: var(--palette-cream);
+  --color-surface-raised: var(--palette-sand);
+  --color-hairline: var(--palette-sand);
+  --color-margin-rule: var(--palette-taupe);
+  --color-control-border: var(--palette-light);
+  --color-text: var(--palette-ink);
+  --color-text-muted: var(--palette-mid);
+  --color-primary: var(--palette-brand);
+  --color-on-primary: var(--palette-white);
+  --color-primary-hover: var(--palette-ink);
+  --color-primary-soft: var(--palette-sand);
+  --color-accent: var(--palette-light);
+  --color-focus: var(--palette-brand);
+}
+
+// ── Dark theme — dark neutral bases + brand accents ──
+// Near-black warm greys for depth; brand brown for buttons; cream for text.
+:root[data-theme='dark'] {
+  --color-bg: var(--dark-0);
+  --color-surface: var(--dark-2);
+  --color-surface-inset: var(--dark-1);
+  --color-surface-raised: var(--dark-3);
+  --color-hairline: var(--dark-4);
+  --color-margin-rule: var(--dark-5);
+  --color-control-border: var(--dark-5);
+  --color-text: var(--palette-cream);
+  --color-text-muted: var(--palette-taupe);
+  --color-primary: var(--palette-brand);
+  --color-on-primary: var(--palette-white);
+  --color-primary-hover: var(--palette-mid);
+  --color-primary-soft: var(--dark-3);
+  --color-accent: var(--palette-light);
+  --color-focus: var(--palette-taupe);
+
+  color-scheme: dark;
+}
+
+// Adaptive motion levels (12.4)
+:root[data-motion='off'] *,
+:root[data-motion='off'] *::before,
+:root[data-motion='off'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}

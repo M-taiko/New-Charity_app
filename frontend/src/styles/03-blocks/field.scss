@@ -1,0 +1,45 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.field__label {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.field__required {
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.field__hint {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.field__error {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.field--invalid .p-inputtext,
+.field--invalid .p-select,
+.field--invalid .p-textarea {
+  border: 2px solid var(--palette-ink);
+}
+
+:root[data-theme='dark'] .field--invalid .p-inputtext,
+:root[data-theme='dark'] .field--invalid .p-select,
+:root[data-theme='dark'] .field--invalid .p-textarea {
+  border-color: var(--palette-cream);
+}

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- NS monogram in the brand color #5D3722 (plan 10.1.7). Cream variant is
+       provided at runtime via CSS color when placed on dark surfaces. -->
+  <symbol id="ns" viewBox="0 0 64 64">
+    <rect x="4" y="4" width="56" height="56" fill="none" stroke="#5D3722" stroke-width="3"/>
+    <text x="32" y="42" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="28" font-weight="700" fill="#5D3722" letter-spacing="1">NS</text>
+  </symbol>
+  <use href="#ns" width="64" height="64"/>
+</svg>

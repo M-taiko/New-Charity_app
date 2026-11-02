@@ -1,0 +1,492 @@
+/* ── Light mode primary buttons — white text on brand brown ──
+   PrimeNG preset sets contrastColor but CSS layer ordering can
+   prevent it from applying. Force it explicitly. */
+:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger) {
+  color: var(--palette-white);
+}
+
+:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger):hover {
+  color: var(--palette-white);
+}
+
+/* ═══ Dark theme — comprehensive PrimeNG + BEM overrides ═══
+   Every element that renders in dark mode gets explicit palette values.
+   ink page, brand inset, mid surface, light borders/hover, cream text. */
+
+/* ── PrimeNG component overrides (data-theme=dark) ─────────────── */
+[data-theme='dark'] {
+
+  // Inputs & textareas
+  .p-inputtext,
+  .p-textarea,
+  .p-inputnumber-input {
+    background: var(--dark-1);
+    border: 1px solid var(--dark-4);
+    color: var(--palette-cream);
+
+    &::placeholder { color: var(--palette-taupe); }
+    &:focus {
+      background: var(--dark-0);
+      border-color: var(--palette-light);
+      box-shadow: 0 0 0 2px var(--dark-4);
+      color: var(--palette-cream);
+    }
+  }
+
+  // Select (dropdown)
+  .p-select {
+    background: var(--dark-1);
+    border: 1px solid var(--dark-4);
+    color: var(--palette-cream);
+
+    .p-select-label { color: var(--palette-cream); }
+    .p-select-label.p-placeholder { color: var(--palette-taupe); }
+    &:hover { border-color: var(--palette-light); }
+    &:focus {
+      background: var(--dark-0);
+      border-color: var(--palette-light);
+      box-shadow: 0 0 0 2px var(--dark-4);
+      color: var(--palette-cream);
+    }
+  }
+
+  .p-select-overlay {
+    background: var(--dark-2);
+    border: 1px solid var(--dark-4);
+    border-radius: var(--radius-m);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+
+    .p-select-option {
+      color: var(--palette-cream);
+      &:hover { background: var(--dark-3); }
+      &.p-focus { background: var(--dark-3); }
+      &.p-highlight { background: var(--dark-3); color: var(--palette-white); }
+    }
+
+    .p-select-empty-message { color: var(--palette-taupe); }
+  }
+
+  // Buttons — brand brown bg + WHITE text (not ink, which is invisible on brown)
+  .p-button {
+    background: var(--palette-brand);
+    border-color: var(--palette-brand);
+    color: var(--palette-white);
+
+    &:hover:not(:disabled) {
+      background: var(--palette-mid);
+      border-color: var(--palette-mid);
+      color: var(--palette-white);
+    }
+    &:active:not(:disabled) { background: var(--palette-light); color: var(--palette-white); }
+    &:focus { box-shadow: 0 0 0 2px var(--palette-taupe); }
+  }
+
+  .p-button-outlined {
+    background: transparent;
+    border-color: var(--dark-4);
+    color: var(--palette-cream);
+    &:hover { background: var(--dark-1); border-color: var(--palette-light); }
+  }
+
+  .p-button-text {
+    background: transparent;
+    color: var(--palette-cream);
+    &:hover { background: var(--dark-1); }
+  }
+
+  .p-button-secondary {
+    background: var(--dark-1);
+    border-color: var(--dark-4);
+    color: var(--palette-cream);
+  }
+
+  .p-button-danger {
+    background: var(--dark-0);
+    border-color: var(--dark-4);
+    color: var(--palette-cream);
+  }
+
+  // Dialog
+  .p-dialog {
+    background: var(--dark-2);
+    border: 1px solid var(--dark-4);
+    border-radius: var(--radius-l);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+
+    .p-dialog-header {
+      color: var(--palette-cream);
+      border-block-end: 1px solid var(--dark-4);
+      background: var(--dark-1);
+    }
+    .p-dialog-title { color: var(--palette-cream); }
+    .p-dialog-content { color: var(--palette-cream); background: var(--dark-2); }
+    .p-dialog-footer {
+      border-block-start: 1px solid var(--dark-4);
+      background: var(--dark-1);
+    }
+  }
+
+  .p-dialog-mask { background: rgba(0, 0, 0, 0.7); }
+
+  // Table
+  .p-datatable {
+    .p-datatable-header {
+      background: var(--dark-1);
+      border: none;
+      border-block-end: 1px solid var(--palette-mid);
+      color: var(--palette-cream);
+    }
+    thead th {
+      background: var(--dark-1);
+      color: var(--palette-taupe);
+      border-color: var(--dark-3);
+      font-weight: 600;
+    }
+    tbody td {
+      background: var(--dark-2);
+      border-color: var(--palette-brand);
+      color: var(--palette-cream);
+    }
+    tbody tr:nth-child(even) td { background: var(--dark-1); }
+    tbody tr:hover td { background: var(--dark-3); }
+    .p-sortable-column.p-highlight { color: var(--palette-white); }
+    .p-datatable-loading-overlay { background: var(--dark-0); }
+  }
+
+  // Paginator
+  .p-paginator {
+    background: var(--dark-1);
+    color: var(--palette-taupe);
+    border: none;
+
+    .p-paginator-element {
+      color: var(--palette-cream);
+      background: transparent;
+      border-radius: var(--radius-s);
+      &:hover { background: var(--dark-2); }
+      &.p-highlight { background: var(--dark-3); color: var(--palette-white); }
+    }
+    .p-dropdown { background: var(--dark-0); border-color: var(--dark-4); }
+  }
+
+  // Checkbox — one unified design lives in _polish.scss (login-style)
+
+  // Datepicker
+  .p-datepicker {
+    background: var(--dark-2);
+    border: 1px solid var(--dark-4);
+    border-radius: var(--radius-m);
+    color: var(--palette-cream);
+
+    .p-datepicker-header {
+      background: var(--dark-1);
+      color: var(--palette-cream);
+      border-block-end: 1px solid var(--dark-4);
+      .p-datepicker-next, .p-datepicker-prev { color: var(--palette-cream); }
+    }
+    table td {
+      a, span { color: var(--palette-cream); }
+      &:hover { background: var(--dark-3); }
+      &.p-datepicker-today > span { background: var(--dark-1); color: var(--palette-white); }
+      &.p-highlight { background: var(--dark-3); color: var(--palette-white); }
+    }
+  }
+  .p-datepicker-panel { background: var(--dark-2); }
+
+  // Menu / Context Menu
+  .p-menu {
+    background: var(--dark-2);
+    border: 1px solid var(--dark-4);
+    border-radius: var(--radius-m);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+
+    .p-menuitem-link {
+      color: var(--palette-cream);
+      .p-menuitem-text { color: var(--palette-cream); }
+      .p-menuitem-icon { color: var(--palette-taupe); }
+      &:hover { background: var(--dark-3); }
+    }
+    .p-menu-separator { border-color: var(--dark-4); }
+  }
+
+  // Tooltip
+  .p-tooltip .p-tooltip-text {
+    background: var(--dark-3);
+    color: var(--palette-white);
+  }
+
+  // File upload
+  .p-fileupload {
+    .p-button { background: var(--dark-1); border-color: var(--dark-4); color: var(--palette-cream); }
+  }
+
+  // Toast
+  .p-toast {
+    .p-toast-message {
+      background: var(--dark-2);
+      border: 1px solid var(--dark-4);
+      color: var(--palette-cream);
+      &.p-toast-message-success { border-inline-start: 4px solid var(--palette-cream); }
+      &.p-toast-message-error { border-inline-start: 4px solid var(--palette-ink); }
+    }
+  }
+
+  // Input number
+  .p-inputnumber-button { background: var(--dark-1); border-color: var(--dark-4); color: var(--palette-cream); }
+
+  // Overlay panel
+  .p-overlaypanel, .p-popover {
+    background: var(--dark-2);
+    border: 1px solid var(--dark-4);
+    border-radius: var(--radius-m);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+    color: var(--palette-cream);
+  }
+
+  // Skeleton
+  .skeleton { background: var(--dark-1); }
+
+  // ── BEM block overrides ─────────────────────────────────────
+
+  // Sidebar
+  .sidebar {
+    background: var(--dark-1);
+    border-inline-start: 1px solid var(--dark-3);
+
+    .sidebar__brand { border-block-end: 1px solid var(--palette-mid); }
+    .sidebar__brand-name { color: var(--palette-cream); }
+    .sidebar__group-label { color: var(--palette-taupe); }
+    .sidebar__link {
+      color: var(--palette-taupe);
+      &:hover { background: var(--dark-2); }
+      &.sidebar__link--active {
+        background: var(--dark-2);
+        border-inline-start-color: var(--palette-cream);
+        color: var(--palette-cream);
+      }
+    }
+  }
+
+  // Topbar
+  .topbar {
+    background: var(--dark-1);
+    border-block-end: 1px solid var(--palette-mid);
+    .topbar__title { color: var(--palette-cream); }
+    .topbar__icon-btn {
+      background: var(--dark-2);
+      border-color: var(--dark-4);
+      color: var(--palette-cream);
+      &:hover { background: var(--dark-3); }
+    }
+  }
+
+  // Stat tiles
+  .stat-tile {
+    background: var(--dark-2);
+    border-color: var(--dark-4);
+    .stat-tile__label { color: var(--palette-taupe); }
+    .stat-tile__value { color: var(--palette-cream); }
+    .stat-tile__caption { color: var(--palette-taupe); }
+  }
+
+  // Ledger table
+  .ledger-table {
+    background: var(--dark-2);
+    border-color: var(--dark-4);
+    .ledger-table__header {
+      background: var(--dark-1);
+      border-block-end: 1px solid var(--dark-4);
+      .ledger-table__title { color: var(--palette-cream); }
+    }
+    th { color: var(--palette-taupe); border-block-end-color: var(--dark-4); }
+    td { border-block-end-color: var(--palette-brand); color: var(--palette-cream); }
+    tbody tr:hover td { background: var(--dark-3); }
+    .ledger-table__summary {
+      background: var(--dark-1);
+      color: var(--palette-taupe);
+      border-block-start: 1px solid var(--dark-4);
+    }
+    .ledger-table__filter {
+      background: var(--dark-0);
+      border-color: var(--dark-4);
+      color: var(--palette-cream);
+    }
+  }
+
+  // Page header
+  .page-header .page-header__title { color: var(--palette-cream); }
+  .page-header .page-header__subtitle { color: var(--palette-taupe); }
+
+  // Chart card
+  .chart-card {
+    background: var(--dark-2);
+    border-color: var(--dark-4);
+    .chart-card__title { color: var(--palette-cream); }
+  }
+
+  // Form sections
+  .form-section {
+    background: var(--dark-2);
+    border-color: var(--dark-4);
+    .form-section__title {
+      color: var(--palette-cream);
+      border-block-end-color: var(--dark-4);
+    }
+  }
+
+  // Stamps
+  .stamp--success { border-color: var(--palette-cream); color: var(--palette-cream); background: transparent; }
+  .stamp--danger {
+    background: var(--palette-brand);
+    color: var(--palette-white);
+  }
+  .stamp--pending {
+    border-color: var(--palette-light);
+    color: var(--palette-taupe);
+  }
+  .stamp--info { background: var(--dark-3); color: var(--palette-white); }
+  .stamp--neutral { background: var(--dark-1); color: var(--palette-taupe); }
+
+  // Empty state
+  .empty-state { color: var(--palette-taupe); }
+  .empty-state__title { color: var(--palette-cream); }
+
+  // Dialog alert
+  .dialog__alert {
+    border-color: var(--palette-taupe);
+    background: var(--dark-3);
+    color: var(--palette-cream);
+  }
+
+  // Login page
+  .login__form-side { background: var(--dark-0); }
+  .login__form-side::before { opacity: 0.05; }
+  .login__form {
+    background: var(--dark-2);
+    border-color: var(--dark-4);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+  }
+  .login__form-title { color: var(--palette-cream); }
+  .login__form-subtitle { color: var(--palette-taupe); }
+  .login__label { color: var(--palette-cream); }
+  .login__input {
+    background: var(--dark-1);
+    border-color: var(--dark-4);
+    color: var(--palette-cream);
+    &::placeholder { color: var(--palette-taupe); }
+    &:focus { border-color: var(--palette-light); box-shadow: 0 0 0 3px var(--dark-4); background: var(--dark-0); }
+  }
+  .login__eye { color: var(--palette-light); &:hover { color: var(--palette-cream); background: var(--dark-1); } }
+  .login__submit {
+    background: var(--palette-brand);
+    color: var(--palette-white);
+    &:hover { background: var(--palette-taupe); }
+    &:disabled { background: var(--dark-1); color: var(--palette-taupe); }
+  }
+  .login__remember { color: var(--palette-taupe); }
+  .login__footer-note { color: var(--palette-taupe); }
+  .login__ledger-rule { border-block-start-color: var(--dark-4); }
+  .login__ledger-rule::after { border-block-start-color: var(--palette-brand); }
+
+  // Toast host
+  .toast-host__item {
+    background: var(--dark-2);
+    border-color: var(--dark-4);
+    border-inline-start-color: var(--palette-cream);
+    color: var(--palette-cream);
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+  }
+
+  // Notification bell
+  .notification-bell__panel {
+    background: var(--dark-2);
+    border-color: var(--dark-4);
+    .notification-bell__item { border-block-end-color: var(--dark-4); }
+    .notification-bell__item--unread { background: var(--dark-1); }
+    .notification-bell__item-title { color: var(--palette-cream); }
+    .notification-bell__item-text { color: var(--palette-taupe); }
+  }
+
+  // Flow ribbon
+  .flow-ribbon__node {
+    border-color: var(--dark-3);
+    background: var(--dark-2);
+    color: var(--palette-taupe);
+  }
+  .flow-ribbon__node--done { border-color: var(--palette-cream); color: var(--palette-cream); }
+  .flow-ribbon__node--current { border-color: var(--palette-light); color: var(--palette-cream); }
+  .flow-ribbon__link { border-block-start-color: var(--dark-3); }
+
+  // Balance ring
+  .balance-ring__track { stroke: var(--palette-brand); }
+  .balance-ring__center-value { fill: var(--palette-cream); }
+  .balance-ring__center-label { fill: var(--palette-taupe); }
+
+  // Timeline
+  .timeline__item { border-inline-start-color: var(--palette-light); }
+  .timeline__item::before {
+    background: var(--dark-2);
+    border-color: var(--palette-cream);
+  }
+  .timeline__title { color: var(--palette-cream); }
+  .timeline__body { color: var(--palette-taupe); }
+  .timeline__time { color: var(--palette-taupe); }
+
+  // Key-value list
+  .key-value-list__key { color: var(--palette-taupe); }
+  .key-value-list__value { color: var(--palette-cream); }
+  .key-value-list__item { border-inline-start-color: var(--palette-light); }
+
+  // Direction trail
+  .direction-trail__chip {
+    background: var(--dark-1);
+    border-color: var(--dark-4);
+    color: var(--palette-cream);
+  }
+  .direction-trail__chip--last { background: var(--dark-3); }
+
+  // Bottom nav
+  .bottom-nav {
+    background: var(--dark-1);
+    border-block-start-color: var(--dark-3);
+    .bottom-nav__item { color: var(--palette-taupe); }
+    .bottom-nav__item--active { color: var(--palette-cream); }
+  }
+
+  // Command palette
+  .command-palette__group { background: var(--dark-1); color: var(--palette-taupe); }
+  .command-palette__item {
+    color: var(--palette-cream);
+    &:hover { background: var(--dark-3); }
+  }
+
+  // Sticky actions
+  .sticky-actions {
+    background: var(--dark-2);
+    border-block-start-color: var(--dark-4);
+  }
+
+  // Scrollbar
+  ::-webkit-scrollbar-thumb { background: var(--dark-3); }
+  ::-webkit-scrollbar-track { background: var(--dark-1); }
+
+  // Chat
+  .chat {
+    background: var(--dark-2);
+    border-color: var(--dark-4);
+  }
+  .chat__msg {
+    background: var(--dark-1);
+    border-color: var(--dark-4);
+    .chat__msg-head { color: var(--palette-taupe); }
+    .chat__body { color: var(--palette-cream); }
+    &.chat__msg--mine { background: var(--dark-3); }
+  }
+  .chat__composer { border-block-start-color: var(--dark-4); }
+
+  // Links
+  a { color: var(--palette-cream); }
+
+  // Scroll lock overlay tint
+  ::selection { background: var(--dark-3); color: var(--palette-white); }
+}

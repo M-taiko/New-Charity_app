@@ -1,0 +1,21 @@
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('ibm-plex-sans-arabic-400-arabic.woff2') format('woff2'), url('ibm-plex-sans-arabic-400-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans Arabic';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('ibm-plex-sans-arabic-600-arabic.woff2') format('woff2'), url('ibm-plex-sans-arabic-600-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Amiri';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url('amiri-700-arabic.woff2') format('woff2'), url('amiri-700-latin.woff2') format('woff2');
+}

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Notification;
+use App\Support\Api\NotificationLink;
 use Illuminate\Http\Request;
 
 class NotificationController extends Controller
@@ -63,7 +64,18 @@ class NotificationController extends Controller
         $latest = Notification::where('user_id', auth()->id())
             ->latest('created_at')
             ->limit(5)
-            ->get(['id', 'title', 'message', 'type', 'created_at', 'is_read']);
+            ->get(['id', 'title', 'message', 'type', 'created_at', 'is_read', 'related_id', 'related_type'])
+            ->map(fn ($n) => [
+                'id' => $n->id,
+                'title' => $n->title,
+                'message' => $n->message,
+                'type' => $n->type,
+                'is_read' => (bool) $n->is_read,
+                'related_id' => $n->related_id,
+                'related_type' => $n->related_type,
+                'link' => NotificationLink::spa($n->related_type, $n->related_id),
+                'created_at' => $n->created_at?->toIso8601ZuluString(),
+            ]);
 
         return response()->json([
             'unread_count' => $unreadCount,

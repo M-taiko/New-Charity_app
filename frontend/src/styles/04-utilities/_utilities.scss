@@ -1,0 +1,115 @@
+// A fixed, tiny set of utilities (plan 15.5). Nothing here may grow ad hoc.
+.u-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.u-text-start {
+  text-align: start;
+}
+
+.u-text-end {
+  text-align: end;
+}
+
+.u-text-center {
+  text-align: center;
+}
+
+.u-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.u-flex {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.u-flex-wrap {
+  flex-wrap: wrap;
+}
+
+.u-flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.u-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.u-gap-1 {
+  gap: var(--space-1);
+}
+
+.u-gap-3 {
+  gap: var(--space-3);
+}
+
+.u-gap-4 {
+  gap: var(--space-4);
+}
+
+.u-mt-2 {
+  margin-block-start: var(--space-2);
+}
+
+.u-mt-4 {
+  margin-block-start: var(--space-4);
+}
+
+.u-mb-4 {
+  margin-block-end: var(--space-4);
+}
+
+.u-full {
+  width: 100%;
+}
+
+.u-muted {
+  color: var(--color-text-muted);
+}
+
+.u-small {
+  font-size: var(--text-xs);
+}
+
+/* LTR isolation for dates/numbers inside RTL text (plan 23).
+   unicode-bidi:isolate is sufficient — no display change needed,
+   so <td> cells keep their table-cell layout and alignment. */
+.u-bidi {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.u-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+.u-print-hidden {
+  @media print {
+    display: none;
+  }
+}
+
+/* Date/number cells inside RTL tables: content flows LTR (for dates like
+   31/10/2026) but the cell stays right-aligned to match the table. */
+td.u-bidi,
+th.u-bidi {
+  text-align: end;
+  display: table-cell;
+}

@@ -1,0 +1,36 @@
+.balance-ring {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.balance-ring__svg {
+  width: 132px;
+  height: 132px;
+  flex-shrink: 0;
+}
+
+.balance-ring__track {
+  stroke: var(--color-hairline);
+}
+
+.balance-ring__center-value {
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  fill: var(--color-text);
+}
+
+.balance-ring__center-label {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  fill: var(--color-text-muted);
+}
+
+.balance-ring__legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 180px;
+}

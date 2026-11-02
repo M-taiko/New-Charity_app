@@ -232,3 +232,40 @@ Route::get('/', function () {
 });
 
 require __DIR__.'/auth.php';
+
+// ── The new SPA (plan section 8): served as static files from public/app ──
+// Blade stays the default during migration; /app hosts the new interface.
+function spa_file(string $file): \Symfony\Component\HttpFoundation\Response
+{
+    $file = ltrim($file, '/');
+    $root = realpath(public_path('app'));
+    abort_if($root === false, 404);
+    $full = realpath(public_path('app/' . $file));
+    // unknown deep links fall back to the SPA router (index.html); a real
+    // path that resolves outside the app root is a traversal attempt -> 404
+    if ($full !== false && !str_starts_with($full, $root)) {
+        abort(404);
+    }
+    if ($full === false || !is_file($full)) {
+        $full = $root . DIRECTORY_SEPARATOR . 'index.html';
+    }
+    $mime = match (strtolower(pathinfo($full, PATHINFO_EXTENSION))) {
+        'js' => 'text/javascript',
+        'css' => 'text/css',
+        'woff2' => 'font/woff2',
+        'svg' => 'image/svg+xml',
+        'json' => 'application/json',
+        'html' => 'text/html',
+        default => null,
+    };
+    $headers = ['Cache-Control' => str_ends_with($full, '.html')
+        ? 'no-cache, no-store, must-revalidate'
+        : 'public, max-age=31536000, immutable'];
+    if ($mime !== null) {
+        $headers['Content-Type'] = $mime . '; charset=utf-8';
+    }
+    return response()->file($full, $headers);
+}
+
+Route::get('/app', fn () => spa_file('index.html'))->name('spa');
+Route::get('/app/{any}', fn (string $any) => spa_file($any))->where('any', '.*')->name('spa.deep');

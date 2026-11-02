@@ -1,0 +1,70 @@
+{
+  "extends": [
+    "stylelint-config-standard-scss"
+  ],
+  "plugins": [
+    "stylelint-scss",
+    "stylelint-no-unsupported-browser-features"
+  ],
+  "rules": {
+    "selector-class-pattern": "^[a-z0-9]+(-[a-z0-9]+)*(__[a-z0-9]+(-[a-z0-9]+)*)?(--[a-z0-9]+(-[a-z0-9]+)*)*$",
+    "scss/selector-no-redundant-nesting-selector": true,
+    "selector-max-id": 0,
+    "declaration-no-important": null,
+    "selector-max-compound-selectors": null,
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": [
+          "use",
+          "forward",
+          "include",
+          "mixin",
+          "function",
+          "return",
+          "layer",
+          "property"
+        ]
+      }
+    ],
+    "plugin/no-unsupported-browser-features": [
+      true,
+      {
+        "severity": "warning",
+        "browsers": [
+          "Chrome >= 109",
+          "Edge >= 109",
+          "Firefox >= 115",
+          "Safari >= 15.4"
+        ]
+      }
+    ],
+    "scss/comment-no-loud": null,
+    "scss/dollar-variable-empty-line-before": null,
+    "scss/double-slash-comment-empty-line-before": null,
+    "comment-empty-line-before": null,
+    "declaration-empty-line-before": null,
+    "custom-property-empty-line-before": null,
+    "rule-empty-line-before": [
+      "always-multi-line",
+      {
+        "except": [
+          "first-nested"
+        ],
+        "ignore": [
+          "after-comment"
+        ]
+      }
+    ],
+    "length-zero-no-unit": true,
+    "color-function-notation": null,
+    "alpha-value-notation": null,
+    "hue-degree-notation": null,
+    "scss/operator-no-unspaced": null,
+    "media-feature-range-notation": "prefix",
+    "import-notation": null,
+    "value-keyword-case": null,
+    "color-hex-length": null,
+    "no-descending-specificity": null
+  }
+}

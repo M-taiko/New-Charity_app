@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="utf-8" />
+    <title>مؤسسة نجيب سليم الخيرية — نظام العهد والمصروفات</title>
+    <base href="/app/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" id="theme-color" content="#f7f3ef" />
+    <link rel="icon" type="image/svg+xml" href="assets/brand/favicon.svg" />
+    <script>
+      // Apply the saved theme before first paint (plan 13.3) — no flash.
+      (function () {
+        try {
+          // one-time storage migration: the app was renamed — daftar.* → naguib-selim.*
+          for (var i = localStorage.length - 1; i >= 0; i--) {
+            var oldKey = localStorage.key(i);
+            if (oldKey && oldKey.indexOf('daftar.') === 0) {
+              var newKey = 'naguib-selim.' + oldKey.slice(7);
+              if (localStorage.getItem(newKey) === null) {
+                localStorage.setItem(newKey, localStorage.getItem(oldKey));
+              }
+              localStorage.removeItem(oldKey);
+            }
+          }
+          var saved = localStorage.getItem('naguib-selim.theme');
+          var theme =
+            saved === 'light' || saved === 'dark'
+              ? saved
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? 'dark'
+                : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.setAttribute('data-motion', localStorage.getItem('naguib-selim.motion') || 'full');
+          var meta = document.getElementById('theme-color');
+          if (meta) meta.setAttribute('content', theme === 'dark' ? '#12100E' : '#F7F3EF');
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      /* Loader shown until Angular replaces <app-root> content */
+      .boot-loader {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 12px;
+        font-family: Tahoma, Arial, sans-serif;
+        font-size: 14px;
+        z-index: 9999;
+      }
+      [data-theme='light'] .boot-loader {
+        background: #f7f3ef;
+        color: #5d3722;
+      }
+      [data-theme='dark'] .boot-loader {
+        background: #12100e;
+        color: #f7f3ef;
+      }
+      .boot-loader__spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid rgba(190, 175, 167, 0.3);
+        border-top-color: #beafa7;
+        border-radius: 50%;
+        animation: boot-spin 0.8s linear infinite;
+      }
+      @keyframes boot-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      [data-motion='off'] .boot-loader__spinner {
+        animation: none;
+      }
+    </style>
+  </head>
+  <body>
+    <app-root>
+      <div class="boot-loader">
+        <div class="boot-loader__spinner"></div>
+        <span>جارٍ التحميل…</span>
+      </div>
+    </app-root>
+  </body>
+</html>

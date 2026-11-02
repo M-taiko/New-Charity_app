@@ -1,0 +1,85 @@
+.chart-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-l);
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.chart-card__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.chart-card__title {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.chart-card__spacer {
+  flex: 1;
+}
+
+.chart-card__body {
+  position: relative;
+  min-height: 220px;
+}
+
+.chart-card__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+}
+
+.chart-card__table th,
+.chart-card__table td {
+  text-align: start;
+  padding: var(--space-1) var(--space-2);
+  border-block-end: 1px solid var(--color-hairline);
+}
+
+/* ── Detail layout — facts card + side panel side by side ─────── */
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.detail-grid__stamp {
+  padding-block: var(--space-2) var(--space-3);
+}
+
+/* edit-form context strip: #id / amount / date of the edited record */
+.detail-grid__context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-m);
+  background: var(--color-surface-inset);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.detail-split__row {
+  padding-block: var(--space-1);
+  border-block-end: 1px dashed var(--color-hairline);
+}
+
+.detail-split__row:last-child {
+  border-block-end: 0;
+}
+
+@media (max-width: 900px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,61 @@
+// One print stylesheet for every page (plan 23): light palette, org header,
+// repeated table heads, no shell chrome. print-sheet__org is hidden on screen
+// and revealed only in print.
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+
+  :root {
+    --color-bg: var(--palette-white);
+    --color-surface: var(--palette-white);
+    --color-surface-inset: var(--palette-cream);
+    --color-surface-raised: var(--palette-sand);
+    --color-hairline: var(--palette-sand);
+    --color-margin-rule: var(--palette-taupe);
+    --color-text: var(--palette-ink);
+    --color-text-muted: var(--palette-mid);
+    --color-primary: var(--palette-brand);
+  }
+
+  .app-shell__sidebar,
+  .app-shell__topbar,
+  .app-shell__bottom-nav,
+  .filter-bar,
+  .toast-host,
+  .sticky-actions,
+  .p-paginator,
+  .u-print-hidden {
+    display: none !important;
+  }
+
+  .app-shell__main,
+  .app-shell__content {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+  }
+
+  .print-sheet__org {
+    display: flex !important;
+    align-items: center;
+    gap: 12px;
+    border-block-end: 2px solid var(--palette-taupe);
+    padding-block-end: 8px;
+    margin-block-end: 12px;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+}

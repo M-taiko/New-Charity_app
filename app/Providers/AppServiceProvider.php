@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +23,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Login rate limit — configurable per environment (LOGIN_THROTTLE_MAX).
+        // Production keeps a strict default; local dev / e2e suites raise it.
+        RateLimiter::for('login', function (Request $request) {
+            $max = max(2, (int) env('LOGIN_THROTTLE_MAX', 10));
+
+            return Limit::perMinute($max)->by($request->input('email') . '|' . $request->ip());
+        });
+
         // Polyfill for mb_split if not available
         if (!function_exists('mb_split')) {
             function mb_split($pattern, $string, $limit = -1) {

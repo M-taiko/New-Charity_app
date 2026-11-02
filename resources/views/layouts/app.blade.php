@@ -270,5 +270,7 @@
     </script>
 
     @stack('scripts')
+
+    @include('partials.orientation-lock')
 </body>
 </html>

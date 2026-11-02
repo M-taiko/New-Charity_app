@@ -1,0 +1,84 @@
+/* Stamps: meaning by icon+fill+border, never by color alone (plan 10.1.3) */
+.stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-s);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  border: 1.5px solid transparent;
+  white-space: nowrap;
+}
+
+.stamp__icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+/* success / approved */
+.stamp--success {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+/* rejected / error — strongest: solid fill + double border */
+.stamp--danger {
+  background: var(--palette-ink);
+  color: var(--palette-white);
+  box-shadow: 0 0 0 1px var(--palette-ink), 0 0 0 2px var(--color-surface), 0 0 0 3px var(--palette-ink);
+}
+
+:root[data-theme='dark'] .stamp--danger {
+  background: var(--palette-cream);
+  color: var(--palette-ink);
+  box-shadow: 0 0 0 1px var(--palette-cream), 0 0 0 2px var(--color-surface), 0 0 0 3px var(--palette-cream);
+}
+
+/* pending — dashed */
+.stamp--pending {
+  border-style: dashed;
+  border-color: var(--color-text-muted);
+  color: var(--color-text-muted);
+}
+
+/* info — filled soft */
+.stamp--info {
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+  border-color: transparent;
+}
+
+/* neutral / closed */
+.stamp--neutral {
+  background: var(--color-surface-inset);
+  color: var(--color-text-muted);
+}
+
+.stamp--lg {
+  font-size: var(--text-sm);
+  padding: var(--space-1) var(--space-3);
+}
+
+.stamp--lg .stamp__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.stamp--stamp-in {
+  animation: stamp-in 220ms var(--ease-out) 1;
+}
+
+@keyframes stamp-in {
+  0% {
+    transform: scale(1.08) rotate(-2deg);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}

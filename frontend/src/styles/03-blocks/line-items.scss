@@ -1,0 +1,52 @@
+.line-items__row {
+  display: grid;
+  grid-template-columns: 1fr 100px 140px 40px;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* cells may not be blown out by intrinsic input widths (RTL overflow) */
+.line-items__row > * {
+  min-width: 0;
+}
+
+.line-items__row p-inputnumber {
+  width: 100%;
+  max-width: 100%;
+}
+
+.line-items__row p-inputnumber .p-inputnumber-input {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.line-items__total {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  font-weight: 600;
+  padding-block-start: var(--space-2);
+}
+
+.line-items__warning {
+  font-size: var(--text-2xs);
+  color: var(--color-text);
+  border: 1.5px dashed var(--color-control-border);
+  border-radius: var(--radius-m);
+  padding: var(--space-2);
+  margin-block-start: var(--space-2);
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+@media (max-width: 576px) {
+  .line-items__row {
+    grid-template-columns: 1fr 80px 40px;
+  }
+
+  .line-items__cell-price {
+    grid-column: 1 / -1;
+  }
+}

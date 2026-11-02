@@ -1,0 +1,50 @@
+.flow-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.flow-ribbon__node {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--color-hairline);
+  background: var(--color-surface);
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.flow-ribbon__node--done {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.flow-ribbon__node--current {
+  border-color: var(--color-text-muted);
+  border-style: dashed;
+  color: var(--color-text);
+  animation: flow-march 1.6s linear infinite;
+}
+
+@keyframes flow-march {
+  to {
+    background-position: 12px 0;
+  }
+}
+
+.flow-ribbon__node-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.flow-ribbon__link {
+  width: 22px;
+  border-block-start: 1.5px solid var(--color-hairline);
+}
+
+.flow-ribbon__link--dashed {
+  border-block-start-style: dashed;
+}
