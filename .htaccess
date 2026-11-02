@@ -6,6 +6,18 @@
     RewriteEngine On
     RewriteBase /
 
+    # The SPA lives under /app (files in public/app). The Laravel code
+    # directory `app/` shadows that URL (the -d check below would stop the
+    # rewrite), so handle /app first:
+    # 1) real SPA files are served straight from public/app by Apache
+    #    (static speed + the cache headers written by frontend pack.mjs)
+    # 2) every other /app URL (SPA deep links) goes to the front
+    #    controller, which answers with public/app/index.html
+    #    (see the spa routes in routes/web.php)
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+    RewriteRule ^app(/.*)?$ public/app$1 [L]
+    RewriteRule ^app(/.*)?$ public/index.php [L]
+
     # If the request is for files or directories that exist, skip the rewriting
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

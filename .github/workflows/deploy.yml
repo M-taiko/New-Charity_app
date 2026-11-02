@@ -1,0 +1,130 @@
+# Deploys to production on every push to main.
+#
+# What it does:
+#   1. Builds the Angular SPA and packs it into public/app (static files
+#      + .htaccess — see frontend/scripts/pack.mjs).
+#   2. rsyncs the repository (plus the built SPA) to the Hostinger VPS.
+#      Host-owned state is never touched or deleted: .env, storage/,
+#      vendor/, public/storage/, bootstrap/cache/ are excluded — rsync
+#      exclude patterns also protect them from --delete on the receiver.
+#   3. Releases on the server: composer install (host provides composer +
+#      PHP 8.2), then `php artisan migrate --force` — additive migrations
+#      ONLY. The database is NEVER dropped/wiped/reseeded: migrate:fresh,
+#      db:wipe and db:seed are forbidden here.
+#   4. Smoke-tests the live site (Blade app at /, SPA at /app, /api/v1).
+#
+# Required repo secret: SSH_PRIVATE_KEY — the deploy key authorized on the
+# VPS (u734216585@82.29.189.151, ~/.ssh/authorized_keys).
+
+name: Deploy to production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # one deploy at a time; a queued push waits instead of being cancelled
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  SSH_HOST: 82.29.189.151
+  SSH_PORT: "65002"
+  SSH_USER: u734216585
+  DEPLOY_PATH: /home/u734216585/domains/charity.masarsoft.io/public_html
+  SITE_URL: https://charity.masarsoft.io
+
+jobs:
+  deploy:
+    name: Build, sync and release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Build the SPA into public/app
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+          npm run pack
+          test -f ../public/app/index.html
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          install -m 600 /dev/null ~/.ssh/id_ed25519
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          # Pinned host public keys (ssh-keyscan -p 65002 82.29.189.151)
+          cat > ~/.ssh/known_hosts <<'KEYS'
+          [82.29.189.151]:65002 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILcCqSCyVBnQ6QGHXCZKsYSaA4DddByeXMgUiymGdfWU
+          [82.29.189.151]:65002 ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBMONV4l1gbum0Yn+f0HgXXfSx3dLgfcxkacU5tA+In5SKrxLjEkzVm78YMkFtGVtB0X+L2Lp3XG1MwOXLpYbdnE=
+          KEYS
+
+      - name: Sync files to the server
+        run: |
+          rsync -az --delete --info=stats1 \
+            -e "ssh -p $SSH_PORT" \
+            --exclude='.git/' \
+            --exclude='.env' \
+            --exclude='.env.backup' \
+            --exclude='.env.production' \
+            --exclude='/storage/' \
+            --exclude='/vendor/' \
+            --exclude='/node_modules/' \
+            --exclude='/frontend/node_modules/' \
+            --exclude='/public/storage/' \
+            --exclude='/public/hot' \
+            --exclude='/public/build/' \
+            --exclude='/bootstrap/cache/' \
+            --exclude='/database/*.sqlite' \
+            --exclude='error_log' \
+            ./ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+
+      - name: Release on the server (composer, migrations, caches)
+        run: |
+          ssh -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "cd '$DEPLOY_PATH' && bash -s" <<'SCRIPT'
+          set -euo pipefail
+
+          # PHP dependencies — the host provides composer + PHP 8.2
+          export COMPOSER_HOME="$HOME/.composer"
+          composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+          # DATABASE SAFETY: additive migrations only.
+          # NEVER migrate:fresh / db:wipe / db:seed on this server.
+          php artisan migrate --force --no-interaction
+
+          php artisan optimize:clear
+
+          # Runtime dirs. No storage:link — symlinks are blocked on this
+          # host (see HOSTING_NOTES.md; public/storage serves the files).
+          mkdir -p storage/framework/cache/data storage/framework/sessions \
+                   storage/framework/views storage/framework/testing \
+                   storage/app/public storage/logs bootstrap/cache
+          chmod -R u+rwX storage bootstrap/cache
+          SCRIPT
+
+      - name: Smoke-test the live site
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$SITE_URL/login")
+          [ "$code" = 200 ] || { echo "::error::Blade app /login returned $code"; exit 1; }
+
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$SITE_URL/app")
+          [ "$code" = 200 ] || { echo "::error::SPA /app returned $code"; exit 1; }
+          curl -sS --max-time 30 "$SITE_URL/app" | grep -q '<app-root>' \
+            || { echo "::error::/app did not serve the SPA index.html"; exit 1; }
+
+          # POST-only API route: a GET must not be 404 (missing route) or 500
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$SITE_URL/api/v1/auth/login")
+          case "$code" in 405|401|419|429) ;; *) echo "::error::/api/v1/auth/login GET returned $code (expected 405/401/419/429)"; exit 1;; esac
+
+          echo "Smoke tests passed: Blade /, SPA /app, API /api/v1 are live."
