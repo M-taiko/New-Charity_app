@@ -105,6 +105,13 @@ jobs:
           export COMPOSER_HOME="$HOME/.composer"
           composer install --no-dev --optimize-autoloader --no-interaction \
             --no-progress --no-scripts
+
+          # Purge stale cached manifests (bootstrap/cache/ is excluded from
+          # rsync, so the host keeps the previous deploy's files). A stale
+          # services.php referencing dev packages that --no-dev removed
+          # hard-fails every artisan boot.
+          rm -f bootstrap/cache/*.php
+
           $PHP artisan package:discover --ansi
 
           # DATABASE SAFETY: additive migrations only.
