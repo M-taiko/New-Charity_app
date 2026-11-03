@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+import type { Routes } from '@angular/router';
 
 export const PROCUREMENT_ROUTES: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'purchase' },

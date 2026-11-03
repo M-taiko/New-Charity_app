@@ -42,10 +42,16 @@ class ApiV1Response
                 $level ??= 'success';
             }
 
+            // Machine-readable business-rule code (Task3 §13): controllers may
+            // flash `code` next to the message so the SPA can translate it
+            // precisely (errors.codes.<code>) instead of string-matching.
+            $code = $request->session()->has('code') ? $request->session()->pull('code') : null;
+
             return response()->json([
                 'data' => null,
                 'message' => $message,
                 'level' => $level,
+                ...(is_string($code) && $code !== '' ? ['code' => $code] : []),
             ], $level === 'error' ? 422 : 200);
         }
 

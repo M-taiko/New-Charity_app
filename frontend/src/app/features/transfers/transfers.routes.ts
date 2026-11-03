@@ -1,4 +1,4 @@
-import { Routes } from '@angular/router';
+import type { Routes } from '@angular/router';
 
 export const TRANSFERS_ROUTES: Routes = [
   { path: '', loadComponent: () => import('./pages/list/list.component').then((m) => m.TransferListPage) },

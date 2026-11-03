@@ -3,22 +3,23 @@
 import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { TranslatePipe } from '@ngx-translate/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
+import { CheckboxModule } from 'primeng/checkbox';
+import { DatePickerModule } from 'primeng/datepicker';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
-import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
-import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
-import { ListResponse } from '@shared/models/api.models';
+import type { ItemResponse, ListResponse, Lookups } from '@shared/models/api.models';
 
 interface Row {
   id: number;
@@ -30,90 +31,165 @@ interface Row {
   custody_id: number | null;
 }
 
-/** Custody movements ledger (plan 20): date/type/agent filters + summary; printable. */
+interface MovementsParams {
+  page: number;
+  per_page: number;
+  q: string;
+  sort?: string;
+  date_from: string;
+  date_to: string;
+  agent_id: number | null;
+  type: string;
+  custody_id: number | null;
+  show_closures: boolean;
+}
+
+const DEFAULT_FILTERS: Omit<MovementsParams, 'page' | 'per_page' | 'q' | 'sort'> = {
+  date_from: '',
+  date_to: '',
+  agent_id: null,
+  type: 'all',
+  custody_id: null,
+  show_closures: false,
+};
+
+/** the movement types movements.blade.php offers, in its order */
+const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'expense', 'recovery', 'custody_close'] as const;
+
+/**
+ * Custody movements ledger (plan 20 + T3-16): the Blade filter set the API
+ * accepts (date range, agent-as-party, type, custody number, zero-closure
+ * toggle) with apply/reset, plus print through the shared print sheet.
+ */
 @Component({
   selector: 'app-custody-movements',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, SelectModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
-    EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
+    TranslatePipe, RouterLink, FormsModule, ButtonModule, CheckboxModule, DatePickerModule, InputNumberModule, SelectModule,
+    PageHeaderComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'custody.movements.title' | translate">
-      <div actions class="u-flex u-gap-2">
+    <app-print-sheet [title]="'custody.movements.title' | translate">
+      <app-page-header [title]="'custody.movements.title' | translate">
+        <div actions class="u-flex u-gap-2">
+          <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
+        </div>
+      </app-page-header>
 
+      <div class="filter-bar no-print">
+        <div class="filter-bar__row">
+          <div class="field" style="min-width: 12rem">
+            <label class="field__label" for="mv-filter-date">{{ 'custody.movements.date_range' | translate }}</label>
+            <p-datepicker appendTo="body" inputId="mv-filter-date" name="date" selectionMode="range" [showIcon]="true"
+              dateFormat="yy-mm-dd" [ngModel]="draftDateRange()" (ngModelChange)="onDateRange($event)" styleClass="u-full" />
+          </div>
+          <div class="field" style="min-width: 11rem">
+            <label class="field__label" for="mv-filter-agent">{{ 'custody.movements.agent' | translate }}</label>
+            <p-select appendTo="body" inputId="mv-filter-agent" [options]="agentOptions()" optionLabel="label" optionValue="value"
+              [filter]="true" [ngModel]="draft().agent_id" (ngModelChange)="patchDraft('agent_id', $event)"
+              name="agent" styleClass="u-full" [autofocus]="false" />
+          </div>
+          <div class="field" style="min-width: 11rem">
+            <label class="field__label" for="mv-filter-type">{{ 'custody.movements.type' | translate }}</label>
+            <p-select appendTo="body" inputId="mv-filter-type" [options]="typeOptions()" optionLabel="label" optionValue="value"
+              [ngModel]="draft().type" (ngModelChange)="patchDraft('type', $event)" name="type"
+              styleClass="u-full" [autofocus]="false" />
+          </div>
+          <div class="field" style="min-width: 9rem">
+            <label class="field__label" for="mv-filter-custody">{{ 'custody.movements.custody_number' | translate }}</label>
+            <p-inputnumber inputId="mv-filter-custody" [ngModel]="draft().custody_id"
+              (ngModelChange)="patchDraft('custody_id', $event)" [min]="1" [useGrouping]="false" name="custody" styleClass="u-full" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="mv-filter-closures">{{ 'custody.movements.show_closures' | translate }}</label>
+            <p-checkbox inputId="mv-filter-closures" [binary]="true" [ngModel]="draft().show_closures"
+              (ngModelChange)="patchDraft('show_closures', $event)" name="show_closures" />
+          </div>
+          <div class="filter-bar__spacer"></div>
+          <p-button [label]="'custody.movements.apply' | translate" size="small" (onClick)="applyFilters()" />
+          <p-button [label]="'common.reset' | translate" severity="secondary" [outlined]="true" size="small" (onClick)="resetFilters()" />
+        </div>
       </div>
-    </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
+      @if (data.isLoading() && !data.value()) {
+        <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
+      } @else if (data.value(); as page) {
         <div class="kpi-grid">
-        <app-stat-tile [label]="'custody.movements.received'" [value]="summaryValue('received')" [money]="true" />
-        <app-stat-tile [label]="'custody.movements.returned'" [value]="summaryValue('returned')" [money]="true" />
-        <app-stat-tile [label]="'custody.movements.transferred'" [value]="summaryValue('transferred')" [money]="true" />
-        <app-stat-tile [label]="'custody.movements.spent'" [value]="summaryValue('spent')" [money]="true" />
+          <app-stat-tile [label]="'custody.movements.received'" [value]="summaryValue('received')" [money]="true" />
+          <app-stat-tile [label]="'custody.movements.returned'" [value]="summaryValue('returned')" [money]="true" />
+          <app-stat-tile [label]="'custody.movements.transferred'" [value]="summaryValue('transferred')" [money]="true" />
+          <app-stat-tile [label]="'custody.movements.spent'" [value]="summaryValue('spent')" [money]="true" />
         </div>
 
-
-      <app-data-table
-        [tableKey]="tableKey"
-        [columns]="columns"
-        [rows]="page.data"
-        [total]="page.meta.total"
-        [perPage]="params().per_page"
-        [loading]="data.isLoading()"
-        (pageChange)="onPage($event)"
-      >
-        <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="date"><span class="u-bidi">{{ row.date | datetime }}</span></td>
-            <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-            <td appTableCol="custody_id">{{ row.custody_id ?? '—' }}</td>
-            <td appTableCol="description">{{ row.description ?? '—' }}</td>
-            <td appTableCol="user">{{ row.user?.name ?? '—' }}</td>
-            <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.movements.col_date' | translate }}</span>
-              <span class="u-bidi">{{ row.date | datetime }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.movements.col_type' | translate }}</span>
-              {{ row.type | enumLabel: 'transaction_type' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.movements.col_custody' | translate }}</span>
-              {{ row.custody_id ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.movements.col_description' | translate }}</span>
-              {{ row.description ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.movements.col_by' | translate }}</span>
-              {{ row.user?.name ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-              <span class="u-bidi">{{ row.amount | money }}</span>
-            </div>
-          </tr>
-        </ng-template>
-        <div empty>
-          <app-empty-state [title]="'custody.movements.empty' | translate" [text]="'common.no_data' | translate" />
-        </div>
-      </app-data-table>
-    }
+        <app-data-table
+          [tableKey]="tableKey"
+          [columns]="columns"
+          [rows]="page.data"
+          [total]="page.meta.total"
+          [perPage]="params().per_page"
+          [loading]="data.isLoading()"
+          (pageChange)="onPage($event)"
+        >
+          <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
+          <ng-template appTableBody let-row>
+            <tr class="ledger-table__row">
+              <td appTableCol="date"><span class="u-bidi">{{ row.date | datetime }}</span></td>
+              <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
+              <td appTableCol="custody_id">
+                @if (row.custody_id) {
+                  <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
+                } @else {
+                  <span>—</span>
+                }
+              </td>
+              <td appTableCol="description">{{ row.description ?? '—' }}</td>
+              <td appTableCol="user">{{ row.user ?? '—' }}</td>
+              <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
+            </tr>
+            <tr class="ledger-table__stacked">
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_date' | translate }}</span>
+                <span class="u-bidi">{{ row.date | datetime }}</span>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_type' | translate }}</span>
+                {{ row.type | enumLabel: 'transaction_type' }}
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_custody' | translate }}</span>
+                @if (row.custody_id) {
+                  <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
+                } @else {
+                  <span>—</span>
+                }
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_description' | translate }}</span>
+                {{ row.description ?? '—' }}
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_by' | translate }}</span>
+                {{ row.user ?? '—' }}
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
+                <span class="u-bidi">{{ row.amount | money }}</span>
+              </div>
+            </tr>
+          </ng-template>
+          <div empty>
+            <app-empty-state [title]="'custody.movements.empty' | translate" [text]="'common.no_data' | translate" />
+          </div>
+        </app-data-table>
+      }
+    </app-print-sheet>
   `,
 })
 export class MovementsPage {
   private http = inject(HttpClient);
-  private toast = inject(ToastService);
+  private translate = inject(TranslateService);
 
   readonly tableKey = 'movements.component';
 
@@ -122,46 +198,108 @@ export class MovementsPage {
     { field: 'type', header: 'custody.movements.col_type', sortable: true },
     { field: 'custody_id', header: 'custody.movements.col_custody', sortable: true },
     { field: 'description', header: 'custody.movements.col_description', sortable: true },
-    { field: 'user', searchField: 'user.name', header: 'custody.movements.col_by', sortable: true },
-    { field: 'amount', header: 'common.amount', sortable: true }
+    { field: 'user', searchField: 'user', header: 'custody.movements.col_by', sortable: true },
+    { field: 'amount', header: 'common.amount', sortable: true },
   ];
 
-  params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
+  /** the filter draft — applied only when the user presses Apply, like the Blade page */
+  draft = signal<MovementsParams>({ page: 1, per_page: 25, q: '', ...DEFAULT_FILTERS });
+  draftDateRange = signal<Date[]>([]);
 
-  data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string }>({
+  /** object spread is not template syntax — the draft is patched through here */
+  patchDraft(key: keyof MovementsParams, value: unknown): void {
+    this.draft.update((d) => ({ ...d, [key]: value }));
+  }
+
+  params = signal<MovementsParams>({ page: 1, per_page: 25, q: '', ...DEFAULT_FILTERS });
+
+  data = resource<ListResponse<Row>, unknown>({
     loader: () =>
       firstValueFrom(this.http.get<ListResponse<Row>>('/custodies/movements', { params: cleanParams(this.params()) })),
   });
+
+  /** agents for the party filter — the Blade view uses role مندوب users */
+  lookups = resource<Lookups, unknown>({
+    loader: () => firstValueFrom(this.http.get<ItemResponse<Lookups>>('/lookups')).then((r) => r.data),
+  });
+
+  private label(key: string): string {
+    const text = this.translate.instant(key);
+    return text !== key ? text : key;
+  }
+
+  agentOptions = computed(() => [
+    { label: this.label('custody.tracking.all_agents'), value: null },
+    ...(this.lookups.value()?.agents ?? []).map((a) => ({ label: a.name, value: a.id })),
+  ]);
+
+  typeOptions = computed(() => [
+    { label: this.label('custody.list.tab_all'), value: 'all' },
+    ...TYPE_VALUES.map((t) => ({ label: this.label(`enums.transaction_type.${t}`), value: t })),
+  ]);
 
   summaryValue(key: string): string {
     const value = this.data.value()?.meta?.summary?.[key];
     return value === undefined || value === null ? '0' : String(value);
   }
 
-  setParam(key: string, value: string): void {
-    this.params.update((p) => ({ ...p, [key]: value, page: 1 }));
+  /** apply the picked range once both ends are chosen (or when cleared) */
+  onDateRange(value: Date[] | undefined): void {
+    const range = value ?? [];
+    this.draftDateRange.set(range);
+    if (range.length === 2) {
+      this.draft.set({ ...this.draft(), date_from: toIsoDate(range[0]), date_to: toIsoDate(range[1]) });
+    } else if (range.length === 0) {
+      this.draft.set({ ...this.draft(), date_from: '', date_to: '' });
+    }
+  }
+
+  applyFilters(): void {
+    this.params.set({ ...this.draft(), page: 1 });
     this.data.reload();
   }
 
-  onSearch(term: string): void { this.setParam('q', term); }
+  resetFilters(): void {
+    this.draftDateRange.set([]);
+    this.draft.set({ page: 1, per_page: this.params().per_page, q: '', ...DEFAULT_FILTERS });
+    this.params.set({ ...this.draft() });
+    this.data.reload();
+  }
+
+  onSearch(term: string): void {
+    this.params.update((p) => ({ ...p, q: term, page: 1 }));
+    this.data.reload();
+  }
 
   onPage(event: { page: number; per_page: number; sort?: string }): void {
     const current = this.params();
     const sort = event.sort ?? '';
-    if (current.page === event.page && current.per_page === event.per_page && (current as { sort?: string }).sort === (event.sort ?? '')) {
+    if (current.page === event.page && current.per_page === event.per_page && current.sort === sort) {
       return;
     }
-    this.params.update((p) => ({ ...p, page: event.page, per_page: event.per_page , sort: event.sort ?? ''}));
+    this.params.update((p) => ({ ...p, page: event.page, per_page: event.per_page, sort }));
+    this.draft.set({ ...this.draft(), per_page: event.per_page });
     this.data.reload();
+  }
+
+  printPage(): void {
+    window.print();
   }
 }
 
-function cleanParams(params: Record<string, unknown>): Record<string, string> {
+function cleanParams(params: object): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [key, value] of Object.entries(params)) {
-    if (value !== null && value !== undefined && value !== '' && value !== 'all') {
+    if (value !== null && value !== undefined && value !== '' && value !== 'all' && value !== false) {
       result[key] = String(value);
     }
   }
   return result;
+}
+
+/** local calendar day as yyyy-mm-dd — the picker's chosen day is the day sent to the API */
+function toIsoDate(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${date.getFullYear()}-${month}-${day}`;
 }

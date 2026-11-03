@@ -1,20 +1,22 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import type { OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { ToastService } from '@core/errors/toast.service';
+import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '@core/auth/auth.service';
 import { MotionService } from '@core/motion/motion.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
-import { ActionResponse } from '@shared/models/api.models';
+import type { ActionResponse } from '@shared/models/api.models';
 
-/** My profile (plan 20): name, password, picture, animation setting. */
+/** My profile (plan 20, T3-103): name, password, picture upload, animation setting. */
 @Component({
   selector: 'app-profile-page',
   standalone: true,
@@ -38,6 +40,54 @@ import { ActionResponse } from '@shared/models/api.models';
       </div>
       <p-button type="submit" [label]="'profile.save_name' | translate" [loading]="sending()" />
     </form>
+    <form class="form-section" (ngSubmit)="savePicture()">
+      <h3 class="form-section__title">{{ 'profile.picture' | translate }}</h3>
+      <div class="u-flex u-gap-3 u-flex-wrap" style="align-items: center">
+        <span
+          class="user-chip__avatar"
+          style="width: 64px; height: 64px; font-size: var(--text-lg); display: inline-flex; align-items: center; justify-content: center"
+        >
+          @if (avatarSrc(); as avatar) {
+            <img [src]="avatar" [alt]="name()" style="width: 100%; height: 100%; border-radius: var(--radius-full); object-fit: cover" />
+          } @else {
+            {{ initials() }}
+          }
+        </span>
+        <div class="u-column u-gap-2" style="flex: 1; min-width: 220px">
+          <input
+            #picInput
+            type="file"
+            class="u-visually-hidden"
+            id="p-picture"
+            accept="image/jpeg,image/png,image/gif"
+            (change)="onPictureSelected($event)"
+            [attr.aria-label]="'profile.picture_choose' | translate"
+          />
+          <div class="u-flex u-gap-2 u-flex-wrap">
+            <p-button
+              type="button"
+              size="small"
+              [text]="true"
+              (onClick)="picInput.click()"
+              [label]="currentPicture() ? ('common.replace' | translate) : ('common.choose_file' | translate)"
+            />
+            @if (selectedFile(); as file) {
+              <p-button
+                type="submit"
+                [label]="'profile.save_picture' | translate"
+                [loading]="pictureSending()"
+                [disabled]="pictureSending()"
+              />
+              <span class="u-small u-truncate" style="max-width: 220px">{{ file.name }}</span>
+            }
+          </div>
+          @if (pictureError(); as error) {
+            <p class="field__error">{{ error | translate }}</p>
+          }
+          <p class="field__hint">{{ 'profile.picture_hint' | translate }}</p>
+        </div>
+      </div>
+    </form>
     <form class="form-section" (ngSubmit)="savePassword()" #pf="ngForm">
       <div class="form-section__grid">
         <div class="field">
@@ -57,15 +107,16 @@ import { ActionResponse } from '@shared/models/api.models';
     </form>
     <section class="form-section">
       <h3 class="form-section__title">{{ 'profile.motion.full' | translate }}</h3>
-      <p-select appendTo="body" [options]="motionOptions ?? []" optionLabel="label" optionValue="value" [ngModel]="motion.level()" name="level()" (ngModelChange)="setMotion($event)" styleClass="u-full" />
+      <p-select appendTo="body" [options]="motionOptions" optionLabel="label" optionValue="value" [ngModel]="motion.level()" name="level()" (ngModelChange)="setMotion($event)" styleClass="u-full" />
     </section>
   `,
 })
-export class ProfilePage {
+export class ProfilePage implements OnDestroy {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
   private motionSvc = inject(MotionService);
+  private translate = inject(TranslateService);
 
   name = signal('');
   email = signal('');
@@ -75,10 +126,40 @@ export class ProfilePage {
   confirmPassword = signal('');
   sending = signal(false);
 
+  // ── profile picture (T3-103) ─────────────────────────────
+  /** the picked file, validated like ProfileController@updateProfilePicture */
+  readonly selectedFile = signal<File | null>(null);
+  /** object URL of the picked file (local preview) */
+  readonly previewUrl = signal<string | null>(null);
+  /** i18n key of the client-side validation error */
+  readonly pictureError = signal<string | null>(null);
+  readonly pictureSending = signal(false);
+
+  /** the stored picture from /me — /storage/app/public/<path> as in the Blade profile */
+  readonly currentPicture = computed(() => {
+    const path = this.auth.me()?.profile_picture;
+    return path ? `/storage/app/public/${path}` : null;
+  });
+
+  readonly initials = computed(() =>
+    (this.auth.me()?.name ?? '?')
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0))
+      .join(''),
+  );
+
+  /** preview shows the freshly picked file, else the stored picture */
+  readonly avatarSrc = computed(() => this.previewUrl() ?? this.currentPicture());
+
+  ngOnDestroy(): void {
+    this.clearPreview();
+  }
+
   readonly motionOptions = [
-    { label: 'الحركات: كاملة', value: 'full' },
-    { label: 'الحركات: مبسطة', value: 'lite' },
-    { label: 'الحركات: معطلة', value: 'off' },
+    { label: this.translate.instant('profile.motion.full'), value: 'full' },
+    { label: this.translate.instant('profile.motion.lite'), value: 'lite' },
+    { label: this.translate.instant('profile.motion.off'), value: 'off' },
   ];
 
   roles = computed(() => (this.auth.me()?.roles ?? []).join('، '));
@@ -94,6 +175,62 @@ export class ProfilePage {
     this.motionSvc.set(level as 'full' | 'lite' | 'off');
   }
 
+  /** client-side mirror of ProfileController: image, jpeg/png/gif, max 2048 KB */
+  onPictureSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (!file) {
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+      this.pictureError.set('profile.picture_invalid_type');
+      this.clearPreview();
+      input.value = '';
+      return;
+    }
+    if (file.size > 2_048 * 1024) {
+      this.pictureError.set('profile.picture_too_large');
+      this.clearPreview();
+      input.value = '';
+      return;
+    }
+    this.pictureError.set(null);
+    this.clearPreview();
+    this.previewUrl.set(URL.createObjectURL(file));
+    this.selectedFile.set(file);
+  }
+
+  savePicture(): void {
+    const file = this.selectedFile();
+    if (!file) {
+      return;
+    }
+    const fd = new FormData();
+    fd.append('profile_picture', file);
+    this.pictureSending.set(true);
+    void firstValueFrom(this.http.post<ActionResponse>('/profile/picture', fd))
+      .then((res) => {
+        this.pictureSending.set(false);
+        this.toast.success(res.message ?? 'profile.picture_saved');
+        this.clearPreview();
+        this.selectedFile.set(null);
+        // refresh /me so the topbar/user-chip avatars pick the new picture
+        this.auth.loadMe().subscribe({ error: () => undefined });
+      })
+      .catch((err: unknown) => {
+        this.pictureSending.set(false);
+        this.toast.apiError(this.errMsg(err));
+      });
+  }
+
+  private clearPreview(): void {
+    const url = this.previewUrl();
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+    this.previewUrl.set(null);
+  }
+
   get motion(): MotionService {
     return this.motionSvc;
   }
@@ -102,7 +239,7 @@ export class ProfilePage {
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>('/profile/name', { name: this.name() }))
       .then((res) => { this.sending.set(false); this.toast.success(res.message); this.auth.loadMe().subscribe(); })
-      .catch((err: HttpErrorResponse) => { this.sending.set(false); this.toast.apiError(err.error?.message ?? 'errors.generic'); });
+      .catch((err: unknown) => { this.sending.set(false); this.toast.apiError(this.errMsg(err)); });
   }
 
   savePassword(): void {
@@ -117,6 +254,11 @@ export class ProfilePage {
       password_confirmation: this.confirmPassword(),
     }))
       .then((res) => { this.sending.set(false); this.toast.success(res.message); })
-      .catch((err: HttpErrorResponse) => { this.sending.set(false); this.toast.apiError(err.error?.message ?? 'errors.generic'); });
+      .catch((err: unknown) => { this.sending.set(false); this.toast.apiError(this.errMsg(err)); });
+  }
+
+  private errMsg(err: unknown): string {
+    const body = (err as HttpErrorResponse).error as { message?: string; error?: string } | null;
+    return body?.message ?? body?.error ?? 'errors.generic';
   }
 }

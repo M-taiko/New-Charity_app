@@ -1,4 +1,4 @@
-import {
+import type {
   AfterViewInit,
   ElementRef} from '@angular/core';
 import {

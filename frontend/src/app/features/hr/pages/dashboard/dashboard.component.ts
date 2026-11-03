@@ -1,5 +1,5 @@
 // HR dashboard (plan 20).
-import { computed, ChangeDetectionStrategy, Component, inject, resource } from '@angular/core';
+import { Component, inject, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
@@ -7,8 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { ItemResponse } from '@shared/models/api.models';
+import type { ItemResponse } from '@shared/models/api.models';
 
 interface HrData {
   employees_count: number; active_employees: number; total_salaries: string;
@@ -18,7 +17,7 @@ interface HrData {
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, StatTileComponent, MoneyPipe],
+  imports: [TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, StatTileComponent],
   template: `
     @if (data.value(); as d) {
       <app-page-header [title]="'hr.dashboard.title' | translate">

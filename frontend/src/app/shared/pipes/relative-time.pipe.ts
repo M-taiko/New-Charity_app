@@ -1,11 +1,11 @@
-import { PipeTransform } from '@angular/core';
-import { Pipe } from '@angular/core';
+import type { PipeTransform } from '@angular/core';
+import { Pipe, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 
 /** Arabic relative time ("منذ ساعة") from the same UTC value (plan 11.8). */
 @Pipe({ name: 'relativeTime' })
 export class RelativeTimePipe implements PipeTransform {
-  constructor(private translate: TranslateService) {}
+  private translate = inject(TranslateService);
 
   transform(value: string | null | undefined): string {
     if (!value) {

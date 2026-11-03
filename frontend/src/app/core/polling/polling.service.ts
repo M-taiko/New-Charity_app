@@ -1,5 +1,5 @@
-import { OnDestroy} from '@angular/core';
-import { Injectable, signal } from '@angular/core';
+import type { OnDestroy} from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { APP_CONFIG } from '@core/config/app-config';
 
@@ -20,8 +20,9 @@ export class PollingService implements OnDestroy {
 
   private timer: ReturnType<typeof setInterval> | null = null;
   private failures = 0;
+  private http = inject(HttpClient);
 
-  constructor(private http: HttpClient) {
+  constructor() {
     document.addEventListener('visibilitychange', this.visibilityHandler);
     this.start();
   }

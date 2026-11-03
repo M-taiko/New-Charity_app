@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, resource, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { TranslatePipe } from '@ngx-translate/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -19,15 +19,18 @@ import { LineItemsEditorComponent } from '@shared/ui/line-items-editor/line-item
 import { AttachmentFieldComponent } from '@shared/ui/attachment-field/attachment-field.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
-import { ActionResponse, DirectionNode, ItemResponse} from '@shared/models/api.models';
-import { ListResponse } from '@shared/models/api.models';
+import type { ActionResponse, DirectionNode, ItemResponse} from '@shared/models/api.models';
+import type { ListResponse } from '@shared/models/api.models';
 
 interface UserCustody { id: number; reason: string; remaining: string; total_available: string }
+interface ApprovedCase { id: number; name: string }
 
 /**
- * Expense form (plan 20, T27/T30): direction mandatory to the last level,
- * source switch custody/treasury by permission, spill hints, line items with
- * a non-blocking total warning, attachment.
+ * Expense form (plan 20, T27/T30, T3-21): direction mandatory to the last
+ * level, source switch custody/treasury by permission, spill hints, line items
+ * with a non-blocking total warning, attachment, the required expense_type
+ * switch (general | social_case) with an approved-case picker, and
+ * remove_attachment on edit.
  */
 @Component({
   selector: 'app-expense-form',
@@ -53,12 +56,12 @@ interface UserCustody { id: number; reason: string; remaining: string; total_ava
         @if (!isEdit()) {
           <div class="field">
             <label class="field__label">{{ 'expense.form.source' | translate }}</label>
-            <p-select appendTo="body" inputId="source" [options]="sourceOptions ?? []" optionLabel="label" optionValue="value" [(ngModel)]="source" name="source" styleClass="u-full" (ngModelChange)="onSource()" />
+            <p-select appendTo="body" inputId="source" [options]="sourceOptions" optionLabel="label" optionValue="value" [(ngModel)]="source" name="source" styleClass="u-full" (ngModelChange)="onSource()" />
           </div>
           @if (source() === 'custody') {
             <div class="field">
               <label class="field__label" for="custody">{{ 'expense.form.custody' | translate }} *</label>
-              <p-select appendTo="body" inputId="custody" [options]="custodyOptions() ?? []" optionLabel="reason" optionValue="id" [(ngModel)]="custodyId" name="custody" required styleClass="u-full" />
+              <p-select appendTo="body" inputId="custody" [options]="custodyOptions()" optionLabel="reason" optionValue="id" [(ngModel)]="custodyId" name="custody" required styleClass="u-full" />
               @if (selectedCustody(); as c) {
                 <span class="field__hint u-bidi">
                   {{ 'expense.form.selected_balance' | translate }}: {{ c.remaining | money }} —
@@ -70,14 +73,23 @@ interface UserCustody { id: number; reason: string; remaining: string; total_ava
           } @else {
             <div class="field">
               <label class="field__label" for="treasury">{{ 'expense.form.treasury' | translate }} *</label>
-              <p-select appendTo="body" inputId="treasury" [options]="treasuryOptions() ?? []" optionLabel="name" optionValue="id" [(ngModel)]="treasuryId" name="treasury" [required]="source() === 'treasury'" styleClass="u-full" />
+              <p-select appendTo="body" inputId="treasury" [options]="treasuryOptions()" optionLabel="name" optionValue="id" [(ngModel)]="treasuryId" name="treasury" [required]="source() === 'treasury'" styleClass="u-full" />
             </div>
           }
         }
         <div class="field">
-          <label class="field__label" for="type">{{ 'expense.form.type' | translate }}</label>
-          <p-select appendTo="body" inputId="type" [options]="typeOptions ?? []" optionLabel="label" optionValue="value" [(ngModel)]="type" name="type" styleClass="u-full" />
+          <label class="field__label" for="type">{{ 'expense.form.type' | translate }} *</label>
+          <p-select appendTo="body" inputId="type" [options]="expenseTypeOptions" optionLabel="label" optionValue="value" [(ngModel)]="expenseType" name="type" required styleClass="u-full" (ngModelChange)="onExpenseType()" />
         </div>
+        @if (expenseType() === 'social_case') {
+          <div class="field">
+            <label class="field__label" for="social-case">{{ 'expense.form.case' | translate }} *</label>
+            <p-select appendTo="body" inputId="social-case" [options]="caseOptions()" optionLabel="name" optionValue="id" [(ngModel)]="socialCaseId" name="social_case_id" [filter]="true" required styleClass="u-full" [placeholder]="'expense.form.case_placeholder' | translate" />
+            @if (caseError()) {
+              <p class="field__error">{{ 'expense.form.case_required' | translate }}</p>
+            }
+          </div>
+        }
         <div class="field">
           <label class="field__label" for="date">{{ 'expense.form.date' | translate }} *</label>
           <p-datepicker appendTo="body" inputId="date" name="date" [(ngModel)]="expenseDate" dateFormat="yy-mm-dd" [showIcon]="true" required styleClass="u-full" />
@@ -116,7 +128,13 @@ interface UserCustody { id: number; reason: string; remaining: string; total_ava
       <app-line-items-editor #lineItems [amount]="amount() ?? 0" (itemsChange)="items = $event" />
 
       <div class="form-section__title u-mt-4">{{ 'expense.form.section_attachment' | translate }}</div>
-      <app-attachment-field (fileChange)="file = $event" />
+      <app-attachment-field
+        #attachmentField
+        [current]="currentAttachmentName()"
+        [downloadUrl]="isEdit() && existing.value()?.has_attachment ? attachmentDownloadUrl() : null"
+        [canRemove]="isEdit()"
+        (fileChange)="file = $event"
+      />
 
       @if (error()) { <div class="dialog__alert" role="alert">{{ error() }}</div> }
       <div class="sticky-actions">
@@ -131,6 +149,7 @@ export class ExpenseFormPage {
   private router = inject(Router);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
+  private translate = inject(TranslateService);
 
   id = input<number | undefined>(undefined);
   isEdit = computed(() => this.id() !== undefined);
@@ -138,7 +157,8 @@ export class ExpenseFormPage {
   source = signal<'custody' | 'treasury'>('custody');
   custodyId = signal<number | null>(null);
   treasuryId = signal<number | null>(null);
-  type = signal('general');
+  expenseType = signal<'general' | 'social_case'>('general');
+  socialCaseId = signal<number | null>(null);
   amount = signal<number | null>(null);
   expenseDate = signal(new Date().toISOString().slice(0, 10));
   description = signal('');
@@ -147,14 +167,16 @@ export class ExpenseFormPage {
   itemId = signal<number | null>(null);
   directionComplete = signal(false);
   directionError = signal(false);
+  caseError = signal(false);
   file: File | null = null;
   items: { description: string; quantity: number; unit_price: number }[] = [];
   sending = signal(false);
   error = signal('');
 
-  readonly typeOptions = [
-    { label: 'مصروف عام', value: 'general' },
-    { label: 'حالة اجتماعية', value: 'social_case' },
+  /** expense_type is required by the controller (general | social_case) — labels from enums */
+  readonly expenseTypeOptions = [
+    { label: this.translate.instant('enums.expense_type.general'), value: 'general' },
+    { label: this.translate.instant('enums.expense_type.social_case'), value: 'social_case' },
   ];
 
   lookups = resource<{ direction_tree: DirectionNode[]; treasuries: { id: number; name: string }[] }, unknown>({
@@ -163,6 +185,16 @@ export class ExpenseFormPage {
 
   custodies = resource<UserCustody[], unknown>({
     loader: () => firstValueFrom(this.http.get<ItemResponse<UserCustody[]>>('/user-custodies')).then((r) => r.data),
+  });
+
+  /** approved social cases only (the same list the Blade form loads) */
+  cases = resource<ApprovedCase[], unknown>({
+    loader: () =>
+      firstValueFrom(
+        this.http.get<ListResponse<ApprovedCase>>('/social-cases', { params: { status: 'approved', per_page: 100 } }),
+      )
+        .then((r) => r.data)
+        .catch(() => [] as ApprovedCase[]),
   });
 
   /** edit mode: the expense being edited — prefills the whole form */
@@ -175,7 +207,7 @@ export class ExpenseFormPage {
   });
 
   private picker = viewChild(DirectionPickerComponent);
-  private lineItemsRef = viewChild(LineItemsEditorComponent);
+  private attachmentField = viewChild(AttachmentFieldComponent);
   private seeded = false;
 
   constructor() {
@@ -187,19 +219,32 @@ export class ExpenseFormPage {
         return;
       }
       this.seeded = true;
-      this.type.set(e.type ?? 'general');
+      this.expenseType.set(e.type === 'social_case' ? 'social_case' : 'general');
       this.amount.set(Number(e.amount) || null);
       this.expenseDate.set(e.expense_date ? e.expense_date.slice(0, 10) : new Date().toISOString().slice(0, 10));
       this.description.set(e.description ?? '');
       this.location.set(e.location ?? '');
       this.source.set(e.source === 'treasury' ? 'treasury' : 'custody');
-      this.picker()?.seed(e.direction_ids?.category_id ?? null, e.direction_ids?.item_id ?? null);
+      // the detail payload exposes the case by name only — match it back to an id
+      this.socialCaseId.set(this.caseIdByName(e.case));
+      this.picker()?.seed(e.direction_ids.category_id ?? null, e.direction_ids.item_id ?? null);
       // sync the picker's internal completion state with the seeded values
       this.onDirection({
-        category_id: e.direction_ids?.category_id ?? null,
-        item_id: e.direction_ids?.item_id ?? null,
-        complete: e.direction_ids?.item_id != null,
+        category_id: e.direction_ids.category_id ?? null,
+        item_id: e.direction_ids.item_id ?? null,
+        complete: e.direction_ids.item_id != null,
       });
+    });
+
+    // the case id can only be resolved once the approved-cases list arrives
+    // (the detail payload exposes the case by name only)
+    effect(() => {
+      const e = this.existing.value();
+      const cases = this.cases.value();
+      if (!e || !cases?.length || this.socialCaseId() !== null || this.expenseType() !== 'social_case') {
+        return;
+      }
+      this.socialCaseId.set(this.caseIdByName(e.case));
     });
   }
 
@@ -215,19 +260,44 @@ export class ExpenseFormPage {
     return this.lookups.value()?.treasuries ?? [];
   }
 
+  caseOptions(): ApprovedCase[] {
+    return this.cases.value() ?? [];
+  }
+
   selectedCustody(): UserCustody | null {
     return this.custodyOptions().find((c) => c.id === this.custodyId()) ?? null;
   }
 
+  currentAttachmentName(): string | null {
+    const e = this.existing.value();
+    if (!e?.has_attachment || !e.attachment) {
+      return null;
+    }
+    const parts = e.attachment.split('/');
+    return parts[parts.length - 1] || null;
+  }
+
+  attachmentDownloadUrl(): string {
+    return `/api/v1/expenses/${this.id()}/download-attachment`;
+  }
+
   readonly sourceOptions = [
-    { label: 'من العهدة', value: 'custody' },
-    { label: 'من الخزينة', value: 'treasury' },
+    { label: this.translate.instant('expense.form.from_custody'), value: 'custody' },
+    { label: this.translate.instant('expense.form.from_treasury'), value: 'treasury' },
   ];
 
   onSource(): void {
     if (this.source() === 'treasury' && !this.auth.can('may_direct_spend')) {
       this.source.set('custody');
     }
+  }
+
+  onExpenseType(): void {
+    // switching away from social_case clears the case (the API nulls it for general expenses)
+    if (this.expenseType() === 'general') {
+      this.socialCaseId.set(null);
+    }
+    this.caseError.set(false);
   }
 
   onDirection(selection: { category_id: number | null; item_id: number | null; complete: boolean }): void {
@@ -245,16 +315,23 @@ export class ExpenseFormPage {
       this.directionError.set(true);
       return;
     }
+    if (this.expenseType() === 'social_case' && this.socialCaseId() === null) {
+      this.caseError.set(true);
+      return;
+    }
     this.sending.set(true);
     this.error.set('');
     const body = new FormData();
     body.append('amount', String(this.amount()));
-    body.append('expense_date', String(this.expenseDate()));
+    body.append('expense_date', this.expenseDate());
     body.append('description', this.description());
     if (this.location()) {
       body.append('location', this.location());
     }
-    body.append('type', this.type());
+    body.append('expense_type', this.expenseType());
+    if (this.expenseType() === 'social_case' && this.socialCaseId() !== null) {
+      body.append('social_case_id', String(this.socialCaseId()));
+    }
     if (this.categoryId() !== null) {
       body.append('expense_category_id', String(this.categoryId()));
     }
@@ -272,6 +349,8 @@ export class ExpenseFormPage {
     }
     if (this.file) {
       body.append('attachment', this.file);
+    } else if (this.isEdit() && (this.attachmentField()?.removed() ?? false)) {
+      body.append('remove_attachment', 'true');
     }
     const id = this.id();
     const request$ = id
@@ -283,10 +362,18 @@ export class ExpenseFormPage {
         this.toast.success(res.message);
         void this.router.navigateByUrl(id ? `/expenses/${id}` : '/expenses/mine');
       })
-      .catch((err: HttpErrorResponse) => {
+      .catch((err: unknown) => {
         this.sending.set(false);
-        this.error.set(err.error?.message ?? 'errors.generic');
+        this.error.set((err as HttpErrorResponse).error?.message ?? 'errors.generic');
       });
+  }
+
+  /** the detail payload exposes only the case display name */
+  private caseIdByName(name: string | null | undefined): number | null {
+    if (!name) {
+      return null;
+    }
+    return this.cases.value()?.find((c) => c.name === name)?.id ?? null;
   }
 }
 
@@ -299,6 +386,9 @@ interface ExistingExpense {
   location: string | null;
   source: string | null;
   reviewed: boolean;
+  case: string | null;
+  attachment: string | null;
+  has_attachment: boolean;
   direction_ids: { category_id: number | null; item_id: number | null };
   line_items: unknown;
 }

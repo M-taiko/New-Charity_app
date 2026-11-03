@@ -1,25 +1,31 @@
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { ChangeDetectionStrategy, Component, computed, inject, input, resource, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
-import { HttpErrorResponse, HttpClient } from '@angular/common/http';
+import type { HttpErrorResponse} from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
 import { ToastService } from '@core/errors/toast.service';
+import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
+import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
-import { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 
-/** Expense details (plan 20): summary tiles, grouped info cards, review panel. */
+/** Expense details (plan 20, T3-20): summary tiles, grouped info cards, review
+ *  panel, the full Blade action set (delete / request edit / review) and an
+ *  in-page attachment preview. Visibility mirrors expenses/modern-show. */
 @Component({
   selector: 'app-expense-detail',
   standalone: true,
-  imports: [EmptyStateComponent, TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, StatTileComponent, MoneyPipe, DatetimePipe],
+  imports: [EmptyStateComponent, TranslatePipe, RouterLink, ButtonModule, DialogModule, PageHeaderComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, StatTileComponent, ConfirmDeleteComponent, MoneyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (safeValue(); as e) {
@@ -28,9 +34,14 @@ import { ActionResponse, ItemResponse } from '@shared/models/api.models';
           <div actions class="u-flex u-gap-2 u-flex-wrap">
             <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
             @if (e.has_attachment) {
-              <a class="p-button p-button-sm p-button-outlined p-button-text-only" [href]="downloadUrl()" target="_blank" rel="noopener">
-                {{ 'expense.detail.view_attachment' | translate }}
-              </a>
+              <p-button [label]="'expense.detail.view_attachment' | translate" size="small" [outlined]="true" (onClick)="openPreview()" />
+            }
+            @if (canRequestEdit()) {
+              <p-button
+                [label]="e.reviewed ? ('expense.detail.request_edit_pending' | translate) : ('expense.detail.request_edit' | translate)"
+                size="small" severity="warn" [outlined]="true"
+                [routerLink]="['/expenses', e.id, 'edit-request']"
+              />
             }
             @if (e.can_edit) {
               <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/expenses', e.id, 'edit']" />
@@ -40,6 +51,9 @@ import { ActionResponse, ItemResponse } from '@shared/models/api.models';
             }
             @if (e.can_unreview) {
               <p-button [label]="'expense.list.unreview' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="act('unreview')" [loading]="sending()" />
+            }
+            @if (canDelete()) {
+              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="confirmDelete.open()" />
             }
           </div>
         </app-page-header>
@@ -68,6 +82,16 @@ import { ActionResponse, ItemResponse } from '@shared/models/api.models';
             <div class="detail-grid__stamp">
               <app-status-stamp [status]="e.reviewed ? 'reviewed' : 'not_reviewed'" namespace="review_state" [large]="true" />
             </div>
+            @if (approvalState() === 'pending_edit') {
+              <p class="u-mt-2"><span class="stamp stamp--pending">{{ 'expense.detail.state_pending_edit' | translate }}</span></p>
+            } @else if (approvalState() === 'approved_edit') {
+              <p class="u-mt-2"><span class="stamp stamp--info">{{ 'expense.detail.state_approved_edit' | translate }}</span></p>
+            }
+            @if (pendingEdit(); as req) {
+              <p class="u-mt-2 u-small">
+                <a [routerLink]="['/expenses/edit-requests', req.id]">{{ 'expense.detail.view_request' | translate }}</a>
+              </p>
+            }
             <app-key-value-list [items]="reviewFacts(e)" />
           </section>
         </div>
@@ -117,6 +141,51 @@ import { ActionResponse, ItemResponse } from '@shared/models/api.models';
           </section>
         }
       </app-print-sheet>
+
+      <!-- attachment preview (T3-20): images inline, other files open/download -->
+      <p-dialog
+        appendTo="body"
+        [visible]="previewOpen()"
+        (visibleChange)="previewOpen.set($event)"
+        [header]="'expense.detail.attachment' | translate"
+        [modal]="true"
+        [draggable]="false"
+        [resizable]="false"
+        [style]="{ width: 'min(720px, 94vw)' }"
+      >
+        <div class="u-column u-gap-3 u-center">
+          @if (attachmentIsImage()) {
+            <img
+              [src]="downloadUrl()"
+              [alt]="'expense.detail.attachment_image_alt' | translate"
+              style="max-width: 100%; max-height: 65vh; object-fit: contain; margin-inline: auto; display: block"
+            />
+          } @else {
+            <div class="u-flex u-gap-2 u-center">
+              <svg width="24" height="24" aria-hidden="true">
+                <use href="assets/icons/sprite.svg#tabler-paperclip" />
+              </svg>
+              <span class="u-bidi">{{ attachmentName() }}</span>
+            </div>
+            <p class="u-small u-muted">{{ 'expense.detail.attachment_file_hint' | translate }}</p>
+          }
+        </div>
+        <p-footer>
+          <div class="u-flex u-gap-2" style="justify-content: flex-end">
+            <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" (onClick)="previewOpen.set(false)" />
+            <a class="p-button p-button-sm p-button-outlined p-button-text-only" [href]="downloadUrl()" target="_blank" rel="noopener">
+              {{ 'expense.detail.download' | translate }}
+            </a>
+          </div>
+        </p-footer>
+      </p-dialog>
+
+      <app-confirm-delete
+        #confirmDelete
+        [path]="'/expenses/' + id() + '/delete'"
+        [entity]="'#' + id()"
+        (deleted)="afterDelete()"
+      />
     } @else if (data.isLoading()) {
       <div class="skeleton skeleton--title u-mb-4"></div>
       <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
@@ -130,10 +199,13 @@ export class ExpenseDetailPage {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
   private translate = inject(TranslateService);
+  private router = inject(Router);
+  private auth = inject(AuthService);
   private dateTime = new DatetimePipe();
 
   id = input.required<number>();
   sending = signal(false);
+  previewOpen = signal(false);
 
   data = resource<ExpenseDetail, { id: number }>({
     params: () => ({ id: this.id() }),
@@ -150,6 +222,29 @@ export class ExpenseDetailPage {
     }
   });
 
+  /** the pending edit request on this expense, if any (T3-20 item 5) */
+  readonly pendingEdit = computed(() => this.safeValue()?.edit_requests?.find((r) => r.status === 'pending') ?? null);
+
+  /** an approved edit request ≈ Blade's hasApprovedEdit()/isApproved() badges */
+  readonly approvalState = computed<'pending_edit' | 'approved_edit' | null>(() => {
+    const requests = this.safeValue()?.edit_requests ?? [];
+    if (requests.some((r) => r.status === 'pending')) {
+      return 'pending_edit';
+    }
+    if (requests.some((r) => r.status === 'approved')) {
+      return 'approved_edit';
+    }
+    return null;
+  });
+
+  /** Blade 207: delete for محاسب or مدير (the API enforces it again) */
+  readonly canDelete = computed(() => this.auth.can('is_accountant') || this.auth.can('is_manager'));
+
+  /** Blade 193: request-edit for the owning agent, not approved, no pending edit request */
+  readonly canRequestEdit = computed(
+    () => this.auth.can('is_agent') && this.pendingEdit() === null && this.approvalState() !== 'approved_edit',
+  );
+
   lineItems = computed(() => {
     const items = this.data.value()?.line_items;
     return Array.isArray(items) ? (items as LineItem[]) : [];
@@ -165,6 +260,22 @@ export class ExpenseDetailPage {
 
   downloadUrl(): string {
     return `/api/v1/expenses/${this.id()}/download-attachment`;
+  }
+
+  attachmentName(): string {
+    return basename(this.safeValue()?.attachment ?? '');
+  }
+
+  attachmentIsImage(): boolean {
+    return isImagePath(this.safeValue()?.attachment);
+  }
+
+  openPreview(): void {
+    this.previewOpen.set(true);
+  }
+
+  afterDelete(): void {
+    void this.router.navigate(['/expenses']);
   }
 
   fmtDate(value: string | null): string {
@@ -217,7 +328,7 @@ export class ExpenseDetailPage {
         this.toast.success(res.message);
         this.data.reload();
       })
-      .catch((err: HttpErrorResponse) => this.toast.apiError(err.error?.message ?? 'errors.generic'));
+      .catch((err: unknown) => this.toast.apiError((err as HttpErrorResponse).error?.message ?? 'errors.generic'));
   }
 
   printPage(): void {
@@ -231,6 +342,13 @@ interface LineItem {
   unit_price: number;
 }
 
+interface EditRequestSummary {
+  id: number;
+  status: string;
+  requested_by: string | null;
+  requested_at: string | null;
+}
+
 interface ExpenseDetail {
   id: number; user: string | null; type: string; amount: string; description: string | null;
   created_at: string | null; expense_date: string | null; direction: string | null;
@@ -239,6 +357,22 @@ interface ExpenseDetail {
   can_review: boolean; can_unreview: boolean; can_edit: boolean;
   case: string | null; location: string | null; notes: string | null;
   source: string | null; treasury: unknown;
+  attachment: string | null;
+  edit_requests: EditRequestSummary[] | null;
   custody_split: { id: number; amount: string }[];
   line_items: unknown;
+}
+
+/** "expense_attachments/abc.jpg" → "abc.jpg" (display only) */
+function basename(path: string): string {
+  if (!path) {
+    return '—';
+  }
+  const parts = path.split('/');
+  return parts[parts.length - 1] || path;
+}
+
+/** images preview inline in the dialog; everything else opens/downloads */
+function isImagePath(path: string | null | undefined): boolean {
+  return typeof path === 'string' && /\.(jpe?g|png|gif|webp)$/i.test(path);
 }

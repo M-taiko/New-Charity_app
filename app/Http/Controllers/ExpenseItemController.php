@@ -190,9 +190,59 @@ class ExpenseItemController extends Controller
         return $this->formBackOrJson($request, 'success', 'تم إضافة التصنيف بنجاح');
     }
 
+    public function updateCategory(Request $request, ExpenseCategory $expenseCategory)
+    {
+        $this->authorize('manage_expense_items');
+
+        $request->validate([
+            'name'      => 'required|string|max:255',
+            'code'      => ['required', 'string', 'max:50', Rule::unique('expense_categories', 'code')->ignore($expenseCategory->id)],
+            'parent_id' => ['nullable', Rule::exists('expense_categories', 'id')->whereNot('id', $expenseCategory->id)],
+            'order'     => 'nullable|integer|min:1',
+        ]);
+
+        // a category may never become its own descendant (cycle guard)
+        if ($request->filled('parent_id')) {
+            $walker = ExpenseCategory::find($request->parent_id);
+            while ($walker !== null) {
+                if ($walker->id === $expenseCategory->id) {
+                    return back()->with('error', 'لا يمكن نقل التصنيف داخل أحد فروعه');
+                }
+                $walker = $walker->parent;
+            }
+        }
+
+        $level = 1;
+        if ($request->parent_id) {
+            $parent = ExpenseCategory::findOrFail($request->parent_id);
+            $level  = $parent->level + 1;
+        }
+
+        $expenseCategory->update([
+            'parent_id'   => $request->parent_id,
+            'level'       => $level,
+            'name'        => $request->name,
+            'code'        => $request->code,
+            'description' => $request->description,
+            'order'       => $request->order ?? $expenseCategory->order,
+        ]);
+
+        return $this->formBackOrJson($request, 'success', 'تم تحديث التصنيف بنجاح');
+    }
+
     public function destroyCategory(ExpenseCategory $expenseCategory)
     {
         $this->authorize('manage_expense_items');
+
+        // Task3 §13: categories in use must not be deleted (T3-30 server rule)
+        if ($expenseCategory->children()->exists()
+            || $expenseCategory->items()->exists()
+            || $expenseCategory->expenses()->exists()) {
+            return back()
+                ->with('error', 'لا يمكن حذف تصنيف يحتوي على تصنيفات فرعية أو بنود أو مصروفات')
+                ->with('code', 'expense_category.in_use');
+        }
+
         $expenseCategory->delete();
         return back()->with('success', 'تم حذف التصنيف بنجاح');
     }

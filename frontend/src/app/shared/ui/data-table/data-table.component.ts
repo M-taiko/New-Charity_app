@@ -51,7 +51,7 @@ interface TableState {
 /** Marks the projected per-row template: <ng-template appTableBody let-row> */
 @Directive({ selector: '[appTableBody]' })
 export class TableBodyDirective {
-  constructor(public template: TemplateRef<unknown>) {}
+  template = inject<TemplateRef<unknown>>(TemplateRef);
 }
 
 /**
@@ -327,7 +327,7 @@ export class DataTableComponent {
     if (qPlain && /^-?[\d.]+$/.test(raw) && raw.includes(qPlain)) return true;
 
     // dates: stored ISO "2026-10-27T…", displayed "27/10/2026"
-    const d = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const d = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
     if (d && `${d[3]}/${d[2]}/${d[1]}`.includes(q)) return true;
 
     // enums: stored code ("closed"), displayed label ("مغلقة")

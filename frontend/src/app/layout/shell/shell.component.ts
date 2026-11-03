@@ -5,7 +5,7 @@ import { map, startWith, filter } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '@core/auth/auth.service';
 import { LocalStorageService } from '@core/storage/local-storage.service';
-import { NavItem } from './nav-items';
+import type { NavItem } from './nav-items';
 import { NAV_GROUPS } from './nav-items';
 import { TopbarComponent } from '../topbar/topbar.component';
 

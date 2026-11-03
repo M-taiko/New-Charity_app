@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, resource, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -11,10 +11,11 @@ import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
+import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
-import { ItemResponse, ListResponse } from '@shared/models/api.models';
+import type { ItemResponse, ListResponse } from '@shared/models/api.models';
 
 interface TreasuryDetail {
   id: number;
@@ -42,15 +43,17 @@ interface TransactionRow {
   imports: [
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent,
     StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective, EmptyStateComponent,
-    PrintSheetComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
+    PrintSheetComponent, ConfirmDeleteComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
   ],
   template: `
     @if (safeValue(); as treasury) {
       <app-print-sheet [title]="'treasury.detail.title' | translate">
         <app-page-header [title]="treasury.name" [subtitle]="treasury.notes ?? ''">
-          <div actions class="u-flex u-gap-2">
+          <div actions class="u-flex u-gap-2 u-flex-wrap">
             <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="print()" />
+            <p-button [label]="'treasury.list.transfer' | translate" size="small" [outlined]="true" routerLink="/treasury/transfer" />
             <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/treasury', treasury.id, 'edit']" />
+            <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg.open()" />
           </div>
         </app-page-header>
 
@@ -71,7 +74,7 @@ interface TransactionRow {
         >
           <div toolbar class="u-flex u-gap-2">
             <p-select appendTo="body"
-              [options]="typeOptions ?? []"
+              [options]="typeOptions"
               optionLabel="label"
               optionValue="value"
               [(ngModel)]="typeFilter" name="typeFilter"
@@ -112,6 +115,14 @@ interface TransactionRow {
           </div>
         </app-data-table>
       </app-print-sheet>
+
+      <!-- T3-40: the server blocks deletion when the treasury has movements or balance — its message surfaces -->
+      <app-confirm-delete
+        #deleteDlg
+        [path]="'/treasury/' + id() + '/delete'"
+        [entity]="safeValue()?.name ?? ''"
+        (deleted)="onDeleted()"
+      />
     } @else if (data.isLoading()) {
       <div class="skeleton skeleton--title u-mb-4"></div>
       <div class="skeleton skeleton--tile"></div>
@@ -124,6 +135,8 @@ interface TransactionRow {
 })
 export class TreasuryDetailPage {
   private http = inject(HttpClient);
+  private router = inject(Router);
+  private translate = inject(TranslateService);
 
   id = input.required<number>();
   typeFilter = signal('all');
@@ -139,17 +152,18 @@ export class TreasuryDetailPage {
     { field: 'user', searchField: 'user.name', header: 'treasury.detail.col_user', sortable: true },
   ];
 
+  /** type filter labels translated (T3-40: no hard-coded Arabic) */
   readonly typeOptions = [
-    { label: 'الكل', value: 'all' },
-    { label: 'تبرع', value: 'donation' },
-    { label: 'صرف عهدة', value: 'custody_out' },
-    { label: 'رد عهدة', value: 'custody_return' },
-    { label: 'مصروف', value: 'expense' },
-    { label: 'تحويل وارد', value: 'transfer_in' },
-    { label: 'تحويل صادر', value: 'transfer_out' },
+    { label: this.translate.instant('treasury.detail.type_all'), value: 'all' },
+    { label: this.translate.instant('enums.transaction_type.donation'), value: 'donation' },
+    { label: this.translate.instant('enums.transaction_type.custody_out'), value: 'custody_out' },
+    { label: this.translate.instant('enums.transaction_type.custody_return'), value: 'custody_return' },
+    { label: this.translate.instant('enums.transaction_type.expense'), value: 'expense' },
+    { label: this.translate.instant('enums.transaction_type.transfer_in'), value: 'transfer_in' },
+    { label: this.translate.instant('enums.transaction_type.transfer_out'), value: 'transfer_out' },
   ];
 
-  data = resource<TreasuryDetail, void>({
+  data = resource<TreasuryDetail, Record<string, unknown>>({
     loader: () =>
       firstValueFrom(
         this.http.get<ItemResponse<TreasuryDetail>>(`/treasury/${this.id()}`, {
@@ -184,9 +198,13 @@ export class TreasuryDetailPage {
   print(): void {
     window.print();
   }
+
+  onDeleted(): void {
+    void this.router.navigateByUrl('/treasury');
+  }
 }
 
-function clean(params: Record<string, unknown>): Record<string, string> {
+function clean(params: Record<string, string | number>): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [key, value] of Object.entries(params)) {
     if (value !== 'all' && value !== null && value !== undefined) {

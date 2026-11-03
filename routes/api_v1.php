@@ -94,6 +94,7 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::post('custodies/{custody}/direct-return', [CustodyController::class, 'directReturn']);
             Route::post('custodies/{custody}/request-return', [CustodyController::class, 'requestReturn']);
             Route::post('custodies/add-recovery', [CustodyController::class, 'addRecovery']);
+            Route::post('custodies/request-return', [CustodyController::class, 'requestReturnTreasury']);
             Route::post('custodies/{custody}/external-donation', [CustodyController::class, 'addExternalDonation']);
             Route::post('custodies/{custody}/agent-accept', [CustodyController::class, 'agentAccept']);
             Route::post('custodies/{custody}/agent-reject', [CustodyController::class, 'agentReject']);
@@ -170,6 +171,7 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::post('social-cases/{socialCase}/reject', [SocialCaseController::class, 'reject']);
             Route::post('social-cases/{socialCase}/toggle-active', [SocialCaseController::class, 'toggleActive']);
             Route::get('social-cases/{socialCase}/family-members', [SocialCaseController::class, 'getFamilyMembers']);
+            Route::post('case-documents/{document}/delete', [SocialCaseController::class, 'removeDocument']);
 
             // ── HR ─────────────────────────────────────────────
             Route::get('hr/dashboard', [ApiHr::class, 'dashboard']);

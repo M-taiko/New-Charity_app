@@ -123,7 +123,7 @@ class TreasuryController extends Controller
 
         // Check if treasury has transactions or balance
         if ($treasury->transactions()->count() > 0 || $treasury->balance > 0) {
-            return back()->with('error', 'لا يمكن حذف خزينة بها حركات أو رصيد');
+            return back()->with('error', 'لا يمكن حذف خزينة بها حركات أو رصيد')->with('code', 'treasury.has_movements');
         }
 
         try {

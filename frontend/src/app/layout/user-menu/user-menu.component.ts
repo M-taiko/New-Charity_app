@@ -2,7 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MenuModule } from 'primeng/menu';
-import { MenuItem, SharedModule } from 'primeng/api';
+import { SharedModule } from 'primeng/api';
+import type { MenuItem } from 'primeng/api';
 import { AuthService } from '@core/auth/auth.service';
 import { MotionService } from '@core/motion/motion.service';
 import { ThemeService } from '@core/theme/theme.service';
@@ -41,7 +42,16 @@ type UserMenuItem = MenuItem & { iconName?: string };
       (click)="menu.toggle($event)"
       [attr.aria-label]="'user.menu' | translate"
     >
-      <span class="user-chip__avatar">{{ initials() }}</span>
+      @if (pictureUrl()) {
+        <img
+          class="user-chip__avatar"
+          [src]="pictureUrl()"
+          [alt]="name()"
+          style="object-fit: cover; display: inline-flex"
+        />
+      } @else {
+        <span class="user-chip__avatar">{{ initials() }}</span>
+      }
       <span class="user-chip__name">{{ name() }}</span>
     </button>
   `,
@@ -54,6 +64,12 @@ export class UserMenuComponent {
   private translate = inject(TranslateService);
 
   readonly name = computed(() => this.auth.me()?.name ?? '');
+
+  /** profile picture served from the public storage disk (T3-103); null → initials */
+  readonly pictureUrl = computed(() => {
+    const path = this.auth.me()?.profile_picture;
+    return path ? `/storage/app/public/${path}` : null;
+  });
 
   readonly initials = computed(() =>
     (this.auth.me()?.name ?? '?')

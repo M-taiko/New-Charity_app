@@ -1,10 +1,10 @@
 // /custodies/:id/edit — edit custody (amount + notes) for management.
-import { computed, OnInit } from '@angular/core';
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import type { OnInit } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -12,7 +12,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 
 @Component({
   selector: 'app-custody-edit',
@@ -59,6 +59,6 @@ export class CustodyEditPage implements OnInit {
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>(`/custodies/${this.id()}/update`, { amount: this.amount(), notes: this.notes() }))
       .then((res) => { this.sending.set(false); this.toast.success(res.message); history.back(); })
-      .catch((err: HttpErrorResponse) => { this.sending.set(false); this.error.set(err.error?.message ?? 'errors.generic'); });
+      .catch((err: unknown) => { this.sending.set(false); this.error.set((err as HttpErrorResponse).error?.message ?? 'errors.generic'); });
   }
 }

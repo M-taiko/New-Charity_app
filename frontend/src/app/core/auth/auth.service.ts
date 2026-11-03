@@ -1,9 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable} from 'rxjs';
+import type { Observable} from 'rxjs';
 import { tap } from 'rxjs';
-import { ItemResponse, Me } from '@shared/models/api.models';
+import type { ItemResponse, Me } from '@shared/models/api.models';
 
 /**
  * Session state for the SPA (plan 18). The /me payload (roles, permissions,

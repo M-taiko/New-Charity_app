@@ -112,6 +112,47 @@
   justify-content: flex-end;
 }
 
+/* ── Row-action icon buttons (T3-03) ────────────────────────────── */
+/* The per-row cell every list page adds for view/edit/delete/state
+   actions. Icon-only buttons carry their label via title + aria-label
+   so the column stays keyboard- and screen-reader-accessible. */
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  justify-content: flex-end;
+}
+
+.row-actions__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.row-actions__btn:hover {
+  background: var(--color-surface-inset);
+  color: var(--color-text);
+}
+
+.row-actions__btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.row-actions__btn--danger:hover {
+  color: var(--color-text);
+  background: var(--color-primary-soft);
+}
+
 /* Phones: the SAME table as desktop — one layout everywhere — inside a
    horizontally scrollable container instead of a stacked-cards variant */
 .ledger-table__stacked {

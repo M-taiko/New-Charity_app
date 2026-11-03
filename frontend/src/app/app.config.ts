@@ -1,4 +1,5 @@
-import { ApplicationConfig, APP_INITIALIZER, inject } from '@angular/core';
+import type { ApplicationConfig} from '@angular/core';
+import { APP_INITIALIZER, inject } from '@angular/core';
 import { provideZoneChangeDetection, LOCALE_ID } from '@angular/core';
 import { registerLocaleData } from '@angular/common';
 import localeArEG from '@angular/common/locales/ar-EG';

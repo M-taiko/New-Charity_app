@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { RingSegment } from '@shared/ui/balance-ring/balance-ring.component';
+import type { RingSegment } from '@shared/ui/balance-ring/balance-ring.component';
 
 const SERIES_COLORS = ['#5D3722', '#9E877A', '#4F2F1D', '#BEAFA7', '#7D5F4E', '#DFD7D3'];
 

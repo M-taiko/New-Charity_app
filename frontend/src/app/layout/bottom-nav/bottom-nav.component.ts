@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
-import { NavItem } from '../shell/nav-items';
+import type { NavItem } from '../shell/nav-items';
 
 /** Bottom navigation on phones (plan 19.2): the role's most-used items. */
 @Component({

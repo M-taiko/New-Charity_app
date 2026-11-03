@@ -1,18 +1,22 @@
 // User details (plan 20): info + role assignment (several roles allowed).
+// T3-60: manage_users block — edit link + delete (ConfirmDelete); the current
+// user can never delete themselves (client guard; server would allow it).
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { computed, ChangeDetectionStrategy, Component, inject, input, resource, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { ToastService } from '@core/errors/toast.service';
+import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
-import { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
+import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 
 interface UserDetail {
   id: number; name: string; email: string; phone: string | null;
@@ -22,12 +26,20 @@ interface UserDetail {
 @Component({
   selector: 'app-user-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, EmptyStateComponent, PageHeaderComponent, KeyValueListComponent],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, EmptyStateComponent, PageHeaderComponent, KeyValueListComponent, ConfirmDeleteComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (safeValue(); as u) {
       <app-page-header [title]="u.name" [subtitle]="'user.detail.title' | translate">
         <div actions class="u-flex u-gap-2">
-          <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/users', u.id, 'edit']" />
+          @if (canManage) {
+            <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/users', u.id, 'edit']" />
+            @if (isSelf(u.id)) {
+              <span class="u-muted u-small" [title]="'user.detail.delete_self_hint' | translate">{{ 'user.detail.delete_self_hint' | translate }}</span>
+            } @else {
+              <p-button [label]="'common.delete' | translate" severity="danger" size="small" [outlined]="true" (onClick)="deleteDialog.open()" />
+            }
+          }
           <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/users" />
         </div>
       </app-page-header>
@@ -45,11 +57,12 @@ interface UserDetail {
       <section class="form-section u-mt-4">
         <h3 class="form-section__title">{{ 'user.form.roles' | translate }}</h3>
         <p class="field__hint">{{ 'user.form.roles_hint' | translate }}</p>
-        <p-select appendTo="body" [options]="roleOptions ?? []" optionLabel="label" optionValue="value" [(ngModel)]="selectedRoles" name="selectedRoles" multiple styleClass="u-full" />
+        <p-select appendTo="body" [options]="roleOptions" optionLabel="label" optionValue="value" [(ngModel)]="selectedRoles" name="selectedRoles" multiple styleClass="u-full" />
         <div class="u-flex" style="justify-content: flex-end">
           <p-button [label]="'common.save' | translate" (onClick)="saveRoles(u.id)" [loading]="sending()" />
         </div>
       </section>
+      <app-confirm-delete #deleteDialog [path]="'/users/' + u.id + '/delete'" [entity]="u.name" (deleted)="onDeleted()" />
     } @else if (data.isLoading()) {
       <div class="skeleton skeleton--title u-mb-4"></div>
       <div class="skeleton skeleton--tile"></div>
@@ -61,9 +74,23 @@ interface UserDetail {
 export class UserDetailPage {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+  private auth = inject(AuthService);
+  private router = inject(Router);
   id = input.required<number>();
   sending = signal(false);
   selectedRoles: string[] = [];
+
+  /** manage_users block (T3-60) — same permission as the Blade view */
+  readonly canManage = this.auth.can('may_manage_users');
+
+  /** deleting the signed-in account is blocked client-side (server would allow it) */
+  isSelf(userId: number): boolean {
+    return this.auth.me()?.id === userId;
+  }
+
+  onDeleted(): void {
+    void this.router.navigate(['/users']);
+  }
 
   readonly roleOptions = [
     { label: 'مدير', value: 1 },
@@ -99,9 +126,9 @@ export class UserDetailPage {
         this.toast.success(res.message);
         this.data.reload();
       })
-      .catch((err: HttpErrorResponse) => {
+      .catch((err: unknown) => {
         this.sending.set(false);
-        this.toast.apiError(err.error?.message ?? 'errors.generic');
+        this.toast.apiError((err as HttpErrorResponse).error?.message ?? 'errors.generic');
       });
   }
 }

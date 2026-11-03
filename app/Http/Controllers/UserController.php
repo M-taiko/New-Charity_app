@@ -87,9 +87,27 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'تم تحديث المستخدم');
     }
 
-    public function destroy(User $user)
+    public function destroy(User $user, Request $request)
     {
         $this->authorize('manage_users');
+
+        // Business rule (Task3 §13): a user with financial history must be
+        // deactivated instead of deleted — cascade would erase the ledger.
+        if ($user->id === $request->user()->id) {
+            return back()->with('error', 'لا يمكنك حذف حسابك الحالي')->with('code', 'user.delete_self_forbidden');
+        }
+
+        $hasFinancialHistory = $user->custodiesAsAgent()->exists()
+            || $user->custodiesAsAccountant()->exists()
+            || $user->expenses()->exists()
+            || $user->treasuryTransactions()->exists();
+
+        if ($hasFinancialHistory) {
+            return back()
+                ->with('error', 'لا يمكن حذف مستخدم له سجل مالي (عهد أو مصروفات أو حركات خزينة). قم بتعطيله بدلاً من الحذف')
+                ->with('code', 'user.delete_has_history');
+        }
+
         $user->delete();
         return back()->with('success', 'تم حذف المستخدم');
     }

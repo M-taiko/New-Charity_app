@@ -1,4 +1,4 @@
-import { Abilities } from '@shared/models/api.models';
+import type { Abilities } from '@shared/models/api.models';
 
 export interface NavItem {
   label: string; // i18n key under nav.*

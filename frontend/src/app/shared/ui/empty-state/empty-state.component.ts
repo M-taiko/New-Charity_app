@@ -1,12 +1,11 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { IconComponent } from '@shared/ui/icon/icon.component';
 
 /** Specific, human empty state (plan 9.3.10) with one clear action. */
 @Component({
   selector: 'app-empty-state',
   standalone: true,
-  imports: [TranslatePipe, IconComponent],
+  imports: [TranslatePipe],
   template: `
     <div class="empty-state">
       <svg class="empty-state__pattern" aria-hidden="true">

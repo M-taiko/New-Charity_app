@@ -150,9 +150,12 @@ class MaintenanceRequestController extends Controller
     {
         $this->authorizeManager();
 
+        $request->validate(['rejection_reason' => 'nullable|string|max:1000']);
+
         $maintenanceRequest->update([
-            'status'      => 'rejected',
-            'reviewed_by' => auth()->id(),
+            'status'           => 'rejected',
+            'reviewed_by'      => auth()->id(),
+            'rejection_reason' => $request->rejection_reason,
         ]);
 
         NotificationService::notifyUser(
@@ -167,6 +170,26 @@ class MaintenanceRequestController extends Controller
         ActivityLogService::rejected($maintenanceRequest, 'رفض طلب صيانة: ' . $maintenanceRequest->title);
 
         return back()->with('success', 'تم رفض الطلب');
+    }
+
+    /**
+     * Delete a maintenance request (Task3 §13): managers may delete any;
+     * reporters may delete their own while still pending.
+     */
+    public function destroy(MaintenanceRequest $maintenanceRequest)
+    {
+        $user = auth()->user();
+        $isManager = $user->hasRole('مدير') || $user->hasRole('محاسب');
+        $isOwnPending = $maintenanceRequest->reported_by === $user->id && $maintenanceRequest->status === 'pending';
+
+        if (!$isManager && !$isOwnPending) {
+            abort(403);
+        }
+
+        $maintenanceRequest->delete();
+        ActivityLogService::log('deleted', 'حذف طلب صيانة: ' . $maintenanceRequest->title, $maintenanceRequest);
+
+        return back()->with('success', 'تم حذف طلب الصيانة');
     }
 
     private function authorizeManager(): void

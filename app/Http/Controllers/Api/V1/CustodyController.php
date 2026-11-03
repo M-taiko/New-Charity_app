@@ -34,6 +34,16 @@ final class CustodyController extends Controller
             ],
         );
 
+        // list contract: agent/accountant/treasury are NAME strings, not the
+        // nested models raw serialization would emit ([object Object] in the SPA)
+        $paginator->getCollection()->transform(function (Custody $c) {
+            $row = $c->toArray();
+            $row['agent'] = $c->agent?->name;
+            $row['accountant'] = $c->accountant?->name;
+            $row['treasury'] = $c->treasury?->name;
+            return $row;
+        });
+
         return response()->json(ApiList::envelope($paginator, fn () => [
             'accepted' => Custody::whereIn('status', ['accepted', 'active'])->count(),
             'pending' => Custody::where('status', 'pending')->count(),

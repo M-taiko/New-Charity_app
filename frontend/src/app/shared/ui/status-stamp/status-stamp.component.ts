@@ -1,7 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
-import { IconComponent } from '@shared/ui/icon/icon.component';
 
 /**
  * The stamp (plan 10.1.3): meaning carried by icon + fill + border style —
@@ -39,7 +37,7 @@ const STAMP_SHAPES: Record<string, { variant: string; icon: string }> = {
 @Component({
   selector: 'app-status-stamp',
   standalone: true,
-  imports: [TranslatePipe, EnumLabelPipe, IconComponent],
+  imports: [ EnumLabelPipe],
   template: `
     <span class="stamp stamp--{{ shape().variant }}" [class.stamp--lg]="large()" [class.stamp--stamp-in]="stampIn()">
       <svg class="stamp__icon" aria-hidden="true">

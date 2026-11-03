@@ -1,4 +1,4 @@
-import { ElementRef, OnDestroy} from '@angular/core';
+import type { ElementRef, OnDestroy} from '@angular/core';
 import { ChangeDetectionStrategy, Component, effect, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';

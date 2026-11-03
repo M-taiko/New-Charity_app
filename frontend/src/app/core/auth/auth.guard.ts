@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { UrlTree } from '@angular/router';
+import type { UrlTree } from '@angular/router';
 import { Router } from '@angular/router';
 import { map, catchError, of } from 'rxjs';
 import { AuthService } from './auth.service';

@@ -4,9 +4,9 @@ import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
-import { HttpErrorResponse } from '@angular/common/http';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '@core/auth/auth.service';
-import { ApiErrorBody } from '@shared/models/api.models';
+import type { ApiErrorBody } from '@shared/models/api.models';
 
 /**
  * Login (plan 20). The organization identity on full display: ink-brown side panel
@@ -293,7 +293,11 @@ import { ApiErrorBody } from '@shared/models/api.models';
           </button>
 
           <div class="login__ledger-rule" aria-hidden="true"></div>
-          <p class="login__footer-note">{{ 'auth.login.footer' | translate }}</p>
+          <p class="login__footer-note" dir="ltr">
+            © {{ year }}
+            <a href="https://masarsoft.io" target="_blank">{{ 'common.company' | translate }}.</a>
+            {{ 'common.rights' | translate }}
+          </p>
         </form>
       </div>
     </div>
@@ -304,6 +308,7 @@ export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
 
+  year = new Date().getFullYear();
   email = signal('');
   password = signal('');
   remember = signal(false);

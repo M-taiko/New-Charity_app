@@ -101,6 +101,7 @@ final class ProcurementController extends Controller
                 'reported_by' => $maintenanceRequest->reporter?->name,
                 'assigned_to' => $maintenanceRequest->assignee?->name,
                 'resolution_notes' => $maintenanceRequest->resolution_notes,
+                'rejection_reason' => $maintenanceRequest->rejection_reason,
                 'resolved_at' => $maintenanceRequest->resolved_at?->toIso8601ZuluString(),
                 'attachment' => $maintenanceRequest->attachment,
                 'created_at' => $maintenanceRequest->created_at?->toIso8601ZuluString(),

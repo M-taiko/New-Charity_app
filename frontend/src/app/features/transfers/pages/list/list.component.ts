@@ -4,21 +4,18 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal 
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { SelectModule } from 'primeng/select';
-import { ToastService } from '@core/errors/toast.service';
+import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
-import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
-import { ListResponse } from '@shared/models/api.models';
+import type { ListResponse } from '@shared/models/api.models';
 
 interface Row {
   id: number;
@@ -27,6 +24,7 @@ interface Row {
   custody_id: number | null;
   amount: string;
   status: string;
+  notes: string | null;
   requested_at: string | null;
   decided_at: string | null;
   decided_by: string | null;
@@ -34,14 +32,28 @@ interface Row {
   can_decide: boolean;
 }
 
-/** Transfers list (plan 20): tabs sent/received/all (T11), wording T32. */
+interface TransferListParams {
+  page: number;
+  per_page: number;
+  q: string;
+  sort?: string;
+  /** CustodyTransferController@index scope — sent | received | all (management only) */
+  scope: string;
+}
+
+/**
+ * Transfers list (plan 20 + T3-17): the custody-transfers/modern tabs
+ * (sent / received / all — `all` is management-only, 403 otherwise), a
+ * pending-for-me banner on the received tab, and the create-transfer
+ * button. Approval actions stay on the detail page (T32: receiver only).
+ */
 @Component({
   selector: 'app-transfer-list',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, SelectModule,
+    TranslatePipe, RouterLink, FormsModule, ButtonModule,
     PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
-    EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
+    EmptyStateComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -52,7 +64,7 @@ interface Row {
     </app-page-header>
 
     @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
+      <div class="kpi-grid">@for (s of [1, 2, 3]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
     } @else if (data.value(); as page) {
         <div class="kpi-grid">
         <app-stat-tile [label]="'transfer.list.pending_count'" [value]="summaryValue('pending_count')" />
@@ -60,6 +72,28 @@ interface Row {
         <app-stat-tile [label]="'transfer.list.rejected_count'" [value]="summaryValue('rejected_count')" />
         </div>
 
+      @if (pendingForMe() > 0) {
+        <div class="dialog__alert" role="alert">
+          <svg width="16" height="16" aria-hidden="true">
+            <use href="assets/icons/sprite.svg#tabler-alert-triangle" />
+          </svg>
+          <span>{{ 'transfer.list.pending_for_me' | translate: { count: pendingForMe() } }}</span>
+        </div>
+      }
+
+      <div class="filter-bar">
+        <div class="filter-bar__chips">
+          @for (tab of scopeTabs(); track tab.value) {
+            <p-button
+              [label]="'transfer.list.tabs.' + tab.value | translate"
+              size="small"
+              [outlined]="params().scope !== tab.value"
+              [severity]="params().scope === tab.value ? undefined : 'secondary'"
+              (onClick)="setParam('scope', tab.value)"
+            />
+          }
+        </div>
+      </div>
 
       <app-data-table
         [tableKey]="tableKey"
@@ -73,12 +107,30 @@ interface Row {
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
         <ng-template appTableBody let-row>
           <tr class="ledger-table__row">
-            <td appTableCol="sender">{{ row.sender ?? '—' }}</td>
+            <td appTableCol="sender">
+              <a [routerLink]="['/transfers', row.id]">{{ row.sender ?? '—' }}</a>
+            </td>
             <td appTableCol="receiver">{{ row.receiver ?? '—' }}</td>
-            <td appTableCol="custody_id">{{ row.custody_id ?? '—' }}</td>
+            <td appTableCol="custody_id">
+              @if (row.custody_id) {
+                <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
+              } @else {
+                <span>—</span>
+              }
+            </td>
             <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
             <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="transfer_status" /></td>
             <td appTableCol="requested_at"><span class="u-bidi">{{ row.requested_at | datetime }}</span></td>
+            <td appTableCol="decided_at"><span class="u-bidi">{{ row.decided_at | datetime }}</span></td>
+            <td appTableCol="decided_by">{{ row.decided_by ?? '—' }}</td>
+            <td appTableCol="rejection_reason">{{ row.rejection_reason ?? '—' }}</td>
+            <td appTableCol="actions">
+              <div class="row-actions">
+                <a class="row-actions__btn" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate" [routerLink]="['/transfers', row.id]">
+                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
+                </a>
+              </div>
+            </td>
           </tr>
           <tr class="ledger-table__stacked">
             <div class="ledger-table__stacked-item">
@@ -91,7 +143,11 @@ interface Row {
             </div>
             <div class="ledger-table__stacked-item">
               <span class="ledger-table__stacked-label">{{ 'transfer.list.col_custody' | translate }}</span>
-              {{ row.custody_id ?? '—' }}
+              @if (row.custody_id) {
+                <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
+              } @else {
+                <span>—</span>
+              }
             </div>
             <div class="ledger-table__stacked-item">
               <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
@@ -105,6 +161,27 @@ interface Row {
               <span class="ledger-table__stacked-label">{{ 'transfer.list.col_requested_at' | translate }}</span>
               <span class="u-bidi">{{ row.requested_at | datetime }}</span>
             </div>
+            <div class="ledger-table__stacked-item">
+              <span class="ledger-table__stacked-label">{{ 'transfer.list.col_decided_at' | translate }}</span>
+              <span class="u-bidi">{{ row.decided_at | datetime }}</span>
+            </div>
+            <div class="ledger-table__stacked-item">
+              <span class="ledger-table__stacked-label">{{ 'transfer.list.col_decided_by' | translate }}</span>
+              {{ row.decided_by ?? '—' }}
+            </div>
+            @if (row.rejection_reason) {
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'transfer.list.col_rejection' | translate }}</span>
+                {{ row.rejection_reason }}
+              </div>
+            }
+            <div class="ledger-table__stacked-item">
+              <div class="row-actions">
+                <a class="row-actions__btn" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate" [routerLink]="['/transfers', row.id]">
+                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
+                </a>
+              </div>
+            </div>
           </tr>
         </ng-template>
         <div empty>
@@ -116,24 +193,50 @@ interface Row {
 })
 export class TransferListPage {
   private http = inject(HttpClient);
-  private toast = inject(ToastService);
+  private auth = inject(AuthService);
 
   readonly tableKey = 'list.component';
 
   readonly columns = [
-    { field: 'sender', header: 'glossary.sender', sortable: true },
-    { field: 'receiver', header: 'glossary.receiver', sortable: true },
+    { field: 'sender', searchField: 'sender', header: 'glossary.sender', sortable: true },
+    { field: 'receiver', searchField: 'receiver', header: 'glossary.receiver', sortable: true },
     { field: 'custody_id', header: 'transfer.list.col_custody', sortable: true },
     { field: 'amount', header: 'common.amount', sortable: true },
     { field: 'status', header: 'transfer.list.col_status', sortable: true },
-    { field: 'requested_at', header: 'transfer.list.col_requested_at', sortable: true }
+    { field: 'requested_at', header: 'transfer.list.col_requested_at', sortable: true },
+    { field: 'decided_at', header: 'transfer.list.col_decided_at', sortable: true },
+    { field: 'decided_by', header: 'transfer.list.col_decided_by', sortable: true },
+    { field: 'rejection_reason', header: 'transfer.list.col_rejection', sortable: false },
+    { field: 'actions', header: 'common.actions', sortable: false },
   ];
 
-  params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
+  /** management (approve_custody_transfer / manage_treasury) also sees every transfer */
+  isManagement = computed(
+    () => this.auth.can('approve_custody_transfer') || this.auth.can('may_manage_treasury'),
+  );
 
-  data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string }>({
+  scopeTabs = computed(() => {
+    const tabs = [
+      { value: 'sent' },
+      { value: 'received' },
+    ];
+    return this.isManagement() ? [{ value: 'all' }, ...tabs] : tabs;
+  });
+
+  params = signal<TransferListParams>({ page: 1, per_page: 25, q: '', scope: 'sent' });
+
+  data = resource<ListResponse<Row>, unknown>({
     loader: () =>
       firstValueFrom(this.http.get<ListResponse<Row>>('/custody-transfers', { params: cleanParams(this.params()) })),
+  });
+
+  /** transfers awaiting MY decision — the summary counts the received scope only */
+  pendingForMe = computed(() => {
+    if (this.params().scope !== 'received') {
+      return 0;
+    }
+    const value = this.data.value()?.meta?.summary?.pending_count;
+    return value === undefined || value === null ? 0 : Number(value);
   });
 
   summaryValue(key: string): string {
@@ -152,7 +255,7 @@ export class TransferListPage {
     // p-table re-emits onLazyLoad on every render — only reload on real changes
     const current = this.params();
     const sort = event.sort ?? '';
-    if (current.page === event.page && current.per_page === event.per_page && (current as { sort?: string }).sort === sort) {
+    if (current.page === event.page && current.per_page === event.per_page && current.sort === sort) {
       return;
     }
     this.params.update((p) => ({ ...p, page: event.page, per_page: event.per_page, sort }));
@@ -160,10 +263,14 @@ export class TransferListPage {
   }
 }
 
-function cleanParams(params: Record<string, unknown>): Record<string, string> {
+/**
+ * Unlike the other lists, `scope` must keep the literal value `all` — the
+ * API treats it as a third real scope (management), not as "no filter".
+ */
+function cleanParams(params: object): Record<string, string> {
   const result: Record<string, string> = {};
   for (const [key, value] of Object.entries(params)) {
-    if (value !== null && value !== undefined && value !== '' && value !== 'all') {
+    if (value !== null && value !== undefined && value !== '') {
       result[key] = String(value);
     }
   }

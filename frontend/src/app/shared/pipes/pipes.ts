@@ -1,6 +1,6 @@
-import { PipeTransform } from '@angular/core';
+import type { PipeTransform } from '@angular/core';
 import { Pipe } from '@angular/core';
-import { TranslateService } from '@ngx-translate/core';
+import type { TranslateService } from '@ngx-translate/core';
 import { arabicPlural } from '@core/i18n/plural';
 
 /** Arabic plural picker (plan 14.5). */

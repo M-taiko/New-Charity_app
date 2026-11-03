@@ -11,8 +11,9 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
+import { IconComponent } from '@shared/ui/icon/icon.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
-import { ItemResponse } from '@shared/models/api.models';
+import type { ItemResponse } from '@shared/models/api.models';
 
 interface AgentStats {
   received: string;
@@ -59,6 +60,12 @@ interface DashboardData {
     expense_count: number;
     custody_count: number;
   }[];
+  researchers_evaluation: {
+    researcher: { id: number; name: string };
+    total_cases: number;
+    approval_rate: number;
+    rating: number;
+  }[];
   direction_figures: { grand_total: number; today: number; by_day?: { label: string; date: string; amount: number }[] } | null;
 }
 
@@ -80,6 +87,7 @@ interface DashboardData {
     StatTileComponent,
     ChartCardComponent,
     StatusStampComponent,
+    IconComponent,
     DatetimePipe,
   ],
   template: `
@@ -130,13 +138,16 @@ interface DashboardData {
           <a class="tile-link" routerLink="/users" [title]="'common.open_page' | translate">
             <app-chart-card [title]="'dashboard.finance.agents_eval'" [series]="agentsSeries()" />
           </a>
+          <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
+            <app-chart-card [title]="'dashboard.finance.researchers_eval'" [series]="researchersSeries()" />
+          </a>
         </div>
 
         <section class="chart-card u-mt-4">
           <div class="chart-card__head">
             <span class="chart-card__title">{{ 'dashboard.finance.year' | translate }}</span>
             <p-select appendTo="body"
-              [options]="d.year_stats.available_years ?? []"
+              [options]="d.year_stats.available_years"
               [(ngModel)]="selectedYear" name="selectedYear"
               (ngModelChange)="reload()"
               [ariaLabel]="'dashboard.finance.year' | translate"
@@ -230,6 +241,30 @@ interface DashboardData {
           </ul>
         </section>
       }
+
+      <!-- T3-111: the per-role quick-action grid (dashboard/shortcuts/{role}.blade.php) -->
+      @if (shortcuts().length > 0) {
+        <section class="chart-card u-mt-4">
+          <div class="chart-card__head">
+            <span class="chart-card__title">{{ 'dashboard.shortcuts_title' | translate }}</span>
+          </div>
+          <div class="kpi-grid u-mt-2">
+            @for (shortcut of shortcuts(); track shortcut.label) {
+              <a class="tile-link" [routerLink]="shortcut.route" [title]="'common.open_page' | translate">
+                <div class="chart-card">
+                  <div class="chart-card__body">
+                    <div class="u-flex u-gap-2">
+                      <app-icon [name]="shortcut.icon" [size]="20" />
+                      <strong>{{ shortcut.label | translate }}</strong>
+                    </div>
+                    <p class="u-muted u-small u-mt-2">{{ shortcut.desc | translate }}</p>
+                  </div>
+                </div>
+              </a>
+            }
+          </div>
+        </section>
+      }
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -261,6 +296,28 @@ export class DashboardPage {
       .map((row) => ({ label: row.agent.name, value: row.rating })),
   );
 
+  researchersSeries = computed(() =>
+    (this.data.value()?.researchers_evaluation ?? [])
+      .slice(0, 6)
+      .map((row) => ({ label: row.researcher.name, value: row.rating })),
+  );
+
+  /**
+   * T3-111: the per-role shortcut grid. The server's `view` picks the
+   * agent/researcher variants; within the finance view Blade checks the
+   * accountant role first (production managers hold every role).
+   */
+  shortcuts = computed<Shortcut[]>(() => {
+    const view = this.data.value()?.view;
+    if (view === 'agent') {
+      return AGENT_SHORTCUTS;
+    }
+    if (view === 'researcher') {
+      return RESEARCHER_SHORTCUTS;
+    }
+    return this.auth.can('is_accountant') ? ACCOUNTANT_SHORTCUTS : MANAGER_SHORTCUTS;
+  });
+
   parseFloat(value: string): number {
     return parseFloat(value) || 0;
   }
@@ -269,3 +326,53 @@ export class DashboardPage {
     this.data.reload();
   }
 }
+
+interface Shortcut {
+  /** i18n key (nav.* or dashboard.shortcuts.*) */
+  label: string;
+  /** i18n key under dashboard.shortcuts.* */
+  desc: string;
+  route: string;
+  /** tabler icon name from the generated sprite */
+  icon: string;
+}
+
+/** dashboard/shortcuts/manager.blade.php */
+const MANAGER_SHORTCUTS: Shortcut[] = [
+  { label: 'nav.custodies', desc: 'dashboard.shortcuts.custodies_desc', route: '/custodies', icon: 'wallet' },
+  { label: 'nav.cases', desc: 'dashboard.shortcuts.cases_desc', route: '/cases', icon: 'heart-handshake' },
+  { label: 'nav.users', desc: 'dashboard.shortcuts.users_desc', route: '/users', icon: 'users-group' },
+  { label: 'nav.reports', desc: 'dashboard.shortcuts.reports_desc', route: '/reports', icon: 'report-analytics' },
+  { label: 'dashboard.shortcuts.new_custody', desc: 'dashboard.shortcuts.new_custody_desc', route: '/custodies/new', icon: 'plus' },
+  { label: 'dashboard.shortcuts.new_case', desc: 'dashboard.shortcuts.new_case_desc', route: '/cases/new', icon: 'plus' },
+];
+
+/** dashboard/shortcuts/accountant.blade.php */
+const ACCOUNTANT_SHORTCUTS: Shortcut[] = [
+  { label: 'nav.treasury', desc: 'dashboard.shortcuts.treasury_desc', route: '/treasury', icon: 'building-bank' },
+  { label: 'nav.expenses', desc: 'dashboard.shortcuts.expenses_desc', route: '/expenses', icon: 'receipt-2' },
+  { label: 'nav.custodies', desc: 'dashboard.shortcuts.custodies_desc', route: '/custodies', icon: 'wallet' },
+  { label: 'nav.reports', desc: 'dashboard.shortcuts.reports_desc', route: '/reports', icon: 'report-analytics' },
+  { label: 'dashboard.shortcuts.new_custody', desc: 'dashboard.shortcuts.new_custody_desc', route: '/custodies/new', icon: 'plus' },
+  { label: 'dashboard.shortcuts.new_expense', desc: 'dashboard.shortcuts.new_expense_desc', route: '/expenses/new', icon: 'plus' },
+];
+
+/** dashboard/shortcuts/agent.blade.php */
+const AGENT_SHORTCUTS: Shortcut[] = [
+  { label: 'nav.my_custodies', desc: 'dashboard.shortcuts.my_custodies_desc', route: '/custodies/mine', icon: 'wallet' },
+  { label: 'nav.my_expenses', desc: 'dashboard.shortcuts.my_expenses_desc', route: '/expenses/mine', icon: 'receipt-2' },
+  { label: 'dashboard.shortcuts.quick_expense', desc: 'dashboard.shortcuts.quick_expense_desc', route: '/expenses/new', icon: 'plus' },
+  { label: 'dashboard.shortcuts.my_report', desc: 'dashboard.shortcuts.my_report_desc', route: '/custodies/mine', icon: 'report-analytics' },
+  { label: 'dashboard.shortcuts.track_custody', desc: 'dashboard.shortcuts.track_custody_desc', route: '/custodies/mine', icon: 'eye' },
+  { label: 'dashboard.shortcuts.active_custodies', desc: 'dashboard.shortcuts.active_custodies_desc', route: '/custodies/mine', icon: 'list-check' },
+];
+
+/** dashboard/shortcuts/researcher.blade.php */
+const RESEARCHER_SHORTCUTS: Shortcut[] = [
+  { label: 'nav.my_cases', desc: 'dashboard.shortcuts.my_cases_desc', route: '/cases/mine', icon: 'user' },
+  { label: 'dashboard.shortcuts.new_case', desc: 'dashboard.shortcuts.new_case_desc', route: '/cases/new', icon: 'plus' },
+  { label: 'dashboard.shortcuts.all_cases', desc: 'dashboard.shortcuts.all_cases_desc', route: '/cases', icon: 'heart-handshake' },
+  { label: 'dashboard.shortcuts.pending_cases', desc: 'dashboard.shortcuts.pending_cases_desc', route: '/cases/mine', icon: 'history' },
+  { label: 'dashboard.shortcuts.approved_cases', desc: 'dashboard.shortcuts.approved_cases_desc', route: '/cases/mine', icon: 'list-check' },
+  { label: 'dashboard.shortcuts.my_report', desc: 'dashboard.shortcuts.my_report_desc', route: '/cases/mine', icon: 'report-analytics' },
+];

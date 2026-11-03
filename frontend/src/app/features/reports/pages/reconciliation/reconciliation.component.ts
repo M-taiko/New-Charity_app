@@ -1,4 +1,4 @@
-import { computed, ChangeDetectionStrategy, Component, inject, resource } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, resource } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -7,7 +7,7 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { ItemResponse } from '@shared/models/api.models';
+import type { ItemResponse } from '@shared/models/api.models';
 
 interface TreasuryRow {
   treasury: { id: number; name: string }; donations: string; custodies_issued: string;
@@ -15,7 +15,16 @@ interface TreasuryRow {
   actual_balance: string; expected_balance: string; difference: string; is_reconciled: boolean;
 }
 
-/** Reconciliation report (plan 20): expected vs actual per treasury. */
+interface ReconciliationData {
+  treasuries: TreasuryRow[];
+  totals: { actual_balance: string; expected_balance: string; difference: string; is_reconciled: boolean };
+}
+
+/**
+ * Reconciliation report (plan 20, T3-110): expected vs actual per treasury —
+ * Blade parity adds the net-transfers column, the per-row status badge and
+ * the grand-total footer row.
+ */
 @Component({
   selector: 'app-reconciliation-report',
   standalone: true,
@@ -40,6 +49,7 @@ interface TreasuryRow {
               <th>{{ 'report.reconciliation.col_issued' | translate }}</th>
               <th>{{ 'report.reconciliation.col_returned' | translate }}</th>
               <th>{{ 'report.reconciliation.col_direct' | translate }}</th>
+              <th>{{ 'report.reconciliation.col_transfers' | translate }}</th>
               <th>{{ 'report.reconciliation.col_expected' | translate }}</th>
               <th>{{ 'report.reconciliation.col_actual' | translate }}</th>
               <th>{{ 'report.reconciliation.col_difference' | translate }}</th>
@@ -52,24 +62,63 @@ interface TreasuryRow {
                   <td class="ledger-table__cell-num">{{ row.custodies_issued | money }}</td>
                   <td class="ledger-table__cell-num">{{ row.custodies_returned | money }}</td>
                   <td class="ledger-table__cell-num">{{ row.direct_expenses | money }}</td>
+                  <td class="ledger-table__cell-num">{{ netTransfers(row) | money }}</td>
                   <td class="ledger-table__cell-num">{{ row.expected_balance | money }}</td>
                   <td class="ledger-table__cell-num">{{ row.actual_balance | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.difference | money }}</td>
+                  <td class="ledger-table__cell-num">
+                    @if (row.is_reconciled) {
+                      <span class="stamp">{{ 'report.reconciliation.reconciled' | translate }}</span>
+                    } @else {
+                      <span class="u-bidi">{{ row.difference | money }}</span>
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
+            <tfoot>
+              <tr class="ledger-table__row">
+                <th>{{ 'common.total' | translate }}</th>
+                <td class="ledger-table__cell-num">{{ columnSum('donations') | money }}</td>
+                <td class="ledger-table__cell-num">{{ columnSum('custodies_issued') | money }}</td>
+                <td class="ledger-table__cell-num">{{ columnSum('custodies_returned') | money }}</td>
+                <td class="ledger-table__cell-num">{{ columnSum('direct_expenses') | money }}</td>
+                <td class="ledger-table__cell-num">{{ netTransfersSum() | money }}</td>
+                <td class="ledger-table__cell-num">{{ d.totals.expected_balance | money }}</td>
+                <td class="ledger-table__cell-num">{{ d.totals.actual_balance | money }}</td>
+                <td class="ledger-table__cell-num">{{ d.totals.difference | money }}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
         <p class="field__hint u-mt-2">{{ 'report.reconciliation.expected_formula' | translate }}</p>
       </app-print-sheet>
     }
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ReconciliationPage {
   private http = inject(HttpClient);
-  data = resource<{ treasuries: TreasuryRow[]; totals: { actual_balance: string; expected_balance: string; difference: string; is_reconciled: boolean } }, unknown>({
-    loader: () => firstValueFrom(this.http.get<ItemResponse<{ treasuries: TreasuryRow[]; totals: { actual_balance: string; expected_balance: string; difference: string; is_reconciled: boolean } }>>('/reports/reconciliation')).then((r) => r.data),
+  data = resource<ReconciliationData, unknown>({
+    loader: () => firstValueFrom(this.http.get<ItemResponse<ReconciliationData>>('/reports/reconciliation')).then((r) => r.data),
   });
+
+  /** net transfers for one treasury (display-only derivation from the two API columns) */
+  netTransfers(row: TreasuryRow): string {
+    return ((parseFloat(row.transfers_in) || 0) - (parseFloat(row.transfers_out) || 0)).toFixed(2);
+  }
+
+  netTransfersSum(): string {
+    const rows = this.data.value()?.treasuries ?? [];
+    return rows
+      .reduce((sum, row) => sum + (parseFloat(row.transfers_in) || 0) - (parseFloat(row.transfers_out) || 0), 0)
+      .toFixed(2);
+  }
+
+  columnSum(key: 'donations' | 'custodies_issued' | 'custodies_returned' | 'direct_expenses'): string {
+    const rows = this.data.value()?.treasuries ?? [];
+    return rows.reduce((sum, row) => sum + (parseFloat(row[key]) || 0), 0).toFixed(2);
+  }
+
   printPage(): void {
     window.print();
   }

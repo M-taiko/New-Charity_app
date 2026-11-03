@@ -1,5 +1,5 @@
-// Researcher statistics (plan 20).
-import { computed, ChangeDetectionStrategy, Component, inject, resource } from '@angular/core';
+// Researcher statistics (plan 20, T3-110: rejected column from Blade).
+import { ChangeDetectionStrategy, Component, inject, resource } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -8,11 +8,11 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { ItemResponse } from '@shared/models/api.models';
+import type { ItemResponse } from '@shared/models/api.models';
 
 interface ResearchersData {
   summary: { researchers_count: number; total_cases: number; approved_cases: number; total_spent: string };
-  researchers: { researcher: { id: number; name: string }; total_cases: number; approved: number; pending: number; total_spent: string; approval_rate: number }[];
+  researchers: { researcher: { id: number; name: string }; total_cases: number; approved: number; rejected: number; pending: number; total_spent: string; approval_rate: number }[];
 }
 
 @Component({
@@ -37,6 +37,7 @@ interface ResearchersData {
               <th>{{ 'report.researchers.col_name' | translate }}</th>
               <th>{{ 'report.researchers.col_cases' | translate }}</th>
               <th>{{ 'report.researchers.col_approved' | translate }}</th>
+              <th>{{ 'report.researchers.col_rejected' | translate }}</th>
               <th>{{ 'report.researchers.col_pending' | translate }}</th>
               <th>{{ 'report.researchers.col_spent' | translate }}</th>
               <th>{{ 'report.researchers.col_rate' | translate }}</th>
@@ -47,17 +48,19 @@ interface ResearchersData {
                   <td>{{ row.researcher.name }}</td>
                   <td class="ledger-table__cell-num">{{ row.total_cases }}</td>
                   <td class="ledger-table__cell-num">{{ row.approved }}</td>
+                  <td class="ledger-table__cell-num">{{ row.rejected }}</td>
                   <td class="ledger-table__cell-num">{{ row.pending }}</td>
                   <td class="ledger-table__cell-num">{{ row.total_spent | money }}</td>
                   <td class="ledger-table__cell-num">{{ row.approval_rate }}%</td>
                 </tr>
-              } @empty { <tr><td colspan="6" class="u-muted">{{ 'report.researchers.empty' | translate }}</td></tr> }
+              } @empty { <tr><td colspan="7" class="u-muted">{{ 'report.researchers.empty' | translate }}</td></tr> }
             </tbody>
           </table>
         </div>
       </app-print-sheet>
     }
   `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ResearchersPage {
   private http = inject(HttpClient);

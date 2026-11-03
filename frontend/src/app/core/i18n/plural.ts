@@ -1,4 +1,4 @@
-import { TranslateService } from '@ngx-translate/core';
+import type { TranslateService } from '@ngx-translate/core';
 
 /**
  * Arabic plurals (plan 14.5): zero/one/two/few/many/other via Intl.PluralRules.

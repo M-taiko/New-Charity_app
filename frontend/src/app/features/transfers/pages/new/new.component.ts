@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal 
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -13,7 +13,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 
 interface UserCustody {
   id: number;
@@ -38,7 +38,7 @@ interface UserCustody {
       <div class="form-section__grid">
         <div class="field">
           <label class="field__label" for="custody">{{ 'transfer.create.custody' | translate }} *</label>
-          <p-select appendTo="body" inputId="custody" [options]="custodyOptions() ?? []" optionLabel="reason" optionValue="id"
+          <p-select appendTo="body" inputId="custody" [options]="custodyOptions()" optionLabel="reason" optionValue="id"
                     [(ngModel)]="custodyId" name="custody" required styleClass="u-full" />
           @if (selected(); as c) {
             <span class="field__hint u-bidi">{{ 'transfer.create.available' | translate }}: {{ c.remaining | money }}</span>
@@ -46,7 +46,7 @@ interface UserCustody {
         </div>
         <div class="field">
           <label class="field__label" for="receiver">{{ 'transfer.create.receiver' | translate }} *</label>
-          <p-select appendTo="body" inputId="receiver" [options]="agentOptions() ?? []" optionLabel="name" optionValue="id"
+          <p-select appendTo="body" inputId="receiver" [options]="agentOptions()" optionLabel="name" optionValue="id"
                     [(ngModel)]="receiverId" name="receiver" required styleClass="u-full" />
         </div>
         <div class="field">
@@ -95,7 +95,7 @@ export class TransferFormPage {
   });
 
   custodyOptions = computed(() => this.custodies.value() ?? []);
-  agentOptions = computed(() => (this.agents.value() ?? []).filter((a) => true));
+  agentOptions = computed(() => this.agents.value() ?? []);
 
   selected = computed(() => this.custodyOptions().find((c) => c.id === this.custodyId()) ?? null);
 
@@ -119,9 +119,9 @@ export class TransferFormPage {
       this.sending.set(false);
       this.toast.success(res.message);
       void this.router.navigateByUrl('/transfers');
-    }).catch((err: HttpErrorResponse) => {
+    }).catch((err: unknown) => {
       this.sending.set(false);
-      this.error.set(err.error?.message ?? 'errors.generic');
+      this.error.set((err as HttpErrorResponse).error?.message ?? 'errors.generic');
     });
   }
 }

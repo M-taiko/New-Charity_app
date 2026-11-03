@@ -1,9 +1,9 @@
-import { OnInit } from '@angular/core';
+import type { OnInit } from '@angular/core';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -11,7 +11,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 
 /**
  * New + edit treasury form (plan 20): one component serving both routes —
@@ -90,9 +90,9 @@ export class TreasuryFormPage implements OnInit {
         this.toast.success(res.message);
         void this.router.navigateByUrl('/treasury');
       })
-      .catch((err: HttpErrorResponse) => {
+      .catch((err: unknown) => {
         this.sending.set(false);
-        this.error.set(err.error?.message ?? 'errors.generic');
+        this.error.set((err as HttpErrorResponse).error?.message ?? 'errors.generic');
       });
   }
 }

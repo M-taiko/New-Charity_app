@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { Observable, map, tap } from 'rxjs';
-import { ItemResponse, ListParams, ListResponse, Lookups } from '@shared/models/api.models';
+import type { ActionResponse, ItemResponse, ListParams, ListResponse, Lookups } from '@shared/models/api.models';
 
 /** Typed GET/POST helpers implementing the list contract (plan 7.3). */
 @Injectable({ providedIn: 'root' })
@@ -21,6 +21,19 @@ export class ApiClient {
 
   post<T = unknown>(path: string, body: unknown): Observable<T> {
     return this.http.post<T>(path, body);
+  }
+
+  /**
+   * A state-changing endpoint that answers with the standard
+   * {data, message, level} action contract (accept/reject/delete/…).
+   */
+  action(path: string, body: Record<string, unknown> = {}): Observable<ActionResponse> {
+    return this.http.post<ActionResponse>(path, body);
+  }
+
+  /** The app-wide delete convention: POST {resource}/{id}/delete (T3-01). */
+  remove(path: string): Observable<ActionResponse> {
+    return this.action(path);
   }
 
   /** Reference data is cached for a short lifetime (plan 18). */

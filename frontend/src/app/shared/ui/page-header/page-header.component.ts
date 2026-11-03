@@ -1,12 +1,11 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
-import { IconComponent } from '@shared/ui/icon/icon.component';
 
 /** Title + optional stamp + actions row used on every page (plan 16.2). */
 @Component({
   selector: 'app-page-header',
   standalone: true,
-  imports: [TranslatePipe, IconComponent],
+  imports: [TranslatePipe],
   template: `
     <header class="page-header">
       <div class="page-header__row">

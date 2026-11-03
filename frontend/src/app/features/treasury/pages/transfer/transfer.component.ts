@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal 
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -12,10 +12,8 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { ActionResponse} from '@shared/models/api.models';
-import { ItemResponse } from '@shared/models/api.models';
+import type { ActionResponse} from '@shared/models/api.models';
 
 interface TreasuryOption {
   id: number;
@@ -29,7 +27,7 @@ interface TreasuryOption {
   standalone: true,
   imports: [
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule,
-    TextareaModule, PageHeaderComponent, StatTileComponent, MoneyPipe,
+    TextareaModule, PageHeaderComponent, MoneyPipe,
   ],
   template: `
     <app-page-header [title]="'treasury.transfer.title' | translate" />
@@ -41,7 +39,7 @@ interface TreasuryOption {
           </label>
           <p-select appendTo="body"
             inputId="from"
-            [options]="treasuryOptions() ?? []"
+            [options]="treasuryOptions()"
             optionLabel="name"
             optionValue="id"
             [(ngModel)]="fromId" name="fromId"
@@ -59,7 +57,7 @@ interface TreasuryOption {
           </label>
           <p-select appendTo="body"
             inputId="to"
-            [options]="treasuryOptions() ?? []"
+            [options]="treasuryOptions()"
             optionLabel="name"
             optionValue="id"
             [(ngModel)]="toId" name="toId"
@@ -146,9 +144,9 @@ export class TreasuryTransferPage {
         this.sending.set(false);
         this.toast.success(res.message);
       })
-      .catch((err: HttpErrorResponse) => {
+      .catch((err: unknown) => {
         this.sending.set(false);
-        this.error.set(err.error?.message ?? 'errors.generic');
+        this.error.set((err as HttpErrorResponse).error?.message ?? 'errors.generic');
       });
   }
 }

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { SelectModule } from 'primeng/select';
-import { DirectionItem, DirectionNode } from '@shared/models/api.models';
+import type { DirectionItem, DirectionNode } from '@shared/models/api.models';
 
 export interface DirectionSelection {
   category_id: number | null;
@@ -27,7 +27,7 @@ export interface DirectionSelection {
         </label>
         <p-select appendTo="body"
           [inputId]="idBase + '-l1'"
-          [options]="level1() ?? []"
+          [options]="level1()"
           optionLabel="name"
           optionValue="id"
           [(ngModel)]="selected1" name="selected1"
@@ -45,7 +45,7 @@ export interface DirectionSelection {
           </label>
           <p-select appendTo="body"
             [inputId]="idBase + '-l2'"
-            [options]="level2() ?? []"
+            [options]="level2()"
             optionLabel="name"
             optionValue="id"
             [(ngModel)]="selected2" name="selected2"
@@ -63,7 +63,7 @@ export interface DirectionSelection {
           </label>
           <p-select appendTo="body"
             [inputId]="idBase + '-l3'"
-            [options]="level3() ?? []"
+            [options]="level3()"
             optionLabel="name"
             optionValue="id"
             [(ngModel)]="selected3" name="selected3"
@@ -81,7 +81,7 @@ export interface DirectionSelection {
           </label>
           <p-select appendTo="body"
             [inputId]="idBase + '-item'"
-            [options]="items() ?? []"
+            [options]="items()"
             optionLabel="name"
             optionValue="id"
             [(ngModel)]="selectedItem" name="selectedItem"

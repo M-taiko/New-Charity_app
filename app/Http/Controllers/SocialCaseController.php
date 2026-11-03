@@ -389,6 +389,50 @@ class SocialCaseController extends Controller
             ->with('success', $statusMessage);
     }
 
+    /**
+     * Delete a social case (Task3 §13): blocked when it has expenses so the
+     * spending history is never erased; deactivate instead.
+     */
+    public function destroy(SocialCase $socialCase)
+    {
+        $this->authorize('manage_social_cases');
+
+        if ($socialCase->expenses()->exists()) {
+            return back()
+                ->with('error', 'لا يمكن حذف حالة بها مصروفات مسجلة. يرجى إيقافها بدلاً من الحذف')
+                ->with('code', 'social_case.has_expenses');
+        }
+
+        $name = $socialCase->name;
+        $socialCase->delete();
+
+        ActivityLogService::log('deleted', 'تم حذف الحالة الاجتماعية: ' . $name, $socialCase);
+        return redirect()
+            ->route('social_cases.index')
+            ->with('success', 'تم حذف الحالة بنجاح');
+    }
+
+    /**
+     * Remove one previously uploaded case document (T3-50 documents parity).
+     */
+    public function removeDocument(Request $request, SocialCaseDocument $document)
+    {
+        $case = $document->socialCase;
+        abort_unless($case !== null, 404);
+        $this->authorize('manage_social_cases');
+
+        if ($case->expenses()->exists()) {
+            return back()
+                ->with('error', 'لا يمكن تعديل مستندات حالة بها مصروفات مسجلة')
+                ->with('code', 'social_case.has_expenses');
+        }
+
+        \Storage::disk('public')->delete($document->file_path);
+        $document->delete();
+
+        return back()->with('success', 'تم حذف المستند بنجاح');
+    }
+
     public function tableData(Request $request)
     {
         $query = SocialCase::with(['researcher', 'familyMembers', 'expenses']);

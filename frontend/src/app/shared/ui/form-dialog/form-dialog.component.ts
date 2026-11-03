@@ -1,10 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, model, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
-import { HttpErrorResponse } from '@angular/common/http';
-import { ApiErrorBody } from '@shared/models/api.models';
+import type { HttpErrorResponse } from '@angular/common/http';
+import type { ApiErrorBody } from '../../models/api.models';
 
 /**
  * One pattern for every modal form (plan 11.14): inline field errors stay in

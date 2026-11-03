@@ -1,14 +1,16 @@
-import { PipeTransform } from '@angular/core';
-import { Pipe } from '@angular/core';
+import type { PipeTransform } from '@angular/core';
+import { Injectable, Pipe, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 
 /**
  * The interface never prints a raw code (plan 14.6). Unknown codes fall back
  * to the code itself so nothing renders blank.
  */
+/** also injectable for programmatic use in components (no manual `new`) */
 @Pipe({ name: 'enumLabel', standalone: true })
+@Injectable({ providedIn: 'root' })
 export class EnumLabelPipe implements PipeTransform {
-  constructor(private translate: TranslateService) {}
+  private translate = inject(TranslateService);
 
   transform(value: string | null | undefined, namespace: string): string {
     if (!value) {

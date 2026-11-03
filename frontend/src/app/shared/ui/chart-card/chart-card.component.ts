@@ -1,8 +1,9 @@
+import type {
+  ElementRef,
+  OnDestroy} from '@angular/core';
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
-  OnDestroy,
   computed,
   effect,
   inject,

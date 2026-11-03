@@ -1,7 +1,7 @@
-import { computed, ChangeDetectionStrategy, Component, inject, resource, signal } from '@angular/core';
+import { Component, inject, resource, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HttpErrorResponse } from '@angular/common/http';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -9,7 +9,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { FileUploadModule } from 'primeng/fileupload';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { ActionResponse } from '@shared/models/api.models';
+import type { ActionResponse } from '@shared/models/api.models';
 
 /** Settings (plan 20): organization name, email, logo. */
 @Component({
@@ -49,8 +49,8 @@ export class SettingsPage {
   logoFile: File | null = null;
   sending = signal(false);
 
-  settings = resource<Record<string, string>, unknown>({
-    loader: () => firstValueFrom(this.http.get<Record<string, string>>('/settings')),
+  settings = resource<Record<string, string | undefined>, unknown>({
+    loader: () => firstValueFrom(this.http.get<Record<string, string | undefined>>('/settings')),
   });
 
   constructor() {
@@ -64,7 +64,7 @@ export class SettingsPage {
     }, 800);
   }
 
-  onLogoSelect(event: { files: File[] }): void {
+  onLogoSelect(event: { files?: File[] }): void {
     this.logoFile = event.files?.[0] ?? null;
   }
 
@@ -72,7 +72,7 @@ export class SettingsPage {
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>('/settings', { organization_name: this.orgName(), organization_email: this.orgEmail() }))
       .then((res) => { this.sending.set(false); this.toast.success(res.message); })
-      .catch((err: HttpErrorResponse) => { this.sending.set(false); this.toast.apiError(err.error?.message ?? 'errors.generic'); });
+      .catch((err: unknown) => { this.sending.set(false); this.toast.apiError((err as HttpErrorResponse).error?.message ?? 'errors.generic'); });
   }
 
   saveLogo(): void {
@@ -84,6 +84,6 @@ export class SettingsPage {
     body.append('logo', this.logoFile);
     void firstValueFrom(this.http.post<ActionResponse>('/settings', body))
       .then((res) => { this.sending.set(false); this.toast.success(res.message); })
-      .catch((err: HttpErrorResponse) => { this.sending.set(false); this.toast.apiError(err.error?.message ?? 'errors.generic'); });
+      .catch((err: unknown) => { this.sending.set(false); this.toast.apiError((err as HttpErrorResponse).error?.message ?? 'errors.generic'); });
   }
 }

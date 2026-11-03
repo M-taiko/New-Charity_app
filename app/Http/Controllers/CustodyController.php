@@ -590,6 +590,68 @@ class CustodyController extends Controller
     }
 
     /**
+     * Delete a custody (Task3 §13): only custodies with no financial activity
+     * and a terminal/pre-approval status may be removed.
+     */
+    public function destroy(Custody $custody)
+    {
+        $this->authorize('manage_treasury');
+
+        if ($custody->transactions()->exists() || $custody->expenses()->exists()) {
+            return back()
+                ->with('error', 'لا يمكن حذف عهدة لها حركات أو مصروفات')
+                ->with('code', 'custody.has_activity');
+        }
+
+        if (!in_array($custody->status, ['pending', 'rejected', 'cancelled'], true)) {
+            return back()
+                ->with('error', 'لا يمكن حذف عهدة نشطة. يرجى إغلاقها أو إلغائها أولاً')
+                ->with('code', 'custody.not_deletable');
+        }
+
+        $custody->delete();
+        return redirect()->route('custodies.index')->with('success', 'تم حذف العهدة');
+    }
+
+    /**
+     * Direct return: the approver immediately sends the FULL remaining balance
+     * back to a treasury (request + approve in one transaction).
+     */
+    public function directReturn(Request $request, Custody $custody)
+    {
+        $this->authorize('approve_custody');
+
+        $remaining = $custody->getRemainingBalance();
+        if ($remaining <= 0) {
+            return back()
+                ->with('error', 'لا يوجد رصيد متاح للرد المباشر')
+                ->with('code', 'custody.no_remaining');
+        }
+
+        $request->validate([
+            'treasury_id' => 'required|exists:treasuries,id',
+        ], [
+            'treasury_id.required' => 'يرجى اختيار خزينة',
+            'treasury_id.exists' => 'الخزينة المختارة غير موجودة',
+        ]);
+
+        try {
+            DB::transaction(function () use ($custody, $request, $remaining) {
+                $this->service->requestReturnCustody($custody, $remaining);
+                $this->service->approveCustodyReturn($custody, (int) $request->input('treasury_id'));
+            });
+
+            ActivityLogService::approved(
+                $custody,
+                'رد مباشر لكل رصيد العهدة #' . $custody->id . ' (' . number_format($remaining, 2) . ' ج.م) إلى الخزينة'
+            );
+            return back()->with('success', 'تم الرد المباشر للخزينة بنجاح');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    /**
      * Approve return request (custody owner action only)
      */
     public function approveReturnRequest(CustodyReturnRequest $returnRequest)

@@ -1,5 +1,5 @@
 // Employee salary history (plan 20).
-import { computed, ChangeDetectionStrategy, Component, inject, input, resource } from '@angular/core';
+import { Component, inject, input, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
@@ -8,7 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { ListResponse } from '@shared/models/api.models';
+import type { ListResponse } from '@shared/models/api.models';
 
 interface SalaryRow { id: number; year: number; month: number; base_salary: string; final_salary: string; status: string }
 
