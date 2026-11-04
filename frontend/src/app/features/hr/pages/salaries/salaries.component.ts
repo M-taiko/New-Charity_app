@@ -1,22 +1,27 @@
 // hr.salaries.title (plan 20). T3-90: month/year list filters (as in
 // hr/salaries/index.blade.php) + the salaries-report CSV export button.
+// T4-20: async-page states (header → KPI → filters → table); T4-23: dialog
+// fields via app-field.
 import { ChangeDetectionStrategy, Component, inject, resource, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import {HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
+import type { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { FieldComponent } from '@shared/ui/field/field.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ListResponse, ActionResponse } from '@shared/models/api.models';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
-import { InputNumberModule } from 'primeng/inputnumber';
 
 interface Row {
   id: number;
@@ -33,10 +38,10 @@ interface Row {
   selector: 'app-salaries-page',
   standalone: true,
   imports: [
-    TranslatePipe, FormsModule, ButtonModule, SelectModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    TranslatePipe, FormsModule, ButtonModule, SelectModule, InputNumberModule,
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, StatusStampComponent,
-    FormDialogComponent, InputNumberModule,
+    FormDialogComponent, FieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -47,83 +52,83 @@ interface Row {
       </div>
     </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
+    <app-async-page [resource]="data" variant="list">
+      @if (data.value(); as page) {
         <div class="kpi-grid">
-        <app-stat-tile [label]="'hr.salaries.detail.title'" [value]="summaryValue('total_final')" [money]="true" />
+          <app-stat-tile [label]="'hr.salaries.detail.title'" [value]="summaryValue('total_final')" [money]="true" />
         </div>
 
-
-      <app-data-table
-        [tableKey]="tableKey"
-        [columns]="columns"
-        [rows]="page.data"
-        [total]="page.meta.total"
-        [perPage]="params().per_page"
-        [loading]="data.isLoading()"
-        (pageChange)="onPage($event)"
-      >
-        <div toolbar class="u-flex u-gap-2 u-flex-wrap">
-          <div class="field" style="margin: 0">
-            <label class="field__label" for="sal-filter-month">{{ 'hr.salaries.month' | translate }}</label>
-            <p-select inputId="sal-filter-month" [options]="monthOptions" optionLabel="label" optionValue="value" [ngModel]="params().month" name="month" (ngModelChange)="setParam('month', $event)" styleClass="u-full" />
+        <app-data-table
+          [tableKey]="tableKey"
+          [columns]="columns"
+          [rows]="page.data"
+          [total]="page.meta.total"
+          [perPage]="params().per_page"
+          [loading]="data.isLoading()"
+          (pageChange)="onPage($event)"
+        >
+          <div toolbar class="u-flex u-gap-2 u-flex-wrap">
+            <app-field label="hr.salaries.month" controlId="sal-filter-month" class="u-m-0">
+              <p-select inputId="sal-filter-month" [options]="monthOptions" optionLabel="label" optionValue="value" [ngModel]="params().month" name="month" (ngModelChange)="setParam('month', $event)" styleClass="u-full" />
+            </app-field>
+            <app-field label="hr.salaries.year" controlId="sal-filter-year" class="u-m-0">
+              <p-select inputId="sal-filter-year" [options]="yearOptions" optionLabel="label" optionValue="value" [ngModel]="params().year" name="year" (ngModelChange)="setParam('year', $event)" styleClass="u-full" />
+            </app-field>
           </div>
-          <div class="field" style="margin: 0">
-            <label class="field__label" for="sal-filter-year">{{ 'hr.salaries.year' | translate }}</label>
-            <p-select inputId="sal-filter-year" [options]="yearOptions" optionLabel="label" optionValue="value" [ngModel]="params().year" name="year" (ngModelChange)="setParam('year', $event)" styleClass="u-full" />
+          <ng-template appTableBody let-row>
+            <tr class="ledger-table__row">
+              <td appTableCol="employee">{{ row.employee ?? '—' }}</td>
+              <td appTableCol="year">{{ row.year ?? '—' }}</td>
+              <td appTableCol="month">{{ row.month ?? '—' }}</td>
+              <td appTableCol="base_salary" class="ledger-table__cell-num"><span class="u-bidi">{{ row.base_salary | money }}</span></td>
+              <td appTableCol="final_salary" class="ledger-table__cell-num"><span class="u-bidi">{{ row.final_salary | money }}</span></td>
+              <td appTableCol="status"><app-status-stamp [status]="row.status ?? ''" namespace="salary" /></td>
+            </tr>
+            <tr class="ledger-table__stacked">
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_name' | translate }}</span>
+                {{ row.employee ?? '—' }}
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'hr.salaries.year' | translate }}</span>
+                {{ row.year ?? '—' }}
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'hr.salaries.month' | translate }}</span>
+                {{ row.month ?? '—' }}
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_base' | translate }}</span>
+                <span class="u-bidi">{{ row.base_salary | money }}</span>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_final' | translate }}</span>
+                <span class="u-bidi">{{ row.final_salary | money }}</span>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_status' | translate }}</span>
+                <app-status-stamp [status]="row.status ?? ''" namespace="salary" />
+              </div>
+            </tr>
+          </ng-template>
+          <div empty>
+            <app-empty-state [title]="'hr.salaries.empty' | translate" [text]="'common.no_data' | translate" />
           </div>
-        </div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="employee">{{ row.employee ?? '—' }}</td>
-            <td appTableCol="year">{{ row.year ?? '—' }}</td>
-            <td appTableCol="month">{{ row.month ?? '—' }}</td>
-            <td appTableCol="base_salary" class="ledger-table__cell-num"><span class="u-bidi">{{ row.base_salary | money }}</span></td>
-            <td appTableCol="final_salary" class="ledger-table__cell-num"><span class="u-bidi">{{ row.final_salary | money }}</span></td>
-            <td appTableCol="status"><app-status-stamp [status]="row.status ?? ''" namespace="salary" /></td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_name' | translate }}</span>
-              {{ row.employee ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'hr.salaries.year' | translate }}</span>
-              {{ row.year ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'hr.salaries.month' | translate }}</span>
-              {{ row.month ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_base' | translate }}</span>
-              <span class="u-bidi">{{ row.base_salary | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_final' | translate }}</span>
-              <span class="u-bidi">{{ row.final_salary | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_status' | translate }}</span>
-              <app-status-stamp [status]="row.status ?? ''" namespace="salary" />
-            </div>
-          </tr>
-        </ng-template>
-        <div empty>
-          <app-empty-state [title]="'hr.salaries.empty' | translate" [text]="'common.no_data' | translate" />
-        </div>
-      </app-data-table>
-    }
+        </app-data-table>
+      }
+    </app-async-page>
 
     <app-form-dialog [header]="'hr.salaries.calculate' | translate" [submitLabel]="'hr.salaries.calculate' | translate" [(visible)]="dialogOpen" [sending]="sending()" (submit)="submit()">
       <div class="u-column u-gap-3">
-        <div class="field"><label class="field__label" for="sal-year">{{ 'hr.salaries.year' | translate }} *</label>
-          <p-inputnumber inputId="sal-year" [(ngModel)]="form.year" name="year" [useGrouping]="false" styleClass="u-full" /></div>
-        <div class="field"><label class="field__label" for="sal-month">{{ 'hr.salaries.month' | translate }} *</label>
-          <p-inputnumber inputId="sal-month" [(ngModel)]="form.month" name="month" [min]="1" [max]="12" [useGrouping]="false" styleClass="u-full" /></div>
-        <div class="field"><label class="field__label">{{ 'hr.salaries.method' | translate }} *</label>
-          <p-select appendTo="body" [options]="methodOptions" optionLabel="label" optionValue="value" [(ngModel)]="form.calculation_method" name="calculation_method" styleClass="u-full" /></div>
+        <app-field label="hr.salaries.year" controlId="sal-year" [required]="true">
+          <p-inputnumber inputId="sal-year" [(ngModel)]="form.year" name="year" [useGrouping]="false" styleClass="u-full" />
+        </app-field>
+        <app-field label="hr.salaries.month" controlId="sal-month" [required]="true">
+          <p-inputnumber inputId="sal-month" [(ngModel)]="form.month" name="month" [min]="1" [max]="12" [useGrouping]="false" styleClass="u-full" />
+        </app-field>
+        <app-field label="hr.salaries.method" controlId="sal-method" [required]="true">
+          <p-select appendTo="body" inputId="sal-method" [options]="methodOptions" optionLabel="label" optionValue="value" [(ngModel)]="form.calculation_method" name="calculation_method" styleClass="u-full" />
+        </app-field>
       </div>
     </app-form-dialog>
   `,
@@ -162,8 +167,8 @@ export class SalariesPage {
   }
 
   summaryValue(key: string): string {
-    const value = this.data.value()?.meta?.summary?.[key];
-    return value === undefined || value === null ? '0' : String(value);
+    const value = this.data.value()?.meta.summary?.[key];
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
   }
 
   setParam(key: string, value: string | number): void {

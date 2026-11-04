@@ -38,7 +38,7 @@ import type { ActionResponse, ApiErrorBody } from '@shared/models/api.models';
         </div>
       }
       <p-footer>
-        <div class="u-flex" style="justify-content: flex-end">
+        <div class="u-flex u-justify-end">
           <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" [disabled]="sending()" (onClick)="visible.set(false)" />
           <p-button [label]="'common.delete' | translate" severity="danger" [loading]="sending()" (onClick)="confirm()" />
         </div>

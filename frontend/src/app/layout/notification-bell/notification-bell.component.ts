@@ -38,8 +38,8 @@ import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 
       @if (openSignal()) {
         <div class="notification-bell__panel" role="dialog" [attr.aria-label]="'nav.notifications' | translate">
-          <div class="u-flex-between" style="padding: var(--space-2) var(--space-3)">
-            <strong style="font-size: var(--text-sm)">{{ 'nav.notifications' | translate }}</strong>
+          <div class="notification-bell__head">
+            <strong class="notification-bell__title">{{ 'nav.notifications' | translate }}</strong>
             <p-button [label]="'notifications.mark_all' | translate" size="small" [text]="true" (onClick)="markAll()" />
           </div>
           <div class="notification-bell__list">
@@ -49,27 +49,22 @@ import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
                 [class.notification-bell__item--unread]="!item.is_read"
                 [routerLink]="item.link || '/notifications'"
                 (click)="openItem(item)"
-                style="text-decoration: none; color: inherit"
               >
                 <span class="notification-bell__item-title">{{ item.title }}</span>
                 <span class="notification-bell__item-text">{{ item.message }}</span>
                 <span class="notification-bell__item-text">{{ item.created_at | relativeTime }}</span>
               </a>
             } @empty {
-              <p class="u-muted" style="padding: var(--space-4)">{{ 'notifications.empty' | translate }}</p>
+              <p class="notification-bell__empty u-muted">{{ 'notifications.empty' | translate }}</p>
             }
           </div>
-          <div
-            class="u-flex-between"
-            style="padding: var(--space-2) var(--space-3); border-block-start: 1px solid var(--color-hairline)"
-          >
-            <a routerLink="/notifications" style="font-size: var(--text-xs)" (click)="openSignal.set(false)">
+          <div class="notification-bell__foot">
+            <a routerLink="/notifications" class="notification-bell__all" (click)="openSignal.set(false)">
               {{ 'notifications.view_all' | translate }}
             </a>
             <button
               type="button"
-              class="topbar__icon-btn"
-              style="width: 28px; height: 28px"
+              class="topbar__icon-btn notification-bell__mute"
               (click)="toggleMute()"
               [attr.aria-label]="(muted() ? 'notifications.unmute' : 'notifications.mute') | translate"
             >
@@ -83,6 +78,37 @@ import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
     </div>
   `,
   styles: `
+    .notification-bell__head,
+    .notification-bell__foot {
+      padding: var(--space-2) var(--space-3);
+    }
+
+    .notification-bell__foot {
+      border-block-start: 1px solid var(--color-hairline);
+    }
+
+    .notification-bell__title {
+      font-size: var(--text-sm);
+    }
+
+    .notification-bell__item {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .notification-bell__empty {
+      padding: var(--space-4);
+    }
+
+    .notification-bell__all {
+      font-size: var(--text-xs);
+    }
+
+    .notification-bell__mute {
+      width: 28px;
+      height: 28px;
+    }
+
     .notification-bell__panel {
       position: absolute;
       top: calc(var(--topbar-h) + 2px);
@@ -140,7 +166,7 @@ export class NotificationBellComponent implements OnDestroy {
   }
 
   markAll(): void {
-    this.http.post('/notifications/mark-all-read', {}).subscribe(() => this.polling.refreshNow());
+    this.http.post('/notifications/mark-all-read', {}).subscribe(() => { this.polling.refreshNow(); });
   }
 
   /** close the dropdown, mark the item read, and let the anchor navigate */
@@ -148,7 +174,7 @@ export class NotificationBellComponent implements OnDestroy {
     this.openSignal.set(false);
     if (!item.is_read) {
       this.http.post(`/notifications/${item.id}/read`, {}).subscribe({
-        complete: () => this.polling.refreshNow(),
+        complete: () => { this.polling.refreshNow(); },
       });
     }
   }

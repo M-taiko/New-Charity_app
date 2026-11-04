@@ -1,10 +1,13 @@
 /* ═══ Visual polish — hover, checkboxes, icons, scrollbars, placeholders ═══
    Explicit color rules for every interactive element in both themes. */
 
-/* ── Scrollbars ─────────────────────────────────────────────────── */
 :root[data-theme='light'] {
-  &::-webkit-scrollbar { width: 10px; height: 10px; }
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
   &::-webkit-scrollbar-track { background: var(--palette-cream); }
+
   &::-webkit-scrollbar-thumb {
     background: var(--palette-taupe);
     border-radius: 6px;
@@ -12,22 +15,7 @@
     &:hover { background: var(--palette-light); }
   }
   scrollbar-color: var(--palette-taupe) var(--palette-cream);
-}
 
-:root[data-theme='dark'] {
-  &::-webkit-scrollbar { width: 10px; height: 10px; }
-  &::-webkit-scrollbar-track { background: var(--dark-0); }
-  &::-webkit-scrollbar-thumb {
-    background: var(--dark-4);
-    border-radius: 6px;
-    border: 2px solid var(--dark-0);
-    &:hover { background: var(--dark-5); }
-  }
-  scrollbar-color: var(--dark-4) var(--dark-0);
-}
-
-/* ── Input placeholders ─────────────────────────────────────────── */
-:root[data-theme='light'] {
   .p-inputtext::placeholder,
   .p-textarea::placeholder,
   .login__input::placeholder,
@@ -35,9 +23,75 @@
     color: var(--palette-light);
     opacity: 1;
   }
+
+  .sidebar__link-icon { color: inherit; }
+  .topbar svg { color: inherit; }
+  .stat-tile__label svg { color: var(--palette-light); }
+  .empty-state__pattern { color: var(--palette-sand); }
+
+  :focus-visible {
+    outline: 2px solid var(--palette-brand);
+    outline-offset: 2px;
+  }
+
+  .p-button:focus-visible {
+    box-shadow: 0 0 0 3px var(--palette-taupe);
+  }
+
+  .p-inputtext:focus,
+  .p-select:focus,
+  .p-textarea:focus {
+    border-color: var(--palette-brand);
+    box-shadow: 0 0 0 2px var(--palette-sand);
+  }
+
+  .p-button:disabled {
+    background: var(--palette-sand);
+    border-color: var(--palette-sand);
+    color: var(--palette-taupe);
+    cursor: not-allowed;
+  }
+
+  .p-inputtext:disabled,
+  .p-select.p-disabled {
+    background: var(--palette-cream);
+    color: var(--palette-taupe);
+  }
+
+  .p-button-outlined {
+    background: transparent;
+    border-color: var(--palette-light);
+    color: var(--palette-brand);
+
+    &:hover {
+      background: var(--palette-cream);
+      border-color: var(--palette-brand);
+      color: var(--palette-brand);
+    }
+  }
+
+  .p-button-text {
+    background: transparent;
+    color: var(--palette-brand);
+    &:hover { background: var(--palette-cream); }
+  }
 }
 
 :root[data-theme='dark'] {
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  &::-webkit-scrollbar-track { background: var(--dark-0); }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--dark-4);
+    border-radius: 6px;
+    border: 2px solid var(--dark-0);
+    &:hover { background: var(--dark-5); }
+  }
+  scrollbar-color: var(--dark-4) var(--dark-0);
+
   .p-inputtext::placeholder,
   .p-textarea::placeholder,
   .login__input::placeholder,
@@ -45,8 +99,59 @@
     color: var(--dark-5);
     opacity: 1;
   }
-}
 
+  .sidebar__link-icon { color: inherit; }
+  .topbar svg { color: inherit; }
+  .stat-tile__label svg { color: var(--palette-taupe); }
+  .empty-state__pattern { color: var(--dark-4); }
+
+  :focus-visible {
+    outline: 2px solid var(--palette-taupe);
+    outline-offset: 2px;
+  }
+
+  .p-button:focus-visible {
+    box-shadow: 0 0 0 3px var(--dark-5);
+  }
+
+  .p-inputtext:focus,
+  .p-select:focus,
+  .p-textarea:focus {
+    border-color: var(--palette-taupe);
+    box-shadow: 0 0 0 2px var(--dark-4);
+  }
+
+  .p-button:disabled {
+    background: var(--dark-3);
+    border-color: var(--dark-3);
+    color: var(--dark-5);
+    cursor: not-allowed;
+  }
+
+  .p-inputtext:disabled,
+  .p-select.p-disabled {
+    background: var(--dark-1);
+    color: var(--dark-5);
+  }
+
+  .p-button-outlined {
+    background: transparent;
+    border-color: var(--dark-5);
+    color: var(--palette-cream);
+
+    &:hover {
+      background: var(--dark-2);
+      border-color: var(--palette-taupe);
+      color: var(--palette-cream);
+    }
+  }
+
+  .p-button-text {
+    background: transparent;
+    color: var(--palette-cream);
+    &:hover { background: var(--dark-2); }
+  }
+}
 /* ── Checkboxes — one unified design app-wide (same as the login page) ── */
 /* PrimeNG 20 marks the root with data-p-checked; a hidden native input sits
    inside — both selectors cover every state. */
@@ -111,10 +216,12 @@
 /* Sidebar links */
 :root[data-theme='light'] .sidebar__link {
   color: var(--palette-ink);
+
   &:hover {
     background: var(--palette-sand);
     color: var(--palette-ink);
   }
+
   &.sidebar__link--active {
     background: var(--palette-sand);
     border-inline-end-color: var(--palette-brand);
@@ -124,10 +231,12 @@
 
 :root[data-theme='dark'] .sidebar__link {
   color: var(--palette-taupe);
+
   &:hover {
     background: var(--dark-3);
     color: var(--palette-cream);
   }
+
   &.sidebar__link--active {
     background: var(--dark-3);
     border-inline-end-color: var(--palette-cream);
@@ -158,6 +267,7 @@
   background: var(--palette-white);
   border: 1px solid var(--palette-sand);
   color: var(--palette-mid);
+
   &:hover {
     background: var(--palette-sand);
     color: var(--palette-ink);
@@ -168,6 +278,7 @@
   background: var(--dark-2);
   border: 1px solid var(--dark-4);
   color: var(--palette-taupe);
+
   &:hover {
     background: var(--dark-3);
     color: var(--palette-cream);
@@ -175,53 +286,10 @@
 }
 
 /* ── SVG icons ──────────────────────────────────────────────────── */
-/* Icons inherit from parent — ensure parent color is always set */
-:root[data-theme='light'] {
-  .sidebar__link-icon { color: inherit; }
-  .topbar svg { color: inherit; }
-  .stat-tile__label svg { color: var(--palette-light); }
-  .empty-state__pattern { color: var(--palette-sand); }
-}
 
-:root[data-theme='dark'] {
-  .sidebar__link-icon { color: inherit; }
-  .topbar svg { color: inherit; }
-  .stat-tile__label svg { color: var(--palette-taupe); }
-  .empty-state__pattern { color: var(--dark-4); }
-}
 
-/* ── Focus rings ────────────────────────────────────────────────── */
-:root[data-theme='light'] {
-  :focus-visible {
-    outline: 2px solid var(--palette-brand);
-    outline-offset: 2px;
-  }
-  .p-button:focus-visible {
-    box-shadow: 0 0 0 3px var(--palette-taupe);
-  }
-  .p-inputtext:focus,
-  .p-select:focus,
-  .p-textarea:focus {
-    border-color: var(--palette-brand);
-    box-shadow: 0 0 0 2px var(--palette-sand);
-  }
-}
 
-:root[data-theme='dark'] {
-  :focus-visible {
-    outline: 2px solid var(--palette-taupe);
-    outline-offset: 2px;
-  }
-  .p-button:focus-visible {
-    box-shadow: 0 0 0 3px var(--dark-5);
-  }
-  .p-inputtext:focus,
-  .p-select:focus,
-  .p-textarea:focus {
-    border-color: var(--palette-taupe);
-    box-shadow: 0 0 0 2px var(--dark-4);
-  }
-}
+
 
 /* ── Selection ──────────────────────────────────────────────────── */
 :root[data-theme='light'] ::selection {
@@ -234,71 +302,9 @@
   color: var(--palette-cream);
 }
 
-/* ── Disabled states ────────────────────────────────────────────── */
-:root[data-theme='light'] {
-  .p-button:disabled {
-    background: var(--palette-sand);
-    border-color: var(--palette-sand);
-    color: var(--palette-taupe);
-    cursor: not-allowed;
-  }
-  .p-inputtext:disabled,
-  .p-select.p-disabled {
-    background: var(--palette-cream);
-    color: var(--palette-taupe);
-  }
-}
 
-:root[data-theme='dark'] {
-  .p-button:disabled {
-    background: var(--dark-3);
-    border-color: var(--dark-3);
-    color: var(--dark-5);
-    cursor: not-allowed;
-  }
-  .p-inputtext:disabled,
-  .p-select.p-disabled {
-    background: var(--dark-1);
-    color: var(--dark-5);
-  }
-}
 
-/* ── Outlined / text button hover ───────────────────────────────── */
-:root[data-theme='light'] {
-  .p-button-outlined {
-    background: transparent;
-    border-color: var(--palette-light);
-    color: var(--palette-brand);
-    &:hover {
-      background: var(--palette-cream);
-      border-color: var(--palette-brand);
-      color: var(--palette-brand);
-    }
-  }
-  .p-button-text {
-    background: transparent;
-    color: var(--palette-brand);
-    &:hover { background: var(--palette-cream); }
-  }
-}
 
-:root[data-theme='dark'] {
-  .p-button-outlined {
-    background: transparent;
-    border-color: var(--dark-5);
-    color: var(--palette-cream);
-    &:hover {
-      background: var(--dark-2);
-      border-color: var(--palette-taupe);
-      color: var(--palette-cream);
-    }
-  }
-  .p-button-text {
-    background: transparent;
-    color: var(--palette-cream);
-    &:hover { background: var(--dark-2); }
-  }
-}
 
 /* ── RTL: datepicker month arrows ────────────────────────────────
    PrimeNG ships fixed LTR chevrons (prev ‹ / next ›). In RTL the header

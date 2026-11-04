@@ -90,8 +90,6 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::post('custodies/{custody}/receive', [CustodyController::class, 'receive']);
             Route::post('custodies/{custody}/reject', [CustodyController::class, 'reject']);
             Route::post('custodies/{custody}/return', [CustodyController::class, 'return']);
-            Route::post('custodies/{custody}/approve-return', [CustodyController::class, 'approveReturn']);
-            Route::post('custodies/{custody}/direct-return', [CustodyController::class, 'directReturn']);
             Route::post('custodies/{custody}/request-return', [CustodyController::class, 'requestReturn']);
             Route::post('custodies/add-recovery', [CustodyController::class, 'addRecovery']);
             Route::post('custodies/request-return', [CustodyController::class, 'requestReturnTreasury']);
@@ -133,13 +131,11 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
                 ->withoutMiddleware(ApiV1Response::class);
 
             // ── Directions (expense items) ─────────────────────
+            // T5-08 (ADR 0007): the lazy per-node reads (roots|children|items|
+            // ancestors|{id}) are gone from the JSON contract — the SPA loads
+            // the full tree via /expense-items and /lookups in one call.
             Route::get('expense-items', [ApiDirections::class, 'index']);
             Route::post('expense-items', [ExpenseItemController::class, 'store']);
-            Route::get('expense-categories/roots', [ExpenseItemController::class, 'categoryRoots']);
-            Route::get('expense-categories/{category}/children', [ExpenseItemController::class, 'categoryChildren']);
-            Route::get('expense-categories/{category}/items', [ExpenseItemController::class, 'categoryItems']);
-            Route::get('expense-categories/{category}/ancestors', [ExpenseItemController::class, 'categoryAncestors']);
-            Route::get('expense-categories/{category}', [ApiDirections::class, 'categoryShow']);
             Route::post('expense-categories', [ExpenseItemController::class, 'storeCategory']);
             Route::post('expense-categories/{expenseCategory}/update', [ExpenseItemController::class, 'updateCategory']);
             Route::post('expense-categories/{expenseCategory}/delete', [ExpenseItemController::class, 'destroyCategory']);
@@ -210,7 +206,8 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::post('maintenance-requests/{maintenanceRequest}/delete', [MaintenanceRequestController::class, 'destroy']);
             Route::get('suppliers', [ApiProcurement::class, 'suppliers']);
             Route::post('suppliers', [SupplierController::class, 'store']);
-            Route::post('suppliers/{id}/update', [SupplierController::class, 'update']);
+            // T5-08 (ADR 0007): no suppliers/{id}/update here — the SPA has no
+            // supplier-edit dialog; the Blade resource route keeps the method.
             Route::post('suppliers/{id}/delete', [SupplierController::class, 'destroy']);
 
             // ── Tasks ──────────────────────────────────────────

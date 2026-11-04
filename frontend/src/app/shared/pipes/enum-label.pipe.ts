@@ -1,6 +1,7 @@
 import type { PipeTransform } from '@angular/core';
 import { Injectable, Pipe, inject } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { warnMissingTranslation } from '@core/i18n/missing-key';
 
 /**
  * The interface never prints a raw code (plan 14.6). Unknown codes fall back
@@ -18,6 +19,10 @@ export class EnumLabelPipe implements PipeTransform {
     }
     const key = `enums.${namespace}.${value}`;
     const label = this.translate.instant(key);
-    return label !== key ? label : value;
+    if (label === key) {
+      warnMissingTranslation(key); // dev only — status-stamp must not silently fall back (T5-01)
+      return value;
+    }
+    return label;
   }
 }

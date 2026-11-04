@@ -88,7 +88,7 @@ final class ProcurementController extends Controller
 
     public function maintenanceShow(Request $request, MaintenanceRequest $maintenanceRequest): JsonResponse
     {
-        $maintenanceRequest->load(['reporter', 'assignee']);
+        $maintenanceRequest->load(['reporter', 'assignee', 'reviewer']);
 
         return response()->json([
             'data' => [
@@ -102,6 +102,7 @@ final class ProcurementController extends Controller
                 'assigned_to' => $maintenanceRequest->assignee?->name,
                 'resolution_notes' => $maintenanceRequest->resolution_notes,
                 'rejection_reason' => $maintenanceRequest->rejection_reason,
+                'rejected_by' => $maintenanceRequest->status === 'rejected' ? $maintenanceRequest->reviewer?->name : null,
                 'resolved_at' => $maintenanceRequest->resolved_at?->toIso8601ZuluString(),
                 'attachment' => $maintenanceRequest->attachment,
                 'created_at' => $maintenanceRequest->created_at?->toIso8601ZuluString(),

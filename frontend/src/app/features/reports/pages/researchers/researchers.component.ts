@@ -1,10 +1,14 @@
 // Researcher statistics (plan 20, T3-110: rejected column from Blade).
+// T4-20/21/27: async-page states + the static ledger table in the shared layout.
 import { ChangeDetectionStrategy, Component, inject, resource } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -18,47 +22,46 @@ interface ResearchersData {
 @Component({
   selector: 'app-researchers-report',
   standalone: true,
-  imports: [TranslatePipe, ButtonModule, PageHeaderComponent, StatTileComponent, PrintSheetComponent, MoneyPipe],
+  imports: [
+    TranslatePipe, ButtonModule,
+    PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
+    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    StatTileComponent, PrintSheetComponent, MoneyPipe,
+  ],
   template: `
-    @if (data.value(); as d) {
-      <app-print-sheet [title]="'report.researchers.title' | translate">
-        <app-page-header [title]="'report.researchers.title' | translate">
-          <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (onClick)="printPage()" /></div>
-        </app-page-header>
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'report.researchers.researchers_count'" [value]="d.summary.researchers_count" />
-          <app-stat-tile [label]="'report.researchers.total_cases'" [value]="d.summary.total_cases" />
-          <app-stat-tile [label]="'report.researchers.approved_cases'" [value]="d.summary.approved_cases" />
-          <app-stat-tile [label]="'report.researchers.total_spent'" [value]="d.summary.total_spent" [money]="true" />
+    <app-print-sheet [title]="'report.researchers.title' | translate">
+      <app-page-header [title]="'report.researchers.title' | translate">
+        <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (onClick)="printPage()" /></div>
+      </app-page-header>
+
+      <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
+        @if (data.value(); as d) {
+          <div class="kpi-grid">
+            <app-stat-tile [label]="'report.researchers.researchers_count'" [value]="d.summary.researchers_count" />
+            <app-stat-tile [label]="'report.researchers.total_cases'" [value]="d.summary.total_cases" />
+            <app-stat-tile [label]="'report.researchers.approved_cases'" [value]="d.summary.approved_cases" />
+            <app-stat-tile [label]="'report.researchers.total_spent'" [value]="d.summary.total_spent" [money]="true" />
+          </div>
+
+          <app-ledger-table [columns]="cols" [rows]="d.researchers" [emptyLabel]="'report.researchers.empty'">
+            <ng-template appLedgerBody let-row>
+              <tr class="ledger-table__row">
+                <td appLedgerCol="researcher">{{ row.researcher.name }}</td>
+                <td appLedgerCol="total_cases" class="u-bidi">{{ row.total_cases }}</td>
+                <td appLedgerCol="approved" class="u-bidi">{{ row.approved }}</td>
+                <td appLedgerCol="rejected" class="u-bidi">{{ row.rejected }}</td>
+                <td appLedgerCol="pending" class="u-bidi">{{ row.pending }}</td>
+                <td appLedgerCol="total_spent"><span class="u-bidi">{{ row.total_spent | money }}</span></td>
+                <td appLedgerCol="approval_rate" class="u-bidi">{{ row.approval_rate }}%</td>
+              </tr>
+            </ng-template>
+          </app-ledger-table>
+        }
+        <div empty>
+          <app-empty-state [title]="'report.researchers.empty'" [text]="'common.no_data'" />
         </div>
-        <div class="ledger-table">
-          <table>
-            <thead><tr>
-              <th>{{ 'report.researchers.col_name' | translate }}</th>
-              <th>{{ 'report.researchers.col_cases' | translate }}</th>
-              <th>{{ 'report.researchers.col_approved' | translate }}</th>
-              <th>{{ 'report.researchers.col_rejected' | translate }}</th>
-              <th>{{ 'report.researchers.col_pending' | translate }}</th>
-              <th>{{ 'report.researchers.col_spent' | translate }}</th>
-              <th>{{ 'report.researchers.col_rate' | translate }}</th>
-            </tr></thead>
-            <tbody>
-              @for (row of d.researchers; track row.researcher.id) {
-                <tr class="ledger-table__row">
-                  <td>{{ row.researcher.name }}</td>
-                  <td class="ledger-table__cell-num">{{ row.total_cases }}</td>
-                  <td class="ledger-table__cell-num">{{ row.approved }}</td>
-                  <td class="ledger-table__cell-num">{{ row.rejected }}</td>
-                  <td class="ledger-table__cell-num">{{ row.pending }}</td>
-                  <td class="ledger-table__cell-num">{{ row.total_spent | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.approval_rate }}%</td>
-                </tr>
-              } @empty { <tr><td colspan="7" class="u-muted">{{ 'report.researchers.empty' | translate }}</td></tr> }
-            </tbody>
-          </table>
-        </div>
-      </app-print-sheet>
-    }
+      </app-async-page>
+    </app-print-sheet>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -67,6 +70,19 @@ export class ResearchersPage {
   data = resource<ResearchersData, unknown>({
     loader: () => firstValueFrom(this.http.get<ItemResponse<ResearchersData>>('/analytics/researchers')).then((r) => r.data),
   });
+
+  isEmpty = (): boolean => (this.data.value()?.researchers ?? []).length === 0;
+
+  readonly cols = [
+    { field: 'researcher', header: 'report.researchers.col_name' },
+    { field: 'total_cases', header: 'report.researchers.col_cases', numeric: true },
+    { field: 'approved', header: 'report.researchers.col_approved', numeric: true },
+    { field: 'rejected', header: 'report.researchers.col_rejected', numeric: true },
+    { field: 'pending', header: 'report.researchers.col_pending', numeric: true },
+    { field: 'total_spent', header: 'report.researchers.col_spent', numeric: true },
+    { field: 'approval_rate', header: 'report.researchers.col_rate', numeric: true },
+  ];
+
   printPage(): void {
     window.print();
   }

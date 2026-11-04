@@ -3,8 +3,7 @@ import type { OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import { HttpErrorResponse } from '@angular/common/http';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -14,6 +13,9 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { FieldComponent } from '@shared/ui/field/field.component';
+import { serverFieldError } from '@shared/lib/server-field-errors';
+import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ActionResponse, ItemResponse, Lookups } from '@shared/models/api.models';
 
@@ -29,21 +31,24 @@ type Variant = 'agent' | 'for-agent' | 'personal';
 @Component({
   selector: 'app-custody-form',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, MoneyPipe],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="title() | translate" [subtitle]="subtitle() | translate" />
-    <div class="u-flex u-gap-4 u-flex-wrap">
-      <form class="form-section" style="flex: 1; min-width: min(100%, 34rem)" (ngSubmit)="submit()" #f="ngForm">
-        <div class="form-section__grid">
+    <app-page-header [title]="title() | translate" [subtitle]="subtitle() | translate">
+      <div actions>
+        <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/custodies" />
+      </div>
+    </app-page-header>
+
+    <div class="detail-grid">
+      <form (ngSubmit)="submit()" #f="ngForm">
+        <app-form-section>
           @if (variant() === 'for-agent') {
-            <div class="field">
-              <label class="field__label" for="agent">{{ 'custody.create.agent' | translate }} *</label>
+            <app-field label="custody.create.agent" controlId="agent" [required]="true" [error]="serverFieldError(error(), 'agent_id')">
               <p-select appendTo="body" inputId="agent" [options]="users()" optionLabel="name" optionValue="id"
                 [filter]="true" [(ngModel)]="agentId" name="agent" required styleClass="u-full" [autofocus]="false" />
-            </div>
-            <div class="field">
-              <label class="field__label" for="treasury">{{ 'custody.create.treasury' | translate }} *</label>
+            </app-field>
+            <app-field label="custody.create.treasury" controlId="treasury" [required]="true" [error]="serverFieldError(error(), 'treasury_id')">
               <p-select appendTo="body" inputId="treasury" [options]="treasuries()" optionLabel="name" optionValue="id"
                 [(ngModel)]="treasuryId" name="treasury" required (ngModelChange)="onTreasury()" styleClass="u-full" [autofocus]="false" />
               @if (selectedTreasury(); as t) {
@@ -52,37 +57,34 @@ type Variant = 'agent' | 'for-agent' | 'personal';
                   {{ 'custody.create.balance_after' | translate }}: {{ balanceAfter() | money }}
                 </span>
               }
-            </div>
+            </app-field>
           }
-          <div class="field">
-            <label class="field__label" for="amount">{{ 'custody.create.amount' | translate }} *</label>
+          <app-field label="custody.create.amount" controlId="amount" [required]="true" [error]="serverFieldError(error(), 'amount')">
             <p-inputnumber inputId="amount" name="amount" [(ngModel)]="amount" mode="decimal" [minFractionDigits]="2"
               [min]="0.01" [max]="maxAmount()" required styleClass="u-full" />
             @if (maxAmount() !== null) {
               <span class="field__hint u-bidi">{{ 'custody.create.max_amount' | translate }}: {{ maxAmount() | money }}</span>
             }
-          </div>
-          <div class="field">
-            <label class="field__label" for="issued">{{ dateLabel() | translate }} *</label>
+          </app-field>
+          <app-field [label]="dateLabel()" controlId="issued" [required]="true" [error]="serverFieldError(error(), 'issued_date')">
             <p-datepicker appendTo="body" inputId="issued" name="issued" [(ngModel)]="issuedDate" dateFormat="yy-mm-dd"
               [showIcon]="true" required styleClass="u-full" />
             @if (variant() === 'agent') {
               <span class="field__hint u-bidi">{{ 'custody.create.request_date' | translate }}: {{ today }}</span>
             }
-          </div>
-          <div class="field">
-            <label class="field__label" for="notes">{{ 'common.notes' | translate }}</label>
-            <textarea pTextarea id="notes" name="notes" rows="2" [(ngModel)]="notes" style="width: 100%"></textarea>
-          </div>
-        </div>
-        @if (error()) { <div class="dialog__alert" role="alert">{{ error() }}</div> }
+          </app-field>
+          <app-field label="common.notes" controlId="notes" [error]="serverFieldError(error(), 'notes')">
+            <textarea pTextarea id="notes" name="notes" rows="2" [(ngModel)]="notes" class="u-full"></textarea>
+          </app-field>
+        </app-form-section>
+        @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
           <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/custodies" />
           <p-button type="submit" [label]="submitLabel() | translate" [loading]="sending()" [disabled]="f.invalid || sending() || overBalance()" />
         </div>
       </form>
 
-      <aside class="chart-card" style="flex: 1; min-width: min(100%, 20rem); align-self: flex-start">
+      <aside class="chart-card">
         <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.create.info_title' | translate }}</span></div>
         <ul class="u-column u-gap-1 u-small">
           @for (hint of hints(); track hint) {
@@ -106,7 +108,9 @@ export class CustodyFormPage implements OnInit {
   issuedDate = signal<string>(new Date().toISOString().slice(0, 10));
   notes = signal('');
   sending = signal(false);
-  error = signal('');
+  error = signal<HttpErrorResponse | null>(null);
+  /** exposed to the template — templates see class members, not module imports */
+  readonly serverFieldError = serverFieldError;
   readonly today = new Date().toISOString().slice(0, 10);
 
   lookups = resource<Lookups, unknown>({
@@ -115,11 +119,19 @@ export class CustodyFormPage implements OnInit {
   });
 
   treasuries(): { id: number; name: string; balance: string }[] {
-    return this.lookups.value()?.treasuries ?? [];
+    try {
+      return this.lookups.value()?.treasuries ?? [];
+    } catch {
+      return [];
+    }
   }
 
   users(): { id: number; name: string }[] {
-    return this.lookups.value()?.users ?? [];
+    try {
+      return this.lookups.value()?.users ?? [];
+    } catch {
+      return [];
+    }
   }
 
   selectedTreasury(): { id: number; name: string; balance: string } | null {
@@ -145,7 +157,7 @@ export class CustodyFormPage implements OnInit {
   }
 
   private isAgent(): boolean {
-    return this.auth.can('is_agent') || this.auth.hasRole('مندوب');
+    return this.auth.can('is_agent');
   }
 
   title(): string {
@@ -228,8 +240,17 @@ export class CustodyFormPage implements OnInit {
     const amount = this.amount();
     const max = this.maxAmount();
     if (amount !== null && max !== null && amount <= max) {
-      this.error.set('');
+      this.error.set(null);
     }
+  }
+
+  /** the general alert text — the server message or the generic fallback key */
+  alert(): string | null {
+    const err = this.error();
+    if (err === null) {
+      return null;
+    }
+    return err.error?.message ?? 'errors.generic';
   }
 
   submit(): void {
@@ -237,7 +258,7 @@ export class CustodyFormPage implements OnInit {
       return;
     }
     this.sending.set(true);
-    this.error.set('');
+    this.error.set(null);
     const body: Record<string, unknown> = {
       amount: this.amount(),
       issued_date: this.issuedDate(),
@@ -261,7 +282,7 @@ export class CustodyFormPage implements OnInit {
       })
       .catch((err: unknown) => {
         this.sending.set(false);
-        this.error.set(err instanceof HttpErrorResponse ? err.error?.message ?? 'errors.generic' : 'errors.generic');
+        this.error.set(err instanceof HttpErrorResponse ? err : null);
       });
   }
 }

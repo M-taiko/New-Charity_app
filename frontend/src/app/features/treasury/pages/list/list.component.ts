@@ -8,11 +8,13 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
+import { RowActionsComponent, type RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
@@ -20,6 +22,7 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { ActionResponse, ListResponse } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface TreasuryRow {
   id: number;
@@ -39,10 +42,10 @@ interface TreasuryRow {
   selector: 'app-treasury-list',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, SelectModule,
-    InputNumberModule, TextareaModule, PageHeaderComponent, StatTileComponent,
+    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, SelectModule,
+    InputNumberModule, TextareaModule, PageHeaderComponent, AsyncPageComponent, StatTileComponent,
     DataTableComponent, TableBodyDirective, TableColDirective, EmptyStateComponent, FormDialogComponent,
-    ConfirmDeleteComponent, MoneyPipe, DatetimePipe,
+    ConfirmDeleteComponent, RowActionsComponent, MoneyPipe, DatetimePipe,
   ],
   template: `
     <app-page-header [title]="'treasury.list.title' | translate">
@@ -53,95 +56,59 @@ interface TreasuryRow {
       </div>
     </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">
-        @for (s of [1, 2]; track s) {
-          <div class="skeleton skeleton--tile"></div>
-        }
-      </div>
-    } @else if (data.value(); as page) {
-      <div class="kpi-grid">
-        <app-stat-tile [label]="'treasury.list.count'" [value]="summaryCount()" />
-        <app-stat-tile [label]="'treasury.list.total_balance'" [value]="summaryBalance()" [money]="true" />
-      </div>
-
-      <app-data-table
-        [tableKey]="tableKey"
-        [columns]="columns"
-        [rows]="page.data"
-        [total]="page.meta.total"
-        [perPage]="params().per_page"
-        [loading]="data.isLoading()"
-        (pageChange)="onPage($event)"
-      >
-        <div toolbar class="u-flex u-gap-2">
-          </div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="name">
-              <a [routerLink]="['/treasury', row.id]">{{ row.name }}</a>
-              @if (row.notes) {
-                <div class="u-muted u-small u-truncate">{{ row.notes }}</div>
-              }
-            </td>
-            <td appTableCol="balance" class="ledger-table__cell-num">{{ row.balance | money }}</td>
-            <td appTableCol="transactions_count" class="ledger-table__cell-num">{{ row.transactions_count ?? '—' }}</td>
-            <td appTableCol="created_at" class="u-bidi">{{ row.created_at | datetime: false }}</td>
-            <td appTableCol="actions">
-              <div class="row-actions">
-                <a class="row-actions__btn" [routerLink]="['/treasury', row.id]" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </a>
-                <button type="button" class="row-actions__btn" [title]="'treasury.list.receive_donation' | translate" [attr.aria-label]="'treasury.list.receive_donation' | translate" (click)="openDonation(row)">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-wallet" /></svg>
-                </button>
-                <a class="row-actions__btn" [routerLink]="['/treasury', row.id, 'edit']" [title]="'common.edit' | translate" [attr.aria-label]="'common.edit' | translate">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-pencil" /></svg>
-                </a>
-                <a class="row-actions__btn" routerLink="/treasury/transfer" [title]="'treasury.list.transfer' | translate" [attr.aria-label]="'treasury.list.transfer' | translate">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-arrows-exchange" /></svg>
-                </a>
-                <button type="button" class="row-actions__btn row-actions__btn--danger" [title]="'common.delete' | translate" [attr.aria-label]="'common.delete' | translate" (click)="openDelete(row)">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-trash" /></svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'treasury.list.name' | translate }}</span>
-              <a [routerLink]="['/treasury', row.id]">{{ row.name }}</a>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'treasury.list.balance' | translate }}</span>
-              <span class="u-bidi">{{ row.balance | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item row-actions">
-              <a class="row-actions__btn" [routerLink]="['/treasury', row.id]" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate">
-                <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-              </a>
-              <button type="button" class="row-actions__btn" [title]="'treasury.list.receive_donation' | translate" [attr.aria-label]="'treasury.list.receive_donation' | translate" (click)="openDonation(row)">
-                <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-wallet" /></svg>
-              </button>
-              <a class="row-actions__btn" [routerLink]="['/treasury', row.id, 'edit']" [title]="'common.edit' | translate" [attr.aria-label]="'common.edit' | translate">
-                <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-pencil" /></svg>
-              </a>
-              <a class="row-actions__btn" routerLink="/treasury/transfer" [title]="'treasury.list.transfer' | translate" [attr.aria-label]="'treasury.list.transfer' | translate">
-                <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-arrows-exchange" /></svg>
-              </a>
-              <button type="button" class="row-actions__btn row-actions__btn--danger" [title]="'common.delete' | translate" [attr.aria-label]="'common.delete' | translate" (click)="openDelete(row)">
-                <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-trash" /></svg>
-              </button>
-            </div>
-          </tr>
-        </ng-template>
-        <div empty>
-          <app-empty-state [title]="'treasury.list.empty' | translate" [text]="'treasury.list.empty_text' | translate">
-            <p-button [label]="'treasury.list.add' | translate" size="small" routerLink="/treasury/new" />
-          </app-empty-state>
+    <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
+      @if (data.value(); as page) {
+        <div class="kpi-grid">
+          <app-stat-tile [label]="'treasury.list.count'" [value]="summaryCount()" />
+          <app-stat-tile [label]="'treasury.list.total_balance'" [value]="summaryBalance()" [money]="true" />
         </div>
-      </app-data-table>
-    }
+
+        <app-data-table
+          [tableKey]="tableKey"
+          [columns]="columns"
+          [rows]="page.data"
+          [total]="page.meta.total"
+          [perPage]="params().per_page"
+          [loading]="data.isLoading()"
+          (pageChange)="onPage($event)"
+        >
+          <div toolbar class="u-flex u-gap-2">
+          </div>
+          <ng-template appTableBody let-row>
+            <tr class="ledger-table__row">
+              <td appTableCol="name">
+                <a [routerLink]="['/treasury', row.id]">{{ row.name }}</a>
+                @if (row.notes) {
+                  <div class="u-muted u-small u-truncate">{{ row.notes }}</div>
+                }
+              </td>
+              <td appTableCol="balance" class="ledger-table__cell-num">{{ row.balance | money }}</td>
+              <td appTableCol="transactions_count" class="ledger-table__cell-num">{{ row.transactions_count ?? '—' }}</td>
+              <td appTableCol="created_at" class="u-bidi">{{ row.created_at | datetime: false }}</td>
+              <td appTableCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
+            </tr>
+            <tr class="ledger-table__stacked">
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'treasury.list.name' | translate }}</span>
+                <a [routerLink]="['/treasury', row.id]">{{ row.name }}</a>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'treasury.list.balance' | translate }}</span>
+                <span class="u-bidi">{{ row.balance | money }}</span>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <app-row-actions [actions]="actionsFor(row)" />
+              </div>
+            </tr>
+          </ng-template>
+        </app-data-table>
+      }
+      <div empty>
+        <app-empty-state [title]="'treasury.list.empty' | translate" [text]="'treasury.list.empty_text' | translate">
+          <p-button [label]="'treasury.list.add' | translate" size="small" routerLink="/treasury/new" />
+        </app-empty-state>
+      </div>
+    </app-async-page>
 
     <!-- T3-40: the server blocks deletion of a treasury with movements/balance — its message surfaces -->
     <app-confirm-delete #deleteDlg [path]="deletePath()" [entity]="deleteEntity()" (deleted)="data.reload()" />
@@ -155,8 +122,7 @@ interface TreasuryRow {
       (submit)="submitDonation()"
     >
       <div class="u-column u-gap-3">
-        <div class="field">
-          <label class="field__label" for="don-treasury">{{ 'custody.create.treasury' | translate }} *</label>
+        <app-field label="custody.create.treasury" controlId="don-treasury" [required]="true">
           <p-select appendTo="body"
             inputId="don-treasury"
             [options]="treasuries()"
@@ -165,13 +131,11 @@ interface TreasuryRow {
             [(ngModel)]="donation.treasury_id" name="treasury_id"
             styleClass="u-full"
           />
-        </div>
-        <div class="field">
-          <label class="field__label" for="don-amount">{{ 'treasury.donation.amount' | translate }} *</label>
+        </app-field>
+        <app-field label="treasury.donation.amount" controlId="don-amount" [required]="true">
           <p-inputnumber inputId="don-amount" [(ngModel)]="donation.amount" name="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" styleClass="u-full" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="don-source">{{ 'treasury.donation.source' | translate }} *</label>
+        </app-field>
+        <app-field label="treasury.donation.source" controlId="don-source" [required]="true">
           <p-select appendTo="body"
             inputId="don-source"
             [options]="sources"
@@ -180,13 +144,12 @@ interface TreasuryRow {
             [(ngModel)]="donation.source" name="source"
           />
           @if (donation.source === 'external') {
-            <input pInputText id="don-external" [(ngModel)]="donation.external_name" name="external_name" [placeholder]="'treasury.donation.external_name' | translate" style="width: 100%; margin-block-start: 8px" />
+            <input pInputText id="don-external" class="u-full u-mt-2" [(ngModel)]="donation.external_name" name="external_name" [placeholder]="'treasury.donation.external_name' | translate" />
           }
-        </div>
-        <div class="field">
-          <label class="field__label" for="don-notes">{{ 'treasury.donation.description' | translate }} *</label>
-          <textarea pTextarea id="don-notes" rows="2" [(ngModel)]="donation.description" name="description" style="width: 100%"></textarea>
-        </div>
+        </app-field>
+        <app-field label="treasury.donation.description" controlId="don-notes" [required]="true">
+          <textarea pTextarea id="don-notes" rows="2" class="u-full" [(ngModel)]="donation.description" name="description"></textarea>
+        </app-field>
         @if (donation.treasury_id && donation.amount) {
           <p class="field__hint">
             {{ 'treasury.donation.balance_after' | translate }}:
@@ -241,20 +204,57 @@ export class TreasuryListPage {
       ),
   });
 
-  treasuries = computed(() => this.data.value()?.data ?? []);
+  /** T4-20: a non-throwing resource view — raw ResourceRef.value() throws on a failed load */
+  readonly pageResource: LoadableResource = {
+    value: () => this.safeValue(),
+    error: () => {
+      try {
+        return this.data.error();
+      } catch {
+        return undefined;
+      }
+    },
+    isLoading: () => this.data.isLoading(),
+    reload: () => {
+      this.data.reload();
+    },
+  };
+
+  private safeValue(): ListResponse<TreasuryRow> | undefined {
+    try {
+      return this.data.value();
+    } catch {
+      return undefined;
+    }
+  }
+
+  isEmpty = (): boolean => (this.safeValue()?.data ?? []).length === 0;
+
+  treasuries = computed(() => this.safeValue()?.data ?? []);
 
   summaryCount(): number {
-    return Number(this.data.value()?.meta.summary?.treasuries_count ?? 0);
+    return Number(this.safeValue()?.meta.summary?.treasuries_count ?? 0);
   }
 
   summaryBalance(): string {
-    return String(this.data.value()?.meta.summary?.total_balance ?? '0');
+    return String(this.safeValue()?.meta.summary?.total_balance ?? '0');
   }
 
   balanceAfter(): string {
     const treasury = this.treasuries().find((t) => t.id === this.donation.treasury_id);
     const base = parseFloat(treasury?.balance ?? '0') || 0;
     return (base + (this.donation.amount ?? 0)).toFixed(2);
+  }
+
+  /** T4-24: view / donation / edit / transfer / delete (Blade actions) */
+  actionsFor(row: TreasuryRow): RowActionItem[] {
+    return [
+      { icon: 'eye', label: 'common.view', route: ['/treasury', row.id] },
+      { icon: 'wallet', label: 'treasury.list.receive_donation', handler: () => { this.openDonation(row); } },
+      { icon: 'pencil', label: 'common.edit', route: ['/treasury', row.id, 'edit'] },
+      { icon: 'arrows-exchange', label: 'treasury.list.transfer', route: ['/treasury', 'transfer'] },
+      { icon: 'trash', label: 'common.delete', severity: 'danger', handler: () => { this.openDelete(row); } },
+    ];
   }
 
   /** open the donation dialog — prefilled with the row's treasury when opened from a row */
@@ -269,11 +269,6 @@ export class TreasuryListPage {
     this.deletePath.set(`/treasury/${row.id}/delete`);
     this.deleteEntity.set(row.name);
     this.deleteDlg().open();
-  }
-
-  onSearch(term: string): void {
-    this.params.update((p) => ({ ...p, q: term, page: 1 }));
-    this.data.reload();
   }
 
   onPage(event: { page: number; per_page: number; sort: string }): void {

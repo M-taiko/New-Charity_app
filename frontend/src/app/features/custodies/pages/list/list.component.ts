@@ -7,9 +7,16 @@ import { HttpClient } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { SelectModule } from 'primeng/select';
+import { FormsModule } from '@angular/forms';
+import { TranslateService } from '@ngx-translate/core';
+import { ApiClient } from '@core/http/api-client';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
+import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -17,6 +24,7 @@ import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.co
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ActionResponse, ListResponse } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface Row {
   id: number;
@@ -38,6 +46,7 @@ interface CustodyListParams {
   q: string;
   sort?: string;
   status: string;
+  agent_id?: number | null;
 }
 
 /**
@@ -51,8 +60,8 @@ interface CustodyListParams {
   selector: 'app-custody-list',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, ButtonModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    FieldComponent, TranslatePipe, RouterLink, ButtonModule, SelectModule, FormsModule,
+    PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, StatusStampComponent,
     ReasonDialogComponent,
   ],
@@ -78,28 +87,44 @@ interface CustodyListParams {
       </div>
     </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4, 5]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
+    <app-async-page [resource]="data" variant="list">
+      @if (data.value(); as page) {
         <div class="kpi-grid">
-        <app-stat-tile [label]="'custody.list.accepted'" [value]="summaryValue('accepted')" />
-        <app-stat-tile [label]="'custody.list.pending'" [value]="summaryValue('pending')" />
-        <app-stat-tile [label]="'custody.list.rejected'" [value]="summaryValue('rejected')" />
-        <app-stat-tile [label]="'custody.list.closed_or_cancelled'" [value]="summaryValue('closed_or_cancelled')" />
-        <app-stat-tile [label]="'custody.list.total'" [value]="summaryValue('total')" />
+          <app-stat-tile [label]="'custody.list.accepted'" [value]="summaryValue('accepted')" />
+          <app-stat-tile [label]="'custody.list.pending'" [value]="summaryValue('pending')" />
+          <app-stat-tile [label]="'custody.list.rejected'" [value]="summaryValue('rejected')" />
+          <app-stat-tile [label]="'custody.list.closed_or_cancelled'" [value]="summaryValue('closed_or_cancelled')" />
+          <app-stat-tile [label]="'custody.list.total'" [value]="summaryValue('total')" />
         </div>
 
       <div class="filter-bar">
-        <div class="filter-bar__chips">
-          @for (tab of statusTabs; track tab.value) {
-            <p-button
-              [label]="tab.value === 'all' ? ('custody.list.tab_all' | translate) : ('enums.custody_status.' + tab.value | translate)"
-              size="small"
-              [outlined]="params().status !== tab.value"
-              [severity]="params().status === tab.value ? undefined : 'secondary'"
-              (onClick)="setParam('status', tab.value)"
+        <div class="filter-bar__row">
+          <app-field label="common.status" controlId="cl-status" class="field--lg">
+            <p-select appendTo="body" inputId="cl-status"
+              [options]="statusOptions()"
+              optionLabel="label"
+              optionValue="value"
+              [ngModel]="params().status"
+              (ngModelChange)="setParam('status', $event)"
+              name="status"
+              styleClass="u-full"
             />
-          }
+          </app-field>
+          <app-field label="custody.list.col_agent" controlId="cl-agent" class="field--lg">
+            <p-select appendTo="body" inputId="cl-agent"
+              [options]="agentOptions()"
+              optionLabel="name"
+              optionValue="id"
+              [filter]="true"
+              [showClear]="true"
+              [placeholder]="'common.choose' | translate"
+              [ngModel]="params().agent_id ?? null"
+              (ngModelChange)="setParam('agent_id', $event)"
+              name="agent_id"
+              styleClass="u-full"
+            />
+          </app-field>
+          <span class="filter-bar__spacer"></span>
         </div>
       </div>
 
@@ -123,24 +148,7 @@ interface CustodyListParams {
             <td appTableCol="spent_percent" class="ledger-table__cell-num">{{ row.spent_percent ?? '—' }}</td>
             <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="custody_status" /></td>
             <td appTableCol="actions">
-              <div class="row-actions">
-                <a class="row-actions__btn" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate" [routerLink]="['/custodies', row.id]">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </a>
-                @if (row.status === 'pending' && canApprove()) {
-                  <a class="row-actions__btn" [title]="'custody.detail.accept' | translate" [attr.aria-label]="'custody.detail.accept' | translate" [routerLink]="['/custodies', row.id]">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-check" /></svg>
-                  </a>
-                  <button type="button" class="row-actions__btn row-actions__btn--danger" [title]="'custody.list.reject_action' | translate" [attr.aria-label]="'custody.list.reject_action' | translate" (click)="openReject(row)">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-x" /></svg>
-                  </button>
-                }
-                @if (isAgent() && openStates.includes(row.status)) {
-                  <a class="row-actions__btn" [title]="'custody.detail.return' | translate" [attr.aria-label]="'custody.detail.return' | translate" [routerLink]="['/custodies', row.id]">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-cash" /></svg>
-                  </a>
-                }
-              </div>
+              <app-row-actions [actions]="actionsFor(row)" />
             </td>
           </tr>
           <tr class="ledger-table__stacked">
@@ -173,24 +181,7 @@ interface CustodyListParams {
               <app-status-stamp [status]="row.status" namespace="custody_status" />
             </div>
             <div class="ledger-table__stacked-item">
-              <div class="row-actions">
-                <a class="row-actions__btn" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate" [routerLink]="['/custodies', row.id]">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </a>
-                @if (row.status === 'pending' && canApprove()) {
-                  <a class="row-actions__btn" [title]="'custody.detail.accept' | translate" [attr.aria-label]="'custody.detail.accept' | translate" [routerLink]="['/custodies', row.id]">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-check" /></svg>
-                  </a>
-                  <button type="button" class="row-actions__btn row-actions__btn--danger" [title]="'custody.list.reject_action' | translate" [attr.aria-label]="'custody.list.reject_action' | translate" (click)="openReject(row)">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-x" /></svg>
-                  </button>
-                }
-                @if (isAgent() && openStates.includes(row.status)) {
-                  <a class="row-actions__btn" [title]="'custody.detail.return' | translate" [attr.aria-label]="'custody.detail.return' | translate" [routerLink]="['/custodies', row.id]">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-cash" /></svg>
-                  </a>
-                }
-              </div>
+              <app-row-actions [actions]="actionsFor(row)" />
             </div>
           </tr>
         </ng-template>
@@ -198,7 +189,8 @@ interface CustodyListParams {
           <app-empty-state [title]="'custody.list.empty' | translate" [text]="'custody.list.empty_text' | translate" />
         </div>
       </app-data-table>
-    }
+      }
+    </app-async-page>
 
     <!-- quick reject for pending custodies (actions.blade.php) -->
     <app-reason-dialog
@@ -215,6 +207,14 @@ export class CustodyListPage {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
+  private api = inject(ApiClient);
+  private translate = inject(TranslateService);
+
+  constructor() {
+    void firstValueFrom(this.api.loadLookups()).then((l) => {
+      this.agentOptions.set(l.agents);
+    });
+  }
 
   readonly tableKey = 'list.component';
 
@@ -229,7 +229,7 @@ export class CustodyListPage {
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
 
-  /** status tabs — the exact values CustodyController@index filters on */
+  /** status choices — the exact values CustodyController@index filters on */
   readonly statusTabs = [
     { value: 'all' },
     { value: 'pending' },
@@ -240,6 +240,20 @@ export class CustodyListPage {
     { value: 'cancelled' },
     { value: 'rejected' },
   ];
+
+  /** status select options with translated labels (Arabic-only UI) */
+  readonly statusOptions = computed(() =>
+    this.statusTabs.map((t) => ({
+      value: t.value,
+      label:
+        t.value === 'all'
+          ? this.translate.instant('custody.list.tab_all')
+          : this.translate.instant(`enums.custody_status.${t.value}`),
+    })),
+  );
+
+  /** agent filter choices from the shared lookups */
+  readonly agentOptions = signal<{ id: number; name: string }[]>([]);
 
   /** Blade actions.blade.php shows the return modal for the agent's own accepted custody */
   readonly openStates = ['accepted', 'active', 'partially_returned'];
@@ -253,7 +267,7 @@ export class CustodyListPage {
 
   canCreate = computed(() => this.auth.can('may_create_custody'));
   canApprove = computed(() => this.auth.can('may_approve_custody'));
-  isAgent = computed(() => this.auth.can('is_agent') || this.auth.hasRole('مندوب'));
+  isAgent = computed(() => this.auth.can('is_agent'));
   /** Blade: accountants and managers get the office variants of the create buttons */
   isOffice = computed(() => this.auth.can('is_accountant') || this.auth.can('is_manager'));
 
@@ -264,16 +278,42 @@ export class CustodyListPage {
   private reason = viewChild.required(ReasonDialogComponent);
 
   summaryValue(key: string): string {
-    const value = this.data.value()?.meta?.summary?.[key];
-    return value === undefined || value === null ? '0' : String(value);
+    const value = this.data.value()?.meta.summary?.[key];
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
   }
 
-  setParam(key: string, value: string): void {
+  setParam(key: string, value: string | number | null): void {
     this.params.update((p) => ({ ...p, [key]: value, page: 1 }));
     this.data.reload();
   }
 
   onSearch(term: string): void { this.setParam('q', term); }
+
+  /** row actions per status/role (actions.blade.php) — view/accept/return link to the detail, reject opens the reason dialog */
+  actionsFor(row: Row): RowActionItem[] {
+    return [
+      { icon: 'eye', label: 'common.view', route: ['/custodies', row.id] },
+      {
+        icon: 'check',
+        label: 'custody.detail.accept',
+        route: ['/custodies', row.id],
+        visible: row.status === 'pending' && this.canApprove(),
+      },
+      {
+        icon: 'x',
+        label: 'custody.list.reject_action',
+        severity: 'danger',
+        handler: () => { this.openReject(row); },
+        visible: row.status === 'pending' && this.canApprove(),
+      },
+      {
+        icon: 'cash',
+        label: 'custody.detail.return',
+        route: ['/custodies', row.id],
+        visible: this.isAgent() && this.openStates.includes(row.status),
+      },
+    ];
+  }
 
   openReject(row: Row): void {
     this.active.set(row);

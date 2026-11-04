@@ -8,20 +8,24 @@ import { HttpClient } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
+import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
 import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
-import type { ActionResponse, ApiErrorBody, ListResponse, Lookups } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
+import type { ActionResponse, ListResponse, Lookups } from '@shared/models/api.models';
 
 interface Row {
   id: number;
@@ -55,10 +59,10 @@ interface ReturnRequestParams {
   selector: 'app-return-requests',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, DialogModule, SelectModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
+    PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
-    ReasonDialogComponent, ConfirmDialogComponent,
+    FormDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, FieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -68,17 +72,16 @@ interface ReturnRequestParams {
       </div>
     </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
-      @if (hasSummary()) {
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'custody.return_requests.tab_pending'" [value]="summaryValue('pending_count')" />
-          <app-stat-tile [label]="'custody.return_requests.tab_approved'" [value]="summaryValue('approved_count')" />
-          <app-stat-tile [label]="'custody.return_requests.tab_rejected'" [value]="summaryValue('rejected_count')" />
-          <app-stat-tile [label]="'custody.return_requests.total_amount'" [value]="summaryValue('total_pending_amount')" [money]="true" />
-        </div>
-      }
+    <app-async-page [resource]="data" variant="list">
+      @if (data.value(); as page) {
+        @if (hasSummary()) {
+          <div class="kpi-grid">
+            <app-stat-tile [label]="'custody.return_requests.tab_pending'" [value]="summaryValue('pending_count')" />
+            <app-stat-tile [label]="'custody.return_requests.tab_approved'" [value]="summaryValue('approved_count')" />
+            <app-stat-tile [label]="'custody.return_requests.tab_rejected'" [value]="summaryValue('rejected_count')" />
+            <app-stat-tile [label]="'custody.return_requests.total_amount'" [value]="summaryValue('total_pending_amount')" [money]="true" />
+          </div>
+        }
 
       <div class="filter-bar">
         <div class="filter-bar__chips">
@@ -120,16 +123,7 @@ interface ReturnRequestParams {
             <td appTableCol="rejection_reason">{{ row.rejection_reason ?? '—' }}</td>
             @if (canDecide()) {
               <td appTableCol="actions">
-                <div class="row-actions">
-                  @if (row.status === 'pending') {
-                    <button type="button" class="row-actions__btn" [title]="'custody.return_requests.approve' | translate" [attr.aria-label]="'custody.return_requests.approve' | translate" (click)="openApprove(row)">
-                      <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-check" /></svg>
-                    </button>
-                    <button type="button" class="row-actions__btn row-actions__btn--danger" [title]="'custody.return_requests.reject' | translate" [attr.aria-label]="'custody.return_requests.reject' | translate" (click)="openReject(row)">
-                      <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-x" /></svg>
-                    </button>
-                  }
-                </div>
+                <app-row-actions [actions]="actionsFor(row)" />
               </td>
             }
           </tr>
@@ -178,14 +172,7 @@ interface ReturnRequestParams {
             }
             @if (canDecide() && row.status === 'pending') {
               <div class="ledger-table__stacked-item">
-                <div class="row-actions">
-                  <button type="button" class="row-actions__btn" [title]="'custody.return_requests.approve' | translate" [attr.aria-label]="'custody.return_requests.approve' | translate" (click)="openApprove(row)">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-check" /></svg>
-                  </button>
-                  <button type="button" class="row-actions__btn row-actions__btn--danger" [title]="'custody.return_requests.reject' | translate" [attr.aria-label]="'custody.return_requests.reject' | translate" (click)="openReject(row)">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-x" /></svg>
-                  </button>
-                </div>
+                <app-row-actions [actions]="actionsFor(row)" />
               </div>
             }
           </tr>
@@ -194,7 +181,8 @@ interface ReturnRequestParams {
           <app-empty-state [title]="'custody.return_requests.empty' | translate" [text]="'common.no_data' | translate" />
         </div>
       </app-data-table>
-    }
+      }
+    </app-async-page>
 
     <!-- Approve without treasury: custody-owner path (approve_custody without manage_treasury) -->
     <app-confirm-dialog
@@ -205,41 +193,23 @@ interface ReturnRequestParams {
     />
 
     <!-- Approve with treasury: accountant/manager path (manage_treasury) -->
-    <p-dialog appendTo="body"
-      [visible]="treasuryDialog()"
-      (visibleChange)="treasuryDialog.set($event)"
-      [header]="'custody.return_requests.approve_with_treasury' | translate"
-      [modal]="true"
-      [draggable]="false"
-      [resizable]="false"
-      [closable]="!sending()"
-      styleClass="dialog"
-      [style]="{ width: 'min(480px, 94vw)' }"
-    >
+    <app-form-dialog #treasuryDlg [header]="'custody.return_requests.approve_with_treasury'"
+                     [submitLabel]="'custody.return_requests.approve'" [sending]="sending()" [error]="actionError()"
+                     (submit)="submitApproveWithTreasury()">
       @if (active(); as row) {
         <div class="dialog__alert" role="status">
           <span class="u-bidi">{{ 'custody.return_requests.request_line' | translate: { custody: '#' + row.custody_id, agent: row.agent ?? '—', amount: row.amount | money } }}</span>
         </div>
         <p class="u-small u-muted">{{ 'custody.return_requests.approve_executes_now' | translate }}</p>
-        <div class="field">
-          <label class="field__label" for="approve-treasury">{{ 'custody.return_requests.choose_treasury' | translate }} *</label>
+        <app-field label="custody.return_requests.choose_treasury" controlId="approve-treasury" [required]="true">
           <p-select appendTo="body" inputId="approve-treasury" [options]="treasuries()" optionLabel="name" optionValue="id"
             [(ngModel)]="approveTreasuryId" name="approve-treasury" styleClass="u-full" [autofocus]="false" />
           @if (selectedTreasury(); as t) {
             <span class="field__hint u-bidi">{{ 'custody.return_requests.treasury_balance' | translate }}: {{ t.balance | money }} — {{ 'custody.return_requests.balance_after' | translate }}: {{ balanceAfter(t) | money }}</span>
           }
-        </div>
+        </app-field>
       }
-      @if (actionMessage(); as msg) {
-        <div class="dialog__alert" role="alert">{{ msg }}</div>
-      }
-      <p-footer>
-        <div class="u-flex u-gap-2" style="justify-content: flex-end">
-          <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" [disabled]="sending()" (onClick)="treasuryDialog.set(false)" />
-          <p-button [label]="'custody.return_requests.approve' | translate" [loading]="sending()" [disabled]="approveTreasuryId() === null" (onClick)="submitApproveWithTreasury()" />
-        </div>
-      </p-footer>
-    </p-dialog>
+    </app-form-dialog>
 
     <!-- Reject with a required reason -->
     <app-reason-dialog
@@ -303,26 +273,16 @@ export class ReturnRequestsPage {
   canManageTreasury = computed(() => this.auth.can('may_manage_treasury'));
 
   /** the summary block only exists once the API provides counters — tiles then light up */
-  hasSummary = computed(() => Object.keys(this.data.value()?.meta?.summary ?? {}).length > 0);
+  hasSummary = computed(() => Object.keys(this.data.value()?.meta.summary ?? {}).length > 0);
 
   active = signal<Row | null>(null);
   approveTreasuryId = signal<number | null>(null);
-  treasuryDialog = signal(false);
   sending = signal(false);
   actionError = signal<HttpErrorResponse | null>(null);
 
-  /** the server message of a failed action, for the inline dialog alert */
-  actionMessage = computed(() => {
-    const err = this.actionError();
-    if (!err) {
-      return null;
-    }
-    const body = err.error as ApiErrorBody | null;
-    return body?.message ?? null;
-  });
-
   private confirm = viewChild.required(ConfirmDialogComponent);
   private reason = viewChild.required(ReasonDialogComponent);
+  private readonly treasuryDlg = viewChild.required<FormDialogComponent>('treasuryDlg');
 
   treasuries(): { id: number; name: string; balance: string }[] {
     return this.lookups.value()?.treasuries ?? [];
@@ -340,8 +300,8 @@ export class ReturnRequestsPage {
   }
 
   summaryValue(key: string): string {
-    const value = this.data.value()?.meta?.summary?.[key];
-    return value === undefined || value === null ? '0' : String(value);
+    const value = this.data.value()?.meta.summary?.[key];
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
   }
 
   setParam(key: string, value: string): void {
@@ -350,6 +310,25 @@ export class ReturnRequestsPage {
   }
 
   onSearch(term: string): void { this.setParam('q', term); }
+
+  /** pending-only decide actions: approve picks the allowed path, reject requires a reason */
+  actionsFor(row: Row): RowActionItem[] {
+    return [
+      {
+        icon: 'check',
+        label: 'custody.return_requests.approve',
+        handler: () => { this.openApprove(row); },
+        visible: row.status === 'pending',
+      },
+      {
+        icon: 'x',
+        label: 'custody.return_requests.reject',
+        severity: 'danger',
+        handler: () => { this.openReject(row); },
+        visible: row.status === 'pending',
+      },
+    ];
+  }
 
   onPage(event: { page: number; per_page: number; sort?: string }): void {
     const current = this.params();
@@ -367,7 +346,7 @@ export class ReturnRequestsPage {
     this.actionError.set(null);
     if (this.canManageTreasury()) {
       this.approveTreasuryId.set(null);
-      this.treasuryDialog.set(true);
+      this.treasuryDlg().open();
     } else {
       this.confirm().open();
     }
@@ -412,7 +391,7 @@ export class ReturnRequestsPage {
     return firstValueFrom(this.http.post<ActionResponse>(path, body))
       .then((res) => {
         this.sending.set(false);
-        this.treasuryDialog.set(false);
+        this.treasuryDlg().close();
         this.reason().done();
         this.toast.success(res.message);
         this.data.reload();

@@ -8,20 +8,21 @@ import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ItemResponse, ListResponse, ActionResponse } from '@shared/models/api.models';
-import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { TextareaModule } from 'primeng/textarea';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface Row {
   id: number;
@@ -38,24 +39,21 @@ interface Row {
   selector: 'app-my-expenses',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, SelectModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
-    EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, FormDialogComponent, InputNumberModule, TextareaModule, SelectModule,
+    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule, TextareaModule,
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    EmptyStateComponent, FormDialogComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'expense.mine.title' | translate">
-      <div actions>
-        <p-button [label]="'expense.list.quick' | translate" size="small" (onClick)="dialogOpen.set(true)" />
-      </div>
       <div actions class="u-flex u-gap-2">
-<p-button [label]="'expense.mine.create' | translate" size="small" routerLink="/expenses/new" />
+        <p-button [label]="'expense.list.quick' | translate" size="small" (onClick)="dialogOpen.set(true)" />
+        <p-button [label]="'expense.mine.create' | translate" size="small" routerLink="/expenses/new" />
       </div>
     </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
+    <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
+      @if (data.value(); as page) {
         <div class="kpi-grid">
         <app-stat-tile [label]="'expense.mine.total'" [value]="summaryValue('total_amount')" [money]="true" />
         <app-stat-tile [label]="'expense.mine.count'" [value]="summaryValue('count')" />
@@ -100,28 +98,26 @@ interface Row {
             </div>
           </tr>
         </ng-template>
-        <div empty>
-          <app-empty-state [title]="'expense.mine.empty' | translate" [text]="'common.no_data' | translate" />
-        </div>
       </app-data-table>
-    }
+      }
+      <div empty>
+        <app-empty-state [title]="'expense.mine.empty' | translate" [text]="'common.no_data' | translate" />
+      </div>
+    </app-async-page>
 
     <app-form-dialog [header]="'expense.list.quick_dialog.title' | translate" [submitLabel]="'common.save' | translate"
                      [(visible)]="dialogOpen" [sending]="sending()" (submit)="submitQuick()">
       <div class="u-column u-gap-3">
-        <div class="field">
-          <label class="field__label" for="qe-custody">{{ 'expense.form.custody' | translate }} *</label>
+        <app-field label="expense.form.custody" controlId="qe-custody" [required]="true">
           <p-select appendTo="body" inputId="qe-custody" [options]="custodies" optionLabel="reason" optionValue="id"
                     [(ngModel)]="quick.custody_id" name="custody_id" styleClass="u-full" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="qe-amount">{{ 'common.amount' | translate }} *</label>
+        </app-field>
+        <app-field label="common.amount" controlId="qe-amount" [required]="true">
           <p-inputnumber inputId="qe-amount" [(ngModel)]="quick.amount" name="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" styleClass="u-full" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="qe-desc">{{ 'common.description' | translate }} *</label>
-          <textarea pTextarea id="qe-desc" rows="2" [(ngModel)]="quick.description" name="description" style="width: 100%"></textarea>
-        </div>
+        </app-field>
+        <app-field label="common.description" controlId="qe-desc" [required]="true">
+          <textarea pTextarea id="qe-desc" rows="2" [(ngModel)]="quick.description" name="description" class="u-full"></textarea>
+        </app-field>
       </div>
     </app-form-dialog>
   `,
@@ -146,9 +142,18 @@ export class MyExpensesPage {
       firstValueFrom(this.http.get<ListResponse<Row>>('/my-expenses', { params: cleanParams(this.params()) })),
   });
 
+  /** an errored resource throws on value() — the error state wins over the empty test */
+  isEmpty = (): boolean => {
+    try {
+      return (this.data.value()?.data ?? []).length === 0;
+    } catch {
+      return false;
+    }
+  };
+
   summaryValue(key: string): string {
-    const value = this.data.value()?.meta?.summary?.[key];
-    return value === undefined || value === null ? '0' : String(value);
+    const value = this.data.value()?.meta.summary?.[key];
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
   }
 
   setParam(key: string, value: string): void {
@@ -164,7 +169,7 @@ export class MyExpensesPage {
   quick = { custody_id: null as number | null, amount: null as number | null, description: '', expense_date: new Date().toISOString().slice(0, 10) };
 
   constructor() {
-    void firstValueFrom(this.http.get<ItemResponse<{ id: number; reason: string }[]>>('/user-custodies')).then((list) => (this.custodies = list.data ?? []));
+    void firstValueFrom(this.http.get<ItemResponse<{ id: number; reason: string }[]>>('/user-custodies')).then((list) => (this.custodies = list.data));
   }
 
   submitQuick(): void {

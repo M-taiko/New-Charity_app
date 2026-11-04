@@ -58,10 +58,15 @@ interface PaletteEntry {
             {{ entry.label | translate }}
           </button>
         } @empty {
-          <p class="u-muted" style="padding: var(--space-3)">{{ 'command.no_results' | translate }}</p>
+          <p class="u-muted command-palette__empty">{{ 'command.no_results' | translate }}</p>
         }
       </div>
     </p-dialog>
+  `,
+  styles: `
+    .command-palette__empty {
+      padding: var(--space-3);
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

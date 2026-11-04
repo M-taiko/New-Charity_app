@@ -23,3 +23,9 @@
 .filter-bar__spacer {
   flex: 1;
 }
+
+/* the paired from/to amount inputs (T5-03) — one fixed step instead of
+   per-control style bindings */
+.filter-bar__amount {
+  width: 8rem;
+}

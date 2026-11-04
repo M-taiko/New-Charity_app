@@ -2,8 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal 
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import type { HttpErrorResponse } from '@angular/common/http';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -12,6 +11,9 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { FieldComponent } from '@shared/ui/field/field.component';
+import { serverFieldError } from '@shared/lib/server-field-errors';
+import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ActionResponse} from '@shared/models/api.models';
 
@@ -27,22 +29,23 @@ interface TreasuryOption {
   standalone: true,
   imports: [
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule,
-    TextareaModule, PageHeaderComponent, MoneyPipe,
+    TextareaModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe,
   ],
   template: `
-    <app-page-header [title]="'treasury.transfer.title' | translate" />
-    <form class="form-section" (ngSubmit)="submit()" #f="ngForm">
-      <div class="form-section__grid">
-        <div class="field">
-          <label class="field__label" for="from">
-            {{ 'treasury.transfer.from' | translate }} <span class="field__required" aria-hidden="true">*</span>
-          </label>
+    <app-page-header [title]="'treasury.transfer.title' | translate">
+      <div actions>
+        <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/treasury" />
+      </div>
+    </app-page-header>
+    <form (ngSubmit)="submit()" #f="ngForm">
+      <app-form-section>
+        <app-field label="treasury.transfer.from" controlId="transfer-from" [required]="true" [error]="serverFieldError(error(), 'from_treasury_id')">
           <p-select appendTo="body"
-            inputId="from"
+            inputId="transfer-from"
             [options]="treasuryOptions()"
             optionLabel="name"
             optionValue="id"
-            [(ngModel)]="fromId" name="fromId"
+            [(ngModel)]="fromId"
             name="from"
             required
             styleClass="u-full"
@@ -50,40 +53,28 @@ interface TreasuryOption {
           @if (fromBalance() !== null) {
             <span class="field__hint u-bidi">{{ fromBalance() | money }}</span>
           }
-        </div>
-        <div class="field">
-          <label class="field__label" for="to">
-            {{ 'treasury.transfer.to' | translate }} <span class="field__required" aria-hidden="true">*</span>
-          </label>
+        </app-field>
+        <app-field label="treasury.transfer.to" controlId="transfer-to" [required]="true" [error]="serverFieldError(error(), 'to_treasury_id')">
           <p-select appendTo="body"
-            inputId="to"
+            inputId="transfer-to"
             [options]="treasuryOptions()"
             optionLabel="name"
             optionValue="id"
-            [(ngModel)]="toId" name="toId"
+            [(ngModel)]="toId"
             name="to"
             required
             styleClass="u-full"
           />
-        </div>
-        <div class="field">
-          <label class="field__label" for="amount">
-            {{ 'treasury.transfer.amount' | translate }} <span class="field__required" aria-hidden="true">*</span>
-          </label>
-          <p-inputnumber inputId="amount" name="amount" [(ngModel)]="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" required styleClass="u-full" />
-          @if (overBalance()) {
-            <span class="field__error">{{ 'treasury.donation.amount' | translate }}</span>
-          }
-        </div>
-        <div class="field">
-          <label class="field__label" for="desc">
-            {{ 'treasury.transfer.notes' | translate }} <span class="field__required" aria-hidden="true">*</span>
-          </label>
-          <textarea pTextarea id="desc" name="desc" rows="2" [(ngModel)]="description" required style="width: 100%"></textarea>
-        </div>
-      </div>
-      @if (error()) {
-        <div class="dialog__alert" role="alert">{{ error() }}</div>
+        </app-field>
+        <app-field label="treasury.transfer.amount" controlId="transfer-amount" [required]="true" [error]="overBalance() ? ('treasury.transfer.over_balance' | translate) : serverFieldError(error(), 'amount')">
+          <p-inputnumber inputId="transfer-amount" name="amount" [(ngModel)]="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" required styleClass="u-full" />
+        </app-field>
+        <app-field label="treasury.transfer.notes" controlId="transfer-desc" [required]="true" [error]="serverFieldError(error(), 'description')">
+          <textarea pTextarea id="transfer-desc" name="desc" rows="2" class="u-full" [(ngModel)]="description" required></textarea>
+        </app-field>
+      </app-form-section>
+      @if (alert(); as msg) {
+        <div class="dialog__alert" role="alert">{{ msg }}</div>
       }
       <div class="sticky-actions">
         <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/treasury" />
@@ -108,13 +99,21 @@ export class TreasuryTransferPage {
   amount = signal<number | null>(null);
   description = signal('');
   sending = signal(false);
-  error = signal('');
+  error = signal<HttpErrorResponse | null>(null);
+  /** exposed to the template — templates see class members, not module imports */
+  readonly serverFieldError = serverFieldError;
 
   treasuries = resource<TreasuryOption[], unknown>({
     loader: () => firstValueFrom(this.api.loadLookups()).then((lookups) => lookups.treasuries),
   });
 
-  treasuryOptions = computed(() => this.treasuries.value() ?? []);
+  treasuryOptions = computed(() => {
+    try {
+      return this.treasuries.value() ?? [];
+    } catch {
+      return [];
+    }
+  });
 
   fromBalance = computed(() => {
     const found = this.treasuryOptions().find((t) => t.id === this.fromId());
@@ -126,12 +125,21 @@ export class TreasuryTransferPage {
     return this.amount() !== null && this.amount()! > balance;
   });
 
+  /** the general alert text — the server message or the generic fallback key */
+  alert(): string | null {
+    const err = this.error();
+    if (err === null) {
+      return null;
+    }
+    return err.error?.message ?? 'errors.generic';
+  }
+
   submit(): void {
     if (this.fromId() === null || this.toId() === null || this.amount() === null) {
       return;
     }
     this.sending.set(true);
-    this.error.set('');
+    this.error.set(null);
     void firstValueFrom(
       this.http.post<ActionResponse>('/treasury/perform-transfer', {
         from_treasury_id: this.fromId(),
@@ -146,7 +154,7 @@ export class TreasuryTransferPage {
       })
       .catch((err: unknown) => {
         this.sending.set(false);
-        this.error.set((err as HttpErrorResponse).error?.message ?? 'errors.generic');
+        this.error.set(err instanceof HttpErrorResponse ? err : null);
       });
   }
 }

@@ -685,8 +685,10 @@ class TreasuryService
                 'transaction_date' => now(),
             ]);
 
-            // Update status (لا إغلاق وثمة تحويل معلق مجمّد على العهدة — T26)
-            $isClosed = $custody->returned >= $custody->amount && (float) $custody->pending_transfer_out <= 0;
+            // Update status — close on net remaining balance (which includes
+            // amounts received via transfers), not just the original amount; never close while a pending transfer is frozen (T26)
+            $isClosed = round((float) $custody->fresh()->getRemainingBalance(), 2) <= 0
+                && (float) $custody->fresh()->pending_transfer_out <= 0;
             if ($isClosed) {
                 $custody->update(['status' => 'closed']);
             } else {
@@ -755,8 +757,9 @@ class TreasuryService
                 'transaction_date' => now(),
             ]);
 
-            // Update status if fully returned (ولا يوجد تحويل معلق مجمّد — T26)
-            if ($custody->returned >= $custody->amount && (float) $custody->pending_transfer_out <= 0) {
+            // Update status if fully settled — net remaining balance (including
+            // amounts received via transfers) reaches zero, and no pending transfer is frozen (T26)
+            if (round((float) $custody->fresh()->getRemainingBalance(), 2) <= 0 && (float) $custody->fresh()->pending_transfer_out <= 0) {
                 $custody->update(['status' => 'closed']);
 
                 // Create closure transaction (administrative record)

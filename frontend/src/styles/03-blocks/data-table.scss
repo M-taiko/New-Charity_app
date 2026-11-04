@@ -70,6 +70,11 @@
   padding: var(--space-2) var(--space-3);
   border-block-end: 1.5px solid var(--color-margin-rule);
   white-space: nowrap;
+
+  /* sortable / resizable / reorderable columns */
+  cursor: pointer;
+  user-select: none;
+  position: relative;
 }
 
 .ledger-table td {
@@ -186,13 +191,6 @@
   color: var(--color-text-muted);
 }
 
-/* ── Sortable / resizable / reorderable columns ────────────────── */
-.ledger-table th {
-  cursor: pointer;
-  user-select: none;
-  position: relative;
-}
-
 .ledger-table th:hover {
   color: var(--color-text);
 }
@@ -217,8 +215,7 @@
 /* RTL: move the handle to the column's RIGHT edge so "drag away from the
    row start = widen" matches PrimeNG's LTR width math */
 [dir='rtl'] .ledger-table th .p-datatable-column-resizer {
-  inset-inline-end: auto;
-  inset-inline-start: -4px;
+  inset-inline: -4px auto;
 }
 
 .ledger-table th .p-datatable-column-resizer:hover,

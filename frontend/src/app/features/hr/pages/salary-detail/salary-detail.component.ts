@@ -2,8 +2,8 @@
 // paid, approve when calculated, record as expense when approved, add
 // allowance while not paid — mirroring hr/salaries/show.blade.php. The exact
 // allowance fields come from SalaryController@addAllowance: type, name,
-// amount, description.
-import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+// amount, description. T4-20: async-page states; T4-23: app-field in the
+// allowance dialog.
 import { computed, ChangeDetectionStrategy, Component, inject, input, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -18,10 +18,12 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ToastService } from '@core/errors/toast.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
+import { FieldComponent } from '@shared/ui/field/field.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 
@@ -60,83 +62,83 @@ interface SalaryDetail {
 @Component({
   selector: 'app-salary-detail',
   standalone: true,
-  imports: [EmptyStateComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, InputNumberModule, InputTextModule, PageHeaderComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, MoneyPipe],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, InputNumberModule, InputTextModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, MoneyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    @if (safeValue(); as item) {
-      <app-print-sheet [title]="'hr.salaries.detail.title' | translate">
-        <app-page-header [title]="itemTitle(item)">
-          <div actions class="u-flex u-gap-2 u-flex-wrap">
-            @if (item.status !== 'paid') {
-              <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/hr/salaries', item.id, 'edit']" />
-              <p-button [label]="'hr.salaries.detail.add_allowance' | translate" size="small" severity="info" [outlined]="true" (onClick)="openAllowance()" />
-            }
-            @if (item.status === 'calculated') {
-              <p-button [label]="'hr.salaries.detail.approve' | translate" size="small" severity="warn" (onClick)="act('approve')" [loading]="sending()" />
-            }
-            @if (item.status === 'approved') {
-              <p-button [label]="'hr.salaries.detail.record_expense' | translate" size="small" severity="success" (onClick)="act('record-expense')" [loading]="sending()" />
-            }
-            <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/hr/salaries" />
-          </div>
-        </app-page-header>
-        <div class="u-mb-4"><app-status-stamp [status]="item.status" namespace="salary" [large]="true" /></div>
-        <app-key-value-list [items]="keyValues(item)" />
-
-        @if (item.allowances.length > 0) {
-          <section class="form-section u-mt-4">
-            <h3 class="form-section__title">{{ 'hr.salaries.detail.allowances' | translate }}</h3>
-            <ul class="u-column u-gap-2" style="list-style: none; padding: 0; margin: 0">
-              @for (allowance of item.allowances; track allowance.id) {
-                <li class="u-flex u-gap-2 u-flex-wrap">
-                  <span class="stamp" [class.stamp--danger]="allowance.type === 'deduction'" [class.stamp--success]="allowance.type !== 'deduction'">
-                    {{ allowance.type === 'deduction' ? ('hr.salaries.allowance.deduction' | translate) : ('hr.salaries.allowance.bonus' | translate) }}
-                  </span>
-                  <span>{{ allowance.description ?? '—' }}</span>
-                  <span class="u-bidi">{{ allowance.amount | money }}</span>
-                </li>
-              }
-            </ul>
-          </section>
-        }
-
-        <app-form-dialog
-          [header]="'hr.salaries.detail.add_allowance' | translate"
-          [submitLabel]="'common.add' | translate"
-          [sending]="allowanceSending()"
-          [error]="allowanceError()"
-          [(visible)]="allowanceOpen"
-          (submit)="addAllowance()"
-        >
-          <div class="u-column u-gap-3">
-            @if (allowanceInvalid()) {
-              <p class="field__error" role="alert">{{ 'common.required_field' | translate }}</p>
-            }
-            <div class="field">
-              <label class="field__label" for="allowance-type">{{ 'hr.salaries.detail.type' | translate }} *</label>
-              <p-select inputId="allowance-type" appendTo="body" [options]="allowanceTypeOptions" optionLabel="label" optionValue="value" [(ngModel)]="allowanceForm.type" name="type" styleClass="u-full" />
-            </div>
-            <div class="field">
-              <label class="field__label" for="allowance-name">{{ 'hr.salaries.detail.description' | translate }} *</label>
-              <input pInputText id="allowance-name" type="text" [(ngModel)]="allowanceForm.name" name="name" [maxlength]="255" styleClass="u-full" style="width: 100%" />
-            </div>
-            <div class="field">
-              <label class="field__label" for="allowance-amount">{{ 'hr.salaries.detail.amount' | translate }} *</label>
-              <p-inputnumber inputId="allowance-amount" [(ngModel)]="allowanceForm.amount" name="amount" [min]="0" mode="decimal" [minFractionDigits]="2" [useGrouping]="false" styleClass="u-full" />
-            </div>
-            <div class="field">
-              <label class="field__label" for="allowance-desc">{{ 'common.description' | translate }}</label>
-              <textarea pInputTextarea id="allowance-desc" rows="2" [(ngModel)]="allowanceForm.description" name="allowance_description" [maxlength]="500" style="width: 100%"></textarea>
-            </div>
-          </div>
-        </app-form-dialog>
-      </app-print-sheet>
-    } @else if (data.isLoading()) {
-      <div class="skeleton skeleton--title u-mb-4"></div>
-      <div class="skeleton skeleton--tile"></div>
-    } @else {
-      <app-empty-state [title]="'common.not_found' | translate" [text]="'common.not_found_text' | translate" />
+  styles: `
+    .allowance-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
     }
+  `,
+  template: `
+    <app-async-page [resource]="data" variant="detail" [backLink]="['/hr/salaries']">
+      @if (safeValue(); as item) {
+        <app-print-sheet [title]="'hr.salaries.detail.title' | translate">
+          <app-page-header [title]="itemTitle(item)">
+            <div actions class="u-flex u-gap-2 u-flex-wrap">
+              @if (item.status !== 'paid') {
+                <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/hr/salaries', item.id, 'edit']" />
+                <p-button [label]="'hr.salaries.detail.add_allowance' | translate" size="small" severity="info" [outlined]="true" (onClick)="openAllowance()" />
+              }
+              @if (item.status === 'calculated') {
+                <p-button [label]="'hr.salaries.detail.approve' | translate" size="small" severity="warn" (onClick)="act('approve')" [loading]="sending()" />
+              }
+              @if (item.status === 'approved') {
+                <p-button [label]="'hr.salaries.detail.record_expense' | translate" size="small" severity="success" (onClick)="act('record-expense')" [loading]="sending()" />
+              }
+              <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/hr/salaries" />
+            </div>
+          </app-page-header>
+          <div class="u-mb-4"><app-status-stamp [status]="item.status" namespace="salary" [large]="true" /></div>
+          <app-key-value-list [items]="keyValues(item)" />
+
+          @if (item.allowances.length > 0) {
+            <section class="form-section u-mt-4">
+              <h3 class="form-section__title">{{ 'hr.salaries.detail.allowances' | translate }}</h3>
+              <ul class="allowance-list u-column u-gap-2">
+                @for (allowance of item.allowances; track allowance.id) {
+                  <li class="u-flex u-gap-2 u-flex-wrap">
+                    <span class="stamp" [class.stamp--danger]="allowance.type === 'deduction'" [class.stamp--success]="allowance.type !== 'deduction'">
+                      {{ allowance.type === 'deduction' ? ('hr.salaries.allowance.deduction' | translate) : ('hr.salaries.allowance.bonus' | translate) }}
+                    </span>
+                    <span>{{ allowance.description ?? '—' }}</span>
+                    <span class="u-bidi">{{ allowance.amount | money }}</span>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
+
+          <app-form-dialog
+            [header]="'hr.salaries.detail.add_allowance' | translate"
+            [submitLabel]="'common.add' | translate"
+            [sending]="allowanceSending()"
+            [error]="allowanceError()"
+            [(visible)]="allowanceOpen"
+            (submit)="addAllowance()"
+          >
+            <div class="u-column u-gap-3">
+              @if (allowanceInvalid()) {
+                <p class="field__error" role="alert">{{ 'common.required_field' | translate }}</p>
+              }
+              <app-field label="hr.salaries.detail.type" controlId="allowance-type" [required]="true">
+                <p-select inputId="allowance-type" appendTo="body" [options]="allowanceTypeOptions" optionLabel="label" optionValue="value" [(ngModel)]="allowanceForm.type" name="type" styleClass="u-full" />
+              </app-field>
+              <app-field label="hr.salaries.detail.description" controlId="allowance-name" [required]="true">
+                <input pInputText id="allowance-name" type="text" [(ngModel)]="allowanceForm.name" name="name" [maxlength]="255" class="u-full" />
+              </app-field>
+              <app-field label="hr.salaries.detail.amount" controlId="allowance-amount" [required]="true">
+                <p-inputnumber inputId="allowance-amount" [(ngModel)]="allowanceForm.amount" name="amount" [min]="0" mode="decimal" [minFractionDigits]="2" [useGrouping]="false" styleClass="u-full" />
+              </app-field>
+              <app-field label="common.description" controlId="allowance-desc">
+                <textarea pInputTextarea id="allowance-desc" rows="2" [(ngModel)]="allowanceForm.description" name="allowance_description" [maxlength]="500" class="u-full"></textarea>
+              </app-field>
+            </div>
+          </app-form-dialog>
+        </app-print-sheet>
+      }
+    </app-async-page>
   `,
 })
 export class SalaryDetailPage {

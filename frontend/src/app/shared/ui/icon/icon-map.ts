@@ -61,6 +61,11 @@ export const ICON_MAP = {
   theme: 'palette',
   profile: 'user-circle',
   pin: 'pin',
+  offline: 'cloud-off',
+  more: 'dots',
+  sort: 'arrows-sort',
+  sortAsc: 'sort-ascending',
+  sortDesc: 'sort-descending',
 } as const;
 
 export type IconKey = keyof typeof ICON_MAP;

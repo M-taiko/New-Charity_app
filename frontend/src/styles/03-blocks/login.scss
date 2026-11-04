@@ -235,8 +235,7 @@
   width: 100%;
   /* icon on inline-start, eye toggle on inline-end */
   padding: var(--space-3);
-  padding-inline-start: calc(var(--space-3) + var(--space-6) + var(--space-1));
-  padding-inline-end: calc(var(--space-3) + var(--space-6));
+  padding-inline: calc(var(--space-3) + var(--space-6) + var(--space-1)) calc(var(--space-3) + var(--space-6));
   border: 1.5px solid var(--palette-light);
   border-radius: var(--radius-m);
   font-size: var(--text-sm);

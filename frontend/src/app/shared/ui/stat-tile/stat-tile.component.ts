@@ -32,7 +32,7 @@ import { MotionService } from '@core/motion/motion.service';
       </span>
       @if (money()) {
         <span class="stat-tile__value" [class.stat-tile__value--hero]="hero()" #value
-          >{{ displayValue() | money: false }}<span class="stat-tile__currency"> ج.م</span></span
+          >{{ displayValue() | money: false }}<span class="stat-tile__currency"> {{ 'common.egp' | translate }}</span></span
         >
       } @else {
         <span class="stat-tile__value" [class.stat-tile__value--hero]="hero()">{{ displayValue() }}</span>

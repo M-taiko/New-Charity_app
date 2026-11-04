@@ -15,6 +15,7 @@ class MaintenanceRequest extends Model
         'title', 'description', 'location',
         'priority', 'status',
         'attachment', 'resolution_notes', 'resolved_at',
+        'rejection_reason',
     ];
 
     protected $casts = [

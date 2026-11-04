@@ -1,3 +1,6 @@
+// My profile (plan 20, T3-103): name, password, picture upload, animation
+// setting. T4-23: app-form-section + app-field; T4-03: the avatar sizing
+// moved from inline styles into colocated component styles.
 import { Component, computed, inject, signal } from '@angular/core';
 import type { OnDestroy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -14,13 +17,41 @@ import { AuthService } from '@core/auth/auth.service';
 import { MotionService } from '@core/motion/motion.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
+import { FieldComponent } from '@shared/ui/field/field.component';
+import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import type { ActionResponse } from '@shared/models/api.models';
 
 /** My profile (plan 20, T3-103): name, password, picture upload, animation setting. */
 @Component({
   selector: 'app-profile-page',
   standalone: true,
-  imports: [TranslatePipe, FormsModule, ButtonModule, InputTextModule, SelectModule, PageHeaderComponent, KeyValueListComponent],
+  imports: [TranslatePipe, FormsModule, ButtonModule, InputTextModule, SelectModule, PageHeaderComponent, KeyValueListComponent, FieldComponent, FormSectionComponent],
+  styles: `
+    .profile-avatar {
+      width: 64px;
+      height: 64px;
+      font-size: var(--text-lg);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .profile-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius-full);
+      object-fit: cover;
+    }
+
+    .profile-picture-controls {
+      flex: 1;
+      min-width: 220px;
+    }
+
+    .profile-file-name {
+      max-width: 220px;
+    }
+  `,
   template: `
     <app-page-header [title]="'profile.title' | translate" />
     <section class="form-section">
@@ -31,84 +62,80 @@ import type { ActionResponse } from '@shared/models/api.models';
         { label: 'profile.role', value: roles() }
       ]" />
     </section>
-    <form class="form-section" (ngSubmit)="saveName()">
-      <div class="form-section__grid">
-        <div class="field">
-          <label class="field__label" for="p-name">{{ 'profile.name' | translate }} *</label>
-          <input pInputText id="p-name" [(ngModel)]="name" name="name" required style="width: 100%" />
-        </div>
-      </div>
+    <form (ngSubmit)="saveName()">
+      <app-form-section>
+        <app-field label="profile.name" controlId="p-name" [required]="true">
+          <input pInputText id="p-name" [(ngModel)]="name" name="name" required class="u-full" />
+        </app-field>
+      </app-form-section>
       <p-button type="submit" [label]="'profile.save_name' | translate" [loading]="sending()" />
     </form>
-    <form class="form-section" (ngSubmit)="savePicture()">
-      <h3 class="form-section__title">{{ 'profile.picture' | translate }}</h3>
-      <div class="u-flex u-gap-3 u-flex-wrap" style="align-items: center">
-        <span
-          class="user-chip__avatar"
-          style="width: 64px; height: 64px; font-size: var(--text-lg); display: inline-flex; align-items: center; justify-content: center"
-        >
-          @if (avatarSrc(); as avatar) {
-            <img [src]="avatar" [alt]="name()" style="width: 100%; height: 100%; border-radius: var(--radius-full); object-fit: cover" />
-          } @else {
-            {{ initials() }}
-          }
-        </span>
-        <div class="u-column u-gap-2" style="flex: 1; min-width: 220px">
-          <input
-            #picInput
-            type="file"
-            class="u-visually-hidden"
-            id="p-picture"
-            accept="image/jpeg,image/png,image/gif"
-            (change)="onPictureSelected($event)"
-            [attr.aria-label]="'profile.picture_choose' | translate"
-          />
-          <div class="u-flex u-gap-2 u-flex-wrap">
-            <p-button
-              type="button"
-              size="small"
-              [text]="true"
-              (onClick)="picInput.click()"
-              [label]="currentPicture() ? ('common.replace' | translate) : ('common.choose_file' | translate)"
-            />
-            @if (selectedFile(); as file) {
-              <p-button
-                type="submit"
-                [label]="'profile.save_picture' | translate"
-                [loading]="pictureSending()"
-                [disabled]="pictureSending()"
-              />
-              <span class="u-small u-truncate" style="max-width: 220px">{{ file.name }}</span>
+    <form (ngSubmit)="savePicture()">
+      <section class="form-section">
+        <h3 class="form-section__title">{{ 'profile.picture' | translate }}</h3>
+        <div class="u-flex u-gap-3 u-flex-wrap">
+          <span class="user-chip__avatar profile-avatar">
+            @if (avatarSrc(); as avatar) {
+              <img [src]="avatar" [alt]="name()" />
+            } @else {
+              {{ initials() }}
             }
+          </span>
+          <div class="u-column u-gap-2 profile-picture-controls">
+            <input
+              #picInput
+              type="file"
+              class="u-visually-hidden"
+              id="p-picture"
+              accept="image/jpeg,image/png,image/gif"
+              (change)="onPictureSelected($event)"
+              [attr.aria-label]="'profile.picture_choose' | translate"
+            />
+            <div class="u-flex u-gap-2 u-flex-wrap">
+              <p-button
+                type="button"
+                size="small"
+                [text]="true"
+                (onClick)="picInput.click()"
+                [label]="currentPicture() ? ('common.replace' | translate) : ('common.choose_file' | translate)"
+              />
+              @if (selectedFile(); as file) {
+                <p-button
+                  type="submit"
+                  [label]="'profile.save_picture' | translate"
+                  [loading]="pictureSending()"
+                  [disabled]="pictureSending()"
+                />
+                <span class="u-small u-truncate profile-file-name">{{ file.name }}</span>
+              }
+            </div>
+            @if (pictureError(); as error) {
+              <p class="field__error">{{ error | translate }}</p>
+            }
+            <p class="field__hint">{{ 'profile.picture_hint' | translate }}</p>
           </div>
-          @if (pictureError(); as error) {
-            <p class="field__error">{{ error | translate }}</p>
-          }
-          <p class="field__hint">{{ 'profile.picture_hint' | translate }}</p>
         </div>
-      </div>
+      </section>
     </form>
-    <form class="form-section" (ngSubmit)="savePassword()" #pf="ngForm">
-      <div class="form-section__grid">
-        <div class="field">
-          <label class="field__label" for="p-current">{{ 'profile.current_password' | translate }} *</label>
-          <input pInputText id="p-current" type="password" [(ngModel)]="currentPassword" name="current" required style="width: 100%" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="p-new">{{ 'profile.new_password' | translate }} *</label>
-          <input pInputText id="p-new" type="password" [(ngModel)]="newPassword" name="new" required minlength="8" style="width: 100%" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="p-confirm">{{ 'profile.confirm_password' | translate }} *</label>
-          <input pInputText id="p-confirm" type="password" [(ngModel)]="confirmPassword" name="confirm" required style="width: 100%" />
-        </div>
-      </div>
+    <form (ngSubmit)="savePassword()" #pf="ngForm">
+      <app-form-section>
+        <app-field label="profile.current_password" controlId="p-current" [required]="true">
+          <input pInputText id="p-current" type="password" [(ngModel)]="currentPassword" name="current" required class="u-full" />
+        </app-field>
+        <app-field label="profile.new_password" controlId="p-new" [required]="true">
+          <input pInputText id="p-new" type="password" [(ngModel)]="newPassword" name="new" required minlength="8" class="u-full" />
+        </app-field>
+        <app-field label="profile.confirm_password" controlId="p-confirm" [required]="true">
+          <input pInputText id="p-confirm" type="password" [(ngModel)]="confirmPassword" name="confirm" required class="u-full" />
+        </app-field>
+      </app-form-section>
       <p-button type="submit" [label]="'profile.update_password' | translate" [loading]="sending()" [disabled]="pf.invalid || sending()" />
     </form>
-    <section class="form-section">
-      <h3 class="form-section__title">{{ 'profile.motion.full' | translate }}</h3>
-      <p-select appendTo="body" [options]="motionOptions" optionLabel="label" optionValue="value" [ngModel]="motion.level()" name="level()" (ngModelChange)="setMotion($event)" styleClass="u-full" />
-    </section>
+    <app-form-section>
+      <app-field label="profile.motion.full" controlId="p-motion">
+        <p-select appendTo="body" inputId="p-motion" [options]="motionOptions" optionLabel="label" optionValue="value" [ngModel]="motion.level()" name="level" (ngModelChange)="setMotion($event)" styleClass="u-full" />
+      </app-field>
+    </app-form-section>
   `,
 })
 export class ProfilePage implements OnDestroy {
@@ -162,7 +189,7 @@ export class ProfilePage implements OnDestroy {
     { label: this.translate.instant('profile.motion.off'), value: 'off' },
   ];
 
-  roles = computed(() => (this.auth.me()?.roles ?? []).join('، '));
+  roles = computed(() => (this.auth.me()?.roles ?? []).join(', '));
 
   constructor() {
     const me = this.auth.me();
@@ -211,7 +238,7 @@ export class ProfilePage implements OnDestroy {
     void firstValueFrom(this.http.post<ActionResponse>('/profile/picture', fd))
       .then((res) => {
         this.pictureSending.set(false);
-        this.toast.success(res.message ?? 'profile.picture_saved');
+        this.toast.success(res.message);
         this.clearPreview();
         this.selectedFile.set(null);
         // refresh /me so the topbar/user-chip avatars pick the new picture

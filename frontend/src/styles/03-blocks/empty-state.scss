@@ -23,3 +23,8 @@
   font-size: var(--text-xs);
   max-width: 420px;
 }
+
+/* full-page variant (403/404 routes) */
+.empty-state--page {
+  min-height: 60vh;
+}

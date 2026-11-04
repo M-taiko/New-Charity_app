@@ -2,16 +2,18 @@
 
 import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
+import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
@@ -51,9 +53,9 @@ interface TransferListParams {
   selector: 'app-transfer-list',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
-    EmptyStateComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
+    TranslatePipe, RouterLink, ButtonModule,
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    EmptyStateComponent, RowActionsComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -63,9 +65,23 @@ interface TransferListParams {
       </div>
     </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
+    <!-- scope tabs stay mounted even when a scope is empty so the user can switch -->
+    <div class="filter-bar">
+      <div class="filter-bar__chips">
+        @for (tab of scopeTabs(); track tab.value) {
+          <p-button
+            [label]="'transfer.list.tabs.' + tab.value | translate"
+            size="small"
+            [outlined]="params().scope !== tab.value"
+            [severity]="params().scope === tab.value ? undefined : 'secondary'"
+            (onClick)="setParam('scope', tab.value)"
+          />
+        }
+      </div>
+    </div>
+
+    <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
+      @if (data.value(); as page) {
         <div class="kpi-grid">
         <app-stat-tile [label]="'transfer.list.pending_count'" [value]="summaryValue('pending_count')" />
         <app-stat-tile [label]="'transfer.list.approved_count'" [value]="summaryValue('approved_count')" />
@@ -80,20 +96,6 @@ interface TransferListParams {
           <span>{{ 'transfer.list.pending_for_me' | translate: { count: pendingForMe() } }}</span>
         </div>
       }
-
-      <div class="filter-bar">
-        <div class="filter-bar__chips">
-          @for (tab of scopeTabs(); track tab.value) {
-            <p-button
-              [label]="'transfer.list.tabs.' + tab.value | translate"
-              size="small"
-              [outlined]="params().scope !== tab.value"
-              [severity]="params().scope === tab.value ? undefined : 'secondary'"
-              (onClick)="setParam('scope', tab.value)"
-            />
-          }
-        </div>
-      </div>
 
       <app-data-table
         [tableKey]="tableKey"
@@ -125,11 +127,7 @@ interface TransferListParams {
             <td appTableCol="decided_by">{{ row.decided_by ?? '—' }}</td>
             <td appTableCol="rejection_reason">{{ row.rejection_reason ?? '—' }}</td>
             <td appTableCol="actions">
-              <div class="row-actions">
-                <a class="row-actions__btn" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate" [routerLink]="['/transfers', row.id]">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </a>
-              </div>
+              <app-row-actions [actions]="actionsFor(row)" />
             </td>
           </tr>
           <tr class="ledger-table__stacked">
@@ -176,19 +174,16 @@ interface TransferListParams {
               </div>
             }
             <div class="ledger-table__stacked-item">
-              <div class="row-actions">
-                <a class="row-actions__btn" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate" [routerLink]="['/transfers', row.id]">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </a>
-              </div>
+              <app-row-actions [actions]="actionsFor(row)" />
             </div>
           </tr>
         </ng-template>
-        <div empty>
-          <app-empty-state [title]="'transfer.list.empty' | translate" [text]="'transfer.list.empty_text' | translate" />
-        </div>
       </app-data-table>
-    }
+      }
+      <div empty>
+        <app-empty-state [title]="'transfer.list.empty' | translate" [text]="'transfer.list.empty_text' | translate" />
+      </div>
+    </app-async-page>
   `,
 })
 export class TransferListPage {
@@ -239,9 +234,25 @@ export class TransferListPage {
     return value === undefined || value === null ? 0 : Number(value);
   });
 
+  /** an errored resource throws on value() — the error state wins over the empty test */
+  isEmpty = (): boolean => {
+    try {
+      return (this.data.value()?.data ?? []).length === 0;
+    } catch {
+      return false;
+    }
+  };
+
+  /** the row actions (T4-24): approval flows live on the detail page (T32) */
+  actionsFor(row: Row): RowActionItem[] {
+    return [
+      { icon: 'eye', label: 'common.view', route: ['/transfers', row.id] },
+    ];
+  }
+
   summaryValue(key: string): string {
     const value = this.data.value()?.meta?.summary?.[key];
-    return value === undefined || value === null ? '0' : String(value);
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
   }
 
   setParam(key: string, value: string): void {

@@ -44,16 +44,21 @@ type UserMenuItem = MenuItem & { iconName?: string };
     >
       @if (pictureUrl()) {
         <img
-          class="user-chip__avatar"
+          class="user-chip__avatar user-chip__avatar--img"
           [src]="pictureUrl()"
           [alt]="name()"
-          style="object-fit: cover; display: inline-flex"
         />
       } @else {
         <span class="user-chip__avatar">{{ initials() }}</span>
       }
       <span class="user-chip__name">{{ name() }}</span>
     </button>
+  `,
+  styles: `
+    .user-chip__avatar--img {
+      object-fit: cover;
+      display: inline-flex;
+    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -86,7 +91,7 @@ export class UserMenuComponent {
 
   items = computed<UserMenuItem[]>(() => {
     const name = this.auth.me()?.name ?? '';
-    const roles = (this.auth.me()?.roles ?? []).join('، ');
+    const roles = (this.auth.me()?.roles ?? []).join(this.t('common.list_separator'));
     const level = this.motion.level();
     const motionLabels: Record<string, string> = {
       full: this.t('profile.motion.full'),
@@ -102,15 +107,15 @@ export class UserMenuComponent {
       {
         label: motionLabels[level] ?? level,
         iconName: 'bolt',
-        command: () => this.motion.set(level === 'full' ? 'lite' : level === 'lite' ? 'off' : 'full'),
+        command: () => { this.motion.set(level === 'full' ? 'lite' : level === 'lite' ? 'off' : 'full'); },
       },
       {
         label: this.t('common.switch_theme'),
         iconName: 'palette',
-        command: () => this.theme.toggle(),
+        command: () => { this.theme.toggle(); },
       },
       { separator: true },
-      { label: this.t('auth.logout'), iconName: 'logout', command: () => this.auth.logout() },
+      { label: this.t('auth.logout'), iconName: 'logout', command: () => { this.auth.logout(); } },
     ];
   });
 }

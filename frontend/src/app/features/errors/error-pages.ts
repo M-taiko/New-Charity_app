@@ -9,7 +9,7 @@ import { ButtonModule } from 'primeng/button';
   standalone: true,
   imports: [TranslatePipe, RouterLink, ButtonModule],
   template: `
-    <div class="empty-state" style="min-height: 60vh">
+    <div class="empty-state" class="empty-state empty-state--page">
       <svg class="empty-state__pattern" aria-hidden="true">
         <use href="assets/patterns/tile.svg#tile" />
       </svg>
@@ -28,7 +28,7 @@ export class ForbiddenComponent {}
   standalone: true,
   imports: [TranslatePipe, RouterLink, ButtonModule],
   template: `
-    <div class="empty-state" style="min-height: 60vh">
+    <div class="empty-state" class="empty-state empty-state--page">
       <svg class="empty-state__pattern" aria-hidden="true">
         <use href="assets/patterns/tile.svg#tile" />
       </svg>

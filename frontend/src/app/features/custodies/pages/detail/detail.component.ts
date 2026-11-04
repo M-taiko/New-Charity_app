@@ -1,4 +1,3 @@
-import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { computed, ChangeDetectionStrategy, Component, inject, input, resource, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -15,6 +14,8 @@ import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
@@ -28,6 +29,7 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface CustodyExpense {
   id: number; amount: string; type: string; description: string | null;
@@ -62,13 +64,14 @@ type DonationType = 'external_donation' | 'expense_refund';
 @Component({
   selector: 'app-custody-detail',
   standalone: true,
-  imports: [EmptyStateComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, FlowRibbonComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
+  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, FlowRibbonComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (safeValue(); as c) {
-      <app-print-sheet [title]="'custody.detail.title' | translate">
+    <app-print-sheet [title]="'custody.detail.title' | translate">
+      @if (safeValue(); as c) {
         <app-page-header [title]="'#' + c.id" [subtitle]="c.agent ?? ''">
           <div actions class="u-flex u-gap-2 u-flex-wrap">
+            <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/custodies" />
             <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
             @if (canManageTreasury()) {
               <p-button [label]="'common.edit' | translate" size="small" [outlined]="true" routerLink="/custodies/{{ c.id }}/edit" />
@@ -113,304 +116,255 @@ type DonationType = 'external_donation' | 'expense_refund';
             }
           </div>
         </app-page-header>
+      }
 
-        @if (showReturnDisabledHint(c)) {
-          <p class="field__hint u-mb-2">{{ 'custody.detail.return_disabled_hint' | translate }}</p>
-        }
+      <app-async-page [resource]="data" variant="detail" [backLink]="['/custodies']">
+        @if (safeValue(); as c) {
+          @if (showReturnDisabledHint(c)) {
+            <p class="field__hint u-mb-2">{{ 'custody.detail.return_disabled_hint' | translate }}</p>
+          }
 
-        <div class="u-flex u-gap-3 u-flex-wrap u-mb-4">
-          <app-status-stamp [status]="c.status" namespace="custody_status" [large]="true" />
-          <span class="u-small u-muted">{{ c.status_detail }}</span>
-        </div>
-
-        <app-flow-ribbon [steps]="flowSteps(c)" />
-
-        <div class="kpi-grid u-mt-4">
-          <app-balance-ring [segments]="ringSegments(c)" [total]="c.remaining" />
-          <div class="chart-card">
-            <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.breakdown.title' | translate }}</span></div>
-            <app-key-value-list [items]="breakdown(c)" />
+          <div class="u-flex u-gap-3 u-flex-wrap u-mb-4">
+            <app-status-stamp [status]="c.status" namespace="custody_status" [large]="true" />
+            <span class="u-small u-muted">{{ c.status_detail }}</span>
           </div>
-        </div>
 
-        <app-key-value-list [items]="keyValues(c)" />
+          <app-flow-ribbon [steps]="flowSteps(c)" />
 
-        <section class="chart-card u-mt-4">
-          <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.returns' | translate }}</span></div>
-          <div style="overflow-x: auto">
-            <table class="ledger-table" style="border: 0">
-              <thead><tr>
-                <th>{{ 'common.date' | translate }}</th>
-                <th>{{ 'common.amount' | translate }}</th>
-                <th>{{ 'custody.detail.return_reason' | translate }}</th>
-                <th>{{ 'common.status' | translate }}</th>
-                <th>{{ 'custody.detail.rr_requester' | translate }}</th>
-                <th>{{ 'custody.detail.rr_decided' | translate }}</th>
-                <th>{{ 'common.actions' | translate }}</th>
-              </tr></thead>
-              <tbody>
-                @for (r of c.return_requests; track r.id) {
-                  <tr class="ledger-table__row">
-                    <td class="u-bidi">{{ r.requested_at | datetime }}</td>
-                    <td class="ledger-table__cell-num">{{ r.amount | money }}</td>
-                    <td>
-                      {{ r.reason || '—' }}
-                      @if (r.rejection_reason) { <span class="u-small u-muted">{{ r.rejection_reason }}</span> }
-                    </td>
-                    <td><app-status-stamp [status]="r.status" namespace="return_request" /></td>
-                    <td>{{ r.requested_by ?? '—' }}</td>
-                    <td>
-                      @if (r.approved_by) {
-                        <span class="u-bidi">{{ r.approved_by }} — {{ r.approved_at | datetime: false }}</span>
-                      } @else { <span class="u-muted">—</span> }
-                    </td>
-                    <td>
-                      @if (r.status === 'pending') {
-                        @if (canManageTreasury()) {
-                          <p-button [label]="'custody.detail.approve_rr' | translate" size="small" severity="success" [outlined]="true" (onClick)="rrDlg.open(); openRrApprove(r)" />
-                        } @else if (c.initiated_by === 'agent' && meId() === c.agent_id) {
-                          <p-button [label]="'custody.detail.approve_rr' | translate" size="small" severity="success" [outlined]="true" (onClick)="rrOwnerDlg.open(); openRrOwnerApprove(r)" />
-                        }
+          <div class="kpi-grid u-mt-4">
+            <app-balance-ring [segments]="ringSegments(c)" [total]="c.remaining" />
+            <div class="chart-card">
+              <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.breakdown.title' | translate }}</span></div>
+              <app-key-value-list [items]="breakdown(c)" />
+            </div>
+          </div>
+
+          <app-key-value-list [items]="keyValues(c)" />
+
+          <section class="chart-card u-mt-4">
+            <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.returns' | translate }}</span></div>
+            <app-ledger-table [columns]="returnRequestCols" [rows]="c.return_requests">
+              <ng-template appLedgerBody let-row>
+                <tr class="ledger-table__row">
+                  <td appLedgerCol="requested_at" class="u-bidi">{{ row.requested_at | datetime }}</td>
+                  <td appLedgerCol="amount">{{ row.amount | money }}</td>
+                  <td appLedgerCol="reason">
+                    {{ row.reason || '—' }}
+                    @if (row.rejection_reason) { <span class="u-small u-muted">{{ row.rejection_reason }}</span> }
+                  </td>
+                  <td appLedgerCol="status"><app-status-stamp [status]="row.status" namespace="return_request" /></td>
+                  <td appLedgerCol="requested_by">{{ row.requested_by ?? '—' }}</td>
+                  <td appLedgerCol="decided">
+                    @if (row.approved_by) {
+                      <span class="u-bidi">{{ row.approved_by }} — {{ row.approved_at | datetime: false }}</span>
+                    } @else { <span class="u-muted">—</span> }
+                  </td>
+                  <td appLedgerCol="actions">
+                    @if (row.status === 'pending') {
+                      @if (canManageTreasury()) {
+                        <p-button [label]="'custody.detail.approve_rr' | translate" size="small" severity="success" [outlined]="true" (onClick)="rrDlg.open(); openRrApprove(row)" />
+                      } @else if (c.initiated_by === 'agent' && meId() === c.agent_id) {
+                        <p-button [label]="'custody.detail.approve_rr' | translate" size="small" severity="success" [outlined]="true" (onClick)="rrOwnerDlg.open(); openRrOwnerApprove(row)" />
                       }
-                    </td>
-                  </tr>
-                } @empty {
-                  <tr><td colspan="7" class="u-muted">{{ 'common.no_data' | translate }}</td></tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="chart-card u-mt-4">
-          <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.transactions' | translate }}</span></div>
-          <div style="overflow-x: auto">
-            <table class="ledger-table" style="border: 0">
-              <thead><tr>
-                <th>{{ 'common.date' | translate }}</th>
-                <th>{{ 'common.type' | translate }}</th>
-                <th>{{ 'common.description' | translate }}</th>
-                <th>{{ 'common.amount' | translate }}</th>
-              </tr></thead>
-              <tbody>
-                @for (t of c.transactions; track t.id) {
-                  <tr class="ledger-table__row">
-                    <td class="u-bidi">{{ t.date | datetime }}</td>
-                    <td>{{ t.type | enumLabel: 'transaction_type' }}</td>
-                    <td>{{ t.description }}</td>
-                    <td class="ledger-table__cell-num">{{ t.amount | money }}</td>
-                  </tr>
-                } @empty {
-                  <tr><td colspan="4" class="u-muted">{{ 'common.no_data' | translate }}</td></tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="chart-card u-mt-4">
-          <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.expenses' | translate }}</span></div>
-          <div style="overflow-x: auto">
-            <table class="ledger-table" style="border: 0">
-              <thead><tr>
-                <th>{{ 'common.date' | translate }}</th><th>{{ 'common.description' | translate }}</th>
-                <th>{{ 'expense.list.col_direction' | translate }}</th><th>{{ 'common.amount' | translate }}</th>
-              </tr></thead>
-              <tbody>
-                @for (e of c.expenses; track e.id) {
-                  <tr class="ledger-table__row">
-                    <td class="u-bidi">{{ e.date | datetime: false }}</td>
-                    <td><a [routerLink]="['/expenses', e.id]">{{ e.description || '—' }}</a>
-                      @if (e.split.length > 1) { <span class="stamp stamp--info">{{ 'expense.detail.custody_split_note' | translate }}</span> }
-                    </td>
-                    <td class="u-small">{{ e.direction || ('expense.list.filter.no_direction' | translate) }}</td>
-                    <td class="ledger-table__cell-num">{{ e.amount | money }}</td>
-                  </tr>
-                } @empty {
-                  <tr><td colspan="4" class="u-muted">{{ 'common.no_data' | translate }}</td></tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        @if (returnOpen()) {
-          <section class="form-section u-mt-4">
-            <h3 class="form-section__title">{{ 'custody.mine.return_dialog.title' | translate }}</h3>
-            <div class="form-section__grid">
-              <div class="field">
-                <label class="field__label" for="ret-amount">{{ 'custody.detail.return_amount' | translate }} *</label>
-                <p-inputnumber inputId="ret-amount" [(ngModel)]="returnAmount" name="returnAmount" mode="decimal"
-                               [minFractionDigits]="2" [min]="0.01" [max]="parseFloat(c.remaining)" styleClass="u-full" />
-                <span class="field__hint u-bidi">{{ 'glossary.remaining' | translate }}: {{ c.remaining | money }}</span>
-              </div>
-              <div class="field">
-                <label class="field__label" for="ret-reason">{{ 'custody.detail.return_reason' | translate }} *</label>
-                <input pInputText id="ret-reason" [(ngModel)]="reason" name="reason" style="width: 100%" />
-              </div>
-            </div>
-            <div class="u-flex" style="justify-content: flex-end">
-              <p-button [label]="'common.cancel' | translate" [text]="true" (onClick)="returnOpen.set(false)" />
-              <p-button [label]="'custody.mine.return_to_treasury' | translate" (onClick)="submitReturn(c.id)" [loading]="sending()" />
-            </div>
+                    }
+                  </td>
+                </tr>
+              </ng-template>
+            </app-ledger-table>
           </section>
-        }
-      </app-print-sheet>
-    } @else if (data.isLoading()) {
-      <div class="skeleton skeleton--title u-mb-4"></div>
-      <div class="skeleton skeleton--tile"></div>
-    } @else {
-      <app-empty-state [title]="'common.not_found' | translate" [text]="'common.not_found_text' | translate" />
 
-    }
+          <section class="chart-card u-mt-4">
+            <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.transactions' | translate }}</span></div>
+            <app-ledger-table [columns]="transactionCols" [rows]="c.transactions">
+              <ng-template appLedgerBody let-row>
+                <tr class="ledger-table__row">
+                  <td appLedgerCol="date" class="u-bidi">{{ row.date | datetime }}</td>
+                  <td appLedgerCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
+                  <td appLedgerCol="description">{{ row.description }}</td>
+                  <td appLedgerCol="amount">{{ row.amount | money }}</td>
+                </tr>
+              </ng-template>
+            </app-ledger-table>
+          </section>
 
-    <!-- approve the agent's request: choose the treasury that funds the custody -->
-    <app-form-dialog #acceptDlg [header]="'custody.detail.accept_dialog' | translate"
-                     [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
-                     (submit)="submitAccept()">
-      <div class="u-column u-gap-3">
-        @if (safeValue(); as c) {
-          <div class="field">
-            <span class="field__label">{{ 'common.amount' | translate }}</span>
-            <p class="u-bidi" style="margin: 0; font-weight: 700">{{ c.amount | money }}</p>
-          </div>
-        }
-        <div class="field">
-          <label class="field__label" for="accept-treasury">{{ 'custody.create.treasury' | translate }} *</label>
-          <p-select appendTo="body" inputId="accept-treasury" [options]="treasuryOptions()" optionLabel="name" optionValue="id"
-                    [(ngModel)]="acceptTreasuryId" name="acceptTreasuryId" styleClass="u-full">
-            <ng-template let-option #item>
-              <div class="u-flex-between">
-                <span>{{ option.name }}</span>
-                <span class="u-bidi u-small">{{ option.balance | money }}</span>
+          <section class="chart-card u-mt-4">
+            <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.expenses' | translate }}</span></div>
+            <app-ledger-table [columns]="expenseCols" [rows]="c.expenses">
+              <ng-template appLedgerBody let-row>
+                <tr class="ledger-table__row">
+                  <td appLedgerCol="date" class="u-bidi">{{ row.date | datetime: false }}</td>
+                  <td appLedgerCol="description">
+                    <a [routerLink]="['/expenses', row.id]">{{ row.description || '—' }}</a>
+                    @if (row.split.length > 1) { <span class="stamp stamp--info">{{ 'expense.detail.custody_split_note' | translate }}</span> }
+                  </td>
+                  <td appLedgerCol="direction" class="u-small">{{ row.direction || ('expense.list.filter.no_direction' | translate) }}</td>
+                  <td appLedgerCol="amount">{{ row.amount | money }}</td>
+                </tr>
+              </ng-template>
+            </app-ledger-table>
+          </section>
+
+          @if (returnOpen()) {
+            <section class="form-section u-mt-4">
+              <h3 class="form-section__title">{{ 'custody.mine.return_dialog.title' | translate }}</h3>
+              <div class="form-section__grid">
+                <app-field label="custody.detail.return_amount" controlId="ret-amount" [required]="true">
+                  <p-inputnumber inputId="ret-amount" [(ngModel)]="returnAmount" name="returnAmount" mode="decimal"
+                                 [minFractionDigits]="2" [min]="0.01" [max]="parseFloat(c.remaining)" styleClass="u-full" />
+                  <span class="field__hint u-bidi">{{ 'glossary.remaining' | translate }}: {{ c.remaining | money }}</span>
+                </app-field>
+                <app-field label="custody.detail.return_reason" controlId="ret-reason" [required]="true">
+                  <input pInputText id="ret-reason" [(ngModel)]="reason" name="reason" class="u-full" />
+                </app-field>
               </div>
-            </ng-template>
-          </p-select>
-        </div>
-        @if (acceptTreasuryId() !== null) {
-          <p class="field__hint u-bidi">{{ 'custody.detail.treasury_balance' | translate }}: {{ acceptBalance() | money }}
-            — {{ 'custody.detail.balance_after' | translate }}: {{ acceptBalanceAfter() | money }}</p>
-          @if (acceptInsufficient()) {
-            <p class="field__error" role="alert">{{ 'custody.detail.insufficient_treasury' | translate }}</p>
+              <div class="u-flex u-justify-end">
+                <p-button [label]="'common.cancel' | translate" [text]="true" (onClick)="returnOpen.set(false)" />
+                <p-button [label]="'custody.mine.return_to_treasury' | translate" (onClick)="submitReturn(c.id)" [loading]="sending()" />
+              </div>
+            </section>
           }
         }
-        <p class="field__hint">{{ 'custody.detail.accept_note' | translate }}</p>
-      </div>
-    </app-form-dialog>
+      </app-async-page>
 
-    <!-- manager rejects the agent's request -->
-    <app-reason-dialog #rejectDlg [header]="'custody.detail.reject' | translate"
-                       [label]="'custody.detail.reject_reason' | translate" [submitLabel]="'common.confirm' | translate"
-                       [sending]="sending()" [error]="actionError()" (submit)="submitReject($event)" />
-
-    <!-- accountant/manager cancels their own pending custody -->
-    <app-reason-dialog #cancelDlg [header]="'custody.detail.cancel_custody' | translate"
-                       [label]="'custody.detail.cancel_reason' | translate" [submitLabel]="'common.confirm' | translate"
-                       [minLength]="1" [sending]="sending()" [error]="actionError()" (submit)="submitCancel($event)" />
-
-    <!-- agent rejects the custody the accountant created -->
-    <app-reason-dialog #agentRejectDlg [header]="'custody.detail.reject' | translate"
-                       [label]="'custody.detail.reject_reason' | translate" [submitLabel]="'common.confirm' | translate"
-                       [minLength]="1" [sending]="sending()" [error]="actionError()" (submit)="submitAgentReject($event)" />
-
-    <!-- agent confirms receiving the money -->
-    <app-form-dialog #receiveDlg [header]="'custody.detail.receive' | translate"
-                     [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
-                     (submit)="submitReceive()">
-      <p>{{ 'custody.detail.receive_confirm' | translate }}</p>
-    </app-form-dialog>
-
-    <!-- agent accepts the custody the accountant sent -->
-    <app-form-dialog #agentAcceptDlg [header]="'custody.detail.agent_accept' | translate"
-                     [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
-                     (submit)="submitAgentAccept()">
-      <p>{{ 'custody.detail.agent_accept_confirm' | translate }}</p>
-    </app-form-dialog>
-
-    <!-- non-agent asks the custody owner to return money to a treasury -->
-    <app-form-dialog #reqReturnDlg [header]="'custody.detail.request_return_dialog' | translate"
-                     [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
-                     (submit)="submitReqReturn()">
-      <div class="u-column u-gap-3">
-        @if (safeValue(); as c) {
-          <div class="field">
-            <label class="field__label" for="rrq-amount">{{ 'custody.detail.return_amount' | translate }} *</label>
-            <p-inputnumber inputId="rrq-amount" [(ngModel)]="reqReturnAmount" name="reqReturnAmount" mode="decimal"
-                           [minFractionDigits]="2" [min]="0.01" [max]="parseFloat(c.remaining)" styleClass="u-full" />
-            <span class="field__hint u-bidi">{{ 'glossary.remaining' | translate }}: {{ c.remaining | money }}</span>
-          </div>
-          <div class="field">
-            <label class="field__label" for="rrq-reason">{{ 'common.reason' | translate }}</label>
-            <textarea pTextarea id="rrq-reason" rows="2" [(ngModel)]="reqReturnReason" name="reqReturnReason" style="width: 100%"></textarea>
-          </div>
-        }
-        <p class="field__hint">{{ 'custody.detail.request_return_note' | translate }}</p>
-      </div>
-    </app-form-dialog>
-
-    <!-- treasury holder approves a pending return request and picks the treasury -->
-    <app-form-dialog #rrDlg [header]="'custody.detail.approve_rr' | translate"
-                     [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
-                     (submit)="submitRrApprove()">
-      <div class="u-column u-gap-3">
-        @if (rrApprove(); as r) {
-          <div class="field">
-            <span class="field__label">{{ 'common.amount' | translate }}</span>
-            <p class="u-bidi" style="margin: 0; font-weight: 700">{{ r.amount | money }}</p>
-            <span class="u-small u-muted">{{ 'custody.detail.rr_requester' | translate }}: {{ r.requested_by ?? '—' }}</span>
-          </div>
-        }
-        <div class="field">
-          <label class="field__label" for="rr-treasury">{{ 'custody.create.treasury' | translate }} *</label>
-          <p-select appendTo="body" inputId="rr-treasury" [options]="treasuryOptions()" optionLabel="name" optionValue="id"
-                    [(ngModel)]="rrTreasuryId" name="rrTreasuryId" styleClass="u-full">
-            <ng-template let-option #item>
-              <div class="u-flex-between">
-                <span>{{ option.name }}</span>
-                <span class="u-bidi u-small">{{ option.balance | money }}</span>
-              </div>
-            </ng-template>
-          </p-select>
-        </div>
-        @if (rrApprove(); as r) {
-          @if (rrTreasuryId() !== null) {
-            <p class="field__hint u-bidi">{{ 'custody.detail.treasury_balance' | translate }}: {{ rrTreasuryBalance() | money }}
-              — {{ 'custody.detail.balance_after' | translate }}: {{ rrBalanceAfter(r) | money }}</p>
+      <!-- approve the agent's request: choose the treasury that funds the custody -->
+      <app-form-dialog #acceptDlg [header]="'custody.detail.accept_dialog' | translate"
+                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       (submit)="submitAccept()">
+        <div class="u-column u-gap-3">
+          @if (safeValue(); as c) {
+            <app-field label="common.amount">
+              <p class="u-bidi u-m-0 u-fw-bold">{{ c.amount | money }}</p>
+            </app-field>
           }
-        }
-        <p class="field__hint">{{ 'custody.detail.rr_treasury_note' | translate }}</p>
-      </div>
-    </app-form-dialog>
+          <app-field label="custody.create.treasury" controlId="accept-treasury" [required]="true">
+            <p-select appendTo="body" inputId="accept-treasury" [options]="treasuryOptions()" optionLabel="name" optionValue="id"
+                      [(ngModel)]="acceptTreasuryId" name="acceptTreasuryId" styleClass="u-full">
+              <ng-template let-option #item>
+                <div class="u-flex-between">
+                  <span>{{ option.name }}</span>
+                  <span class="u-bidi u-small">{{ option.balance | money }}</span>
+                </div>
+              </ng-template>
+            </p-select>
+          </app-field>
+          @if (acceptTreasuryId() !== null) {
+            <p class="field__hint u-bidi">{{ 'custody.detail.treasury_balance' | translate }}: {{ acceptBalance() | money }}
+              — {{ 'custody.detail.balance_after' | translate }}: {{ acceptBalanceAfter() | money }}</p>
+            @if (acceptInsufficient()) {
+              <p class="field__error" role="alert">{{ 'custody.detail.insufficient_treasury' | translate }}</p>
+            }
+          }
+          <p class="field__hint">{{ 'custody.detail.accept_note' | translate }}</p>
+        </div>
+      </app-form-dialog>
 
-    <!-- custody owner approves a pending return request (executed immediately) -->
-    <app-form-dialog #rrOwnerDlg [header]="'custody.detail.approve_rr' | translate"
-                     [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
-                     (submit)="submitRrOwnerApprove()">
-      <p>{{ 'custody.detail.rr_owner_note' | translate }}</p>
-    </app-form-dialog>
+      <!-- manager rejects the agent's request -->
+      <app-reason-dialog #rejectDlg [header]="'custody.detail.reject' | translate"
+                         [label]="'custody.detail.reject_reason' | translate" [submitLabel]="'common.confirm' | translate"
+                         [sending]="sending()" [error]="actionError()" (submit)="submitReject($event)" />
 
-    <!-- external donation (new standalone custody) / expense refund (back into this custody) -->
-    <app-form-dialog #donationDlg [header]="'custody.detail.donation_add' | translate"
-                     [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
-                     (submit)="submitDonation()">
-      <div class="u-column u-gap-3">
-        <div class="field">
-          <label class="field__label" for="don-type">{{ 'custody.detail.donation_type' | translate }} *</label>
-          <p-select appendTo="body" inputId="don-type" [options]="donationTypeOptions" optionLabel="label" optionValue="value"
-                    [(ngModel)]="donationType" name="donationType" styleClass="u-full" />
+      <!-- accountant/manager cancels their own pending custody -->
+      <app-reason-dialog #cancelDlg [header]="'custody.detail.cancel_custody' | translate"
+                         [label]="'custody.detail.cancel_reason' | translate" [submitLabel]="'common.confirm' | translate"
+                         [minLength]="1" [sending]="sending()" [error]="actionError()" (submit)="submitCancel($event)" />
+
+      <!-- agent rejects the custody the accountant created -->
+      <app-reason-dialog #agentRejectDlg [header]="'custody.detail.reject' | translate"
+                         [label]="'custody.detail.reject_reason' | translate" [submitLabel]="'common.confirm' | translate"
+                         [minLength]="1" [sending]="sending()" [error]="actionError()" (submit)="submitAgentReject($event)" />
+
+      <!-- agent confirms receiving the money -->
+      <app-form-dialog #receiveDlg [header]="'custody.detail.receive' | translate"
+                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       (submit)="submitReceive()">
+        <p>{{ 'custody.detail.receive_confirm' | translate }}</p>
+      </app-form-dialog>
+
+      <!-- agent accepts the custody the accountant sent -->
+      <app-form-dialog #agentAcceptDlg [header]="'custody.detail.agent_accept' | translate"
+                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       (submit)="submitAgentAccept()">
+        <p>{{ 'custody.detail.agent_accept_confirm' | translate }}</p>
+      </app-form-dialog>
+
+      <!-- non-agent asks the custody owner to return money to a treasury -->
+      <app-form-dialog #reqReturnDlg [header]="'custody.detail.request_return_dialog' | translate"
+                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       (submit)="submitReqReturn()">
+        <div class="u-column u-gap-3">
+          @if (safeValue(); as c) {
+            <app-field label="custody.detail.return_amount" controlId="rrq-amount" [required]="true">
+              <p-inputnumber inputId="rrq-amount" [(ngModel)]="reqReturnAmount" name="reqReturnAmount" mode="decimal"
+                             [minFractionDigits]="2" [min]="0.01" [max]="parseFloat(c.remaining)" styleClass="u-full" />
+              <span class="field__hint u-bidi">{{ 'glossary.remaining' | translate }}: {{ c.remaining | money }}</span>
+            </app-field>
+            <app-field label="common.reason" controlId="rrq-reason">
+              <textarea pTextarea id="rrq-reason" rows="2" [(ngModel)]="reqReturnReason" name="reqReturnReason" class="u-full"></textarea>
+            </app-field>
+          }
+          <p class="field__hint">{{ 'custody.detail.request_return_note' | translate }}</p>
         </div>
-        <div class="field">
-          <label class="field__label" for="don-amount">{{ 'common.amount' | translate }} *</label>
-          <p-inputnumber inputId="don-amount" [(ngModel)]="donationAmount" name="donationAmount" mode="decimal"
-                         [minFractionDigits]="2" [min]="0.01" styleClass="u-full" />
+      </app-form-dialog>
+
+      <!-- treasury holder approves a pending return request and picks the treasury -->
+      <app-form-dialog #rrDlg [header]="'custody.detail.approve_rr' | translate"
+                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       (submit)="submitRrApprove()">
+        <div class="u-column u-gap-3">
+          @if (rrApprove(); as r) {
+            <app-field label="common.amount">
+              <p class="u-bidi u-m-0 u-fw-bold">{{ r.amount | money }}</p>
+              <span class="u-small u-muted">{{ 'custody.detail.rr_requester' | translate }}: {{ r.requested_by ?? '—' }}</span>
+            </app-field>
+          }
+          <app-field label="custody.create.treasury" controlId="rr-treasury" [required]="true">
+            <p-select appendTo="body" inputId="rr-treasury" [options]="treasuryOptions()" optionLabel="name" optionValue="id"
+                      [(ngModel)]="rrTreasuryId" name="rrTreasuryId" styleClass="u-full">
+              <ng-template let-option #item>
+                <div class="u-flex-between">
+                  <span>{{ option.name }}</span>
+                  <span class="u-bidi u-small">{{ option.balance | money }}</span>
+                </div>
+              </ng-template>
+            </p-select>
+          </app-field>
+          @if (rrApprove(); as r) {
+            @if (rrTreasuryId() !== null) {
+              <p class="field__hint u-bidi">{{ 'custody.detail.treasury_balance' | translate }}: {{ rrTreasuryBalance() | money }}
+                — {{ 'custody.detail.balance_after' | translate }}: {{ rrBalanceAfter(r) | money }}</p>
+            }
+          }
+          <p class="field__hint">{{ 'custody.detail.rr_treasury_note' | translate }}</p>
         </div>
-        <div class="field">
-          <label class="field__label" for="don-desc">{{ 'common.description' | translate }} *</label>
-          <input pInputText id="don-desc" [(ngModel)]="donationDescription" name="donationDescription" style="width: 100%" />
+      </app-form-dialog>
+
+      <!-- custody owner approves a pending return request (executed immediately) -->
+      <app-form-dialog #rrOwnerDlg [header]="'custody.detail.approve_rr' | translate"
+                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       (submit)="submitRrOwnerApprove()">
+        <p>{{ 'custody.detail.rr_owner_note' | translate }}</p>
+      </app-form-dialog>
+
+      <!-- external donation (new standalone custody) / expense refund (back into this custody) -->
+      <app-form-dialog #donationDlg [header]="'custody.detail.donation_add' | translate"
+                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       (submit)="submitDonation()">
+        <div class="u-column u-gap-3">
+          <app-field label="custody.detail.donation_type" controlId="don-type" [required]="true">
+            <p-select appendTo="body" inputId="don-type" [options]="donationTypeOptions" optionLabel="label" optionValue="value"
+                      [(ngModel)]="donationType" name="donationType" styleClass="u-full" />
+          </app-field>
+          <app-field label="common.amount" controlId="don-amount" [required]="true">
+            <p-inputnumber inputId="don-amount" [(ngModel)]="donationAmount" name="donationAmount" mode="decimal"
+                           [minFractionDigits]="2" [min]="0.01" styleClass="u-full" />
+          </app-field>
+          <app-field label="common.description" controlId="don-desc" [required]="true">
+            <input pInputText id="don-desc" [(ngModel)]="donationDescription" name="donationDescription" class="u-full" />
+          </app-field>
+          <p class="field__hint">{{ 'custody.detail.donation_hint' | translate }}</p>
         </div>
-        <p class="field__hint">{{ 'custody.detail.donation_hint' | translate }}</p>
-      </div>
-    </app-form-dialog>
+      </app-form-dialog>
+    </app-print-sheet>
   `,
 })
 export class CustodyDetailPage {
@@ -454,6 +408,30 @@ export class CustodyDetailPage {
     { value: 'expense_refund', label: this.translate.instant('custody.detail.donation_type_refund') },
   ];
 
+  readonly returnRequestCols = [
+    { field: 'requested_at', header: 'common.date' },
+    { field: 'amount', header: 'common.amount', numeric: true },
+    { field: 'reason', header: 'custody.detail.return_reason' },
+    { field: 'status', header: 'common.status' },
+    { field: 'requested_by', header: 'custody.detail.rr_requester' },
+    { field: 'decided', header: 'custody.detail.rr_decided' },
+    { field: 'actions', header: 'common.actions' },
+  ];
+
+  readonly transactionCols = [
+    { field: 'date', header: 'common.date' },
+    { field: 'type', header: 'common.type' },
+    { field: 'description', header: 'common.description' },
+    { field: 'amount', header: 'common.amount', numeric: true },
+  ];
+
+  readonly expenseCols = [
+    { field: 'date', header: 'common.date' },
+    { field: 'description', header: 'common.description' },
+    { field: 'direction', header: 'expense.list.col_direction' },
+    { field: 'amount', header: 'common.amount', numeric: true },
+  ];
+
   data = resource<CustodyDetail, { id: number }>({
     params: () => ({ id: this.id() }),
     loader: ({ params }) =>
@@ -486,7 +464,7 @@ export class CustodyDetailPage {
   }
 
   isAgent(): boolean {
-    return this.auth.hasRole('مندوب');
+    return this.auth.can('is_agent');
   }
 
   canManageTreasury(): boolean {
@@ -677,34 +655,34 @@ export class CustodyDetailPage {
     const body = custody.treasury === null
       ? { treasury_id: treasuryId }
       : { treasury_amounts: { [String(treasuryId)]: custody.amount } };
-    this.act('accept', body, () => this.acceptDlg().close());
+    this.act('accept', body, () => { this.acceptDlg().close(); });
   }
 
   submitReject(reason: string): void {
-    this.act('reject', { reason }, () => this.rejectDlg().done());
+    this.act('reject', { reason }, () => { this.rejectDlg().done(); });
   }
 
   submitCancel(reason: string): void {
-    this.act('cancel', { cancel_reason: reason }, () => this.cancelDlg().done());
+    this.act('cancel', { cancel_reason: reason }, () => { this.cancelDlg().done(); });
   }
 
   submitAgentAccept(): void {
-    this.act('agent-accept', {}, () => this.agentAcceptDlg().close());
+    this.act('agent-accept', {}, () => { this.agentAcceptDlg().close(); });
   }
 
   submitAgentReject(reason: string): void {
-    this.act('agent-reject', { reason }, () => this.agentRejectDlg().done());
+    this.act('agent-reject', { reason }, () => { this.agentRejectDlg().done(); });
   }
 
   submitReceive(): void {
-    this.act('receive', {}, () => this.receiveDlg().close());
+    this.act('receive', {}, () => { this.receiveDlg().close(); });
   }
 
   submitReqReturn(): void {
     if (this.reqReturnAmount() === null) {
       return;
     }
-    this.act('request-return', { return_amount: this.reqReturnAmount(), reason: this.reqReturnReason() }, () => this.reqReturnDlg().close());
+    this.act('request-return', { return_amount: this.reqReturnAmount(), reason: this.reqReturnReason() }, () => { this.reqReturnDlg().close(); });
   }
 
   submitDonation(): void {
@@ -715,7 +693,7 @@ export class CustodyDetailPage {
       type: this.donationType(),
       amount: this.donationAmount(),
       description: this.donationDescription(),
-    }, () => this.donationDlg().close());
+    }, () => { this.donationDlg().close(); });
   }
 
   submitRrApprove(): void {
@@ -723,7 +701,7 @@ export class CustodyDetailPage {
     if (!request || this.rrTreasuryId() === null) {
       return;
     }
-    this.post(`/custody-return-requests/${request.id}/approve-with-treasury`, { treasury_id: this.rrTreasuryId() }, () => this.rrDlg().close());
+    this.post(`/custody-return-requests/${request.id}/approve-with-treasury`, { treasury_id: this.rrTreasuryId() }, () => { this.rrDlg().close(); });
   }
 
   submitRrOwnerApprove(): void {
@@ -731,7 +709,7 @@ export class CustodyDetailPage {
     if (!request) {
       return;
     }
-    this.post(`/custody-return-requests/${request.id}/approve`, {}, () => this.rrOwnerDlg().close());
+    this.post(`/custody-return-requests/${request.id}/approve`, {}, () => { this.rrOwnerDlg().close(); });
   }
 
   submitReturn(custodyId: number): void {

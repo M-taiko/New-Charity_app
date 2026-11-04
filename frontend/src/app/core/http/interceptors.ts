@@ -18,7 +18,7 @@ export const apiUrlInterceptor: HttpInterceptorFn = (req, next) => {
   }
   // everything else is an API call: prefix with /api/v1 keeping one slash
   const path = url.replace(/^\/+/, '');
-  return next(req.clone({ url: APP_CONFIG.apiBase + '/' + path, withCredentials: true }));
+  return next(req.clone({ url: `${APP_CONFIG.apiBase}/${path}`, withCredentials: true }));
 };
 
 /**
@@ -41,16 +41,16 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       if (err.status === 401 && !req.url.includes('/auth/login')) {
         const target = router.url;
         if (target !== '/login') {
-          router.navigate(['/login'], { queryParams: { returnUrl: target } });
+          void router.navigate(['/login'], { queryParams: { returnUrl: target } });
         }
         return throwError(() => err);
       }
       if (err.status === 403) {
-        router.navigate(['/forbidden']);
+        void router.navigate(['/forbidden']);
         return throwError(() => err);
       }
       if (err.status === 404 && !req.url.includes('/api/')) {
-        router.navigate(['/not-found']);
+        void router.navigate(['/not-found']);
         return throwError(() => err);
       }
       if (err.status === 0) {

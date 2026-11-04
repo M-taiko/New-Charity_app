@@ -3,8 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal 
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
-import type { HttpErrorResponse } from '@angular/common/http';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -12,6 +11,9 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
+import { FieldComponent } from '@shared/ui/field/field.component';
+import { serverFieldError } from '@shared/lib/server-field-errors';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 
@@ -30,39 +32,35 @@ interface UserCustody {
 @Component({
   selector: 'app-transfer-form',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule, TextareaModule, PageHeaderComponent, MoneyPipe],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule, TextareaModule, PageHeaderComponent, FormSectionComponent, FieldComponent, MoneyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'transfer.create.title' | translate" />
-    <form class="form-section" (ngSubmit)="submit()" #f="ngForm">
-      <div class="form-section__grid">
-        <div class="field">
-          <label class="field__label" for="custody">{{ 'transfer.create.custody' | translate }} *</label>
+    <form (ngSubmit)="submit()" #f="ngForm">
+      <app-form-section>
+        <app-field label="transfer.create.custody" controlId="custody" [required]="true" [error]="serverFieldError(error(), 'custody_id')">
           <p-select appendTo="body" inputId="custody" [options]="custodyOptions()" optionLabel="reason" optionValue="id"
                     [(ngModel)]="custodyId" name="custody" required styleClass="u-full" />
           @if (selected(); as c) {
             <span class="field__hint u-bidi">{{ 'transfer.create.available' | translate }}: {{ c.remaining | money }}</span>
           }
-        </div>
-        <div class="field">
-          <label class="field__label" for="receiver">{{ 'transfer.create.receiver' | translate }} *</label>
+        </app-field>
+        <app-field label="transfer.create.receiver" controlId="receiver" [required]="true" [error]="serverFieldError(error(), 'to_agent_id')">
           <p-select appendTo="body" inputId="receiver" [options]="agentOptions()" optionLabel="name" optionValue="id"
                     [(ngModel)]="receiverId" name="receiver" required styleClass="u-full" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="amount">{{ 'transfer.create.amount' | translate }} *</label>
+        </app-field>
+        <app-field
+          label="transfer.create.amount" controlId="amount" [required]="true"
+          [error]="maxTransferable() <= 0 ? ('transfer.create.over_limit' | translate) : serverFieldError(error(), 'amount')"
+        >
           <p-inputnumber inputId="amount" name="amount" [(ngModel)]="amount" mode="decimal"
                          [minFractionDigits]="2" [min]="0.01" [max]="maxTransferable()" required styleClass="u-full" />
-          @if (maxTransferable() <= 0) {
-            <span class="field__error">{{ 'transfer.create.over_limit' | translate }}</span>
-          }
-        </div>
-        <div class="field">
-          <label class="field__label" for="notes">{{ 'transfer.create.notes' | translate }}</label>
-          <textarea pTextarea id="notes" name="notes" rows="2" [(ngModel)]="notes" style="width: 100%"></textarea>
-        </div>
-      </div>
-      @if (error()) { <div class="dialog__alert" role="alert">{{ error() }}</div> }
+        </app-field>
+        <app-field label="transfer.create.notes" controlId="notes" [error]="serverFieldError(error(), 'notes')">
+          <textarea pTextarea id="notes" name="notes" rows="2" [(ngModel)]="notes" class="u-full"></textarea>
+        </app-field>
+      </app-form-section>
+      @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
       <div class="sticky-actions">
         <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/transfers" />
         <p-button type="submit" [label]="'transfer.create.submit' | translate" [loading]="sending()"
@@ -81,7 +79,9 @@ export class TransferFormPage {
   amount = signal<number | null>(null);
   notes = signal('');
   sending = signal(false);
-  error = signal('');
+  error = signal<HttpErrorResponse | null>(null);
+  /** exposed to the template — templates see class members, not module imports */
+  readonly serverFieldError = serverFieldError;
 
   custodies = resource<UserCustody[], unknown>({
     loader: () => firstValueFrom(this.http.get<ItemResponse<UserCustody[]>>('/user-custodies')).then((r) => r.data),
@@ -104,10 +104,19 @@ export class TransferFormPage {
     return custody ? parseFloat(custody.remaining) || 0 : 0;
   }
 
+  /** the general alert text — the server message or the generic fallback key */
+  alert(): string | null {
+    const err = this.error();
+    if (err === null) {
+      return null;
+    }
+    return err.error?.message ?? 'errors.generic';
+  }
+
   submit(): void {
     if (this.custodyId() === null || this.receiverId() === null || this.amount() === null) return;
     this.sending.set(true);
-    this.error.set('');
+    this.error.set(null);
     void firstValueFrom(
       this.http.post<ActionResponse>('/custody-transfers', {
         custody_id: this.custodyId(),
@@ -121,7 +130,7 @@ export class TransferFormPage {
       void this.router.navigateByUrl('/transfers');
     }).catch((err: unknown) => {
       this.sending.set(false);
-      this.error.set((err as HttpErrorResponse).error?.message ?? 'errors.generic');
+      this.error.set(err instanceof HttpErrorResponse ? err : null);
     });
   }
 }

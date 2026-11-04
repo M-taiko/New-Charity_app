@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, resource, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -7,6 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -42,94 +43,91 @@ interface TransactionRow {
   standalone: true,
   imports: [
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent,
-    StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective, EmptyStateComponent,
-    PrintSheetComponent, ConfirmDeleteComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
+    AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    EmptyStateComponent, PrintSheetComponent, ConfirmDeleteComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
   ],
   template: `
-    @if (safeValue(); as treasury) {
-      <app-print-sheet [title]="'treasury.detail.title' | translate">
-        <app-page-header [title]="treasury.name" [subtitle]="treasury.notes ?? ''">
-          <div actions class="u-flex u-gap-2 u-flex-wrap">
-            <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="print()" />
-            <p-button [label]="'treasury.list.transfer' | translate" size="small" [outlined]="true" routerLink="/treasury/transfer" />
-            <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/treasury', treasury.id, 'edit']" />
-            <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg.open()" />
-          </div>
-        </app-page-header>
-
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'treasury.list.balance'" [value]="treasury.balance" [money]="true" />
-          <app-stat-tile [label]="'treasury.detail.total_in'" [value]="treasury.stats.total_in" [money]="true" />
-          <app-stat-tile [label]="'treasury.detail.total_out'" [value]="treasury.stats.total_out" [money]="true" />
-          <app-stat-tile [label]="'treasury.list.transactions_count'" [value]="treasury.stats.total_transactions" />
+    <app-print-sheet [title]="'treasury.detail.title' | translate">
+      <app-page-header [title]="headerTitle()" [subtitle]="safeValue()?.notes ?? ''">
+        <div actions class="u-flex u-gap-2 u-flex-wrap">
+          <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="print()" />
+          <p-button [label]="'treasury.list.transfer' | translate" size="small" [outlined]="true" routerLink="/treasury/transfer" />
+          <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/treasury', id(), 'edit']" />
+          <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg()?.open()" />
+          <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/treasury" />
         </div>
+      </app-page-header>
 
-        <app-data-table
-          [title]="'treasury.detail.transactions' | translate"
-          [columns]="columns"
-          [rows]="treasury.transactions.data"
-          [total]="treasury.transactions.meta.total"
-          [perPage]="params().per_page"
-          (pageChange)="onPage($event)"
-        >
-          <div toolbar class="u-flex u-gap-2">
-            <p-select appendTo="body"
-              [options]="typeOptions"
-              optionLabel="label"
-              optionValue="value"
-              [(ngModel)]="typeFilter" name="typeFilter"
-              (ngModelChange)="onTypeChange()"
-              [placeholder]="'common.type' | translate"
-              size="small"
-            />
+      <app-async-page [resource]="pageResource" variant="detail" [backLink]="['/treasury']">
+        @if (safeValue(); as treasury) {
+          <div class="kpi-grid">
+            <app-stat-tile [label]="'treasury.list.balance'" [value]="treasury.balance" [money]="true" />
+            <app-stat-tile [label]="'treasury.detail.total_in'" [value]="treasury.stats.total_in" [money]="true" />
+            <app-stat-tile [label]="'treasury.detail.total_out'" [value]="treasury.stats.total_out" [money]="true" />
+            <app-stat-tile [label]="'treasury.list.transactions_count'" [value]="treasury.stats.total_transactions" />
           </div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="date" class="u-bidi">{{ row.date | datetime }}</td>
-              <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-              <td appTableCol="description">{{ row.description }}</td>
-              <td appTableCol="amount" class="ledger-table__cell-num">{{ row.amount | money }}</td>
-              <td appTableCol="user">{{ row.user?.name ?? '—' }}</td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_date' | translate }}</span>
-                <span class="u-bidi">{{ row.date | datetime }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_type' | translate }}</span>
-                <span>{{ row.type | enumLabel: 'transaction_type' }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-                <span class="u-bidi">{{ row.amount | money }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_description' | translate }}</span>
-                <span>{{ row.description }}</span>
-              </div>
-            </tr>
-          </ng-template>
-          <div empty>
-            <app-empty-state [title]="'treasury.detail.empty' | translate" [text]="'common.no_data' | translate" />
-          </div>
-        </app-data-table>
-      </app-print-sheet>
 
-      <!-- T3-40: the server blocks deletion when the treasury has movements or balance — its message surfaces -->
-      <app-confirm-delete
-        #deleteDlg
-        [path]="'/treasury/' + id() + '/delete'"
-        [entity]="safeValue()?.name ?? ''"
-        (deleted)="onDeleted()"
-      />
-    } @else if (data.isLoading()) {
-      <div class="skeleton skeleton--title u-mb-4"></div>
-      <div class="skeleton skeleton--tile"></div>
-    } @else {
-      <app-empty-state [title]="'common.not_found' | translate" [text]="'common.not_found_text' | translate" />
+          <app-data-table
+            [title]="'treasury.detail.transactions' | translate"
+            [columns]="columns"
+            [rows]="treasury.transactions.data"
+            [total]="treasury.transactions.meta.total"
+            [perPage]="params().per_page"
+            (pageChange)="onPage($event)"
+          >
+            <div toolbar class="u-flex u-gap-2">
+              <p-select appendTo="body"
+                [options]="typeOptions"
+                optionLabel="label"
+                optionValue="value"
+                [(ngModel)]="typeFilter" name="typeFilter"
+                (ngModelChange)="onTypeChange()"
+                [placeholder]="'common.type' | translate"
+                size="small"
+              />
+            </div>
+            <ng-template appTableBody let-row>
+              <tr class="ledger-table__row">
+                <td appTableCol="date" class="u-bidi">{{ row.date | datetime }}</td>
+                <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
+                <td appTableCol="description">{{ row.description }}</td>
+                <td appTableCol="amount" class="ledger-table__cell-num">{{ row.amount | money }}</td>
+                <td appTableCol="user">{{ row.user?.name ?? '—' }}</td>
+              </tr>
+              <tr class="ledger-table__stacked">
+                <div class="ledger-table__stacked-item">
+                  <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_date' | translate }}</span>
+                  <span class="u-bidi">{{ row.date | datetime }}</span>
+                </div>
+                <div class="ledger-table__stacked-item">
+                  <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_type' | translate }}</span>
+                  <span>{{ row.type | enumLabel: 'transaction_type' }}</span>
+                </div>
+                <div class="ledger-table__stacked-item">
+                  <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
+                  <span class="u-bidi">{{ row.amount | money }}</span>
+                </div>
+                <div class="ledger-table__stacked-item">
+                  <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_description' | translate }}</span>
+                  <span>{{ row.description }}</span>
+                </div>
+              </tr>
+            </ng-template>
+            <div empty>
+              <app-empty-state [title]="'treasury.detail.empty' | translate" [text]="'common.no_data' | translate" />
+            </div>
+          </app-data-table>
 
-    }
+          <!-- T3-40: the server blocks deletion when the treasury has movements or balance — its message surfaces -->
+          <app-confirm-delete
+            #deleteDlg
+            [path]="'/treasury/' + id() + '/delete'"
+            [entity]="safeValue()?.name ?? ''"
+            (deleted)="onDeleted()"
+          />
+        }
+      </app-async-page>
+    </app-print-sheet>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -141,6 +139,9 @@ export class TreasuryDetailPage {
   id = input.required<number>();
   typeFilter = signal('all');
   params = signal<{ page: number; per_page: number }>({ page: 1, per_page: 25 });
+
+  /** the delete dialog lives inside the loaded branch — reach it via viewChild */
+  deleteDlg = viewChild(ConfirmDeleteComponent);
 
   readonly tableKey = 'detail.component';
 
@@ -180,6 +181,27 @@ export class TreasuryDetailPage {
       return null;
     }
   });
+
+  /** T4-20: a non-throwing resource view — raw ResourceRef.value() throws on a failed load */
+  readonly pageResource: LoadableResource = {
+    value: () => this.safeValue() ?? undefined,
+    error: () => {
+      try {
+        return this.data.error();
+      } catch {
+        return undefined;
+      }
+    },
+    isLoading: () => this.data.isLoading(),
+    reload: () => {
+      this.data.reload();
+    },
+  };
+
+  /** header title outside the async states: the treasury's name once loaded, the generic key otherwise */
+  headerTitle(): string {
+    return this.safeValue()?.name ?? 'treasury.detail.title';
+  }
 
   onTypeChange(): void {
     this.params.update((p) => ({ ...p, page: 1 }));

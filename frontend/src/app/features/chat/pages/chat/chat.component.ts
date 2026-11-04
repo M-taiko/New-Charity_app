@@ -1,3 +1,6 @@
+// Group chat (plan 20, T3-100). T4-03: the remaining one-off sizing moved
+// from inline styles into colocated component styles; T4-23: app-field for
+// the poll dialog's question.
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { viewChild } from '@angular/core';
 import type { OnDestroy } from '@angular/core';
@@ -16,6 +19,9 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
+import { FieldComponent } from '@shared/ui/field/field.component';
+import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
+import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 
@@ -97,8 +103,23 @@ interface PollFeedMsg {
   imports: [
     TranslatePipe, FormsModule, ButtonModule, InputTextModule, TextareaModule,
     PageHeaderComponent, IconComponent, ConfirmDeleteComponent, FormDialogComponent, DatetimePipe,
+    FieldComponent, RowActionsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
+    /* pushes the per-message row-actions to the end of the message head */
+    .chat-delete-btn {
+      margin-inline-start: auto;
+    }
+
+    .chat-composer-input {
+      flex: 1;
+    }
+
+    .chat-option-input {
+      flex: 1;
+    }
+  `,
   template: `
     <app-page-header [title]="'chat.title' | translate">
       <div actions>
@@ -115,16 +136,7 @@ interface PollFeedMsg {
               <strong>{{ m.name }}</strong>
               <span class="u-bidi">{{ m.time ?? (m.created_at | datetime) }}</span>
               @if (m.is_mine || canModerate()) {
-                <button
-                  type="button"
-                  class="topbar__icon-btn"
-                  style="width: 24px; height: 24px; margin-inline-start: auto"
-                  (click)="askDelete(m)"
-                  [attr.aria-label]="'common.delete' | translate"
-                  [title]="'common.delete' | translate"
-                >
-                  <app-icon name="trash" [size]="14" />
-                </button>
+                <app-row-actions class="chat-delete-btn" [actions]="messageActions(m)" />
               }
             </div>
             <p class="chat__body">{{ m.body }}</p>
@@ -132,18 +144,17 @@ interface PollFeedMsg {
               <div class="chat__poll">
                 <strong class="u-small">{{ poll.question }}</strong>
                 @for (option of poll.options; track $index) {
-                  <button
-                    type="button"
-                    class="direction-trail__chip u-full"
-                    style="margin-block: 2px; text-align: start"
+                  <p-button
+                    styleClass="direction-trail__chip u-full chat-poll-option"
+                    [text]="true"
                     [disabled]="poll.is_closed"
-                    (click)="vote(poll.id, $index)"
+                    (onClick)="vote(poll.id, $index)"
                   >
                     {{ (poll.my_vote === $index ? '✓ ' : '') + option.text }}
                     @if (option.votes !== undefined) {
                       <span class="u-bidi u-muted">({{ option.votes }})</span>
                     }
-                  </button>
+                  </p-button>
                 }
                 <div class="u-flex-between">
                   <span class="u-small u-bidi">{{ 'chat.poll.total_votes' | translate: { count: poll.votes_count } }}</span>
@@ -172,10 +183,10 @@ interface PollFeedMsg {
         <textarea
           pTextarea
           rows="1"
+          class="chat-composer-input"
           [(ngModel)]="draft"
           name="draft"
           [placeholder]="'chat.placeholder' | translate"
-          style="flex: 1"
           (keydown.enter)="$event.preventDefault(); send()"
         ></textarea>
         <p-button (onClick)="send()" [ariaLabel]="'chat.send' | translate">
@@ -194,28 +205,27 @@ interface PollFeedMsg {
       (submit)="submitPoll()"
     >
       <div class="u-column u-gap-3">
-        <div class="field">
-          <label class="field__label" for="poll-question">{{ 'chat.poll.question' | translate }} *</label>
+        <app-field label="chat.poll.question" controlId="poll-question" [required]="true">
           <textarea
             pTextarea
             id="poll-question"
             rows="2"
             maxlength="500"
+            class="u-full"
             [(ngModel)]="pollQuestion"
             name="question"
-            style="width: 100%"
           ></textarea>
-        </div>
+        </app-field>
         <div class="u-column u-gap-2">
           @for (opt of pollOptions(); track $index) {
-            <div class="u-flex u-gap-2" style="align-items: center">
+            <div class="u-flex u-gap-2">
               <input
                 pInputText
+                class="chat-option-input"
                 maxlength="200"
                 [ngModel]="pollOptions()[$index]"
                 [name]="'option' + $index"
                 [placeholder]="'chat.poll.option' | translate: { index: $index + 1 }"
-                style="flex: 1"
                 (ngModelChange)="setOption($index, $event)"
               />
               @if (pollOptions().length > 2) {
@@ -252,7 +262,7 @@ export class ChatPage implements OnDestroy {
   loaded = signal(false);
 
   /** the chat may be moderated by managers (ChatController@destroy / ChatPollController@close) */
-  readonly canModerate = computed(() => this.auth.me()?.roles.includes('مدير') ?? false);
+  readonly canModerate = computed(() => this.auth.can('is_manager'));
 
   // ── delete message (T3-100) ──────────────────────────────
   private readonly deleteDialog = viewChild.required(ConfirmDeleteComponent);
@@ -305,13 +315,13 @@ export class ChatPage implements OnDestroy {
         // the new message arrives through the incremental feed — no full reload
         void this.pollNow();
       })
-      .catch((err: unknown) => this.toast.apiError(this.errMsg(err)));
+      .catch((err: unknown) => { this.toast.apiError(this.errMsg(err)); });
   }
 
   vote(pollId: number, optionIndex: number): void {
     void firstValueFrom(this.http.post<ActionResponse>(`/chat-polls/${pollId}/vote`, { option_index: optionIndex }))
       .then(() => this.reload()) // vote tallies are only visible on the full feed
-      .catch((err: unknown) => this.toast.apiError(this.errMsg(err)));
+      .catch((err: unknown) => { this.toast.apiError(this.errMsg(err)); });
   }
 
   closePoll(pollId: number): void {
@@ -320,7 +330,12 @@ export class ChatPage implements OnDestroy {
         this.toast.success('chat.poll.closed');
         void this.reload();
       })
-      .catch((err: unknown) => this.toast.apiError(this.errMsg(err)));
+      .catch((err: unknown) => { this.toast.apiError(this.errMsg(err)); });
+  }
+
+  /** the per-message delete action (T5-04) — shared row-actions instead of a raw button */
+  messageActions(m: ChatMsg): RowActionItem[] {
+    return [{ icon: 'trash', label: 'common.delete', severity: 'danger', handler: () => { this.askDelete(m); } }];
   }
 
   askDelete(m: ChatMsg): void {
@@ -391,7 +406,7 @@ export class ChatPage implements OnDestroy {
   private async reload(): Promise<void> {
     try {
       const res = await firstValueFrom(this.http.get<ItemResponse<ChatFeedMsg[]>>('/chat'));
-      const list = (res.data ?? []).map((row) => this.mapFeedRow(row));
+      const list = (res.data).map((row) => this.mapFeedRow(row));
       this.failures = 0;
       this.messages.set(list);
       this.lastId = list.reduce((max, m) => Math.max(max, m.id), 0);

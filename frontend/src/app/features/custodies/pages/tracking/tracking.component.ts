@@ -10,6 +10,10 @@ import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
+import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -17,7 +21,9 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
+import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 /** /custodies/tracking payload — one full dataset, no server pagination */
 interface TrackingAgent {
@@ -76,8 +82,8 @@ interface CustodyMovements {
   selector: 'app-custody-tracking',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, DialogModule, SelectModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, DialogModule, SelectModule,
+    PageHeaderComponent, AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -88,17 +94,16 @@ interface CustodyMovements {
       </div>
     </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4, 5, 6]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
-      <div class="kpi-grid">
-        <app-stat-tile [label]="'custody.tracking.total'" [value]="summaryValue('total_custodies')" />
-        <app-stat-tile [label]="'custody.tracking.active'" [value]="summaryValue('active')" />
-        <app-stat-tile [label]="'custody.tracking.pending'" [value]="summaryValue('pending')" />
-        <app-stat-tile [label]="'custody.tracking.rejected'" [value]="summaryValue('rejected')" />
-        <app-stat-tile [label]="'custody.tracking.closed'" [value]="summaryValue('closed')" />
-        <app-stat-tile [label]="'custody.tracking.remaining'" [value]="summaryValue('total_remaining')" [money]="true" />
-      </div>
+    <app-async-page [resource]="data" variant="list">
+      @if (data.value(); as page) {
+        <div class="kpi-grid">
+          <app-stat-tile [label]="'custody.tracking.total'" [value]="summaryValue('total_custodies')" />
+          <app-stat-tile [label]="'custody.tracking.active'" [value]="summaryValue('active')" />
+          <app-stat-tile [label]="'custody.tracking.pending'" [value]="summaryValue('pending')" />
+          <app-stat-tile [label]="'custody.tracking.rejected'" [value]="summaryValue('rejected')" />
+          <app-stat-tile [label]="'custody.tracking.closed'" [value]="summaryValue('closed')" />
+          <app-stat-tile [label]="'custody.tracking.remaining'" [value]="summaryValue('total_remaining')" [money]="true" />
+        </div>
 
       <h2 class="u-small u-muted">{{ 'custody.tracking.by_agent' | translate }}</h2>
       <app-data-table
@@ -158,16 +163,14 @@ interface CustodyMovements {
       <h2 class="u-small u-muted">{{ 'custody.tracking.custodies' | translate }}</h2>
       <div class="filter-bar">
         <div class="filter-bar__row">
-          <div class="field" style="min-width: 12rem">
-            <label class="field__label" for="track-filter-agent">{{ 'custody.tracking.col_agent' | translate }}</label>
+          <app-field label="custody.tracking.col_agent" controlId="track-filter-agent" class="field--lg">
             <p-select appendTo="body" inputId="track-filter-agent" [options]="agentOptions()" optionLabel="label" optionValue="value"
               [filter]="true" [ngModel]="agentFilter()" (ngModelChange)="agentFilter.set($event)" name="agent" styleClass="u-full" [autofocus]="false" />
-          </div>
-          <div class="field" style="min-width: 11rem">
-            <label class="field__label" for="track-filter-status">{{ 'common.status' | translate }}</label>
+          </app-field>
+          <app-field label="common.status" controlId="track-filter-status" class="field--md">
             <p-select appendTo="body" inputId="track-filter-status" [options]="statusOptions()" optionLabel="label" optionValue="value"
               [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)" name="status" styleClass="u-full" [autofocus]="false" />
-          </div>
+          </app-field>
         </div>
       </div>
 
@@ -192,14 +195,7 @@ interface CustodyMovements {
             <td appTableCol="remaining" class="ledger-table__cell-num"><span class="u-bidi">{{ row.remaining | money }}</span></td>
             <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="custody_status" /></td>
             <td appTableCol="actions">
-              <div class="row-actions">
-                <a class="row-actions__btn" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate" [routerLink]="['/custodies', row.id]">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </a>
-                <button type="button" class="row-actions__btn" [title]="'custody.tracking.view_movements' | translate" [attr.aria-label]="'custody.tracking.view_movements' | translate" (click)="openMovements(row.id)">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-history" /></svg>
-                </button>
-              </div>
+              <app-row-actions [actions]="custodyActions(row)" />
             </td>
           </tr>
           <tr class="ledger-table__stacked">
@@ -244,14 +240,7 @@ interface CustodyMovements {
               <app-status-stamp [status]="row.status" namespace="custody_status" />
             </div>
             <div class="ledger-table__stacked-item">
-              <div class="row-actions">
-                <a class="row-actions__btn" [title]="'common.view' | translate" [attr.aria-label]="'common.view' | translate" [routerLink]="['/custodies', row.id]">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </a>
-                <button type="button" class="row-actions__btn" [title]="'custody.tracking.view_movements' | translate" [attr.aria-label]="'custody.tracking.view_movements' | translate" (click)="openMovements(row.id)">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-history" /></svg>
-                </button>
-              </div>
+              <app-row-actions [actions]="custodyActions(row)" />
             </div>
           </tr>
         </ng-template>
@@ -259,7 +248,8 @@ interface CustodyMovements {
           <app-empty-state [title]="'custody.tracking.empty' | translate" [text]="'common.no_data' | translate" />
         </div>
       </app-data-table>
-    }
+      }
+    </app-async-page>
 
     <!-- per-custody movements (all-custodies.blade.php modal) -->
     <p-dialog appendTo="body"
@@ -282,30 +272,17 @@ interface CustodyMovements {
           <app-stat-tile [label]="'custody.tracking.returned'" [value]="m.returned" [money]="true" />
           <app-stat-tile [label]="'custody.tracking.remaining'" [value]="m.remaining" [money]="true" />
         </div>
-        <div style="overflow-x: auto; margin-block-start: 1rem">
-          <table class="ledger-table" style="border: 0">
-            <thead><tr>
-              <th>{{ 'common.date' | translate }}</th>
-              <th>{{ 'common.type' | translate }}</th>
-              <th>{{ 'common.description' | translate }}</th>
-              <th>{{ 'custody.movements.col_by' | translate }}</th>
-              <th>{{ 'common.amount' | translate }}</th>
-            </tr></thead>
-            <tbody>
-              @for (t of m.transactions; track t.id) {
-                <tr class="ledger-table__row">
-                  <td class="u-bidi">{{ t.date | datetime: false }}</td>
-                  <td>{{ t.type | enumLabel: 'transaction_type' }}</td>
-                  <td>{{ t.description ?? '—' }}</td>
-                  <td>{{ t.user ?? '—' }}</td>
-                  <td class="ledger-table__cell-num"><span class="u-bidi">{{ t.amount | money }}</span></td>
-                </tr>
-              } @empty {
-                <tr><td colspan="5" class="u-muted">{{ 'common.no_data' | translate }}</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
+        <app-ledger-table class="u-mt-4" [columns]="movementCols" [rows]="m.transactions">
+          <ng-template appLedgerBody let-row>
+            <tr class="ledger-table__row">
+              <td appLedgerCol="date" class="u-bidi">{{ row.date | datetime: false }}</td>
+              <td appLedgerCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
+              <td appLedgerCol="description">{{ row.description ?? '—' }}</td>
+              <td appLedgerCol="user">{{ row.user ?? '—' }}</td>
+              <td appLedgerCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
+            </tr>
+          </ng-template>
+        </app-ledger-table>
       }
       <p-footer>
         <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" (onClick)="movementsOpen.set(false)" />
@@ -342,6 +319,14 @@ export class TrackingPage {
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
 
+  readonly movementCols = [
+    { field: 'date', header: 'common.date' },
+    { field: 'type', header: 'common.type' },
+    { field: 'description', header: 'common.description' },
+    { field: 'user', header: 'custody.movements.col_by' },
+    { field: 'amount', header: 'common.amount', numeric: true },
+  ];
+
   /** the same status list all-custodies.blade.php filters on */
   readonly statusValues = [
     'all', 'pending', 'accepted', 'active', 'rejected', 'partially_returned', 'closed',
@@ -362,6 +347,9 @@ export class TrackingPage {
 
   private label(key: string): string {
     const text = this.translate.instant(key);
+    if (text === key) {
+      warnMissingTranslation(key); // dev only — the raw key in the UI means a key was lost (T5-01)
+    }
     return text !== key ? text : key;
   }
 
@@ -398,6 +386,14 @@ export class TrackingPage {
 
   summaryValue(key: string): string {
     return this.data.value()?.data.stats[key] ?? '0';
+  }
+
+  /** per-custody row actions: open the detail or the movements dialog (all-custodies.blade.php) */
+  custodyActions(row: TrackingCustody): RowActionItem[] {
+    return [
+      { icon: 'eye', label: 'common.view', route: ['/custodies', row.id] },
+      { icon: 'history', label: 'custody.tracking.view_movements', handler: () => { this.openMovements(row.id); } },
+    ];
   }
 
   openMovements(custodyId: number): void {

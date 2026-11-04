@@ -37,26 +37,22 @@
     "switch_theme": "تبديل المظهر",
     "view_chart": "عرض كرسم",
     "view_table": "عرض كجدول",
-    "per_page": "العدد بالصفحة",
     "confirm": "تأكيد",
-    "of": "من",
-    "today": "اليوم",
     "count": "العدد",
     "confirm_delete": "تأكيد الحذف",
     "delete_message": "هل تريد حذف {{name}}؟ لا يمكن التراجع عن هذا الإجراء.",
     "true": "نعم",
     "false": "لا",
     "required_field": "هذا الحقل مطلوب",
-    "optional": "اختياري",
-    "unknown": "غير محدد",
-    "not_found": "السجل غير موجود",
-    "not_found_text": "هذا السجل غير موجود أو لا يمكنك الوصول إليه",
     "open_page": "فتح صفحة البيانات",
     "delete": "حذف",
     "reason": "السبب",
-    "delegated_to": "المكلَّف",
     "company": "Masarsoft",
-    "rights": "All rights reserved."
+    "rights": "All rights reserved.",
+    "org_name": "مؤسسة نجيب سليم الخيرية",
+    "list_separator": "، ",
+    "retry": "إعادة المحاولة",
+    "loading": "جارٍ التحميل"
   },
   "nav": {
     "main_aria": "القائمة الرئيسية",
@@ -112,16 +108,13 @@
       "password_placeholder": "••••••••",
       "remember": "تذكرني",
       "submit": "دخول",
-      "failed": "بيانات الدخول غير صحيحة",
-      "welcome": "مؤسسة نجيب سليم الخيرية",
       "org_hint": "إدارة الأموال للجمعية الخيرية",
       "feat_track": "متابعة العهد والمصروفات لحظة بلحظة",
       "feat_secure": "حماية كاملة للأموال والبيانات",
       "show_password": "إظهار كلمة المرور",
       "hide_password": "إخفاء كلمة المرور"
     },
-    "logout": "تسجيل الخروج",
-    "session_expired": "انتهت الجلسة. يرجى تسجيل الدخول من جديد"
+    "logout": "تسجيل الخروج"
   },
   "errors": {
     "500": "500",
@@ -130,6 +123,8 @@
     "404_title": "الصفحة غير موجودة",
     "404_text": "الرابط الذي طلبته غير موجود أو تم نقله.",
     "offline_title": "لا يوجد اتصال",
+    "load_title": "تعذّر تحميل البيانات",
+    "load_text": "حدث خطأ أثناء تحميل البيانات من الخادم. حاول مرة أخرى.",
     "generic": "حدث خطأ غير متوقع. حاول مرة أخرى.",
     "network": "network",
     "codes": {
@@ -166,7 +161,8 @@
     "social_case": {
       "pending": "قيد الانتظار",
       "approved": "موافق عليها",
-      "rejected": "مرفوضة"
+      "rejected": "مرفوضة",
+      "new": "جديدة"
     },
     "purchase_request": {
       "pending": "في الانتظار",
@@ -244,7 +240,6 @@
   "command": {
     "title": "الانتقال السريع",
     "placeholder": "ابحث عن صفحة…",
-    "open": "بحث سريع (Ctrl+K)",
     "recent": "فتح حديثاً",
     "no_results": "لا توجد نتائج مطابقة"
   },
@@ -253,8 +248,7 @@
     "finance": {
       "year": "السنة",
       "charts": {
-        "expenses_by_day": "المصروفات آخر ٧ أيام",
-        "custody_status": "حالة العهد"
+        "expenses_by_day": "المصروفات آخر ٧ أيام"
       },
       "agents_eval": "تقييم المناديب",
       "researchers_eval": "تقييم الباحثين",
@@ -264,12 +258,7 @@
       "total_spent": "إجمالي المصروفات",
       "today_expenses": "مصروفات اليوم",
       "active_custodies": "العهد النشطة",
-      "pending_cases": "حالات معلقة",
-      "agents_count": "إجمالي المناديب",
-      "custodies_amount": "مبالغ العهد",
-      "custodies_spent": "مصروفات العهد",
-      "custodies_returned": "مرتجعات العهد",
-      "total_custodies_amount": "مبالغ العهد"
+      "agents_count": "إجمالي المناديب"
     },
     "researcher": {
       "recent_cases": "أحدث الحالات",
@@ -289,7 +278,6 @@
       "transferred_out": "محول منه"
     },
     "title": "الرئيسية",
-    "stats": "إحصائيات عامة",
     "shortcuts_title": "اختصارات سريعة",
     "shortcuts": {
       "active_custodies": "العهد النشطة",
@@ -336,15 +324,13 @@
       "count": "عدد الخزائن",
       "total_balance": "إجمالي الأرصدة",
       "transactions_count": "عدد الحركات",
-      "created_at": "تاريخ الإنشاء",
-      "notes_col": "الملاحظات"
+      "created_at": "تاريخ الإنشاء"
     },
     "form": {
       "new_title": "إنشاء خزينة جديدة",
       "edit_title": "تعديل الخزينة",
       "name": "اسم الخزينة",
-      "notes": "الملاحظات",
-      "created": "تم إنشاء الخزينة بنجاح"
+      "notes": "الملاحظات"
     },
     "donation": {
       "title": "استقبال تبرع",
@@ -355,8 +341,7 @@
       "balance_after": "الرصيد بعد التبرع",
       "source_company": "من الشركة",
       "source_external": "من جهة خارجية",
-      "source_return": "مردود/مرتجع",
-      "created": "تم إضافة التبرع بنجاح"
+      "source_return": "مردود/مرتجع"
     },
     "transfer": {
       "title": "تحويل أموال بين الخزائن",
@@ -365,9 +350,7 @@
       "amount": "المبلغ المراد تحويله",
       "notes": "ملاحظات التحويل",
       "submit": "تحويل الأموال",
-      "done": "تم التحويل بنجاح",
-      "incoming": "واردة",
-      "outgoing": "صادرة"
+      "over_balance": "المبلغ يتجاوز رصيد الخزينة المصدرة"
     },
     "detail": {
       "title": "تفاصيل الخزينة",
@@ -376,12 +359,9 @@
       "col_type": "النوع",
       "col_description": "الوصف",
       "empty": "لا توجد حركات في هذه الخزينة بعد",
-      "stats": "حركة الخزينة",
       "total_in": "إجمالي الوارد",
       "total_out": "إجمالي الصادر",
-      "col_amount": "المبلغ",
       "col_user": "المستخدم",
-      "edit": "تعديل",
       "type_all": "الكل"
     }
   },
@@ -425,8 +405,6 @@
       "personal_title": "طلب عهدة شخصية",
       "submit_request": "إرسال الطلب",
       "submit_create": "إنشاء العهدة",
-      "created": "تم إرسال طلب العهدة للمحاسب للموافقة",
-      "created_direct": "تم إنشاء العهدة بنجاح",
       "info_title": "معلومات مهمة",
       "treasury_balance": "رصيد الخزينة المختارة",
       "balance_after": "الرصيد بعد الصرف",
@@ -485,17 +463,11 @@
         "remaining": "المتبقي"
       },
       "agent": "اسم الوكيل",
-      "phone": "رقم الهاتف",
-      "amount": "المبلغ",
       "treasury": "الخزينة",
-      "notes_label": "الملاحظات",
-      "data": "بيانات العهدة",
-      "print": "طباعة",
       "accept": "قبول العهدة",
       "reject": "رفض العهدة",
       "reject_reason": "سبب الرفض",
       "accept_dialog": "قبول العهدة",
-      "transfers": "سجل التحويلات",
       "returns": "طلبات الرد",
       "approve_request": "الموافقة على الطلب",
       "reject_request": "رفض الطلب",
@@ -526,8 +498,7 @@
       "donation_hint": "التبرع الخارجي ينشئ عهدة جديدة مستقلة، أما استرداد المصروف فيُعاد لرصيد هذه العهدة مباشرة"
     },
     "edit": {
-      "title": "تعديل العهدة",
-      "saved": "تم تحديث العهدة بنجاح"
+      "title": "تعديل العهدة"
     },
     "mine": {
       "title": "عهداتي",
@@ -541,35 +512,24 @@
         "title": "استلام خارجي",
         "amount": "المبلغ (ج.م)",
         "source": "الجهة الخارجية",
-        "hint": "يُضاف المبلغ مباشرة كعهدة جديدة نشطة دون تغيير رصيد الخزينة",
-        "description": "الوصف",
-        "created": "تم تسجيل الاستلام الخارجي وإضافة عهدة جديدة لك بنجاح"
+        "hint": "يُضاف المبلغ مباشرة كعهدة جديدة نشطة دون تغيير رصيد الخزينة"
       },
       "return_dialog": {
         "title": "رد مبلغ للخزينة",
         "amount": "المبلغ المراد رده (ج.م)",
-        "reason": "السبب",
         "created": "تم تقديم طلب الرد. سيراجعه المحاسب ويختار الخزينة"
       },
-      "stats": "ملخص عهداتي",
       "total": "إجمالي العهد",
       "active": "العهد النشطة",
-      "pending": "عهد معلقة",
       "amount": "إجمالي المبالغ",
       "spent": "إجمالي المصروفات",
-      "returned": "إجمالي المردود",
-      "transferred_in": "تحويلات واردة إليّ",
-      "transferred_out": "تحويلات صادرة مني",
       "remaining": "رصيدي الحالي",
       "recover": "استرداد",
-      "col_original": "المبلغ الأصلي",
-      "col_returned": "المرتجع",
       "recover_dialog": {
         "title": "تسجيل استرجاع",
         "amount": "المبلغ المسترجع (ج.م)",
         "reason": "سبب الاسترجاع",
         "custody": "اختر العهدة (اختياري)",
-        "created": "تم تسجيل الاسترجاع بنجاح",
         "hint": "اترك الحقل فارغاً ليتم إنشاء عهدة جديدة بمبلغ الاسترداد"
       },
       "tab_awaiting": "قيد الانتظار",
@@ -609,9 +569,6 @@
       "pending": "المعلقة",
       "rejected": "المرفوضة",
       "closed": "المغلقة",
-      "amount": "إجمالي المبالغ",
-      "pending_returns": "قيد الرد",
-      "col_count": "عدد العهدات",
       "by_agent": "حسب المندوب",
       "count": "عدد العهد",
       "custodies": "جميع العهدات",
@@ -630,15 +587,10 @@
       "returned": "المردود للخزينة",
       "transferred": "المحوّل بين المناديب",
       "spent": "المصروف",
-      "from_date": "من تاريخ",
-      "to_date": "إلى تاريخ",
       "agent": "المندوب (طرف)",
       "type": "نوع الحركة",
       "custody_number": "رقم العهدة",
       "show_closures": "إظهار الإغلاقات الصفرية",
-      "col_from": "من",
-      "col_to": "إلى",
-      "col_amount": "المبلغ",
       "apply": "تطبيق",
       "date_range": "الفترة الزمنية"
     },
@@ -649,14 +601,8 @@
       "total_received": "إجمالي المستلم (عهد + تحويلات)",
       "total_spent": "إجمالي المصروفات",
       "total_returned": "إجمالي المبالغ المردودة",
-      "transferred_in": "تحويلات واردة إليّ",
-      "transferred_out": "تحويلات صادرة مني",
       "remaining": "رصيدي الحالي",
       "all": "جميع الحركات",
-      "received_tab": "عهد مستلمة",
-      "expenses_tab": "مصروفات",
-      "returned_tab": "مبالغ مردودة",
-      "transfers_tab": "تحويلات",
       "tab_sent": "التحويلات المرسلة",
       "tab_received": "التحويلات المستلمة"
     },
@@ -667,8 +613,6 @@
       "col_requested_by": "مقدم الطلب",
       "col_reason": "السبب",
       "empty": "لا توجد طلبات رد",
-      "col_amount": "المبلغ",
-      "col_date": "التاريخ",
       "col_approved_by": "المعتمد",
       "col_approved_at": "تاريخ الموافقة",
       "col_rejection": "سبب الرفض",
@@ -677,7 +621,6 @@
       "reject": "رفض الطلب",
       "reject_reason": "سبب الرفض",
       "choose_treasury": "اختر الخزينة المستقبلة",
-      "blocked_transfer": "لا يمكن رد عهدة بها تحويلات معلقة. يرجى انتظار البت في التحويلات أولاً",
       "subtitle": "الموافقة على طلبات الرد للعهدات التي تخصك",
       "tab_all": "الكل",
       "tab_pending": "المعلقة",
@@ -700,20 +643,18 @@
       "col_requested_at": "تاريخ الطلب",
       "empty": "لا توجد تحويلات",
       "empty_text": "حوّل جزءاً من عهدتك إلى مندوب آخر بطلب يوافق عليه المستلم",
+      "pending_count": "معلقة",
+      "approved_count": "مقبولة",
+      "rejected_count": "مرفوضة",
+      "col_decided_at": "تاريخ القرار",
+      "col_decided_by": "المُقرر",
+      "col_rejection": "سبب الرفض",
+      "pending_for_me": "لديك {count} تحويلات معلقة بانتظار قرارك",
       "tabs": {
         "sent": "التحويلات المرسلة",
         "received": "التحويلات المستقبلة",
         "all": "كل التحويلات"
-      },
-      "pending_count": "معلقة",
-      "approved_count": "مقبولة",
-      "rejected_count": "مرفوضة",
-      "col_sender": "المرسل",
-      "col_receiver": "المستلم",
-      "col_decided_at": "تاريخ القرار",
-      "col_decided_by": "المُقرر",
-      "col_rejection": "سبب الرفض",
-      "pending_for_me": "لديك {count} تحويلات معلقة بانتظار قرارك"
+      }
     },
     "create": {
       "title": "إنشاء طلب تحويل عهدة",
@@ -723,10 +664,7 @@
       "notes": "ملاحظات",
       "available": "المتاح بعد التجميد",
       "over_limit": "المبلغ يتجاوز الحد الأقصى القابل للتحويل",
-      "submit": "إرسال الطلب",
-      "frozen": "المجمّد حالياً",
-      "max_transferable": "الحد الأقصى القابل للتحويل",
-      "created": "تم إرسال طلب التحويل. سيجمّد المبلغ حتى يبت المستلم في الطلب"
+      "submit": "إرسال الطلب"
     },
     "detail": {
       "title": "تفاصيل التحويل",
@@ -734,7 +672,8 @@
       "reject": "رفض التحويل",
       "reject_reason": "سبب الرفض",
       "confirm_reject": "تأكيد الرفض",
-      "only_receiver_hint": "المستلم وحده يستطيع قبول التحويل أو رفضه"
+      "only_receiver_hint": "المستلم وحده يستطيع قبول التحويل أو رفضه",
+      "accept_confirm": "هل تريد قبول هذا التحويل؟ سيُضاف المبلغ إلى عهدتك المستلمة"
     }
   },
   "expense": {
@@ -765,17 +704,9 @@
       "unreview": "إلغاء المراجعة",
       "quick_dialog": {
         "title": "مصروف سريع",
-        "created": "تم تسجيل المصروف السريع. سيكمله المحاسب بالتوجيه لاحقاً",
         "line_items": "تفاصيل البنود (نص حر)",
         "note": "سيُسجّل كمصروف سريع بدون تفاصيل كاملة؛ يمكن تعديله لاحقاً لإضافة التفاصيل"
       },
-      "total": "إجمالي المصروفات",
-      "custody_expenses": "مصروفات العهد",
-      "purchase_requests": "طلبات الشراء",
-      "salaries": "الرواتب والمرتبات",
-      "col_case": "الحالة الاجتماعية",
-      "col_amount": "المبلغ",
-      "col_status": "الحالة",
       "col_attachment": "المرفق",
       "filtered_total": "إجمالي النتائج المصفاة",
       "review_confirm": "تأكيد المراجعة؟ بعد المراجعة ستحتاج تعديلات المندوب على هذا المصروف إلى موافقة المحاسب/المدير",
@@ -783,7 +714,9 @@
       "review_dialog": {
         "title": "مراجعة مصروف بلا توجيه محاسبي",
         "warning": "هذا المصروف بدون توجيه محاسبي. اختر التوجيه الآن أو أكمل المراجعة وحدده لاحقاً بالتعديل"
-      }
+      },
+      "option_all": "الكل",
+      "custody_fallback": "عهدة رقم {{id}}"
     },
     "form": {
       "create_title": "إضافة مصروف جديد",
@@ -800,7 +733,6 @@
       "location": "الموقع",
       "attachment": "إرفاق ملف (اختياري)",
       "attachment_removed": "سيُحذف المرفق الحالي نهائياً عند اعتماد الطلب",
-      "remove_attachment": "حذف المرفق الحالي نهائياً (بدون رفع ملف بديل)",
       "spill_hint": "يُصرف من العهدة المختارة أولاً، والزائد من عهداتك الأخرى الأقدم فالأحدث",
       "selected_balance": "رصيد العهدة المختارة",
       "total_available": "إجمالي المتاح لك",
@@ -819,7 +751,6 @@
       "from_treasury": "من الخزينة",
       "case": "حالة اجتماعية",
       "other": "مصروفات أخرى",
-      "created": "تم تسجيل المصروف بنجاح",
       "section_basics": "البيانات الأساسية",
       "section_direction": "التوجيه المحاسبي",
       "section_details": "التفاصيل",
@@ -839,7 +770,6 @@
       "item_description": "البيان",
       "item_quantity": "الكمية",
       "item_unit_price": "سعر الوحدة",
-      "user": "المستخدم",
       "type": "نوع المصروف",
       "direction": "التوجيه المحاسبي",
       "amount": "المبلغ",
@@ -878,11 +808,7 @@
       "total": "إجمالي المصروفات",
       "count": "عدد المصروفات",
       "general": "مصروفات عامة",
-      "cases": "حالات اجتماعية",
-      "request_custody": "طلب عهدة جديدة",
-      "transfer": "تحويل عهدتي",
-      "col_amount": "المبلغ",
-      "col_case": "الحالة الاجتماعية"
+      "cases": "حالات اجتماعية"
     },
     "edit_requests": {
       "title": "طلبات تعديل المصروفات",
@@ -903,13 +829,12 @@
         "after": "القيمة الجديدة",
         "reason": "سبب التعديل",
         "rejection_reason": "سبب الرفض",
-        "attachment_removed": "حذف المرفق"
+        "attachment_removed": "حذف المرفق",
+        "items_separator": "، "
       },
       "pending": "طلبات معلقة",
       "approved": "موافقات",
-      "rejected": "رفوضات",
-      "col_date": "التاريخ",
-      "col_status": "الحالة"
+      "rejected": "رفوضات"
     }
   },
   "direction": {
@@ -924,11 +849,6 @@
       "total_categories": "إجمالي الفروع",
       "total_items": "إجمالي البنود",
       "inactive": "غير نشطة",
-      "add_level2": "إضافة م٢",
-      "add_level3": "إضافة م٣",
-      "add_item": "إضافة بند",
-      "col_name": "الاسم",
-      "col_code": "الكود",
       "toggle_active": "تفعيل/تعطيل البند",
       "expand": "توسيع",
       "collapse": "تجميع",
@@ -945,8 +865,7 @@
       "edit_category": "تعديل التصنيف",
       "new_item": "إضافة بند",
       "edit_item": "تعديل البند",
-      "parent": "التصنيف الأب",
-      "saved": "تم الحفظ بنجاح"
+      "parent": "التصنيف الأب"
     },
     "picker": {
       "group": "التوجيه المحاسبي",
@@ -991,7 +910,8 @@
       "custody_closed": "العهد المغلقة",
       "rejected": "الحالات المرفوضة",
       "social_case_expenses": "مصروفات الحالات الاجتماعية",
-      "governorates_hint": "أعلى 5 محافظات بالمصروف — التفاصيل الكاملة في تقرير المحافظات"
+      "governorates_hint": "أعلى 5 محافظات بالمصروف — التفاصيل الكاملة في تقرير المحافظات",
+      "empty": "لا توجد بيانات للتقارير بعد"
     },
     "researchers": {
       "title": "إحصائيات الباحثين الاجتماعيين",
@@ -1097,8 +1017,7 @@
       "not_reconciled": "فرق",
       "expected_formula": "المتوقع = تبرعات + مرتجعات + تحويلات واردة - عهد - مصاريف مباشرة - تحويلات صادرة",
       "col_transfers": "تحويلات من/إلى خزائن (صافي)",
-      "total": "المجموع",
-      "summary": "البيان"
+      "empty": "لا توجد خزائن لمطابقتها"
     },
     "governorates": {
       "title": "الحالات الاجتماعية حسب المحافظة",
@@ -1132,12 +1051,7 @@
       "total": "إجمالي الحالات",
       "pending": "حالات معلقة",
       "approved": "حالات موافق عليها",
-      "rejected": "حالات مرفوضة",
-      "col_assistance": "المساعدة",
-      "col_spent": "المصروف",
-      "col_last": "آخر صرف",
-      "col_relatives": "الأقارب",
-      "filter_governorate": "المحافظة"
+      "rejected": "حالات مرفوضة"
     },
     "form": {
       "create_title": "إضافة حالة اجتماعية",
@@ -1158,11 +1072,9 @@
       "housing_type": "نوع السكن",
       "housing_status": "حالة السكن",
       "assistance_type": "نوع المساعدة المطلوبة",
-      "add_document": "إضافة مستند",
       "family_members": "الأقارب",
       "add_member": "إضافة قريب",
       "relation": "صلة القرابة",
-      "saved": "تم حفظ الحالة بنجاح",
       "section_basics": "البيانات الأساسية",
       "section_personal": "البيانات الشخصية",
       "section_housing": "معلومات السكن",
@@ -1202,25 +1114,18 @@
       "reject": "الرفض",
       "researcher": "الباحث",
       "assistance": "نوع المساعدة",
-      "status": "الحالة",
       "address": "العنوان",
       "governorate": "المحافظة",
       "district": "المركز/الحي",
       "marital": "الحالة الإجتماعية",
-      "income": "الدخل والعمل",
-      "housing": "وصف المسكن",
       "documents": "المستندات",
-      "comments": "التعليقات",
       "expenses": "المصروفات المرتبطة",
       "family_members": "الأقارب",
       "total_spent": "إجمالي المصروف",
       "reject_dialog": "رفض الحالة",
       "reject_reason": "سبب الرفض",
-      "toggle_active": "تفعيل/إيقاف",
-      "col_type": "النوع",
       "col_amount": "المبلغ",
       "col_date": "التاريخ",
-      "col_relation": "صلة القرابة",
       "empty_expenses": "لا توجد مصروفات مرتبطة بهذه الحالة",
       "name": "الاسم",
       "phone": "رقم الهاتف",
@@ -1236,7 +1141,8 @@
       "spending_summary": "ملخص الصرف",
       "expenses_count": "عدد المصروفات",
       "col_user": "بواسطة",
-      "view_document": "عرض"
+      "view_document": "عرض",
+      "col_index": "#"
     },
     "mine": {
       "title": "حالاتي الاجتماعية",
@@ -1353,7 +1259,8 @@
       "pending_salaries": "مرتبات معلقة",
       "approved_salaries": "مرتبات معتمدة",
       "recorded_salaries": "مرتبات مسجلة كمصروف",
-      "today_attendance": "حضور اليوم"
+      "today_attendance": "حضور اليوم",
+      "empty": "لا توجد بيانات للموارد البشرية بعد"
     },
     "employees": {
       "title": "إدارة الموظفين",
@@ -1367,10 +1274,8 @@
       "hire_date": "تاريخ التعيين",
       "salary": "الراتب (ج.م)",
       "empty": "لا يوجد موظفون بعد",
-      "col_hire": "تاريخ التعيين",
-      "col_salary": "الراتب",
-      "col_status": "الحالة",
-      "saved": "تم حفظ الموظف بنجاح"
+      "status_active": "نشط",
+      "status_inactive": "موقوف"
     },
     "attendance": {
       "title": "تسجيل الحضور والغياب",
@@ -1380,10 +1285,7 @@
       "add": "إضافة السجل",
       "empty": "لا توجد سجلات حضور",
       "month": "الشهر",
-      "year": "السنة",
-      "employee": "الموظف",
-      "date": "التاريخ",
-      "filter": "تصفية"
+      "year": "السنة"
     },
     "kpi": {
       "title": "مؤشرات الأداء الرئيسية (KPI)",
@@ -1396,11 +1298,7 @@
       "col_target": "الهدف",
       "col_actual": "التحقيق الفعلي",
       "col_percent": "النسبة %",
-      "empty": "لا توجد مؤشرات بعد",
-      "employee": "الموظف",
-      "start": "بداية الفترة",
-      "end": "نهاية الفترة",
-      "col_period": "الفترة"
+      "empty": "لا توجد مؤشرات بعد"
     },
     "salaries": {
       "title": "حسابات المرتبات",
@@ -1421,29 +1319,21 @@
         "late_days": "أيام التأخير",
         "leave_days": "أيام الإجازة",
         "employee": "اسم الموظف",
-        "job": "الوظيفة",
         "period": "الشهر والسنة",
-        "method": "طريقة الحساب",
         "calculated": "المرتب المحسوب",
         "deductions": "الخصومات",
         "bonuses": "العلاوات",
         "allowances": "العلاوات والخصومات",
-        "edit": "تعديل",
         "add_allowance": "إضافة",
         "type": "النوع",
         "description": "البيان",
         "amount": "المبلغ (ج.م)",
-        "recorded": "تم تسجيل المرتب كمصروف بنجاح",
         "approved_at": "موافقة في",
         "paid_at": "دفع في"
       },
       "edit_title": "تعديل حساب المرتب",
       "history_title": "سجل مرتبات الموظف",
       "empty": "لا توجد مرتبات محسوبة بعد",
-      "calculated": "تم حساب مرتبات الشهر بنجاح",
-      "col_calculated": "المرتب المحسوب",
-      "col_deductions": "الخصومات",
-      "col_bonuses": "العلاوات",
       "col_status": "الحالة",
       "export": "تصدير تقرير المرتبات",
       "notes": "ملاحظات",
@@ -1474,7 +1364,6 @@
         "submit": "إرسال الطلب",
         "supplier": "المورد المقترح (اختياري)",
         "attachment": "مرفق (اختياري)",
-        "created": "تم إرسال طلب الشراء",
         "cat_office_supplies": "مستلزمات مكتبية",
         "cat_equipment": "معدات وأجهزة",
         "cat_services": "خدمات",
@@ -1505,10 +1394,7 @@
       "pending": "في الانتظار",
       "approved": "موافق عليها",
       "purchased": "تم الشراء",
-      "total_spent": "إجمالي المنصرف",
-      "create": "طلب شراء جديد",
-      "col_status": "الحالة",
-      "col_date": "التاريخ"
+      "create": "طلب شراء جديد"
     },
     "maintenance": {
       "list_title": "طلبات الصيانة",
@@ -1523,14 +1409,14 @@
         "priority": "الأولوية",
         "description": "وصف المشكلة",
         "submit": "إرسال الطلب",
-        "attachment": "صورة أو مستند (اختياري)",
-        "created": "تم إرسال بلاغ الصيانة"
+        "attachment": "صورة أو مستند (اختياري)"
       },
       "detail": {
         "title": "طلب صيانة",
         "resolve": "تم الإصلاح",
         "assign": "تكليف وبدء المعالجة",
         "assignee": "المكلَّف",
+        "rejected_by": "رافض الطلب",
         "resolution_notes": "ملاحظات الإصلاح",
         "reject": "رفض الطلب"
       },
@@ -1539,9 +1425,7 @@
       "in_progress": "جاري المعالجة",
       "resolved": "تم الحل",
       "create": "إبلاغ عن مشكلة",
-      "col_status": "الحالة",
-      "col_assignee": "المكلَّف",
-      "col_date": "التاريخ"
+      "col_assignee": "المكلَّف"
     },
     "suppliers": {
       "title": "الموردون",
@@ -1554,10 +1438,6 @@
       "col_email": "البريد",
       "col_requests": "طلبات الشراء",
       "empty": "لا يوجد موردون بعد",
-      "address": "العنوان",
-      "notes": "ملاحظات",
-      "col_status": "الحالة",
-      "saved": "تم حفظ المورد بنجاح",
       "deactivate": "تعطيل المورد"
     }
   },
@@ -1571,10 +1451,7 @@
       "empty": "لا توجد مهام",
       "pending": "قيد الانتظار",
       "in_progress": "جاري التنفيذ",
-      "completed": "مكتملة",
-      "cancelled": "ملغاة",
-      "create": "مهمة جديدة",
-      "col_status": "الحالة"
+      "completed": "مكتملة"
     },
     "form": {
       "title": "مهمة جديدة",
@@ -1583,8 +1460,7 @@
       "assignee": "تعيين إلى",
       "priority": "الأولوية",
       "due_date": "تاريخ الاستحقاق",
-      "submit": "إنشاء المهمة",
-      "created": "تم إنشاء المهمة بنجاح"
+      "submit": "إنشاء المهمة"
     },
     "detail": {
       "title": "تفاصيل المهمة",
@@ -1623,7 +1499,6 @@
   "notification": {
     "title": "الإشعارات",
     "empty": "لا توجد إشعارات",
-    "all_read": "تم تعليم جميع الإشعارات كمقروءة",
     "mark_read_failed": "تعذر تحديد الإشعار كمقروء"
   },
   "broadcast": {
@@ -1645,7 +1520,6 @@
     "col_status": "الحالة",
     "deactivate": "إيقاف",
     "reactivate": "تنشيط",
-    "created": "تم إرسال الرسالة العاجلة",
     "dismiss": "إخفاء الرسالة",
     "level_info": "معلومة",
     "level_warning": "تحذير",
@@ -1663,8 +1537,7 @@
     "col_user": "المستخدم",
     "col_event": "الحدث",
     "col_description": "الوصف",
-    "empty": "لا يوجد نشاط مسجل",
-    "col_type": "النوع"
+    "empty": "لا يوجد نشاط مسجل"
   },
   "user": {
     "list": {
@@ -1676,10 +1549,7 @@
       "empty": "لا يوجد مستخدمون",
       "total": "إجمالي المستخدمين",
       "active": "المستخدمون النشطون",
-      "inactive": "المستخدمون المعطلون",
-      "roles_count": "عدد الأدوار",
-      "add": "إضافة مستخدم",
-      "col_roles": "الأدوار"
+      "inactive": "المستخدمون المعطلون"
     },
     "form": {
       "create_title": "إضافة مستخدم جديد",
@@ -1690,18 +1560,22 @@
       "password": "كلمة المرور",
       "roles": "الأدوار",
       "active": "المستخدم نشط",
-      "roles_hint": "يمكن إسناد أكثر من دور لنفس المستخدم",
-      "password_confirm": "تأكيد كلمة المرور",
-      "saved": "تم حفظ المستخدم بنجاح"
+      "roles_hint": "يمكن إسناد أكثر من دور لنفس المستخدم"
     },
     "detail": {
       "title": "تفاصيل المستخدم",
       "name": "الاسم",
       "email": "البريد الإلكتروني",
       "phone": "رقم الهاتف",
-      "status": "الحالة",
       "roles": "الأدوار",
       "delete_self_hint": "لا يمكنك حذف حسابك الحالي"
+    },
+    "role": {
+      "manager": "مدير",
+      "accountant": "محاسب",
+      "agent": "مندوب",
+      "social_worker": "باحث اجتماعي",
+      "supervisor": "مشرف"
     },
     "menu": "قائمة المستخدم"
   },
@@ -1712,8 +1586,7 @@
     "logo": "تحميل شعار جديد",
     "save_logo": "حفظ الشعار",
     "save_info": "حفظ المعلومات",
-    "logo_hint": "الشعار يظهر في الشريط الجانبي وفي الطباعة",
-    "saved": "تم حفظ الإعدادات بنجاح"
+    "logo_hint": "الشعار يظهر في الشريط الجانبي وفي الطباعة"
   },
   "profile": {
     "title": "حسابي الشخصي",
@@ -1733,12 +1606,10 @@
     "role": "الدور",
     "picture": "الصورة الشخصية",
     "save_picture": "حفظ الصورة",
-    "password_saved": "تم تحديث كلمة المرور بنجاح",
     "picture_choose": "اختيار صورة الملف الشخصي",
     "picture_hint": "صورة بصيغة JPEG أو PNG أو GIF وبحجم أقصى 2 ميجابايت",
     "picture_invalid_type": "نوع الصورة غير مدعوم. المسموح: JPEG أو PNG أو GIF",
-    "picture_too_large": "حجم الصورة يتجاوز 2 ميجابايت",
-    "picture_saved": "تم تحديث الصورة الشخصية بنجاح"
+    "picture_too_large": "حجم الصورة يتجاوز 2 ميجابايت"
   },
   "notifications": {
     "mark_all": "تعليم الكل كمقروء",

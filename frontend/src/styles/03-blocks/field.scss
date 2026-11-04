@@ -32,6 +32,14 @@
   gap: 4px;
 }
 
+/* Filter-bar sizing (T5-03): the fixed min-widths that pages used to carry
+   as inline style="min-width: …" — every width a filter field needs is one
+   of these four steps, so no inline style can come back. */
+.field--sm { min-width: 9rem; }
+.field--md { min-width: 11rem; }
+.field--lg { min-width: 12rem; }
+.field--xl { min-width: 14rem; }
+
 .field--invalid .p-inputtext,
 .field--invalid .p-select,
 .field--invalid .p-textarea {

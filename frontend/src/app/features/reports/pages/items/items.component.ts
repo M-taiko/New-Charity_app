@@ -7,95 +7,95 @@ import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { ApiClient } from '@core/http/api-client';
 import type { DirectionNode, ItemResponse, Lookups } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface ItemsData {
   summary: { total_amount: string; count: number };
   items: { item: string; category: string | null; count: number; total: string; average: string; percentage: number }[];
 }
 
-/** Expense items report (plan 20, T3-110): Blade filters, cards, table + pie chart. */
+/** Expense items report (plan 20, T3-110): Blade filters, cards, table + pie chart.
+ *  T4-20/21/27: async-page states + static ledger table in the shared layout. */
 @Component({
   selector: 'app-items-report',
   standalone: true,
   imports: [
-    TranslatePipe, FormsModule, ButtonModule, DatePickerModule, SelectModule,
-    PageHeaderComponent, PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe,
+    FieldComponent, TranslatePipe, FormsModule, ButtonModule, DatePickerModule, SelectModule,
+    PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
+    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe,
   ],
   template: `
-    @if (data.value(); as d) {
-      <app-print-sheet [title]="'report.items.title' | translate">
-        <app-page-header [title]="'report.items.title' | translate">
-          <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
-        </app-page-header>
+    <app-print-sheet [title]="'report.items.title' | translate">
+      <app-page-header [title]="'report.items.title' | translate">
+        <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
+      </app-page-header>
 
-        <div class="filter-bar">
-          <div class="filter-bar__row">
-            <div class="field">
-              <label class="field__label" for="items-filter-category">{{ 'report.items.filter_category' | translate }}</label>
-              <p-select appendTo="body" inputId="items-filter-category" name="category"
-                [options]="categoryOptions()" optionLabel="label" optionValue="value" [filter]="true"
-                [ngModel]="params().category_id" (ngModelChange)="setParams({ category_id: $event })"
-                [ariaLabel]="'report.items.filter_category' | translate"
-              />
+      <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
+        @if (data.value(); as d) {
+          <div class="filter-bar">
+            <div class="filter-bar__row">
+              <app-field label="report.items.filter_category" controlId="items-filter-category">
+                <p-select appendTo="body" inputId="items-filter-category" name="category"
+                  [options]="categoryOptions()" optionLabel="label" optionValue="value" [filter]="true"
+                  [ngModel]="params().category_id" (ngModelChange)="setParams({ category_id: $event })"
+                  [ariaLabel]="'report.items.filter_category' | translate"
+                />
+              </app-field>
+              <app-field label="report.filters.range" controlId="items-filter-date">
+                <p-datepicker appendTo="body" inputId="items-filter-date" name="date" selectionMode="range"
+                  [showIcon]="true"
+                  [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
+                  [ariaLabel]="'report.filters.range' | translate"
+                />
+              </app-field>
+              <div class="filter-bar__spacer"></div>
+              <p-button [label]="'common.reset' | translate" size="small" [outlined]="true" (click)="resetFilters()" />
             </div>
-            <div class="field">
-              <label class="field__label" for="items-filter-date">{{ 'report.filters.range' | translate }}</label>
-              <p-datepicker appendTo="body" inputId="items-filter-date" name="date" selectionMode="range"
-                [showIcon]="true"
-                [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
-                [ariaLabel]="'report.filters.range' | translate"
-              />
-            </div>
-            <div class="filter-bar__spacer"></div>
-            <p-button [label]="'common.reset' | translate" size="small" [outlined]="true" (click)="resetFilters()" />
           </div>
-        </div>
 
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'common.total'" [value]="d.summary.total_amount" [money]="true" />
-          <app-stat-tile [label]="'common.count'" [value]="d.summary.count" />
-          <app-stat-tile [label]="'report.items.items_count'" [value]="d.items.length" />
-          <app-stat-tile [label]="'report.items.average'" [value]="average()" [money]="true" />
-        </div>
+          <div class="kpi-grid">
+            <app-stat-tile [label]="'common.total'" [value]="d.summary.total_amount" [money]="true" />
+            <app-stat-tile [label]="'common.count'" [value]="d.summary.count" />
+            <app-stat-tile [label]="'report.items.items_count'" [value]="d.items.length" />
+            <app-stat-tile [label]="'report.items.average'" [value]="average()" [money]="true" />
+          </div>
 
-        <div class="ledger-table u-mt-4">
-          <table>
-            <thead><tr>
-              <th>{{ 'report.items.col_item' | translate }}</th>
-              <th>{{ 'report.items.col_category' | translate }}</th>
-              <th>{{ 'report.items.col_count' | translate }}</th>
-              <th>{{ 'report.items.col_total' | translate }}</th>
-              <th>{{ 'report.items.col_average' | translate }}</th>
-              <th>{{ 'report.items.col_percent' | translate }}</th>
-            </tr></thead>
-            <tbody>
-              @for (row of d.items; track row.item) {
+          <div class="u-mt-4">
+            <app-ledger-table [columns]="cols" [rows]="d.items" [emptyLabel]="'report.items.empty'">
+              <ng-template appLedgerBody let-row>
                 <tr class="ledger-table__row">
-                  <td>{{ row.item }}</td>
-                  <td>{{ row.category ?? '—' }}</td>
-                  <td class="ledger-table__cell-num">{{ row.count }}</td>
-                  <td class="ledger-table__cell-num">{{ row.total | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.average | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.percentage }}%</td>
+                  <td appLedgerCol="item">{{ row.item }}</td>
+                  <td appLedgerCol="category">{{ row.category ?? '—' }}</td>
+                  <td appLedgerCol="count" class="u-bidi">{{ row.count }}</td>
+                  <td appLedgerCol="total"><span class="u-bidi">{{ row.total | money }}</span></td>
+                  <td appLedgerCol="average"><span class="u-bidi">{{ row.average | money }}</span></td>
+                  <td appLedgerCol="percentage" class="u-bidi">{{ row.percentage }}%</td>
                 </tr>
-              } @empty { <tr><td colspan="6" class="u-muted">{{ 'report.items.empty' | translate }}</td></tr> }
-            </tbody>
-          </table>
-        </div>
-
-        @if (d.items.length > 0) {
-          <div class="kpi-grid u-mt-4">
-            <app-chart-card [title]="'report.items.chart'" [series]="itemsSeries()" />
+              </ng-template>
+            </app-ledger-table>
           </div>
+
+          @if (d.items.length > 0) {
+            <div class="kpi-grid u-mt-4">
+              <app-chart-card [title]="'report.items.chart'" [series]="itemsSeries()" />
+            </div>
+          }
         }
-      </app-print-sheet>
-    }
+        <div empty>
+          <app-empty-state [title]="'report.items.empty'" [text]="'common.no_data'" />
+        </div>
+      </app-async-page>
+    </app-print-sheet>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -116,6 +116,17 @@ export class ItemsReportPage {
         }),
       ).then((r) => r.data),
   });
+
+  isEmpty = (): boolean => (this.data.value()?.items ?? []).length === 0;
+
+  readonly cols = [
+    { field: 'item', header: 'report.items.col_item' },
+    { field: 'category', header: 'report.items.col_category' },
+    { field: 'count', header: 'report.items.col_count', numeric: true },
+    { field: 'total', header: 'report.items.col_total', numeric: true },
+    { field: 'average', header: 'report.items.col_average', numeric: true },
+    { field: 'percentage', header: 'report.items.col_percent', numeric: true },
+  ];
 
   /** reference data for the category filter (cacheable endpoint) */
   lookups = resource<Lookups, unknown>({

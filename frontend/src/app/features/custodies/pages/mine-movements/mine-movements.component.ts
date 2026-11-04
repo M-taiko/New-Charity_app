@@ -8,6 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -15,7 +16,9 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
+import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ListResponse } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface Row {
   id: number;
@@ -50,8 +53,8 @@ const TYPE_VALUES = [
   selector: 'app-my-movements',
   standalone: true,
   imports: [
-    TranslatePipe, FormsModule, ButtonModule, SelectModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    FieldComponent, TranslatePipe, FormsModule, ButtonModule, SelectModule,
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,15 +65,14 @@ const TYPE_VALUES = [
       </div>
     </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4, 5]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
+    <app-async-page [resource]="data" variant="list">
+      @if (data.value(); as page) {
         <div class="kpi-grid">
-        <app-stat-tile [label]="'custody.my_movements.custodies_count'" [value]="summaryValue('custodies_count')" />
-        <app-stat-tile [label]="'custody.my_movements.total_received'" [value]="summaryValue('total_received')" [money]="true" />
-        <app-stat-tile [label]="'custody.my_movements.total_spent'" [value]="summaryValue('total_spent')" [money]="true" />
-        <app-stat-tile [label]="'custody.my_movements.total_returned'" [value]="summaryValue('total_returned')" [money]="true" />
-        <app-stat-tile [label]="'custody.my_movements.remaining'" [value]="summaryValue('remaining')" [money]="true" />
+          <app-stat-tile [label]="'custody.my_movements.custodies_count'" [value]="summaryValue('custodies_count')" />
+          <app-stat-tile [label]="'custody.my_movements.total_received'" [value]="summaryValue('total_received')" [money]="true" />
+          <app-stat-tile [label]="'custody.my_movements.total_spent'" [value]="summaryValue('total_spent')" [money]="true" />
+          <app-stat-tile [label]="'custody.my_movements.total_returned'" [value]="summaryValue('total_returned')" [money]="true" />
+          <app-stat-tile [label]="'custody.my_movements.remaining'" [value]="summaryValue('remaining')" [money]="true" />
         </div>
 
       <div class="filter-bar">
@@ -86,12 +88,11 @@ const TYPE_VALUES = [
           }
         </div>
         <div class="filter-bar__row">
-          <div class="field" style="min-width: 12rem">
-            <label class="field__label" for="mm-filter-type">{{ 'common.type' | translate }}</label>
+          <app-field label="common.type" controlId="mm-filter-type" class="field--lg">
             <p-select appendTo="body" inputId="mm-filter-type" [options]="typeOptions()" optionLabel="label" optionValue="value"
               [ngModel]="params().type" (ngModelChange)="setParam('type', $event)" name="type"
               styleClass="u-full" [autofocus]="false" />
-          </div>
+          </app-field>
         </div>
       </div>
 
@@ -143,7 +144,8 @@ const TYPE_VALUES = [
           <app-empty-state [title]="'custody.my_movements.empty' | translate" [text]="'common.no_data' | translate" />
         </div>
       </app-data-table>
-    }
+      }
+    </app-async-page>
   `,
 })
 export class MyMovementsPage {
@@ -175,6 +177,9 @@ export class MyMovementsPage {
 
   private label(key: string): string {
     const text = this.translate.instant(key);
+    if (text === key) {
+      warnMissingTranslation(key); // dev only — the raw key in the UI means a key was lost (T5-01)
+    }
     return text !== key ? text : key;
   }
 
@@ -184,8 +189,8 @@ export class MyMovementsPage {
   ]);
 
   summaryValue(key: string): string {
-    const value = this.data.value()?.meta?.summary?.[key];
-    return value === undefined || value === null ? '0' : String(value);
+    const value = this.data.value()?.meta.summary?.[key];
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
   }
 
   setParam(key: string, value: string): void {

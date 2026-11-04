@@ -67,32 +67,4 @@ final class ExpenseItemController extends Controller
         ]);
     }
 
-    /** GET /api/v1/expense-categories/{id} — one node with children and items */
-    public function categoryShow(ExpenseCategory $category): JsonResponse
-    {
-        $category->load(['children' => fn ($q) => $q->ordered(), 'items' => fn ($q) => $q->ordered()]);
-
-        return response()->json([
-            'data' => [
-                'id' => $category->id,
-                'name' => $category->name,
-                'code' => $category->code,
-                'level' => (int) $category->level,
-                'parent_id' => $category->parent_id,
-                'is_active' => (bool) $category->is_active,
-                'order' => (int) $category->order,
-                'path' => $category->full_path,
-                'children' => $category->children->map(fn ($c) => [
-                    'id' => $c->id, 'name' => $c->name, 'level' => (int) $c->level, 'is_active' => (bool) $c->is_active,
-                ]),
-                'items' => $category->items->map(fn ($i) => [
-                    'id' => $i->id,
-                    'name' => $i->name,
-                    'code' => $i->code,
-                    'is_active' => (bool) $i->is_active,
-                    'default_amount' => $i->default_amount !== null ? number_format((float) $i->default_amount, 2, '.', '') : null,
-                ]),
-            ],
-        ]);
-    }
 }

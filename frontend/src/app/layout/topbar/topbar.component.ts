@@ -76,7 +76,7 @@ interface ActiveBroadcast {
 
     @if (broadcast(); as b) {
       <div class="broadcast-banner" role="status">
-        <div class="topbar__broadcast" style="flex: 1; min-width: 0">
+        <div class="topbar__broadcast">
           <app-icon [name]="levelIcon(b.level)" [size]="16" />
           <strong class="u-small">{{ b.title }}</strong>
           <span class="u-small u-truncate">{{ b.message }}</span>
@@ -91,8 +91,7 @@ interface ActiveBroadcast {
         </div>
         <button
           type="button"
-          class="topbar__icon-btn"
-          style="width: 28px; height: 28px"
+          class="topbar__icon-btn topbar__icon-btn--sm"
           (click)="dismissBroadcast()"
           [attr.aria-label]="'broadcast.dismiss' | translate"
           [title]="'broadcast.dismiss' | translate"
@@ -105,6 +104,16 @@ interface ActiveBroadcast {
     <app-command-palette [open]="paletteOpen()" (closed)="paletteOpen.set(false)" />
   `,
   styles: `
+    .topbar__icon-btn--sm {
+      width: 28px;
+      height: 28px;
+    }
+
+    .topbar__broadcast {
+      flex: 1;
+      min-width: 0;
+    }
+
     .broadcast-banner {
       display: flex;
       align-items: center;

@@ -20,7 +20,7 @@ import { ButtonModule } from 'primeng/button';
     >
       <p>{{ message() | translate: { name: context() } }}</p>
       <p-footer>
-        <div class="u-flex" style="justify-content: flex-end">
+        <div class="u-flex u-justify-end">
           <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" (onClick)="visible.set(false)" />
           <p-button [label]="confirmLabel() | translate" severity="danger" (onClick)="confirmed.emit(); visible.set(false)" />
         </div>

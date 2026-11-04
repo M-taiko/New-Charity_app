@@ -38,11 +38,12 @@ export class ApiClient {
 
   /** Reference data is cached for a short lifetime (plan 18). */
   loadLookups(force = false): Observable<Lookups> {
-    if (force || this.lookupsSignal() === null) {
+    const cached = this.lookupsSignal();
+    if (force || cached === null) {
       return this.get<Lookups>('/lookups').pipe(tap((data) => { this.lookupsSignal.set(data); }));
     }
     return new Observable<Lookups>((observer) => {
-      observer.next(this.lookupsSignal() as Lookups);
+      observer.next(cached);
       observer.complete();
     });
   }
@@ -50,7 +51,10 @@ export class ApiClient {
   private cleanParams(params: ListParams): Record<string, string> {
     const result: Record<string, string> = {};
     for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined && value !== null && value !== '' && value !== 'all') {
+      if (value === undefined || value === null || value === '' || value === 'all') {
+        continue;
+      }
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
         result[key] = String(value);
       }
     }

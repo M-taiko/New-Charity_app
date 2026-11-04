@@ -38,7 +38,7 @@ import type { ApiErrorBody } from '../../models/api.models';
         </div>
       }
       <p-footer>
-        <div class="u-flex u-gap-2" style="justify-content: flex-end">
+        <div class="u-flex u-gap-2 u-justify-end">
           <p-button
             [label]="'common.cancel' | translate"
             severity="secondary"

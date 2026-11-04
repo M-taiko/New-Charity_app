@@ -9,14 +9,18 @@ import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, type LedgerColumn } from '@shared/ui/ledger-table/ledger-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
+import { RowActionsComponent, type RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
+import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse, ListResponse } from '@shared/models/api.models';
 
 /** my-cases rows are the raw SocialCase model (no researcher relation) */
@@ -65,9 +69,11 @@ interface QuickDetail {
   standalone: true,
   imports: [
     TranslatePipe, RouterLink, ButtonModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
-    EmptyStateComponent, FormDialogComponent, ConfirmDeleteComponent, KeyValueListComponent,
-    StatusStampComponent, DatetimePipe,
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent,
+    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    DataTableComponent, TableBodyDirective, TableColDirective,
+    EmptyStateComponent, FormDialogComponent, ConfirmDeleteComponent,
+    RowActionsComponent, KeyValueListComponent, StatusStampComponent, DatetimePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -77,142 +83,80 @@ interface QuickDetail {
       </div>
     </app-page-header>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
-      <div class="kpi-grid">
-        <app-stat-tile [label]="'case.list.total'" [value]="summaryValue('total')" />
-        <app-stat-tile [label]="'case.list.pending'" [value]="summaryValue('pending')" />
-        <app-stat-tile [label]="'case.list.approved'" [value]="summaryValue('approved')" />
-        <app-stat-tile [label]="'case.list.rejected'" [value]="summaryValue('rejected')" />
-      </div>
-
-      <app-data-table
-        [tableKey]="tableKey"
-        [columns]="columns"
-        [rows]="page.data"
-        [total]="page.meta.total"
-        [perPage]="params().per_page"
-        [loading]="data.isLoading()"
-        (pageChange)="onPage($event)"
-      >
-        <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="name"><a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a></td>
-            <td appTableCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
-            <td appTableCol="assistance_type">{{ label('case.enums.assistance.' + row.assistance_type) }}</td>
-            <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="social_case" /></td>
-            <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-            <td appTableCol="actions">
-              <div class="row-actions">
-                <button type="button" class="row-actions__btn" (click)="openFamily(row)"
-                  [title]="'case.actions.family' | translate" [attr.aria-label]="'case.actions.family' | translate">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-users-group" /></svg>
-                </button>
-                <button type="button" class="row-actions__btn" (click)="openDetails(row)"
-                  [title]="'case.actions.details' | translate" [attr.aria-label]="'case.actions.details' | translate">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </button>
-                @if (canManage()) {
-                  <a class="row-actions__btn" [routerLink]="['/cases', row.id, 'edit']"
-                    [title]="'common.edit' | translate" [attr.aria-label]="'common.edit' | translate">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-pencil" /></svg>
-                  </a>
-                  <button type="button" class="row-actions__btn" (click)="toggleActive(row)" [disabled]="acting()"
-                    [title]="row.is_active ? ('case.actions.deactivate' | translate) : ('case.actions.activate' | translate)"
-                    [attr.aria-label]="row.is_active ? ('case.actions.deactivate' | translate) : ('case.actions.activate' | translate)">
-                    <svg width="16" height="16" aria-hidden="true"><use [attr.href]="'assets/icons/sprite.svg#tabler-' + (row.is_active ? 'check' : 'x')" /></svg>
-                  </button>
-                  <button type="button" class="row-actions__btn row-actions__btn--danger" (click)="askDelete(row)"
-                    [title]="'common.delete' | translate" [attr.aria-label]="'common.delete' | translate">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-trash" /></svg>
-                  </button>
-                }
-              </div>
-            </td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'case.mine.col_name' | translate }}</span>
-              <a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'case.mine.col_phone' | translate }}</span>
-              <span class="u-bidi">{{ row.phone ?? '—' }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'case.mine.col_assistance' | translate }}</span>
-              {{ label('case.enums.assistance.' + row.assistance_type) }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'case.mine.col_status' | translate }}</span>
-              <app-status-stamp [status]="row.status" namespace="social_case" />
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'case.mine.col_date' | translate }}</span>
-              <span class="u-bidi">{{ row.created_at | datetime }}</span>
-            </div>
-            <div class="ledger-table__stacked-item row-actions" style="justify-content: flex-start">
-              <button type="button" class="row-actions__btn" (click)="openFamily(row)"
-                [title]="'case.actions.family' | translate" [attr.aria-label]="'case.actions.family' | translate">
-                <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-users-group" /></svg>
-              </button>
-              <button type="button" class="row-actions__btn" (click)="openDetails(row)"
-                [title]="'case.actions.details' | translate" [attr.aria-label]="'case.actions.details' | translate">
-                <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-              </button>
-              @if (canManage()) {
-                <a class="row-actions__btn" [routerLink]="['/cases', row.id, 'edit']"
-                  [title]="'common.edit' | translate" [attr.aria-label]="'common.edit' | translate">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-pencil" /></svg>
-                </a>
-                <button type="button" class="row-actions__btn" (click)="toggleActive(row)" [disabled]="acting()"
-                  [title]="row.is_active ? ('case.actions.deactivate' | translate) : ('case.actions.activate' | translate)"
-                  [attr.aria-label]="row.is_active ? ('case.actions.deactivate' | translate) : ('case.actions.activate' | translate)">
-                  <svg width="16" height="16" aria-hidden="true"><use [attr.href]="'assets/icons/sprite.svg#tabler-' + (row.is_active ? 'check' : 'x')" /></svg>
-                </button>
-                <button type="button" class="row-actions__btn row-actions__btn--danger" (click)="askDelete(row)"
-                  [title]="'common.delete' | translate" [attr.aria-label]="'common.delete' | translate">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-trash" /></svg>
-                </button>
-              }
-            </div>
-          </tr>
-        </ng-template>
-        <div empty>
-          <app-empty-state [title]="'case.mine.empty' | translate" [text]="'common.no_data' | translate" />
+    <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
+      @if (data.value(); as page) {
+        <div class="kpi-grid">
+          <app-stat-tile [label]="'case.list.total'" [value]="summaryValue('total')" />
+          <app-stat-tile [label]="'case.list.pending'" [value]="summaryValue('pending')" />
+          <app-stat-tile [label]="'case.list.approved'" [value]="summaryValue('approved')" />
+          <app-stat-tile [label]="'case.list.rejected'" [value]="summaryValue('rejected')" />
         </div>
-      </app-data-table>
-    }
+
+        <app-data-table
+          [tableKey]="tableKey"
+          [columns]="columns"
+          [rows]="page.data"
+          [total]="page.meta.total"
+          [perPage]="params().per_page"
+          [loading]="data.isLoading()"
+          (pageChange)="onPage($event)"
+        >
+          <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
+          <ng-template appTableBody let-row>
+            <tr class="ledger-table__row">
+              <td appTableCol="name"><a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a></td>
+              <td appTableCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
+              <td appTableCol="assistance_type">{{ label('case.enums.assistance.' + row.assistance_type) }}</td>
+              <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="social_case" /></td>
+              <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
+              <td appTableCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
+            </tr>
+            <tr class="ledger-table__stacked">
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'case.mine.col_name' | translate }}</span>
+                <a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'case.mine.col_phone' | translate }}</span>
+                <span class="u-bidi">{{ row.phone ?? '—' }}</span>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'case.mine.col_assistance' | translate }}</span>
+                {{ label('case.enums.assistance.' + row.assistance_type) }}
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'case.mine.col_status' | translate }}</span>
+                <app-status-stamp [status]="row.status" namespace="social_case" />
+              </div>
+              <div class="ledger-table__stacked-item">
+                <span class="ledger-table__stacked-label">{{ 'case.mine.col_date' | translate }}</span>
+                <span class="u-bidi">{{ row.created_at | datetime }}</span>
+              </div>
+              <div class="ledger-table__stacked-item">
+                <app-row-actions [actions]="actionsFor(row)" />
+              </div>
+            </tr>
+          </ng-template>
+        </app-data-table>
+      }
+      <div empty>
+        <app-empty-state [title]="'case.mine.empty' | translate" [text]="'common.no_data' | translate" />
+      </div>
+    </app-async-page>
 
     <app-form-dialog [header]="familyHeader()" [submitLabel]="'case.modal.close'" [(visible)]="familyOpen" [sending]="familyLoading()">
-      <table class="ledger-table ledger-table--borderless">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>{{ 'case.form.member_name' | translate }}</th>
-            <th>{{ 'case.form.relation' | translate }}</th>
-            <th>{{ 'case.form.member_gender' | translate }}</th>
-            <th>{{ 'case.form.member_status' | translate }}</th>
-            <th>{{ 'case.form.member_phone' | translate }}</th>
+      <app-ledger-table [columns]="familyCols" [rows]="familyMembers()" [emptyLabel]="'case.modal.empty_family'">
+        <ng-template appLedgerBody let-row let-index="index">
+          <tr class="ledger-table__row">
+            <td appLedgerCol="index" class="u-bidi">{{ index + 1 }}</td>
+            <td appLedgerCol="name">{{ row.name }}</td>
+            <td appLedgerCol="relation">{{ label('case.enums.relation.' + row.relationship) }}</td>
+            <td appLedgerCol="gender">{{ label('case.enums.gender.' + row.gender) }}</td>
+            <td appLedgerCol="status">{{ label('case.enums.member_status.' + row.status) }}</td>
+            <td appLedgerCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
           </tr>
-        </thead>
-        <tbody>
-          @for (m of familyMembers(); track m.id; let i = $index) {
-            <tr class="ledger-table__row">
-              <td class="u-bidi">{{ i + 1 }}</td>
-              <td>{{ m.name }}</td>
-              <td>{{ label('case.enums.relation.' + m.relationship) }}</td>
-              <td>{{ label('case.enums.gender.' + m.gender) }}</td>
-              <td>{{ label('case.enums.member_status.' + m.status) }}</td>
-              <td><span class="u-bidi">{{ m.phone ?? '—' }}</span></td>
-            </tr>
-          } @empty {
-            <tr><td colspan="6">{{ 'case.modal.empty_family' | translate }}</td></tr>
-          }
-        </tbody>
-      </table>
+        </ng-template>
+      </app-ledger-table>
     </app-form-dialog>
 
     <app-form-dialog [header]="'case.detail.title' | translate" [submitLabel]="'common.open_page'" [(visible)]="detailsOpen" [sending]="detailsLoading()" (submit)="openDetailPage()">
@@ -244,12 +188,48 @@ export class MyCasesPage {
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
 
+  /** the family-members modal table (T4-21) */
+  readonly familyCols: LedgerColumn[] = [
+    { field: 'index', header: 'case.detail.col_index' },
+    { field: 'name', header: 'case.form.member_name' },
+    { field: 'relation', header: 'case.form.relation' },
+    { field: 'gender', header: 'case.form.member_gender' },
+    { field: 'status', header: 'case.form.member_status' },
+    { field: 'phone', header: 'case.form.member_phone' },
+  ];
+
   params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
 
   data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string }>({
     loader: () =>
       firstValueFrom(this.http.get<ListResponse<Row>>('/my-cases', { params: cleanParams(this.params()) })),
   });
+
+  /** T4-20: a non-throwing resource view — raw ResourceRef.value() throws on a failed load */
+  readonly pageResource: LoadableResource = {
+    value: () => this.safeValue(),
+    error: () => {
+      try {
+        return this.data.error();
+      } catch {
+        return undefined;
+      }
+    },
+    isLoading: () => this.data.isLoading(),
+    reload: () => {
+      this.data.reload();
+    },
+  };
+
+  private safeValue(): ListResponse<Row> | undefined {
+    try {
+      return this.data.value();
+    } catch {
+      return undefined;
+    }
+  }
+
+  isEmpty = (): boolean => (this.safeValue()?.data ?? []).length === 0;
 
   familyOpen = signal(false);
   familyLoading = signal(false);
@@ -267,9 +247,26 @@ export class MyCasesPage {
 
   readonly canManage = computed(() => this.auth.can('may_manage_social_cases'));
 
+  /** T4-24: family / details / edit / toggle-active / delete (Blade actions) */
+  actionsFor(row: Row): RowActionItem[] {
+    return [
+      { icon: 'users-group', label: 'case.actions.family', handler: () => { this.openFamily(row); } },
+      { icon: 'eye', label: 'case.actions.details', handler: () => { this.openDetails(row); } },
+      { icon: 'pencil', label: 'common.edit', route: ['/cases', row.id, 'edit'], visible: this.canManage() },
+      {
+        icon: row.is_active ? 'check' : 'x',
+        label: row.is_active ? 'case.actions.deactivate' : 'case.actions.activate',
+        handler: () => { this.toggleActive(row); },
+        disabled: this.acting(),
+        visible: this.canManage(),
+      },
+      { icon: 'trash', label: 'common.delete', severity: 'danger', handler: () => { this.askDelete(row); }, visible: this.canManage() },
+    ];
+  }
+
   summaryValue(key: string): string {
-    const value = this.data.value()?.meta?.summary?.[key];
-    return value === undefined || value === null ? '0' : String(value);
+    const value = this.safeValue()?.meta?.summary?.[key];
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
   }
 
   onPage(event: { page: number; per_page: number; sort?: string }): void {
@@ -288,6 +285,9 @@ export class MyCasesPage {
       return '—';
     }
     const translated = this.translate.instant(key);
+    if (translated === key) {
+      warnMissingTranslation(key); // dev only — a raw code in the UI means a key was lost (T5-01)
+    }
     return translated !== key ? translated : value;
   }
 

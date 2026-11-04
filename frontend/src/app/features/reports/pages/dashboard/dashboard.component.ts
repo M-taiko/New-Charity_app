@@ -7,12 +7,16 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { ApiClient } from '@core/http/api-client';
 import type { DirectionNode, ItemResponse, Lookups } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface Figures {
   today: number;
@@ -52,157 +56,153 @@ interface ReportsData {
  * of reports/dashboard.blade.php, plus a direction explorer (T33) — the
  * direction-affected figures and the category chart refresh from
  * GET /directional-stats without leaving the page.
+ * T4-20/21/27: async-page states + static ledger table in the shared layout.
  */
 @Component({
   selector: 'app-reports-dashboard',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
-    PageHeaderComponent, StatTileComponent, ChartCardComponent, PrintSheetComponent, MoneyPipe,
+    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
+    PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
+    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    StatTileComponent, ChartCardComponent, PrintSheetComponent, MoneyPipe,
   ],
   template: `
-    @if (data.value(); as d) {
-      <app-print-sheet [title]="'report.dashboard.title' | translate">
-        <app-page-header [title]="'report.dashboard.title' | translate">
-          <div actions>
-            <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
-          </div>
-        </app-page-header>
+    <app-print-sheet [title]="'report.dashboard.title' | translate">
+      <app-page-header [title]="'report.dashboard.title' | translate">
+        <div actions>
+          <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
+        </div>
+      </app-page-header>
 
-        <!-- T33 direction explorer: direction-affected figures refresh in place -->
-        <div class="filter-bar">
-          <div class="filter-bar__row">
-            <div class="field">
-              <label class="field__label" for="rep-dashboard-direction">{{ 'report.dashboard.direction_filter' | translate }}</label>
-              <p-select appendTo="body" inputId="rep-dashboard-direction" name="direction"
-                [options]="directionOptions()" optionLabel="label" optionValue="value"
-                [ngModel]="selectedDirection()" (ngModelChange)="onDirection($event)"
-                [ariaLabel]="'report.filters.direction' | translate"
-              />
+      <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/dashboard']">
+        @if (data.value(); as d) {
+          <!-- T33 direction explorer: direction-affected figures refresh in place -->
+          <div class="filter-bar">
+            <div class="filter-bar__row">
+              <app-field label="report.dashboard.direction_filter" controlId="rep-dashboard-direction">
+                <p-select appendTo="body" inputId="rep-dashboard-direction" name="direction"
+                  [options]="directionOptions()" optionLabel="label" optionValue="value"
+                  [ngModel]="selectedDirection()" (ngModelChange)="onDirection($event)"
+                  [ariaLabel]="'report.filters.direction' | translate"
+                />
+              </app-field>
             </div>
           </div>
+
+          <div class="kpi-grid">
+            <a class="tile-link" routerLink="/treasury" [title]="'common.open_page' | translate">
+              <app-stat-tile [label]="'report.dashboard.treasury_balance'" [value]="d.treasury_balance" [money]="true" />
+            </a>
+            <a class="tile-link" routerLink="/expenses" [title]="'common.open_page' | translate">
+              <app-stat-tile [label]="'report.dashboard.total_expenses'" [value]="d.total_spent" [money]="true" />
+            </a>
+            <a class="tile-link" routerLink="/custodies" [title]="'common.open_page' | translate">
+              <app-stat-tile [label]="'report.dashboard.active_custodies'" [value]="d.active_custodies" />
+            </a>
+          </div>
+          <div class="kpi-grid">
+            <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
+              <app-stat-tile [label]="'report.dashboard.social_cases'" [value]="d.total_social_cases" />
+            </a>
+            <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
+              <app-stat-tile [label]="'case.list.approved'" [value]="d.approved_cases" />
+            </a>
+            <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
+              <app-stat-tile [label]="'case.list.pending'" [value]="d.pending_cases" />
+            </a>
+          </div>
+
+          <!-- ملخص المصروفات (direction-aware: today / month / year / grand) -->
+          <section class="chart-card u-mt-4">
+            <div class="chart-card__head">
+              <span class="chart-card__title">{{ 'report.dashboard.expenses_summary' | translate }}</span>
+            </div>
+            <div class="kpi-grid u-mt-2">
+              <app-stat-tile [label]="'report.dashboard.expenses_today'" [value]="fig('today')" [money]="true" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.expenses_month'" [value]="fig('this_month')" [money]="true" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.expenses_year'" [value]="fig('this_year')" [money]="true" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.expenses_grand'" [value]="fig('grand_total')" [money]="true" [inset]="true" />
+            </div>
+          </section>
+
+          <!-- تقرير العهد -->
+          <section class="chart-card u-mt-4">
+            <div class="chart-card__head">
+              <span class="chart-card__title">{{ 'report.dashboard.custody_report' | translate }}</span>
+            </div>
+            <div class="kpi-grid u-mt-2">
+              <app-stat-tile [label]="'report.dashboard.custody_amount'" [value]="d.custody_amount" [money]="true" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.custody_spent'" [value]="d.custody_spent" [money]="true" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.custody_returned'" [value]="d.custody_returned" [money]="true" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.custody_remaining'" [value]="custodyRemaining()" [money]="true" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.custody_total'" [value]="d.total_custodies" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.custody_closed'" [value]="d.closed_custodies" [inset]="true" />
+            </div>
+          </section>
+
+          <!-- تقرير الحالات الاجتماعية -->
+          <section class="chart-card u-mt-4">
+            <div class="chart-card__head">
+              <span class="chart-card__title">{{ 'report.dashboard.case_report' | translate }}</span>
+            </div>
+            <div class="kpi-grid u-mt-2">
+              <app-stat-tile [label]="'report.dashboard.social_cases'" [value]="d.total_social_cases" [inset]="true" />
+              <app-stat-tile [label]="'case.list.approved'" [value]="d.approved_cases" [inset]="true" />
+              <app-stat-tile [label]="'case.list.pending'" [value]="d.pending_cases" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.rejected'" [value]="d.rejected_cases" [inset]="true" />
+              <app-stat-tile [label]="'report.dashboard.social_case_expenses'" [value]="d.social_case_expenses" [money]="true" [inset]="true" />
+            </div>
+          </section>
+
+          <div class="kpi-grid u-mt-4">
+            <app-chart-card [title]="'report.dashboard.charts.expenses_by_day'" [series]="byDaySeries()" chartType="bar" />
+            <app-chart-card [title]="'report.dashboard.charts.expenses_by_category'" [series]="categorySeries()" />
+          </div>
+          <div class="kpi-grid u-mt-4">
+            <a class="tile-link" routerLink="/custodies" [title]="'common.open_page' | translate">
+              <app-chart-card [title]="'report.dashboard.charts.custodies_by_agents'" [series]="agentsSeries()" chartType="bar" />
+            </a>
+            <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
+              <app-chart-card [title]="'report.dashboard.charts.cases_by_researchers'" [series]="researchersSeries()" chartType="bar" />
+            </a>
+          </div>
+
+          <!-- بطاقة الحالات حسب المحافظة (T34): أعلى 5 محافظات -->
+          <section class="chart-card u-mt-4">
+            <div class="chart-card__head">
+              <span class="chart-card__title">{{ 'report.dashboard.governorates_card' | translate }}</span>
+              <span class="chart-card__spacer"></span>
+              <p-button [label]="'report.governorates.title' | translate" size="small" [text]="true" routerLink="/reports/governorates" />
+            </div>
+            <app-ledger-table [columns]="govCols" [rows]="governoratesTop()" [emptyLabel]="'report.governorates.empty'">
+              <ng-template appLedgerBody let-row>
+                <tr class="ledger-table__row">
+                  <td appLedgerCol="label">
+                    {{ row.label }}
+                    @if (!row.standard) {
+                      <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
+                    }
+                  </td>
+                  <td appLedgerCol="total" class="u-bidi">{{ row.total }}</td>
+                  <td appLedgerCol="expenses_total"><span class="u-bidi">{{ row.expenses_total | money }}</span></td>
+                </tr>
+              </ng-template>
+            </app-ledger-table>
+            <p class="u-muted u-small u-mt-2">{{ 'report.dashboard.governorates_hint' | translate }}</p>
+          </section>
+
+          <div class="u-flex u-gap-2 u-mt-4 u-flex-wrap">
+            <p-button [label]="'report.dashboard.governorates_card' | translate" size="small" [outlined]="true" routerLink="/reports/governorates" />
+            <p-button [label]="'report.dashboard.view_custodies' | translate" size="small" [outlined]="true" routerLink="/custodies/tracking" />
+            <p-button [label]="'report.dashboard.view_cases' | translate" size="small" [outlined]="true" routerLink="/cases" />
+          </div>
+        }
+        <div empty>
+          <app-empty-state [title]="'report.dashboard.empty'" [text]="'common.no_data'" />
         </div>
-
-        <div class="kpi-grid">
-          <a class="tile-link" routerLink="/treasury" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'report.dashboard.treasury_balance'" [value]="d.treasury_balance" [money]="true" />
-          </a>
-          <a class="tile-link" routerLink="/expenses" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'report.dashboard.total_expenses'" [value]="d.total_spent" [money]="true" />
-          </a>
-          <a class="tile-link" routerLink="/custodies" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'report.dashboard.active_custodies'" [value]="d.active_custodies" />
-          </a>
-        </div>
-        <div class="kpi-grid">
-          <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'report.dashboard.social_cases'" [value]="d.total_social_cases" />
-          </a>
-          <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'case.list.approved'" [value]="d.approved_cases" />
-          </a>
-          <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'case.list.pending'" [value]="d.pending_cases" />
-          </a>
-        </div>
-
-        <!-- ملخص المصروفات (direction-aware: today / month / year / grand) -->
-        <section class="chart-card u-mt-4">
-          <div class="chart-card__head">
-            <span class="chart-card__title">{{ 'report.dashboard.expenses_summary' | translate }}</span>
-          </div>
-          <div class="kpi-grid u-mt-2">
-            <app-stat-tile [label]="'report.dashboard.expenses_today'" [value]="fig('today')" [money]="true" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.expenses_month'" [value]="fig('this_month')" [money]="true" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.expenses_year'" [value]="fig('this_year')" [money]="true" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.expenses_grand'" [value]="fig('grand_total')" [money]="true" [inset]="true" />
-          </div>
-        </section>
-
-        <!-- تقرير العهد -->
-        <section class="chart-card u-mt-4">
-          <div class="chart-card__head">
-            <span class="chart-card__title">{{ 'report.dashboard.custody_report' | translate }}</span>
-          </div>
-          <div class="kpi-grid u-mt-2">
-            <app-stat-tile [label]="'report.dashboard.custody_amount'" [value]="d.custody_amount" [money]="true" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.custody_spent'" [value]="d.custody_spent" [money]="true" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.custody_returned'" [value]="d.custody_returned" [money]="true" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.custody_remaining'" [value]="custodyRemaining()" [money]="true" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.custody_total'" [value]="d.total_custodies" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.custody_closed'" [value]="d.closed_custodies" [inset]="true" />
-          </div>
-        </section>
-
-        <!-- تقرير الحالات الاجتماعية -->
-        <section class="chart-card u-mt-4">
-          <div class="chart-card__head">
-            <span class="chart-card__title">{{ 'report.dashboard.case_report' | translate }}</span>
-          </div>
-          <div class="kpi-grid u-mt-2">
-            <app-stat-tile [label]="'report.dashboard.social_cases'" [value]="d.total_social_cases" [inset]="true" />
-            <app-stat-tile [label]="'case.list.approved'" [value]="d.approved_cases" [inset]="true" />
-            <app-stat-tile [label]="'case.list.pending'" [value]="d.pending_cases" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.rejected'" [value]="d.rejected_cases" [inset]="true" />
-            <app-stat-tile [label]="'report.dashboard.social_case_expenses'" [value]="d.social_case_expenses" [money]="true" [inset]="true" />
-          </div>
-        </section>
-
-        <div class="kpi-grid u-mt-4">
-          <app-chart-card [title]="'report.dashboard.charts.expenses_by_day'" [series]="byDaySeries()" chartType="bar" />
-          <app-chart-card [title]="'report.dashboard.charts.expenses_by_category'" [series]="categorySeries()" />
-        </div>
-        <div class="kpi-grid u-mt-4">
-          <a class="tile-link" routerLink="/custodies" [title]="'common.open_page' | translate">
-            <app-chart-card [title]="'report.dashboard.charts.custodies_by_agents'" [series]="agentsSeries()" chartType="bar" />
-          </a>
-          <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
-            <app-chart-card [title]="'report.dashboard.charts.cases_by_researchers'" [series]="researchersSeries()" chartType="bar" />
-          </a>
-        </div>
-
-        <!-- بطاقة الحالات حسب المحافظة (T34): أعلى 5 محافظات -->
-        <section class="chart-card u-mt-4">
-          <div class="chart-card__head">
-            <span class="chart-card__title">{{ 'report.dashboard.governorates_card' | translate }}</span>
-            <span class="chart-card__spacer"></span>
-            <p-button [label]="'report.governorates.title' | translate" size="small" [text]="true" routerLink="/reports/governorates" />
-          </div>
-          <div class="ledger-table">
-            <table>
-              <thead><tr>
-                <th>{{ 'report.governorates.col_governorate' | translate }}</th>
-                <th>{{ 'report.governorates.col_total' | translate }}</th>
-                <th>{{ 'report.governorates.col_spent' | translate }}</th>
-              </tr></thead>
-              <tbody>
-                @for (row of governoratesTop(); track row.label) {
-                  <tr class="ledger-table__row">
-                    <td>
-                      {{ row.label }}
-                      @if (!row.standard) {
-                        <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
-                      }
-                    </td>
-                    <td class="ledger-table__cell-num">{{ row.total }}</td>
-                    <td class="ledger-table__cell-num">{{ row.expenses_total | money }}</td>
-                  </tr>
-                } @empty {
-                  <tr><td colspan="3" class="u-muted">{{ 'report.governorates.empty' | translate }}</td></tr>
-                }
-              </tbody>
-            </table>
-          </div>
-          <p class="u-muted u-small u-mt-2">{{ 'report.dashboard.governorates_hint' | translate }}</p>
-        </section>
-
-        <div class="u-flex u-gap-2 u-mt-4 u-flex-wrap">
-          <p-button [label]="'report.dashboard.governorates_card' | translate" size="small" [outlined]="true" routerLink="/reports/governorates" />
-          <p-button [label]="'report.dashboard.view_custodies' | translate" size="small" [outlined]="true" routerLink="/custodies/tracking" />
-          <p-button [label]="'report.dashboard.view_cases' | translate" size="small" [outlined]="true" routerLink="/cases" />
-        </div>
-      </app-print-sheet>
-    }
+      </app-async-page>
+    </app-print-sheet>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -215,6 +215,24 @@ export class ReportsDashboardPage {
     loader: () =>
       firstValueFrom(this.http.get<ItemResponse<ReportsData>>('/reports')).then((r) => r.data),
   });
+
+  /** the dashboard is empty only when every main counter is zero */
+  isEmpty = (): boolean => {
+    const d = this.data.value();
+    return (
+      !!d &&
+      d.total_social_cases === 0 &&
+      d.total_custodies === 0 &&
+      d.active_custodies === 0 &&
+      parseFloat(d.total_spent) === 0
+    );
+  };
+
+  readonly govCols = [
+    { field: 'label', header: 'report.governorates.col_governorate' },
+    { field: 'total', header: 'report.governorates.col_total', numeric: true },
+    { field: 'expenses_total', header: 'report.governorates.col_spent', numeric: true },
+  ];
 
   /** reference data for the direction filter (cacheable endpoint) */
   lookups = resource<Lookups, unknown>({

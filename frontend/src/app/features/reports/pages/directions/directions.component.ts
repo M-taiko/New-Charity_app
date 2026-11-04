@@ -8,12 +8,16 @@ import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ItemResponse } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface AnalyticsRow {
   id: number;
@@ -50,83 +54,78 @@ interface DrillExpense {
  * expense-categories-analytics page — date filter, summary cards, the
  * level-badged statistics table and the per-row expenses drill-down
  * (GET /category-item-expenses) that Blade opened in a modal.
+ * T4-20/21/22/27: async-page states + static ledger tables in the shared layout.
  */
 @Component({
   selector: 'app-directions-report',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, DatePickerModule, DialogModule,
-    PageHeaderComponent, PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe, DatetimePipe,
+    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, DatePickerModule, DialogModule,
+    PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
+    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe, DatetimePipe,
   ],
   template: `
-    @if (data.value(); as d) {
-      <app-print-sheet [title]="'report.directions.title' | translate">
-        <app-page-header [title]="'report.directions.title' | translate">
-          <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
-        </app-page-header>
+    <app-print-sheet [title]="'report.directions.title' | translate">
+      <app-page-header [title]="'report.directions.title' | translate">
+        <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
+      </app-page-header>
 
-        <div class="filter-bar">
-          <div class="filter-bar__row">
-            <div class="field">
-              <label class="field__label" for="directions-filter-date">{{ 'report.filters.range' | translate }}</label>
-              <p-datepicker appendTo="body" inputId="directions-filter-date" name="date" selectionMode="range"
-                [showIcon]="true"
-                [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
-                [ariaLabel]="'report.filters.range' | translate"
-              />
+      <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
+        @if (data.value(); as d) {
+          <div class="filter-bar">
+            <div class="filter-bar__row">
+              <app-field label="report.filters.range" controlId="directions-filter-date">
+                <p-datepicker appendTo="body" inputId="directions-filter-date" name="date" selectionMode="range"
+                  [showIcon]="true"
+                  [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
+                  [ariaLabel]="'report.filters.range' | translate"
+                />
+              </app-field>
+              <div class="filter-bar__spacer"></div>
+              <p-button [label]="'common.reset' | translate" size="small" [outlined]="true" (click)="resetFilters()" />
             </div>
-            <div class="filter-bar__spacer"></div>
-            <p-button [label]="'common.reset' | translate" size="small" [outlined]="true" (click)="resetFilters()" />
           </div>
-        </div>
 
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'common.total'" [value]="d.grand_total" [money]="true" />
-          <app-stat-tile [label]="'report.directions.rows_count'" [value]="d.rows.length" />
-          <app-stat-tile [label]="'report.directions.operations'" [value]="operationsCount()" />
-          <app-stat-tile [label]="'report.directions.col_average'" [value]="averageAmount()" [money]="true" />
-        </div>
+          <div class="kpi-grid">
+            <app-stat-tile [label]="'common.total'" [value]="d.grand_total" [money]="true" />
+            <app-stat-tile [label]="'report.directions.rows_count'" [value]="d.rows.length" />
+            <app-stat-tile [label]="'report.directions.operations'" [value]="operationsCount()" />
+            <app-stat-tile [label]="'report.directions.col_average'" [value]="averageAmount()" [money]="true" />
+          </div>
 
-        <div class="kpi-grid u-mt-4">
-          <app-chart-card [title]="'report.directions.charts'" [series]="rootsSeries()" />
-        </div>
+          <div class="kpi-grid u-mt-4">
+            <app-chart-card [title]="'report.directions.charts'" [series]="rootsSeries()" />
+          </div>
 
-        <div class="ledger-table u-mt-4">
-          <div class="ledger-table__header"><span class="ledger-table__title">{{ 'report.directions.details' | translate }}</span></div>
-          <table>
-            <thead><tr>
-              <th>{{ 'report.directions.col_level' | translate }}</th>
-              <th>{{ 'report.directions.col_item' | translate }}</th>
-              <th>{{ 'report.directions.col_code' | translate }}</th>
-              <th>{{ 'report.directions.col_parent' | translate }}</th>
-              <th>{{ 'report.directions.col_total' | translate }}</th>
-              <th>{{ 'report.directions.col_count' | translate }}</th>
-              <th>{{ 'report.directions.col_average' | translate }}</th>
-              <th>{{ 'report.directions.col_reviewer' | translate }}</th>
-              <th>{{ 'report.directions.col_percent' | translate }}</th>
-            </tr></thead>
-            <tbody>
-              @for (row of d.rows; track row.id) {
-                <tr class="ledger-table__row" style="cursor: pointer" tabindex="0" role="button"
+          <div class="u-mt-4">
+            <app-ledger-table [title]="'report.directions.details'" [columns]="rowCols" [rows]="d.rows" [emptyLabel]="'report.directions.empty'">
+              <ng-template appLedgerBody let-row>
+                <tr class="ledger-table__row ledger-table__row--link" tabindex="0" role="button"
                   (click)="openDrill(row)" (keydown.enter)="openDrill(row)"
                   [attr.aria-label]="'report.directions.expenses_dialog' | translate">
-                  <td><span class="stamp">{{ levelKey(row.level) | translate }}</span></td>
-                  <td>{{ row.name }}</td>
-                  <td class="u-bidi">{{ row.code ?? '—' }}</td>
-                  <td>{{ row.parent_name ?? '—' }}</td>
-                  <td class="ledger-table__cell-num">{{ row.total_amount | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.expense_count }}</td>
-                  <td class="ledger-table__cell-num">{{ row.average_amount | money }}</td>
-                  <td>{{ row.reviewed_by ?? '—' }}</td>
-                  <td class="ledger-table__cell-num">{{ row.percentage }}%</td>
+                  <td appLedgerCol="level"><span class="stamp">{{ levelKey(row.level) | translate }}</span></td>
+                  <td appLedgerCol="name">{{ row.name }}</td>
+                  <td appLedgerCol="code" class="u-bidi">{{ row.code ?? '—' }}</td>
+                  <td appLedgerCol="parent_name">{{ row.parent_name ?? '—' }}</td>
+                  <td appLedgerCol="total_amount"><span class="u-bidi">{{ row.total_amount | money }}</span></td>
+                  <td appLedgerCol="expense_count" class="u-bidi">{{ row.expense_count }}</td>
+                  <td appLedgerCol="average_amount"><span class="u-bidi">{{ row.average_amount | money }}</span></td>
+                  <td appLedgerCol="reviewed_by">{{ row.reviewed_by ?? '—' }}</td>
+                  <td appLedgerCol="percentage" class="u-bidi">{{ row.percentage }}%</td>
                 </tr>
-              } @empty { <tr><td colspan="9" class="u-muted">{{ 'report.directions.empty' | translate }}</td></tr> }
-            </tbody>
-          </table>
+              </ng-template>
+            </app-ledger-table>
+          </div>
+        }
+        <div empty>
+          <app-empty-state [title]="'report.directions.empty'" [text]="'common.no_data'" />
         </div>
-      </app-print-sheet>
+      </app-async-page>
+    </app-print-sheet>
 
-      <!-- Drill-down: the row's expenses (GET /category-item-expenses) -->
+    <!-- Drill-down: the row's expenses (GET /category-item-expenses) -->
+    @if (data.value()) {
       <p-dialog appendTo="body" [visible]="drillVisible()" (visibleChange)="drillVisible.set($event)"
         [header]="'report.directions.expenses_dialog' | translate" [modal]="true"
         [draggable]="false" [resizable]="false" styleClass="dialog"
@@ -135,34 +134,20 @@ interface DrillExpense {
         @if (drillLoading()) {
           <div class="skeleton skeleton--tile" role="status"></div>
         } @else {
-          <div class="ledger-table">
-            <table>
-              <thead><tr>
-                <th>{{ 'report.case_expenses.col_date' | translate }}</th>
-                <th>{{ 'report.case_expenses.col_description' | translate }}</th>
-                <th>{{ 'report.directions.col_user' | translate }}</th>
-                <th>{{ 'report.directions.col_reviewer' | translate }}</th>
-                <th>{{ 'common.amount' | translate }}</th>
-                <th>{{ 'common.actions' | translate }}</th>
-              </tr></thead>
-              <tbody>
-                @for (row of drillRows(); track row.id) {
-                  <tr class="ledger-table__row">
-                    <td><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-                    <td>{{ row.description ?? '—' }}</td>
-                    <td>{{ row.created_by ?? '—' }}</td>
-                    <td>{{ row.approved_by ?? '—' }}</td>
-                    <td class="ledger-table__cell-num">{{ row.amount | money }}</td>
-                    <td>
-                      <a [routerLink]="['/expenses', row.id]">{{ 'common.view' | translate }}</a>
-                    </td>
-                  </tr>
-                } @empty {
-                  <tr><td colspan="6" class="u-muted">{{ 'report.directions.empty_drill' | translate }}</td></tr>
-                }
-              </tbody>
-            </table>
-          </div>
+          <app-ledger-table [columns]="drillCols" [rows]="drillRows()" [emptyLabel]="'report.directions.empty_drill'">
+            <ng-template appLedgerBody let-row>
+              <tr class="ledger-table__row">
+                <td appLedgerCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
+                <td appLedgerCol="description">{{ row.description ?? '—' }}</td>
+                <td appLedgerCol="created_by">{{ row.created_by ?? '—' }}</td>
+                <td appLedgerCol="approved_by">{{ row.approved_by ?? '—' }}</td>
+                <td appLedgerCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
+                <td appLedgerCol="actions">
+                  <a [routerLink]="['/expenses', row.id]">{{ 'common.view' | translate }}</a>
+                </td>
+              </tr>
+            </ng-template>
+          </app-ledger-table>
           <p class="u-flex u-flex-between u-mt-2">
             <span>{{ 'report.directions.drill_count' | translate }}: {{ drillRows().length }}</span>
             <span class="u-bidi">{{ 'common.total' | translate }}: {{ drillTotal() | money }}</span>
@@ -186,6 +171,29 @@ export class DirectionsReportPage {
         }),
       ).then((r) => r.data),
   });
+
+  isEmpty = (): boolean => (this.data.value()?.rows ?? []).length === 0;
+
+  readonly rowCols = [
+    { field: 'level', header: 'report.directions.col_level' },
+    { field: 'name', header: 'report.directions.col_item' },
+    { field: 'code', header: 'report.directions.col_code' },
+    { field: 'parent_name', header: 'report.directions.col_parent' },
+    { field: 'total_amount', header: 'report.directions.col_total', numeric: true },
+    { field: 'expense_count', header: 'report.directions.col_count', numeric: true },
+    { field: 'average_amount', header: 'report.directions.col_average', numeric: true },
+    { field: 'reviewed_by', header: 'report.directions.col_reviewer' },
+    { field: 'percentage', header: 'report.directions.col_percent', numeric: true },
+  ];
+
+  readonly drillCols = [
+    { field: 'created_at', header: 'report.case_expenses.col_date' },
+    { field: 'description', header: 'report.case_expenses.col_description' },
+    { field: 'created_by', header: 'report.directions.col_user' },
+    { field: 'approved_by', header: 'report.directions.col_reviewer' },
+    { field: 'amount', header: 'common.amount', numeric: true },
+    { field: 'actions', header: 'common.actions' },
+  ];
 
   dateRange = signal<Date[]>([]);
 

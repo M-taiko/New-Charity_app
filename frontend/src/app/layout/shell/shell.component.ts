@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { map, startWith, filter } from 'rxjs';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '@core/auth/auth.service';
 import { LocalStorageService } from '@core/storage/local-storage.service';
 import type { NavItem } from './nav-items';
@@ -86,6 +86,7 @@ import { TopbarComponent } from '../topbar/topbar.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ShellComponent {
+  private translate = inject(TranslateService);
   private auth = inject(AuthService);
   private storage = inject(LocalStorageService);
   private router = inject(Router);
@@ -115,7 +116,7 @@ export class ShellComponent {
     })).filter((group) => group.items.length > 0);
   });
 
-  readonly orgName = computed(() => this.auth.me()?.organization?.name || 'مؤسسة نجيب سليم الخيرية');
+  readonly orgName = computed(() => this.auth.me()?.organization?.name || this.translate.instant('common.org_name'));
 
   /** current in-app path (no query/hash), reactive to navigation */
   private readonly currentPath = toSignal(

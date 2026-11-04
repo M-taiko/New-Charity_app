@@ -39,7 +39,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
           [(ngModel)]="reason"
           name="reason"
           [maxlength]="maxLength()"
-          style="width: 100%"
+          class="u-full"
           (keydown.control.enter)="confirm()"
         ></textarea>
         @if (invalid()) {
@@ -55,7 +55,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
         </div>
       }
       <p-footer>
-        <div class="u-flex u-gap-2" style="justify-content: flex-end">
+        <div class="u-flex u-gap-2 u-justify-end">
           <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" [disabled]="sending()" (onClick)="visible.set(false)" />
           <p-button [label]="submitLabel() | translate" [loading]="sending()" [disabled]="sending()" (onClick)="confirm()" />
         </div>

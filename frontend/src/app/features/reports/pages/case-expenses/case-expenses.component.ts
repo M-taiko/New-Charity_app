@@ -7,12 +7,16 @@ import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { ApiClient } from '@core/http/api-client';
 import type { DirectionNode, ItemResponse, ListResponse, Lookups } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface CaseExpensesData {
   summary: { total_amount: string; count: number };
@@ -26,114 +30,94 @@ interface CaseExpensesData {
 /**
  * Social case expenses report (plan 20, T3-110): Blade parity — the case /
  * category / date filters, the average card and the detailed expenses table.
+ * T4-20/21/27: async-page states + static ledger tables in the shared layout.
  */
 @Component({
   selector: 'app-case-expenses-report',
   standalone: true,
   imports: [
-    TranslatePipe, FormsModule, ButtonModule, DatePickerModule, SelectModule,
-    PageHeaderComponent, PrintSheetComponent, StatTileComponent, MoneyPipe, DatetimePipe,
+    FieldComponent, TranslatePipe, FormsModule, ButtonModule, DatePickerModule, SelectModule,
+    PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
+    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    PrintSheetComponent, StatTileComponent, MoneyPipe, DatetimePipe,
   ],
   template: `
-    @if (data.value(); as d) {
-      <app-print-sheet [title]="'report.case_expenses.title' | translate">
-        <app-page-header [title]="'report.case_expenses.title' | translate">
-          <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
-        </app-page-header>
+    <app-print-sheet [title]="'report.case_expenses.title' | translate">
+      <app-page-header [title]="'report.case_expenses.title' | translate">
+        <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
+      </app-page-header>
 
-        <div class="filter-bar">
-          <div class="filter-bar__row">
-            <div class="field">
-              <label class="field__label" for="case-exp-filter-case">{{ 'report.case_expenses.filter_case' | translate }}</label>
-              <p-select appendTo="body" inputId="case-exp-filter-case" name="case"
-                [options]="caseOptions()" optionLabel="label" optionValue="value" [filter]="true"
-                [ngModel]="params().social_case_id" (ngModelChange)="setParams({ social_case_id: $event })"
-                [ariaLabel]="'report.case_expenses.filter_case' | translate"
-              />
+      <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
+        @if (data.value(); as d) {
+          <div class="filter-bar">
+            <div class="filter-bar__row">
+              <app-field label="report.case_expenses.filter_case" controlId="case-exp-filter-case">
+                <p-select appendTo="body" inputId="case-exp-filter-case" name="case"
+                  [options]="caseOptions()" optionLabel="label" optionValue="value" [filter]="true"
+                  [ngModel]="params().social_case_id" (ngModelChange)="setParams({ social_case_id: $event })"
+                  [ariaLabel]="'report.case_expenses.filter_case' | translate"
+                />
+              </app-field>
+              <app-field label="report.case_expenses.filter_category" controlId="case-exp-filter-category">
+                <p-select appendTo="body" inputId="case-exp-filter-category" name="category"
+                  [options]="categoryOptions()" optionLabel="label" optionValue="value" [filter]="true"
+                  [ngModel]="params().category_id" (ngModelChange)="setParams({ category_id: $event })"
+                  [ariaLabel]="'report.case_expenses.filter_category' | translate"
+                />
+              </app-field>
+              <app-field label="report.filters.range" controlId="case-exp-filter-date">
+                <p-datepicker appendTo="body" inputId="case-exp-filter-date" name="date" selectionMode="range"
+                  [showIcon]="true"
+                  [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
+                  [ariaLabel]="'report.filters.range' | translate"
+                />
+              </app-field>
+              <div class="filter-bar__spacer"></div>
+              <p-button [label]="'common.reset' | translate" size="small" [outlined]="true" (click)="resetFilters()" />
             </div>
-            <div class="field">
-              <label class="field__label" for="case-exp-filter-category">{{ 'report.case_expenses.filter_category' | translate }}</label>
-              <p-select appendTo="body" inputId="case-exp-filter-category" name="category"
-                [options]="categoryOptions()" optionLabel="label" optionValue="value" [filter]="true"
-                [ngModel]="params().category_id" (ngModelChange)="setParams({ category_id: $event })"
-                [ariaLabel]="'report.case_expenses.filter_category' | translate"
-              />
-            </div>
-            <div class="field">
-              <label class="field__label" for="case-exp-filter-date">{{ 'report.filters.range' | translate }}</label>
-              <p-datepicker appendTo="body" inputId="case-exp-filter-date" name="date" selectionMode="range"
-                [showIcon]="true"
-                [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
-                [ariaLabel]="'report.filters.range' | translate"
-              />
-            </div>
-            <div class="filter-bar__spacer"></div>
-            <p-button [label]="'common.reset' | translate" size="small" [outlined]="true" (click)="resetFilters()" />
           </div>
-        </div>
 
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'common.total'" [value]="d.summary.total_amount" [money]="true" />
-          <app-stat-tile [label]="'common.count'" [value]="d.summary.count" />
-          <app-stat-tile [label]="'report.case_expenses.average'" [value]="average()" [money]="true" />
-        </div>
-
-        <div class="ledger-table u-mt-4">
-          <div class="ledger-table__header">
-            <span class="ledger-table__title">{{ 'report.case_expenses.col_category' | translate }}</span>
+          <div class="kpi-grid">
+            <app-stat-tile [label]="'common.total'" [value]="d.summary.total_amount" [money]="true" />
+            <app-stat-tile [label]="'common.count'" [value]="d.summary.count" />
+            <app-stat-tile [label]="'report.case_expenses.average'" [value]="average()" [money]="true" />
           </div>
-          <table>
-            <thead><tr>
-              <th>{{ 'report.case_expenses.col_category' | translate }}</th>
-              <th>{{ 'report.case_expenses.col_count' | translate }}</th>
-              <th>{{ 'report.case_expenses.col_total' | translate }}</th>
-              <th>{{ 'report.case_expenses.col_percent' | translate }}</th>
-            </tr></thead>
-            <tbody>
-              @for (row of d.by_category; track row.category) {
-                <tr class="ledger-table__row">
-                  <td>{{ row.category }}</td>
-                  <td class="ledger-table__cell-num">{{ row.count }}</td>
-                  <td class="ledger-table__cell-num">{{ row.total | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.percentage }}%</td>
-                </tr>
-              } @empty {
-                <tr><td colspan="4" class="u-muted">{{ 'report.case_expenses.empty' | translate }}</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
 
-        <div class="ledger-table u-mt-4">
-          <table>
-            <thead><tr>
-              <th>{{ 'report.case_expenses.col_date' | translate }}</th>
-              <th>{{ 'report.case_expenses.col_case' | translate }}</th>
-              <th>{{ 'report.case_expenses.col_category' | translate }}</th>
-              <th>{{ 'report.case_expenses.col_item' | translate }}</th>
-              <th>{{ 'report.case_expenses.col_amount' | translate }}</th>
-              <th>{{ 'report.case_expenses.col_agent' | translate }}</th>
-              <th>{{ 'report.case_expenses.col_description' | translate }}</th>
-            </tr></thead>
-            <tbody>
-              @for (row of d.expenses; track row.id) {
+          <div class="u-mt-4">
+            <app-ledger-table [title]="'report.case_expenses.col_category'"
+              [columns]="categoryCols" [rows]="d.by_category" [emptyLabel]="'report.case_expenses.empty'">
+              <ng-template appLedgerBody let-row>
                 <tr class="ledger-table__row">
-                  <td><span class="u-bidi">{{ row.date | datetime }}</span></td>
-                  <td>{{ row.case ?? '—' }}</td>
-                  <td>{{ row.category ?? '—' }}</td>
-                  <td>{{ row.item ?? '—' }}</td>
-                  <td class="ledger-table__cell-num">{{ row.amount | money }}</td>
-                  <td>{{ row.user ?? '—' }}</td>
-                  <td>{{ row.description ?? '—' }}</td>
+                  <td appLedgerCol="category">{{ row.category }}</td>
+                  <td appLedgerCol="count" class="u-bidi">{{ row.count }}</td>
+                  <td appLedgerCol="total"><span class="u-bidi">{{ row.total | money }}</span></td>
+                  <td appLedgerCol="percentage" class="u-bidi">{{ row.percentage }}%</td>
                 </tr>
-              } @empty {
-                <tr><td colspan="7" class="u-muted">{{ 'report.case_expenses.empty' | translate }}</td></tr>
-              }
-            </tbody>
-          </table>
+              </ng-template>
+            </app-ledger-table>
+          </div>
+
+          <div class="u-mt-4">
+            <app-ledger-table [columns]="expenseCols" [rows]="d.expenses" [emptyLabel]="'report.case_expenses.empty'">
+              <ng-template appLedgerBody let-row>
+                <tr class="ledger-table__row">
+                  <td appLedgerCol="date"><span class="u-bidi">{{ row.date | datetime }}</span></td>
+                  <td appLedgerCol="case">{{ row.case ?? '—' }}</td>
+                  <td appLedgerCol="category">{{ row.category ?? '—' }}</td>
+                  <td appLedgerCol="item">{{ row.item ?? '—' }}</td>
+                  <td appLedgerCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
+                  <td appLedgerCol="user">{{ row.user ?? '—' }}</td>
+                  <td appLedgerCol="description">{{ row.description ?? '—' }}</td>
+                </tr>
+              </ng-template>
+            </app-ledger-table>
+          </div>
+        }
+        <div empty>
+          <app-empty-state [title]="'report.case_expenses.empty'" [text]="'common.no_data'" />
         </div>
-      </app-print-sheet>
-    }
+      </app-async-page>
+    </app-print-sheet>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -154,6 +138,25 @@ export class CaseExpensesPage {
         }),
       ).then((r) => r.data),
   });
+
+  isEmpty = (): boolean => (this.data.value()?.expenses ?? []).length === 0;
+
+  readonly categoryCols = [
+    { field: 'category', header: 'report.case_expenses.col_category' },
+    { field: 'count', header: 'report.case_expenses.col_count', numeric: true },
+    { field: 'total', header: 'report.case_expenses.col_total', numeric: true },
+    { field: 'percentage', header: 'report.case_expenses.col_percent', numeric: true },
+  ];
+
+  readonly expenseCols = [
+    { field: 'date', header: 'report.case_expenses.col_date' },
+    { field: 'case', header: 'report.case_expenses.col_case' },
+    { field: 'category', header: 'report.case_expenses.col_category' },
+    { field: 'item', header: 'report.case_expenses.col_item' },
+    { field: 'amount', header: 'report.case_expenses.col_amount', numeric: true },
+    { field: 'user', header: 'report.case_expenses.col_agent' },
+    { field: 'description', header: 'report.case_expenses.col_description' },
+  ];
 
   /** reference data for the category filter (cacheable endpoint) */
   lookups = resource<Lookups, unknown>({

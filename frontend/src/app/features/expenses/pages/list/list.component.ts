@@ -9,7 +9,6 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
-import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -17,9 +16,12 @@ import { SelectModule } from 'primeng/select';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
+import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { DirectionPickerComponent } from '@shared/ui/direction-picker/direction-picker.component';
@@ -28,6 +30,7 @@ import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 import type { DirectionNode, ListResponse, Lookups } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface Row {
   id: number;
@@ -88,7 +91,6 @@ interface AttachmentPreview {
   image: boolean;
 }
 
-const ALL = 'الكل';
 const DEFAULT_FILTERS: Omit<ExpenseListParams, 'page' | 'per_page' | 'q'> = {
   type: 'all',
   reviewed: 'all',
@@ -114,9 +116,9 @@ const AMOUNT_DEBOUNCE_MS = 500;
   selector: 'app-expense-list',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, DialogModule, InputTextModule, InputNumberModule, TextareaModule, DatePickerModule, SelectModule,
-    PageHeaderComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
-    EmptyStateComponent, ConfirmDialogComponent, FormDialogComponent, DirectionPickerComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ],
+    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, DialogModule, InputNumberModule, TextareaModule, DatePickerModule, SelectModule,
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    EmptyStateComponent, RowActionsComponent, ConfirmDialogComponent, FormDialogComponent, DirectionPickerComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'expense.list.title' | translate">
@@ -131,63 +133,55 @@ const AMOUNT_DEBOUNCE_MS = 500;
 
     <div class="filter-bar">
       <div class="filter-bar__row">
-        <div class="field" style="min-width: 11rem">
-          <label class="field__label" for="exp-filter-type">{{ 'expense.list.filter.type' | translate }}</label>
+        <app-field label="expense.list.filter.type" controlId="exp-filter-type" class="field--md">
           <p-select appendTo="body" inputId="exp-filter-type" [options]="typeOptions()" optionLabel="label" optionValue="value"
             [ngModel]="params().type" (ngModelChange)="setParams({ type: $event })" name="type"
             styleClass="u-full" [autofocus]="false" />
-        </div>
-        <div class="field" style="min-width: 11rem">
-          <label class="field__label" for="exp-filter-reviewed">{{ 'expense.list.filter.reviewed' | translate }}</label>
+        </app-field>
+        <app-field label="expense.list.filter.reviewed" controlId="exp-filter-reviewed" class="field--md">
           <p-select appendTo="body" inputId="exp-filter-reviewed" [options]="reviewedOptions" optionLabel="label" optionValue="value"
             [ngModel]="params().reviewed" (ngModelChange)="setParams({ reviewed: $event })" name="reviewed"
             styleClass="u-full" [autofocus]="false" />
-        </div>
-        <div class="field" style="min-width: 12rem">
-          <label class="field__label" for="exp-filter-user">{{ 'expense.list.filter.user' | translate }}</label>
+        </app-field>
+        <app-field label="expense.list.filter.user" controlId="exp-filter-user" class="field--lg">
           <p-select appendTo="body" inputId="exp-filter-user" [options]="userOptions()" optionLabel="label" optionValue="value"
             [filter]="true" [ngModel]="params().user_id" (ngModelChange)="setParams({ user_id: $event })" name="user"
             styleClass="u-full" [autofocus]="false" />
-        </div>
-        <div class="field" style="min-width: 14rem">
-          <label class="field__label" for="exp-filter-direction">{{ 'expense.list.filter.direction' | translate }}</label>
+        </app-field>
+        <app-field label="expense.list.filter.direction" controlId="exp-filter-direction" class="field--xl">
           <p-select appendTo="body" inputId="exp-filter-direction" [options]="directionOptions()" optionLabel="label" optionValue="value"
             [filter]="true" [ngModel]="direction()" (ngModelChange)="onDirection($event)" name="direction"
             styleClass="u-full" [autofocus]="false" />
-        </div>
-        <div class="field" style="min-width: 12rem">
-          <label class="field__label" for="exp-filter-custody">{{ 'expense.list.filter.custody' | translate }}</label>
+        </app-field>
+        <app-field label="expense.list.filter.custody" controlId="exp-filter-custody" class="field--lg">
           <p-select appendTo="body" inputId="exp-filter-custody" [options]="custodyOptions()" optionLabel="label" optionValue="value"
             [filter]="true" [ngModel]="params().custody_id" (ngModelChange)="setParams({ custody_id: $event })" name="custody"
             styleClass="u-full" [autofocus]="false" />
-        </div>
-        <div class="field" style="min-width: 13rem">
-          <label class="field__label" for="exp-filter-date">{{ 'expense.list.filter.date_range' | translate }}</label>
+        </app-field>
+        <app-field label="expense.list.filter.date_range" controlId="exp-filter-date" class="field--xl">
           <p-datepicker appendTo="body" inputId="exp-filter-date" name="date" selectionMode="range" [showIcon]="true"
             dateFormat="yy-mm-dd" [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
             styleClass="u-full" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="exp-filter-amount-from">{{ 'expense.list.filter.amount_range' | translate }}</label>
+        </app-field>
+        <app-field label="expense.list.filter.amount_range" controlId="exp-filter-amount-from">
           <div class="u-flex u-gap-1">
             <p-inputnumber inputId="exp-filter-amount-from" [ngModel]="amountFrom()" (ngModelChange)="onAmount('from', $event)"
               mode="decimal" [min]="0" [minFractionDigits]="0" [useGrouping]="false"
               placeholder="{{ 'expense.list.filter.amount_from' | translate }}"
-              style="width: 8rem" inputStyleClass="u-full" />
+              styleClass="filter-bar__amount" inputStyleClass="u-full" />
             <p-inputnumber inputId="exp-filter-amount-to" [ngModel]="amountTo()" (ngModelChange)="onAmount('to', $event)"
               mode="decimal" [min]="0" [minFractionDigits]="0" [useGrouping]="false"
               placeholder="{{ 'expense.list.filter.amount_to' | translate }}"
-              style="width: 8rem" inputStyleClass="u-full" />
+              styleClass="filter-bar__amount" inputStyleClass="u-full" />
           </div>
-        </div>
+        </app-field>
         <div class="filter-bar__spacer"></div>
         <p-button [label]="'common.reset' | translate" severity="secondary" [outlined]="true" size="small" (onClick)="resetFilters()" />
       </div>
     </div>
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-    } @else if (data.value(); as page) {
+    <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
+      @if (data.value(); as page) {
         <div class="kpi-grid">
         <app-stat-tile [label]="'expense.list.filtered_total'" [value]="summaryValue('filtered_total')" [money]="true" />
         <app-stat-tile [label]="'common.count'" [value]="summaryValue('count')" />
@@ -214,47 +208,11 @@ const AMOUNT_DEBOUNCE_MS = 500;
             <td appTableCol="reviewed">{{ row.reviewed | enumLabel: 'review_state' }}</td>
             <td appTableCol="attachment">
               @if (row.has_attachment) {
-                <button type="button" class="row-actions__btn"
-                  [title]="'expense.detail.view_attachment' | translate"
-                  [attr.aria-label]="'expense.detail.view_attachment' | translate"
-                  (click)="openAttachment(row)">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-paperclip" /></svg>
-                </button>
+                <app-row-actions [actions]="attachmentActions(row)" />
               } @else { <span aria-hidden="true">—</span> }
             </td>
             <td appTableCol="actions">
-              <div class="row-actions">
-                @if (row.can_review) {
-                  <button type="button" class="row-actions__btn"
-                    [title]="'expense.list.review' | translate"
-                    [attr.aria-label]="'expense.list.review' | translate"
-                    (click)="startReview(row)">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-check" /></svg>
-                  </button>
-                }
-                @if (row.can_unreview) {
-                  <button type="button" class="row-actions__btn"
-                    [title]="'expense.list.unreview' | translate"
-                    [attr.aria-label]="'expense.list.unreview' | translate"
-                    (click)="startUnreview(row)">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-x" /></svg>
-                  </button>
-                }
-                @if (row.can_edit) {
-                  <button type="button" class="row-actions__btn"
-                    [title]="'common.edit' | translate"
-                    [attr.aria-label]="'common.edit' | translate"
-                    [routerLink]="['/expenses', row.id, 'edit']">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-pencil" /></svg>
-                  </button>
-                }
-                <button type="button" class="row-actions__btn"
-                  [title]="'common.view' | translate"
-                  [attr.aria-label]="'common.view' | translate"
-                  [routerLink]="['/expenses', row.id]">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </button>
-              </div>
+              <app-row-actions [actions]="actionsFor(row)" />
             </td>
           </tr>
           <tr class="ledger-table__stacked">
@@ -285,56 +243,21 @@ const AMOUNT_DEBOUNCE_MS = 500;
             <div class="ledger-table__stacked-item">
               <span class="ledger-table__stacked-label">{{ 'expense.list.col_attachment' | translate }}</span>
               @if (row.has_attachment) {
-                <button type="button" class="row-actions__btn"
-                  [title]="'expense.detail.view_attachment' | translate"
-                  [attr.aria-label]="'expense.detail.view_attachment' | translate"
-                  (click)="openAttachment(row)">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-paperclip" /></svg>
-                </button>
+                <app-row-actions [actions]="attachmentActions(row)" />
               } @else { <span aria-hidden="true">—</span> }
             </div>
             <div class="ledger-table__stacked-item">
               <span class="ledger-table__stacked-label">{{ 'common.actions' | translate }}</span>
-              <div class="row-actions">
-                @if (row.can_review) {
-                  <button type="button" class="row-actions__btn"
-                    [title]="'expense.list.review' | translate"
-                    [attr.aria-label]="'expense.list.review' | translate"
-                    (click)="startReview(row)">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-check" /></svg>
-                  </button>
-                }
-                @if (row.can_unreview) {
-                  <button type="button" class="row-actions__btn"
-                    [title]="'expense.list.unreview' | translate"
-                    [attr.aria-label]="'expense.list.unreview' | translate"
-                    (click)="startUnreview(row)">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-x" /></svg>
-                  </button>
-                }
-                @if (row.can_edit) {
-                  <button type="button" class="row-actions__btn"
-                    [title]="'common.edit' | translate"
-                    [attr.aria-label]="'common.edit' | translate"
-                    [routerLink]="['/expenses', row.id, 'edit']">
-                    <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-pencil" /></svg>
-                  </button>
-                }
-                <button type="button" class="row-actions__btn"
-                  [title]="'common.view' | translate"
-                  [attr.aria-label]="'common.view' | translate"
-                  [routerLink]="['/expenses', row.id]">
-                  <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-eye" /></svg>
-                </button>
-              </div>
+              <app-row-actions [actions]="actionsFor(row)" />
             </div>
           </tr>
         </ng-template>
-        <div empty>
-          <app-empty-state [title]="'expense.list.empty' | translate" [text]="'common.no_data' | translate" />
-        </div>
       </app-data-table>
-    }
+      }
+      <div empty>
+        <app-empty-state [title]="'expense.list.empty' | translate" [text]="'common.no_data' | translate" />
+      </div>
+    </app-async-page>
 
     <!-- attachment preview: images inline, other files open/download (T3-22) -->
     <p-dialog
@@ -353,7 +276,11 @@ const AMOUNT_DEBOUNCE_MS = 500;
             <img
               [src]="attachmentUrl(p.id)"
               [alt]="'expense.detail.attachment_image_alt' | translate"
-              style="max-width: 100%; max-height: 65vh; object-fit: contain; margin-inline: auto; display: block"
+              [style.max-width]="'100%'"
+              [style.max-height]="'65vh'"
+              [style.object-fit]="'contain'"
+              [style.margin-inline]="'auto'"
+              [style.display]="'block'"
             />
           } @else {
             <div class="u-flex u-gap-2 u-center">
@@ -368,7 +295,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
       }
       <p-footer>
         @if (preview(); as p) {
-          <div class="u-flex u-gap-2" style="justify-content: flex-end">
+          <div class="u-flex u-gap-2 u-justify-end">
             <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" (onClick)="preview.set(null)" />
             <a class="p-button p-button-sm p-button-outlined p-button-text-only" [href]="attachmentUrl(p.id)" target="_blank" rel="noopener">
               {{ 'expense.detail.download' | translate }}
@@ -425,8 +352,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
       (submit)="submitQuick()"
     >
       <div class="u-column u-gap-3">
-        <div class="field">
-          <label class="field__label" for="qe-custody">{{ 'expense.form.custody' | translate }} *</label>
+        <app-field label="expense.form.custody" controlId="qe-custody" [required]="true">
           <p-select appendTo="body" inputId="qe-custody" [options]="custodies.value() ?? []" optionLabel="reason" optionValue="id"
             [(ngModel)]="quick.custody_id" name="custody_id" required styleClass="u-full" />
           @if (selectedQuickCustody(); as c) {
@@ -435,23 +361,19 @@ const AMOUNT_DEBOUNCE_MS = 500;
               {{ 'expense.form.total_available' | translate }}: {{ c.total_available | money }}
             </span>
           }
-        </div>
-        <div class="field">
-          <label class="field__label" for="qe-date">{{ 'expense.form.date' | translate }} *</label>
+        </app-field>
+        <app-field label="expense.form.date" controlId="qe-date" [required]="true">
           <p-datepicker appendTo="body" inputId="qe-date" name="date" [(ngModel)]="quick.expense_date" dateFormat="yy-mm-dd" [showIcon]="true" required styleClass="u-full" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="qe-amount">{{ 'expense.form.amount' | translate }} *</label>
+        </app-field>
+        <app-field label="expense.form.amount" controlId="qe-amount" [required]="true">
           <p-inputnumber inputId="qe-amount" [(ngModel)]="quick.amount" name="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" required styleClass="u-full" />
-        </div>
-        <div class="field">
-          <label class="field__label" for="qe-desc">{{ 'expense.form.description' | translate }} *</label>
-          <textarea pTextarea id="qe-desc" rows="2" [(ngModel)]="quick.description" name="description" required style="width: 100%"></textarea>
-        </div>
-        <div class="field">
-          <label class="field__label" for="qe-items">{{ 'expense.list.quick_dialog.line_items' | translate }}</label>
-          <textarea pTextarea id="qe-items" rows="2" [(ngModel)]="quick.line_items" name="line_items" style="width: 100%"></textarea>
-        </div>
+        </app-field>
+        <app-field label="expense.form.description" controlId="qe-desc" [required]="true">
+          <textarea pTextarea id="qe-desc" rows="2" [(ngModel)]="quick.description" name="description" required class="u-full"></textarea>
+        </app-field>
+        <app-field label="expense.list.quick_dialog.line_items" controlId="qe-items">
+          <textarea pTextarea id="qe-items" rows="2" [(ngModel)]="quick.line_items" name="line_items" class="u-full"></textarea>
+        </app-field>
         <p class="field__hint">{{ 'expense.list.quick_dialog.note' | translate }}</p>
       </div>
     </app-form-dialog>
@@ -510,28 +432,33 @@ export class ExpenseListPage {
         .catch(() => [] as UserCustody[]),
   });
 
+  /** the "all" option label (T4-30 — no Arabic literals in code) */
+  private get allLabel(): string {
+    return this.translate.instant('expense.list.option_all');
+  }
+
   /** type options come from /lookups — the distinct expenses.type values in the database */
   typeOptions = computed(() => [
-    { label: ALL, value: 'all' },
+    { label: this.allLabel, value: 'all' },
     ...(this.lookups.value()?.expense_types ?? []).map((t) => ({ label: this.typeLabel(t), value: t })),
   ]);
 
   readonly reviewedOptions = [
-    { label: ALL, value: 'all' },
+    { label: this.allLabel, value: 'all' },
     { label: this.translate.instant('enums.review_state.reviewed'), value: 'reviewed' },
     { label: this.translate.instant('enums.review_state.not_reviewed'), value: 'not_reviewed' },
   ];
 
   userOptions = computed(() => [
-    { label: ALL, value: null },
+    { label: this.allLabel, value: null },
     ...(this.lookups.value()?.users ?? []).map((u) => ({ label: u.name, value: u.id })),
   ]);
 
   /** flattened direction tree — any node filters itself + its subtree; "none" = expenses without a direction */
   directionOptions = computed(() => {
     const options: { label: string; value: string }[] = [
-      { label: ALL, value: 'all' },
-      { label: 'بلا توجيه', value: 'none' },
+      { label: this.allLabel, value: 'all' },
+      { label: this.translate.instant('expense.list.filter.no_direction'), value: 'none' },
     ];
     const walk = (nodes: DirectionNode[], depth: number): void => {
       for (const node of nodes) {
@@ -547,8 +474,8 @@ export class ExpenseListPage {
   });
 
   custodyOptions = computed(() => [
-    { label: ALL, value: null },
-    ...(this.custodies.value() ?? []).map((c) => ({ label: custodyLabel(c), value: c.id })),
+    { label: this.allLabel, value: null },
+    ...(this.custodies.value() ?? []).map((c) => ({ label: this.custodyLabel(c), value: c.id })),
   ]);
 
   /** UI-only models for controls whose raw value isn't a query param */
@@ -576,9 +503,33 @@ export class ExpenseListPage {
     expense_date: new Date().toISOString().slice(0, 10),
   };
 
+  /** an errored resource throws on value() — the error state wins over the empty test */
+  isEmpty = (): boolean => {
+    try {
+      return (this.data.value()?.data ?? []).length === 0;
+    } catch {
+      return false;
+    }
+  };
+
   summaryValue(key: string): string {
-    const value = this.data.value()?.meta?.summary?.[key];
-    return value === undefined || value === null ? '0' : String(value);
+    const value = this.data.value()?.meta.summary?.[key];
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
+  }
+
+  /** the row actions (T4-24) — quick review/unreview, edit, view (T3-22) */
+  actionsFor(row: Row): RowActionItem[] {
+    return [
+      { icon: 'list-check', label: 'expense.list.review', visible: row.can_review, handler: () => { this.startReview(row); } },
+      { icon: 'x', label: 'expense.list.unreview', visible: row.can_unreview, handler: () => { this.startUnreview(row); } },
+      { icon: 'pencil', label: 'common.edit', visible: row.can_edit, route: ['/expenses', row.id, 'edit'] },
+      { icon: 'eye', label: 'common.view', route: ['/expenses', row.id] },
+    ];
+  }
+
+  /** the attachment-column action (T5-04) — the paperclip lives in row-actions with the rest */
+  attachmentActions(row: Row): RowActionItem[] {
+    return [{ icon: 'paperclip', label: 'expense.detail.view_attachment', handler: () => { this.openAttachment(row); } }];
   }
 
   /** apply any filter change and jump back to the first page */
@@ -648,7 +599,7 @@ export class ExpenseListPage {
         const name = path.split('/').pop() || path;
         this.preview.set({ id: row.id, name, image: /\.(jpe?g|png|gif|webp)$/i.test(path) });
       })
-      .catch((err: unknown) => this.toast.apiError((err as HttpErrorResponse).error?.message ?? 'errors.generic', (err as HttpErrorResponse).error?.code));
+      .catch((err: unknown) => { this.toast.apiError((err as HttpErrorResponse).error?.message ?? 'errors.generic', (err as HttpErrorResponse).error?.code); });
   }
 
   attachmentUrl(id: number): string {
@@ -808,6 +759,15 @@ export class ExpenseListPage {
     return label !== key ? label : type;
   }
 
+  /** custody options read "reason — agent name" (T31 wording), falling back to the id */
+  private custodyLabel(c: CustodyRow): string {
+    const reason = c.notes !== null && c.notes.trim() !== ''
+      ? c.notes
+      : this.translate.instant('expense.list.custody_fallback', { id: c.id });
+    const agent = c.agent?.name;
+    return agent ? `${reason} — ${agent}` : reason;
+  }
+
   onPage(event: { page: number; per_page: number; sort?: string }): void {
     const current = this.params();
     const sort = event.sort ?? '';
@@ -834,11 +794,4 @@ function toIsoDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${date.getFullYear()}-${month}-${day}`;
-}
-
-/** custody options read "reason — agent name" (T31 wording), falling back to the id */
-function custodyLabel(c: CustodyRow): string {
-  const reason = c.notes !== null && c.notes.trim() !== '' ? c.notes : `عهدة #${c.id}`;
-  const agent = c.agent?.name;
-  return agent ? `${reason} — ${agent}` : reason;
 }

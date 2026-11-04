@@ -12,6 +12,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
@@ -19,7 +20,9 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse, ListResponse, Lookups } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface Row {
   id: number;
@@ -65,8 +68,8 @@ const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'e
   selector: 'app-custody-movements',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, CheckboxModule, DatePickerModule, InputNumberModule, SelectModule,
-    PageHeaderComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, CheckboxModule, DatePickerModule, InputNumberModule, SelectModule,
+    PageHeaderComponent, AsyncPageComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -78,49 +81,43 @@ const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'e
         </div>
       </app-page-header>
 
-      <div class="filter-bar no-print">
-        <div class="filter-bar__row">
-          <div class="field" style="min-width: 12rem">
-            <label class="field__label" for="mv-filter-date">{{ 'custody.movements.date_range' | translate }}</label>
-            <p-datepicker appendTo="body" inputId="mv-filter-date" name="date" selectionMode="range" [showIcon]="true"
-              dateFormat="yy-mm-dd" [ngModel]="draftDateRange()" (ngModelChange)="onDateRange($event)" styleClass="u-full" />
-          </div>
-          <div class="field" style="min-width: 11rem">
-            <label class="field__label" for="mv-filter-agent">{{ 'custody.movements.agent' | translate }}</label>
-            <p-select appendTo="body" inputId="mv-filter-agent" [options]="agentOptions()" optionLabel="label" optionValue="value"
-              [filter]="true" [ngModel]="draft().agent_id" (ngModelChange)="patchDraft('agent_id', $event)"
-              name="agent" styleClass="u-full" [autofocus]="false" />
-          </div>
-          <div class="field" style="min-width: 11rem">
-            <label class="field__label" for="mv-filter-type">{{ 'custody.movements.type' | translate }}</label>
-            <p-select appendTo="body" inputId="mv-filter-type" [options]="typeOptions()" optionLabel="label" optionValue="value"
-              [ngModel]="draft().type" (ngModelChange)="patchDraft('type', $event)" name="type"
-              styleClass="u-full" [autofocus]="false" />
-          </div>
-          <div class="field" style="min-width: 9rem">
-            <label class="field__label" for="mv-filter-custody">{{ 'custody.movements.custody_number' | translate }}</label>
-            <p-inputnumber inputId="mv-filter-custody" [ngModel]="draft().custody_id"
-              (ngModelChange)="patchDraft('custody_id', $event)" [min]="1" [useGrouping]="false" name="custody" styleClass="u-full" />
-          </div>
-          <div class="field">
-            <label class="field__label" for="mv-filter-closures">{{ 'custody.movements.show_closures' | translate }}</label>
-            <p-checkbox inputId="mv-filter-closures" [binary]="true" [ngModel]="draft().show_closures"
-              (ngModelChange)="patchDraft('show_closures', $event)" name="show_closures" />
-          </div>
-          <div class="filter-bar__spacer"></div>
-          <p-button [label]="'custody.movements.apply' | translate" size="small" (onClick)="applyFilters()" />
-          <p-button [label]="'common.reset' | translate" severity="secondary" [outlined]="true" size="small" (onClick)="resetFilters()" />
-        </div>
-      </div>
-
-      @if (data.isLoading() && !data.value()) {
-        <div class="kpi-grid">@for (s of [1, 2, 3, 4]; track s) {<div class="skeleton skeleton--tile"></div>}</div>
-      } @else if (data.value(); as page) {
+      <app-async-page [resource]="data" variant="list">
+        @if (data.value(); as page) {
         <div class="kpi-grid">
           <app-stat-tile [label]="'custody.movements.received'" [value]="summaryValue('received')" [money]="true" />
           <app-stat-tile [label]="'custody.movements.returned'" [value]="summaryValue('returned')" [money]="true" />
           <app-stat-tile [label]="'custody.movements.transferred'" [value]="summaryValue('transferred')" [money]="true" />
           <app-stat-tile [label]="'custody.movements.spent'" [value]="summaryValue('spent')" [money]="true" />
+        </div>
+
+        <div class="filter-bar no-print">
+          <div class="filter-bar__row">
+            <app-field label="custody.movements.date_range" controlId="mv-filter-date" class="field--lg">
+              <p-datepicker appendTo="body" inputId="mv-filter-date" name="date" selectionMode="range" [showIcon]="true"
+                dateFormat="yy-mm-dd" [ngModel]="draftDateRange()" (ngModelChange)="onDateRange($event)" styleClass="u-full" />
+            </app-field>
+            <app-field label="custody.movements.agent" controlId="mv-filter-agent" class="field--md">
+              <p-select appendTo="body" inputId="mv-filter-agent" [options]="agentOptions()" optionLabel="label" optionValue="value"
+                [filter]="true" [ngModel]="draft().agent_id" (ngModelChange)="patchDraft('agent_id', $event)"
+                name="agent" styleClass="u-full" [autofocus]="false" />
+            </app-field>
+            <app-field label="custody.movements.type" controlId="mv-filter-type" class="field--md">
+              <p-select appendTo="body" inputId="mv-filter-type" [options]="typeOptions()" optionLabel="label" optionValue="value"
+                [ngModel]="draft().type" (ngModelChange)="patchDraft('type', $event)" name="type"
+                styleClass="u-full" [autofocus]="false" />
+            </app-field>
+            <app-field label="custody.movements.custody_number" controlId="mv-filter-custody" class="field--sm">
+              <p-inputnumber inputId="mv-filter-custody" [ngModel]="draft().custody_id"
+                (ngModelChange)="patchDraft('custody_id', $event)" [min]="1" [useGrouping]="false" name="custody" styleClass="u-full" />
+            </app-field>
+            <app-field label="custody.movements.show_closures" controlId="mv-filter-closures">
+              <p-checkbox inputId="mv-filter-closures" [binary]="true" [ngModel]="draft().show_closures"
+                (ngModelChange)="patchDraft('show_closures', $event)" name="show_closures" />
+            </app-field>
+            <div class="filter-bar__spacer"></div>
+            <p-button [label]="'custody.movements.apply' | translate" size="small" (onClick)="applyFilters()" />
+            <p-button [label]="'common.reset' | translate" severity="secondary" [outlined]="true" size="small" (onClick)="resetFilters()" />
+          </div>
         </div>
 
         <app-data-table
@@ -183,7 +180,8 @@ const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'e
             <app-empty-state [title]="'custody.movements.empty' | translate" [text]="'common.no_data' | translate" />
           </div>
         </app-data-table>
-      }
+        }
+      </app-async-page>
     </app-print-sheet>
   `,
 })
@@ -225,6 +223,9 @@ export class MovementsPage {
 
   private label(key: string): string {
     const text = this.translate.instant(key);
+    if (text === key) {
+      warnMissingTranslation(key); // dev only — the raw key in the UI means a key was lost (T5-01)
+    }
     return text !== key ? text : key;
   }
 
@@ -239,8 +240,8 @@ export class MovementsPage {
   ]);
 
   summaryValue(key: string): string {
-    const value = this.data.value()?.meta?.summary?.[key];
-    return value === undefined || value === null ? '0' : String(value);
+    const value = this.data.value()?.meta.summary?.[key];
+    return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
   }
 
   /** apply the picked range once both ends are chosen (or when cleared) */

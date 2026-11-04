@@ -35,7 +35,7 @@ export class MotionService {
     }
     // Weak-device probe: few cores or little memory → lite (fades only)
     const nav = navigator as Navigator & { deviceMemory?: number };
-    const cores = nav.hardwareConcurrency ?? 4;
+    const cores = nav.hardwareConcurrency;
     const memory = nav.deviceMemory ?? 4;
     if (cores <= 2 || memory <= 2) {
       return 'lite';

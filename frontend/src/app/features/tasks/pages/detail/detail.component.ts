@@ -4,8 +4,7 @@
 //   - manager/accountant: complete + cancel while open, reopen when closed, delete
 //   - assignee (non-manager): start (in_progress) only, only while pending
 //   - delegate: creator, assignee, manager or accountant, while the task is open
-import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { computed, ChangeDetectionStrategy, Component, inject, input, resource, signal } from '@angular/core';
+import { computed, ChangeDetectionStrategy, Component, inject, input, resource, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -18,6 +17,7 @@ import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
@@ -28,6 +28,7 @@ import { UserChipComponent } from '@shared/ui/user-chip/user-chip.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface TaskComment {
   id: number;
@@ -54,19 +55,19 @@ interface TaskDetail {
 @Component({
   selector: 'app-task-detail',
   standalone: true,
-  imports: [EmptyStateComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, PageHeaderComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, ConfirmDialogComponent, ConfirmDeleteComponent, FormDialogComponent, UserChipComponent, RelativeTimePipe, EnumLabelPipe],
+  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, ConfirmDialogComponent, ConfirmDeleteComponent, FormDialogComponent, UserChipComponent, RelativeTimePipe, EnumLabelPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (safeValue(); as item) {
-      <app-print-sheet [title]="'task.detail.title' | translate">
-        <app-page-header [title]="item.title">
-          <div actions class="u-flex u-gap-2 u-flex-wrap">
+    <app-print-sheet [title]="'task.detail.title' | translate">
+      <app-page-header [title]="headerTitle()">
+        <div actions class="u-flex u-gap-2 u-flex-wrap">
+          @if (safeValue(); as item) {
             @if (canStart(item)) {
               <p-button [label]="'task.detail.start' | translate" size="small" (onClick)="setStatus('in_progress')" [loading]="sending()" />
             }
             @if (isManager() && isOpen(item)) {
               <p-button [label]="'task.detail.complete' | translate" size="small" severity="success" (onClick)="setStatus('completed')" [loading]="sending()" />
-              <p-button [label]="'common.cancel' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="cancelDialog.open()" [loading]="sending()" />
+              <p-button [label]="'common.cancel' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="cancelDlg()?.open()" [loading]="sending()" />
             }
             @if (isManager() && isClosed(item)) {
               <p-button [label]="'task.detail.reopen' | translate" size="small" severity="warn" (onClick)="setStatus('pending')" [loading]="sending()" />
@@ -75,113 +76,111 @@ interface TaskDetail {
               <p-button [label]="'task.detail.delegate' | translate" size="small" severity="warn" [outlined]="true" (onClick)="openDelegate()" />
             }
             @if (isManager()) {
-              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [text]="true" (onClick)="deleteDialog.open()" />
+              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [text]="true" (onClick)="deleteDlg()?.open()" />
             }
-            <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/tasks" />
-          </div>
-        </app-page-header>
-
-        <div class="u-flex u-gap-2 u-flex-wrap u-mb-4">
-          <app-status-stamp [status]="item.status" namespace="task" [large]="true" />
-          <span class="stamp">{{ item.priority | enumLabel: 'priority' }}</span>
+          }
+          <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/tasks" />
         </div>
+      </app-page-header>
 
-        <div class="u-flex u-gap-4 u-flex-wrap u-mb-4">
-          <span class="u-flex u-gap-1">
-            <span class="u-muted u-small">{{ 'task.detail.creator' | translate }}:</span>
-            <app-user-chip [name]="item.created_by ?? '—'" />
-          </span>
-          <span class="u-flex u-gap-1">
-            <span class="u-muted u-small">{{ 'task.detail.assignee' | translate }}:</span>
-            <app-user-chip [name]="item.assigned_to ?? '—'" />
-          </span>
-        </div>
-
-        <app-key-value-list [items]="keyValues(item)" />
-
-        <section class="form-section u-mt-4">
-          <h3 class="form-section__title">{{ 'task.detail.comments' | translate }} ({{ item.comments.length }})</h3>
-          @if (item.comments.length === 0) {
-            <p class="u-muted">{{ 'task.detail.empty_comments' | translate }}</p>
-          } @else {
-            <ul class="u-column u-gap-3" style="list-style: none; padding: 0; margin: 0">
-              @for (comment of item.comments; track comment.id) {
-                <li class="u-column u-gap-1">
-                  <div class="u-flex u-gap-2 u-flex-wrap">
-                    <app-user-chip [name]="comment.user ?? '—'" />
-                    @if (commentRole(comment.user); as role) {
-                      <span class="stamp stamp--neutral u-small">{{ role }}</span>
-                    }
-                    <span class="u-muted u-small u-bidi">{{ comment.created_at | relativeTime }}</span>
-                  </div>
-                  <p style="white-space: pre-line; margin: 0">{{ comment.body }}</p>
-                </li>
-              }
-            </ul>
-          }
-
-          @if (isOpen(item)) {
-            <form class="u-column u-gap-2 u-mt-4" (ngSubmit)="addComment()">
-              <label class="field__label u-visually-hidden" for="task-comment">{{ 'task.detail.comment_placeholder' | translate }}</label>
-              <textarea
-                id="task-comment"
-                pInputTextarea
-                rows="3"
-                name="body"
-                [(ngModel)]="commentBody"
-                [maxlength]="2000"
-                [placeholder]="'task.detail.comment_placeholder' | translate"
-                style="width: 100%"
-              ></textarea>
-              <div class="u-flex" style="justify-content: flex-end">
-                <p-button type="submit" [label]="'task.detail.send' | translate" size="small" [loading]="sending()" [disabled]="!commentBody().trim() || sending()" />
-              </div>
-            </form>
-          } @else {
-            <p class="u-muted u-small">{{ 'task.detail.comments_locked' | translate }}</p>
-          }
-        </section>
-
-        <app-confirm-dialog
-          #cancelDialog
-          [header]="'common.confirm'"
-          [message]="'task.detail.cancel_message'"
-          [context]="{ name: item.title }"
-          (confirmed)="setStatus('cancelled')"
-        />
-        <app-confirm-delete #deleteDialog [path]="'/tasks/' + item.id + '/delete'" [entity]="item.title" (deleted)="onDeleted()" />
-        <app-form-dialog
-          [header]="'task.detail.delegate' | translate"
-          [submitLabel]="'task.detail.delegate_confirm' | translate"
-          [sending]="delegateSending()"
-          [error]="delegateError()"
-          [(visible)]="delegateOpen"
-          (submit)="delegate(item)"
-        >
-          @if (delegateInvalid()) {
-            <p class="field__error" role="alert">{{ 'common.required_field' | translate }}</p>
-          }
-          <div class="field">
-            <label class="field__label" for="delegate-user">{{ 'task.form.assignee' | translate }} *</label>
-            <p-select
-              inputId="delegate-user"
-              appendTo="body"
-              [options]="delegateUsers()"
-              optionLabel="name"
-              optionValue="id"
-              [(ngModel)]="delegateUserId"
-              name="assigned_to"
-              styleClass="u-full"
-            />
+      <app-async-page [resource]="pageResource" variant="detail" [backLink]="['/tasks']">
+        @if (safeValue(); as item) {
+          <div class="u-flex u-gap-2 u-flex-wrap u-mb-4">
+            <app-status-stamp [status]="item.status" namespace="task" [large]="true" />
+            <span class="stamp">{{ item.priority | enumLabel: 'priority' }}</span>
           </div>
-        </app-form-dialog>
-      </app-print-sheet>
-    } @else if (data.isLoading()) {
-      <div class="skeleton skeleton--title u-mb-4"></div>
-      <div class="skeleton skeleton--tile"></div>
-    } @else {
-      <app-empty-state [title]="'common.not_found' | translate" [text]="'common.not_found_text' | translate" />
-    }
+
+          <div class="u-flex u-gap-4 u-flex-wrap u-mb-4">
+            <span class="u-flex u-gap-1">
+              <span class="u-muted u-small">{{ 'task.detail.creator' | translate }}:</span>
+              <app-user-chip [name]="item.created_by ?? '—'" />
+            </span>
+            <span class="u-flex u-gap-1">
+              <span class="u-muted u-small">{{ 'task.detail.assignee' | translate }}:</span>
+              <app-user-chip [name]="item.assigned_to ?? '—'" />
+            </span>
+          </div>
+
+          <app-key-value-list [items]="keyValues(item)" />
+
+          <section class="form-section u-mt-4">
+            <h3 class="form-section__title">{{ 'task.detail.comments' | translate }} ({{ item.comments.length }})</h3>
+            @if (item.comments.length === 0) {
+              <p class="u-muted">{{ 'task.detail.empty_comments' | translate }}</p>
+            } @else {
+              <ul class="timeline u-gap-3">
+                @for (comment of item.comments; track comment.id) {
+                  <li class="u-column u-gap-1">
+                    <div class="u-flex u-gap-2 u-flex-wrap">
+                      <app-user-chip [name]="comment.user ?? '—'" />
+                      @if (commentRole(comment.user); as role) {
+                        <span class="stamp stamp--neutral u-small">{{ role }}</span>
+                      }
+                      <span class="u-muted u-small u-bidi">{{ comment.created_at | relativeTime }}</span>
+                    </div>
+                    <p class="chat__body u-m-0">{{ comment.body }}</p>
+                  </li>
+                }
+              </ul>
+            }
+
+            @if (isOpen(item)) {
+              <form class="u-column u-gap-2 u-mt-4" (ngSubmit)="addComment()">
+                <label class="field__label u-visually-hidden" for="task-comment">{{ 'task.detail.comment_placeholder' | translate }}</label>
+                <textarea
+                  id="task-comment"
+                  pInputTextarea
+                  rows="3"
+                  name="body"
+                  class="u-full"
+                  [(ngModel)]="commentBody"
+                  [maxlength]="2000"
+                  [placeholder]="'task.detail.comment_placeholder' | translate"
+                ></textarea>
+                <div class="u-flex u-justify-end">
+                  <p-button type="submit" [label]="'task.detail.send' | translate" size="small" [loading]="sending()" [disabled]="!commentBody().trim() || sending()" />
+                </div>
+              </form>
+            } @else {
+              <p class="u-muted u-small">{{ 'task.detail.comments_locked' | translate }}</p>
+            }
+          </section>
+
+          <app-confirm-dialog
+            #cancelDialog
+            [header]="'common.confirm'"
+            [message]="'task.detail.cancel_message'"
+            [context]="{ name: item.title }"
+            (confirmed)="setStatus('cancelled')"
+          />
+          <app-confirm-delete #deleteDialog [path]="'/tasks/' + item.id + '/delete'" [entity]="item.title" (deleted)="onDeleted()" />
+          <app-form-dialog
+            [header]="'task.detail.delegate' | translate"
+            [submitLabel]="'task.detail.delegate_confirm' | translate"
+            [sending]="delegateSending()"
+            [error]="delegateError()"
+            [(visible)]="delegateOpen"
+            (submit)="delegate(item)"
+          >
+            @if (delegateInvalid()) {
+              <p class="field__error" role="alert">{{ 'common.required_field' | translate }}</p>
+            }
+            <app-field label="task.form.assignee" controlId="delegate-user" [required]="true">
+              <p-select
+                inputId="delegate-user"
+                appendTo="body"
+                [options]="delegateUsers()"
+                optionLabel="name"
+                optionValue="id"
+                [(ngModel)]="delegateUserId"
+                name="assigned_to"
+                styleClass="u-full"
+              />
+            </app-field>
+          </app-form-dialog>
+        }
+      </app-async-page>
+    </app-print-sheet>
   `,
 })
 export class TaskDetailPage {
@@ -195,6 +194,10 @@ export class TaskDetailPage {
 
   id = input.required<number>();
   sending = signal(false);
+
+  /** the cancel/delete dialogs live inside the loaded branch — reach them via viewChild */
+  cancelDlg = viewChild(ConfirmDialogComponent);
+  deleteDlg = viewChild(ConfirmDeleteComponent);
 
   /** delegate dialog state */
   delegateOpen = signal(false);
@@ -219,6 +222,27 @@ export class TaskDetailPage {
       return null;
     }
   });
+
+  /** T4-20: a non-throwing resource view — raw ResourceRef.value() throws on a failed load */
+  readonly pageResource: LoadableResource = {
+    value: () => this.safeValue() ?? undefined,
+    error: () => {
+      try {
+        return this.data.error();
+      } catch {
+        return undefined;
+      }
+    },
+    isLoading: () => this.data.isLoading(),
+    reload: () => {
+      this.data.reload();
+    },
+  };
+
+  /** header title outside the async states: the task's title once loaded, the generic key otherwise */
+  headerTitle(): string {
+    return this.safeValue()?.title ?? 'task.detail.title';
+  }
 
   constructor() {
     void firstValueFrom(this.api.loadLookups()).then((lookups) => {

@@ -1,11 +1,11 @@
 /* ── Light mode primary buttons — white text on brand brown ──
    PrimeNG preset sets contrastColor but CSS layer ordering can
    prevent it from applying. Force it explicitly. */
-:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger) {
+:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined, .p-button-text, .p-button-secondary, .p-button-danger) {
   color: var(--palette-white);
 }
 
-:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined):not(.p-button-text):not(.p-button-secondary):not(.p-button-danger):hover {
+:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined, .p-button-text, .p-button-secondary, .p-button-danger):hover {
   color: var(--palette-white);
 }
 
@@ -25,6 +25,7 @@
     color: var(--palette-cream);
 
     &::placeholder { color: var(--palette-taupe); }
+
     &:focus {
       background: var(--dark-0);
       border-color: var(--palette-light);
@@ -42,6 +43,7 @@
     .p-select-label { color: var(--palette-cream); }
     .p-select-label.p-placeholder { color: var(--palette-taupe); }
     &:hover { border-color: var(--palette-light); }
+
     &:focus {
       background: var(--dark-0);
       border-color: var(--palette-light);
@@ -54,13 +56,17 @@
     background: var(--dark-2);
     border: 1px solid var(--dark-4);
     border-radius: var(--radius-m);
-    box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+    box-shadow: 3px 3px 0 rgb(0,0,0,0.4);
 
     .p-select-option {
       color: var(--palette-cream);
       &:hover { background: var(--dark-3); }
       &.p-focus { background: var(--dark-3); }
-      &.p-highlight { background: var(--dark-3); color: var(--palette-white); }
+
+      &.p-highlight {
+        background: var(--dark-3);
+        color: var(--palette-white);
+      }
     }
 
     .p-select-empty-message { color: var(--palette-taupe); }
@@ -77,7 +83,11 @@
       border-color: var(--palette-mid);
       color: var(--palette-white);
     }
-    &:active:not(:disabled) { background: var(--palette-light); color: var(--palette-white); }
+
+    &:active:not(:disabled) {
+      background: var(--palette-light);
+      color: var(--palette-white);
+    }
     &:focus { box-shadow: 0 0 0 2px var(--palette-taupe); }
   }
 
@@ -85,7 +95,11 @@
     background: transparent;
     border-color: var(--dark-4);
     color: var(--palette-cream);
-    &:hover { background: var(--dark-1); border-color: var(--palette-light); }
+
+    &:hover {
+      background: var(--dark-1);
+      border-color: var(--palette-light);
+    }
   }
 
   .p-button-text {
@@ -111,7 +125,7 @@
     background: var(--dark-2);
     border: 1px solid var(--dark-4);
     border-radius: var(--radius-l);
-    box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+    box-shadow: 4px 4px 0 rgb(0,0,0,0.5);
 
     .p-dialog-header {
       color: var(--palette-cream);
@@ -119,14 +133,19 @@
       background: var(--dark-1);
     }
     .p-dialog-title { color: var(--palette-cream); }
-    .p-dialog-content { color: var(--palette-cream); background: var(--dark-2); }
+
+    .p-dialog-content {
+      color: var(--palette-cream);
+      background: var(--dark-2);
+    }
+
     .p-dialog-footer {
       border-block-start: 1px solid var(--dark-4);
       background: var(--dark-1);
     }
   }
 
-  .p-dialog-mask { background: rgba(0, 0, 0, 0.7); }
+  .p-dialog-mask { background: rgb(0, 0, 0, 0.7); }
 
   // Table
   .p-datatable {
@@ -136,12 +155,14 @@
       border-block-end: 1px solid var(--palette-mid);
       color: var(--palette-cream);
     }
+
     thead th {
       background: var(--dark-1);
       color: var(--palette-taupe);
       border-color: var(--dark-3);
       font-weight: 600;
     }
+
     tbody td {
       background: var(--dark-2);
       border-color: var(--palette-brand);
@@ -164,9 +185,17 @@
       background: transparent;
       border-radius: var(--radius-s);
       &:hover { background: var(--dark-2); }
-      &.p-highlight { background: var(--dark-3); color: var(--palette-white); }
+
+      &.p-highlight {
+        background: var(--dark-3);
+        color: var(--palette-white);
+      }
     }
-    .p-dropdown { background: var(--dark-0); border-color: var(--dark-4); }
+
+    .p-dropdown {
+      background: var(--dark-0);
+      border-color: var(--dark-4);
+    }
   }
 
   // Checkbox — one unified design lives in _polish.scss (login-style)
@@ -184,11 +213,20 @@
       border-block-end: 1px solid var(--dark-4);
       .p-datepicker-next, .p-datepicker-prev { color: var(--palette-cream); }
     }
+
     table td {
       a, span { color: var(--palette-cream); }
       &:hover { background: var(--dark-3); }
-      &.p-datepicker-today > span { background: var(--dark-1); color: var(--palette-white); }
-      &.p-highlight { background: var(--dark-3); color: var(--palette-white); }
+
+      &.p-datepicker-today > span {
+        background: var(--dark-1);
+        color: var(--palette-white);
+      }
+
+      &.p-highlight {
+        background: var(--dark-3);
+        color: var(--palette-white);
+      }
     }
   }
   .p-datepicker-panel { background: var(--dark-2); }
@@ -198,7 +236,7 @@
     background: var(--dark-2);
     border: 1px solid var(--dark-4);
     border-radius: var(--radius-m);
-    box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+    box-shadow: 3px 3px 0 rgb(0,0,0,0.4);
 
     .p-menuitem-link {
       color: var(--palette-cream);
@@ -217,7 +255,11 @@
 
   // File upload
   .p-fileupload {
-    .p-button { background: var(--dark-1); border-color: var(--dark-4); color: var(--palette-cream); }
+    .p-button {
+      background: var(--dark-1);
+      border-color: var(--dark-4);
+      color: var(--palette-cream);
+    }
   }
 
   // Toast
@@ -232,14 +274,18 @@
   }
 
   // Input number
-  .p-inputnumber-button { background: var(--dark-1); border-color: var(--dark-4); color: var(--palette-cream); }
+  .p-inputnumber-button {
+    background: var(--dark-1);
+    border-color: var(--dark-4);
+    color: var(--palette-cream);
+  }
 
   // Overlay panel
   .p-overlaypanel, .p-popover {
     background: var(--dark-2);
     border: 1px solid var(--dark-4);
     border-radius: var(--radius-m);
-    box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+    box-shadow: 3px 3px 0 rgb(0,0,0,0.4);
     color: var(--palette-cream);
   }
 
@@ -256,9 +302,11 @@
     .sidebar__brand { border-block-end: 1px solid var(--palette-mid); }
     .sidebar__brand-name { color: var(--palette-cream); }
     .sidebar__group-label { color: var(--palette-taupe); }
+
     .sidebar__link {
       color: var(--palette-taupe);
       &:hover { background: var(--dark-2); }
+
       &.sidebar__link--active {
         background: var(--dark-2);
         border-inline-start-color: var(--palette-cream);
@@ -272,6 +320,7 @@
     background: var(--dark-1);
     border-block-end: 1px solid var(--palette-mid);
     .topbar__title { color: var(--palette-cream); }
+
     .topbar__icon-btn {
       background: var(--dark-2);
       border-color: var(--dark-4);
@@ -293,19 +342,30 @@
   .ledger-table {
     background: var(--dark-2);
     border-color: var(--dark-4);
+
     .ledger-table__header {
       background: var(--dark-1);
       border-block-end: 1px solid var(--dark-4);
       .ledger-table__title { color: var(--palette-cream); }
     }
-    th { color: var(--palette-taupe); border-block-end-color: var(--dark-4); }
-    td { border-block-end-color: var(--palette-brand); color: var(--palette-cream); }
+
+    th {
+      color: var(--palette-taupe);
+      border-block-end-color: var(--dark-4);
+    }
+
+    td {
+      border-block-end-color: var(--palette-brand);
+      color: var(--palette-cream);
+    }
     tbody tr:hover td { background: var(--dark-3); }
+
     .ledger-table__summary {
       background: var(--dark-1);
       color: var(--palette-taupe);
       border-block-start: 1px solid var(--dark-4);
     }
+
     .ledger-table__filter {
       background: var(--dark-0);
       border-color: var(--dark-4);
@@ -328,6 +388,7 @@
   .form-section {
     background: var(--dark-2);
     border-color: var(--dark-4);
+
     .form-section__title {
       color: var(--palette-cream);
       border-block-end-color: var(--dark-4);
@@ -335,17 +396,31 @@
   }
 
   // Stamps
-  .stamp--success { border-color: var(--palette-cream); color: var(--palette-cream); background: transparent; }
+  .stamp--success {
+    border-color: var(--palette-cream);
+    color: var(--palette-cream);
+    background: transparent;
+  }
+
   .stamp--danger {
     background: var(--palette-brand);
     color: var(--palette-white);
   }
+
   .stamp--pending {
     border-color: var(--palette-light);
     color: var(--palette-taupe);
   }
-  .stamp--info { background: var(--dark-3); color: var(--palette-white); }
-  .stamp--neutral { background: var(--dark-1); color: var(--palette-taupe); }
+
+  .stamp--info {
+    background: var(--dark-3);
+    color: var(--palette-white);
+  }
+
+  .stamp--neutral {
+    background: var(--dark-1);
+    color: var(--palette-taupe);
+  }
 
   // Empty state
   .empty-state { color: var(--palette-taupe); }
@@ -361,27 +436,47 @@
   // Login page
   .login__form-side { background: var(--dark-0); }
   .login__form-side::before { opacity: 0.05; }
+
   .login__form {
     background: var(--dark-2);
     border-color: var(--dark-4);
-    box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+    box-shadow: 4px 4px 0 rgb(0,0,0,0.5);
   }
   .login__form-title { color: var(--palette-cream); }
   .login__form-subtitle { color: var(--palette-taupe); }
   .login__label { color: var(--palette-cream); }
+
   .login__input {
     background: var(--dark-1);
     border-color: var(--dark-4);
     color: var(--palette-cream);
     &::placeholder { color: var(--palette-taupe); }
-    &:focus { border-color: var(--palette-light); box-shadow: 0 0 0 3px var(--dark-4); background: var(--dark-0); }
+
+    &:focus {
+      border-color: var(--palette-light);
+      box-shadow: 0 0 0 3px var(--dark-4);
+      background: var(--dark-0);
+    }
   }
-  .login__eye { color: var(--palette-light); &:hover { color: var(--palette-cream); background: var(--dark-1); } }
+
+  .login__eye {
+    color: var(--palette-light);
+
+    &:hover {
+      color: var(--palette-cream);
+      background: var(--dark-1);
+    }
+  }
+
   .login__submit {
     background: var(--palette-brand);
     color: var(--palette-white);
     &:hover { background: var(--palette-taupe); }
-    &:disabled { background: var(--dark-1); color: var(--palette-taupe); }
+
+    &:disabled {
+      background: var(--dark-1);
+      color: var(--palette-taupe);
+    }
   }
   .login__remember { color: var(--palette-taupe); }
   .login__footer-note { color: var(--palette-taupe); }
@@ -394,7 +489,7 @@
     border-color: var(--dark-4);
     border-inline-start-color: var(--palette-cream);
     color: var(--palette-cream);
-    box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+    box-shadow: 2px 2px 0 rgb(0,0,0,0.3);
   }
 
   // Notification bell
@@ -413,8 +508,16 @@
     background: var(--dark-2);
     color: var(--palette-taupe);
   }
-  .flow-ribbon__node--done { border-color: var(--palette-cream); color: var(--palette-cream); }
-  .flow-ribbon__node--current { border-color: var(--palette-light); color: var(--palette-cream); }
+
+  .flow-ribbon__node--done {
+    border-color: var(--palette-cream);
+    color: var(--palette-cream);
+  }
+
+  .flow-ribbon__node--current {
+    border-color: var(--palette-light);
+    color: var(--palette-cream);
+  }
   .flow-ribbon__link { border-block-start-color: var(--dark-3); }
 
   // Balance ring
@@ -424,6 +527,7 @@
 
   // Timeline
   .timeline__item { border-inline-start-color: var(--palette-light); }
+
   .timeline__item::before {
     background: var(--dark-2);
     border-color: var(--palette-cream);
@@ -454,7 +558,11 @@
   }
 
   // Command palette
-  .command-palette__group { background: var(--dark-1); color: var(--palette-taupe); }
+  .command-palette__group {
+    background: var(--dark-1);
+    color: var(--palette-taupe);
+  }
+
   .command-palette__item {
     color: var(--palette-cream);
     &:hover { background: var(--dark-3); }
@@ -475,6 +583,7 @@
     background: var(--dark-2);
     border-color: var(--dark-4);
   }
+
   .chat__msg {
     background: var(--dark-1);
     border-color: var(--dark-4);
@@ -488,5 +597,8 @@
   a { color: var(--palette-cream); }
 
   // Scroll lock overlay tint
-  ::selection { background: var(--dark-3); color: var(--palette-white); }
+  ::selection {
+    background: var(--dark-3);
+    color: var(--palette-white);
+  }
 }

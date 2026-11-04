@@ -8,10 +8,15 @@ import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
+import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { ApiClient } from '@core/http/api-client';
 import type { DirectionNode, ItemResponse, Lookups } from '@shared/models/api.models';
+import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface GovRow {
   label: string;
@@ -30,92 +35,91 @@ interface GovData {
  * Governorates report (T34, plan 20 — new page): one row per governorate.
  * Date range + direction filters (T3-110) mirror reports/governorates.blade.php —
  * they affect the expense amounts only, never the case counts.
+ * T4-20/21/27: async-page states + static ledger table in the shared layout.
  */
 @Component({
   selector: 'app-governorates-report',
   standalone: true,
   imports: [
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, DatePickerModule, SelectModule,
-    PageHeaderComponent, PrintSheetComponent, MoneyPipe,
+    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, DatePickerModule, SelectModule,
+    PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
+    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    PrintSheetComponent, StatTileComponent, MoneyPipe,
   ],
   template: `
-    @if (data.value(); as d) {
-      <app-print-sheet [title]="'report.governorates.title' | translate">
-        <app-page-header [title]="'report.governorates.title' | translate">
-          <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
-        </app-page-header>
+    <app-print-sheet [title]="'report.governorates.title' | translate">
+      <app-page-header [title]="'report.governorates.title' | translate">
+        <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
+      </app-page-header>
 
-        <div class="filter-bar">
-          <div class="filter-bar__row">
-            <div class="field">
-              <label class="field__label" for="gov-filter-direction">{{ 'report.filters.direction' | translate }}</label>
-              <p-select appendTo="body" inputId="gov-filter-direction" name="direction"
-                [options]="directionOptions()" optionLabel="label" optionValue="value"
-                [ngModel]="direction()" (ngModelChange)="onDirection($event)"
-                [ariaLabel]="'report.filters.direction' | translate"
-              />
+      <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
+        @if (data.value(); as d) {
+          <div class="filter-bar">
+            <div class="filter-bar__row">
+              <app-field label="report.filters.direction" controlId="gov-filter-direction">
+                <p-select appendTo="body" inputId="gov-filter-direction" name="direction"
+                  [options]="directionOptions()" optionLabel="label" optionValue="value"
+                  [ngModel]="direction()" (ngModelChange)="onDirection($event)"
+                  [ariaLabel]="'report.filters.direction' | translate"
+                />
+              </app-field>
+              <app-field label="report.filters.range" controlId="gov-filter-date">
+                <p-datepicker appendTo="body" inputId="gov-filter-date" name="date" selectionMode="range"
+                  [showIcon]="true"
+                  [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
+                  [ariaLabel]="'report.filters.range' | translate"
+                />
+              </app-field>
+              <div class="filter-bar__spacer"></div>
+              <p-button [label]="'common.reset' | translate" size="small" [outlined]="true" (click)="resetFilters()" />
             </div>
-            <div class="field">
-              <label class="field__label" for="gov-filter-date">{{ 'report.filters.range' | translate }}</label>
-              <p-datepicker appendTo="body" inputId="gov-filter-date" name="date" selectionMode="range"
-                [showIcon]="true"
-                [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
-                [ariaLabel]="'report.filters.range' | translate"
-              />
-            </div>
-            <div class="filter-bar__spacer"></div>
-            <p-button [label]="'common.reset' | translate" size="small" [outlined]="true" (click)="resetFilters()" />
+            <p class="u-muted u-small">{{ 'report.governorates.filter_note' | translate }}</p>
           </div>
-          <p class="u-muted u-small">{{ 'report.governorates.filter_note' | translate }}</p>
-        </div>
 
-        <p class="u-muted u-small u-mb-4">{{ 'report.governorates.click_hint' | translate }}</p>
-        <div class="ledger-table">
-          <table>
-            <thead><tr>
-              <th>{{ 'report.governorates.col_governorate' | translate }}</th>
-              <th>{{ 'report.governorates.col_total' | translate }}</th>
-              <th>{{ 'report.governorates.col_approved' | translate }}</th>
-              <th>{{ 'report.governorates.col_pending' | translate }}</th>
-              <th>{{ 'report.governorates.col_rejected' | translate }}</th>
-              <th>{{ 'report.governorates.col_spent' | translate }}</th>
-              <th>{{ 'report.governorates.col_average' | translate }}</th>
-            </tr></thead>
-            <tbody>
-              @for (row of d.governorates; track row.label) {
-                <tr class="ledger-table__row">
-                  <td>
-                    <a [routerLink]="['/cases']" [queryParams]="{ governorate: row.label }">{{ row.label }}</a>
-                    @if (!row.standard) {
-                      <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
-                    }
-                  </td>
-                  <td class="ledger-table__cell-num">{{ row.total }}</td>
-                  <td class="ledger-table__cell-num">{{ row.approved }}</td>
-                  <td class="ledger-table__cell-num">{{ row.pending }}</td>
-                  <td class="ledger-table__cell-num">{{ row.rejected }}</td>
-                  <td class="ledger-table__cell-num">{{ row.expenses_total | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.average | money }}</td>
-                </tr>
-              } @empty {
-                <tr><td colspan="7" class="u-muted">{{ 'report.governorates.empty' | translate }}</td></tr>
-              }
-            </tbody>
-            <tfoot>
+          <div class="kpi-grid">
+            <app-stat-tile [label]="'report.governorates.col_total'" [value]="d.grand_total.total" />
+            <app-stat-tile [label]="'report.governorates.col_approved'" [value]="d.grand_total.approved" />
+            <app-stat-tile [label]="'report.governorates.col_pending'" [value]="d.grand_total.pending" />
+            <app-stat-tile [label]="'report.governorates.col_rejected'" [value]="d.grand_total.rejected" />
+            <app-stat-tile [label]="'report.governorates.col_spent'" [value]="d.grand_total.expenses_total" [money]="true" />
+          </div>
+
+          <p class="u-muted u-small u-mb-4">{{ 'report.governorates.click_hint' | translate }}</p>
+          <app-ledger-table [columns]="cols" [rows]="d.governorates" [emptyLabel]="'report.governorates.empty'">
+            <ng-template appLedgerBody let-row>
+              <tr class="ledger-table__row">
+                <td appLedgerCol="label">
+                  <a [routerLink]="['/cases']" [queryParams]="{ governorate: row.label }">{{ row.label }}</a>
+                  @if (!row.standard) {
+                    <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
+                  }
+                </td>
+                <td appLedgerCol="total" class="u-bidi">{{ row.total }}</td>
+                <td appLedgerCol="approved" class="u-bidi">{{ row.approved }}</td>
+                <td appLedgerCol="pending" class="u-bidi">{{ row.pending }}</td>
+                <td appLedgerCol="rejected" class="u-bidi">{{ row.rejected }}</td>
+                <td appLedgerCol="expenses_total"><span class="u-bidi">{{ row.expenses_total | money }}</span></td>
+                <td appLedgerCol="average"><span class="u-bidi">{{ row.average | money }}</span></td>
+              </tr>
+            </ng-template>
+            <tfoot footer>
               <tr class="ledger-table__row">
                 <th>{{ 'common.total' | translate }}</th>
-                <td class="ledger-table__cell-num">{{ d.grand_total.total }}</td>
-                <td class="ledger-table__cell-num">{{ d.grand_total.approved }}</td>
-                <td class="ledger-table__cell-num">{{ d.grand_total.pending }}</td>
-                <td class="ledger-table__cell-num">{{ d.grand_total.rejected }}</td>
-                <td class="ledger-table__cell-num">{{ d.grand_total.expenses_total | money }}</td>
-                <td class="ledger-table__cell-num">{{ d.grand_total.average | money }}</td>
+                <td class="ledger-table__cell-num u-bidi">{{ d.grand_total.total }}</td>
+                <td class="ledger-table__cell-num u-bidi">{{ d.grand_total.approved }}</td>
+                <td class="ledger-table__cell-num u-bidi">{{ d.grand_total.pending }}</td>
+                <td class="ledger-table__cell-num u-bidi">{{ d.grand_total.rejected }}</td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.grand_total.expenses_total | money }}</span></td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.grand_total.average | money }}</span></td>
               </tr>
             </tfoot>
-          </table>
+          </app-ledger-table>
+        }
+        <div empty>
+          <app-empty-state [title]="'report.governorates.empty'" [text]="'common.no_data'" />
         </div>
-      </app-print-sheet>
-    }
+      </app-async-page>
+    </app-print-sheet>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -134,6 +138,18 @@ export class GovernoratesPage {
         this.http.get<ItemResponse<GovData>>('/reports/governorates', { params: cleanParams(this.params()) }),
       ).then((r) => r.data),
   });
+
+  isEmpty = (): boolean => (this.data.value()?.governorates ?? []).length === 0;
+
+  readonly cols = [
+    { field: 'label', header: 'report.governorates.col_governorate' },
+    { field: 'total', header: 'report.governorates.col_total', numeric: true },
+    { field: 'approved', header: 'report.governorates.col_approved', numeric: true },
+    { field: 'pending', header: 'report.governorates.col_pending', numeric: true },
+    { field: 'rejected', header: 'report.governorates.col_rejected', numeric: true },
+    { field: 'expenses_total', header: 'report.governorates.col_spent', numeric: true },
+    { field: 'average', header: 'report.governorates.col_average', numeric: true },
+  ];
 
   /** reference data for the direction filter (cacheable endpoint) */
   lookups = resource<Lookups, unknown>({

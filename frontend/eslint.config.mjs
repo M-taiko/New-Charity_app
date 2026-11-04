@@ -43,6 +43,9 @@ export default tseslint.config(
       '@angular-eslint/prefer-inject': 'warn',
       '@angular-eslint/no-output-native': 'warn',
       'no-console': 'error',
+      // native browser dialogs are banned (custom shared dialogs only —
+      // app-confirm-dialog / app-confirm-delete / app-reason-dialog)
+      'no-alert': 'error',
     },
   },
   {

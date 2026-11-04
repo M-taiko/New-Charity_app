@@ -4,6 +4,9 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -24,75 +27,73 @@ interface ReconciliationData {
  * Reconciliation report (plan 20, T3-110): expected vs actual per treasury —
  * Blade parity adds the net-transfers column, the per-row status badge and
  * the grand-total footer row.
+ * T4-20/21/27: async-page states + static ledger table in the shared layout.
  */
 @Component({
   selector: 'app-reconciliation-report',
   standalone: true,
-  imports: [TranslatePipe, ButtonModule, PageHeaderComponent, PrintSheetComponent, StatTileComponent, MoneyPipe],
+  imports: [
+    TranslatePipe, ButtonModule,
+    PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
+    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    PrintSheetComponent, StatTileComponent, MoneyPipe,
+  ],
   template: `
-    @if (data.value(); as d) {
-      <app-print-sheet [title]="'report.reconciliation.title' | translate">
-        <app-page-header [title]="'report.reconciliation.title' | translate">
-          <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
-        </app-page-header>
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'report.reconciliation.col_actual'" [value]="d.totals.actual_balance" [money]="true" />
-          <app-stat-tile [label]="'report.reconciliation.col_expected'" [value]="d.totals.expected_balance" [money]="true" />
-          <app-stat-tile [label]="'report.reconciliation.col_difference'" [value]="d.totals.difference" [money]="true" [inset]="true" />
-          <app-stat-tile [label]="'common.status'" [value]="d.totals.is_reconciled ? ('report.reconciliation.reconciled' | translate) : ('report.reconciliation.not_reconciled' | translate)" />
-        </div>
-        <div class="ledger-table">
-          <table>
-            <thead><tr>
-              <th>{{ 'report.reconciliation.col_treasury' | translate }}</th>
-              <th>{{ 'report.reconciliation.col_donations' | translate }}</th>
-              <th>{{ 'report.reconciliation.col_issued' | translate }}</th>
-              <th>{{ 'report.reconciliation.col_returned' | translate }}</th>
-              <th>{{ 'report.reconciliation.col_direct' | translate }}</th>
-              <th>{{ 'report.reconciliation.col_transfers' | translate }}</th>
-              <th>{{ 'report.reconciliation.col_expected' | translate }}</th>
-              <th>{{ 'report.reconciliation.col_actual' | translate }}</th>
-              <th>{{ 'report.reconciliation.col_difference' | translate }}</th>
-            </tr></thead>
-            <tbody>
-              @for (row of d.treasuries; track row.treasury.id) {
-                <tr class="ledger-table__row">
-                  <td>{{ row.treasury.name }}</td>
-                  <td class="ledger-table__cell-num">{{ row.donations | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.custodies_issued | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.custodies_returned | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.direct_expenses | money }}</td>
-                  <td class="ledger-table__cell-num">{{ netTransfers(row) | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.expected_balance | money }}</td>
-                  <td class="ledger-table__cell-num">{{ row.actual_balance | money }}</td>
-                  <td class="ledger-table__cell-num">
-                    @if (row.is_reconciled) {
-                      <span class="stamp">{{ 'report.reconciliation.reconciled' | translate }}</span>
-                    } @else {
-                      <span class="u-bidi">{{ row.difference | money }}</span>
-                    }
-                  </td>
-                </tr>
-              }
-            </tbody>
-            <tfoot>
+    <app-print-sheet [title]="'report.reconciliation.title' | translate">
+      <app-page-header [title]="'report.reconciliation.title' | translate">
+        <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
+      </app-page-header>
+
+      <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
+        @if (data.value(); as d) {
+          <div class="kpi-grid">
+            <app-stat-tile [label]="'report.reconciliation.col_actual'" [value]="d.totals.actual_balance" [money]="true" />
+            <app-stat-tile [label]="'report.reconciliation.col_expected'" [value]="d.totals.expected_balance" [money]="true" />
+            <app-stat-tile [label]="'report.reconciliation.col_difference'" [value]="d.totals.difference" [money]="true" [inset]="true" />
+            <app-stat-tile [label]="'common.status'" [value]="d.totals.is_reconciled ? ('report.reconciliation.reconciled' | translate) : ('report.reconciliation.not_reconciled' | translate)" />
+          </div>
+
+          <app-ledger-table [columns]="cols" [rows]="d.treasuries" [emptyLabel]="'report.reconciliation.empty'">
+            <ng-template appLedgerBody let-row>
+              <tr class="ledger-table__row">
+                <td appLedgerCol="treasury">{{ row.treasury.name }}</td>
+                <td appLedgerCol="donations"><span class="u-bidi">{{ row.donations | money }}</span></td>
+                <td appLedgerCol="custodies_issued"><span class="u-bidi">{{ row.custodies_issued | money }}</span></td>
+                <td appLedgerCol="custodies_returned"><span class="u-bidi">{{ row.custodies_returned | money }}</span></td>
+                <td appLedgerCol="direct_expenses"><span class="u-bidi">{{ row.direct_expenses | money }}</span></td>
+                <td appLedgerCol="net_transfers"><span class="u-bidi">{{ netTransfers(row) | money }}</span></td>
+                <td appLedgerCol="expected_balance"><span class="u-bidi">{{ row.expected_balance | money }}</span></td>
+                <td appLedgerCol="actual_balance"><span class="u-bidi">{{ row.actual_balance | money }}</span></td>
+                <td appLedgerCol="difference">
+                  @if (row.is_reconciled) {
+                    <span class="stamp">{{ 'report.reconciliation.reconciled' | translate }}</span>
+                  } @else {
+                    <span class="u-bidi">{{ row.difference | money }}</span>
+                  }
+                </td>
+              </tr>
+            </ng-template>
+            <tfoot footer>
               <tr class="ledger-table__row">
                 <th>{{ 'common.total' | translate }}</th>
-                <td class="ledger-table__cell-num">{{ columnSum('donations') | money }}</td>
-                <td class="ledger-table__cell-num">{{ columnSum('custodies_issued') | money }}</td>
-                <td class="ledger-table__cell-num">{{ columnSum('custodies_returned') | money }}</td>
-                <td class="ledger-table__cell-num">{{ columnSum('direct_expenses') | money }}</td>
-                <td class="ledger-table__cell-num">{{ netTransfersSum() | money }}</td>
-                <td class="ledger-table__cell-num">{{ d.totals.expected_balance | money }}</td>
-                <td class="ledger-table__cell-num">{{ d.totals.actual_balance | money }}</td>
-                <td class="ledger-table__cell-num">{{ d.totals.difference | money }}</td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ columnSum('donations') | money }}</span></td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ columnSum('custodies_issued') | money }}</span></td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ columnSum('custodies_returned') | money }}</span></td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ columnSum('direct_expenses') | money }}</span></td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ netTransfersSum() | money }}</span></td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.totals.expected_balance | money }}</span></td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.totals.actual_balance | money }}</span></td>
+                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.totals.difference | money }}</span></td>
               </tr>
             </tfoot>
-          </table>
+          </app-ledger-table>
+          <p class="field__hint u-mt-2">{{ 'report.reconciliation.expected_formula' | translate }}</p>
+        }
+        <div empty>
+          <app-empty-state [title]="'report.reconciliation.empty'" [text]="'common.no_data'" />
         </div>
-        <p class="field__hint u-mt-2">{{ 'report.reconciliation.expected_formula' | translate }}</p>
-      </app-print-sheet>
-    }
+      </app-async-page>
+    </app-print-sheet>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -101,6 +102,20 @@ export class ReconciliationPage {
   data = resource<ReconciliationData, unknown>({
     loader: () => firstValueFrom(this.http.get<ItemResponse<ReconciliationData>>('/reports/reconciliation')).then((r) => r.data),
   });
+
+  isEmpty = (): boolean => (this.data.value()?.treasuries ?? []).length === 0;
+
+  readonly cols = [
+    { field: 'treasury', header: 'report.reconciliation.col_treasury' },
+    { field: 'donations', header: 'report.reconciliation.col_donations', numeric: true },
+    { field: 'custodies_issued', header: 'report.reconciliation.col_issued', numeric: true },
+    { field: 'custodies_returned', header: 'report.reconciliation.col_returned', numeric: true },
+    { field: 'direct_expenses', header: 'report.reconciliation.col_direct', numeric: true },
+    { field: 'net_transfers', header: 'report.reconciliation.col_transfers', numeric: true },
+    { field: 'expected_balance', header: 'report.reconciliation.col_expected', numeric: true },
+    { field: 'actual_balance', header: 'report.reconciliation.col_actual', numeric: true },
+    { field: 'difference', header: 'report.reconciliation.col_difference', numeric: true },
+  ];
 
   /** net transfers for one treasury (display-only derivation from the two API columns) */
   netTransfers(row: TreasuryRow): string {

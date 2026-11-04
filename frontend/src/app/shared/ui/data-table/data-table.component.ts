@@ -272,11 +272,12 @@ export class DataTableComponent {
       this.state.set(saved);
 
       // seed the first data fetch with the saved sort so header and rows agree
-      if (saved.sortField) {
+      const savedSortField = typeof saved.sortField === 'string' ? saved.sortField : '';
+      if (savedSortField !== '') {
         this.pageChange.emit({
           page: 1,
           per_page: saved.rows ?? 25,
-          sort: (saved.sortDir === -1 ? '-' : '') + saved.sortField,
+          sort: (saved.sortDir === -1 ? '-' : '') + String(savedSortField),
         });
       }
     });
@@ -301,7 +302,7 @@ export class DataTableComponent {
 
     // moving down needs the slot AFTER the target; moving up lands on it
     const ref = currentIdx < targetIdx ? cells[targetIdx + 1] : cells[targetIdx];
-    tr.insertBefore(td, ref ?? null);
+    tr.insertBefore(td, ref);
   }
 
   /** rows filtered client-side — matches what the user SEES: raw values,
@@ -309,7 +310,7 @@ export class DataTableComponent {
   filteredRows = computed(() => {
     const q = this.searchQuery().trim().toLowerCase();
     const rows = this.rows();
-    if (!q || !Array.isArray(rows)) return rows ?? [];
+    if (!q || !Array.isArray(rows)) return rows;
     const qPlain = q.replace(/,/g, '');
     const fields = this.orderedColumns().map((c) => c.searchField ?? c.field);
     return rows.filter((row) =>
@@ -319,8 +320,10 @@ export class DataTableComponent {
 
   /** one cell's value in every form the interface might display it */
   private cellMatches(value: unknown, q: string, qPlain: string): boolean {
-    if (value === null || value === undefined) return false;
-    const raw = String(value);
+    // objects can never match a text query (and previously stringified to
+    // "[object Object]", which matched nothing either)
+    if (value === null || value === undefined || typeof value === 'object') return false;
+    const raw = String(value as string | number | bigint | boolean | symbol);
     if (raw.toLowerCase().includes(q)) return true;
 
     // money: stored "5000.00", displayed "5,000.00"
@@ -432,13 +435,15 @@ export class DataTableComponent {
   }
 
   onColResize(event: { element?: HTMLElement | null; delta?: number | null }): void {
-    const field = event.element?.getAttribute?.('data-field');
-    if (!field) return;
-    const width = event.element?.style?.width || `${event.element?.offsetWidth || 100}px`;
+    const element = event.element ?? null;
+    const field = element?.getAttribute('data-field');
+    if (!element || !field) return;
+    const offsetWidth = element.offsetWidth > 0 ? element.offsetWidth : 100;
+    const width = element.style.width !== '' ? element.style.width : `${offsetWidth}px`;
     // PrimeNG (expand mode) also grew the table element — persist that too,
     // otherwise restored column widths can exceed the 100% container
-    const table = event.element?.closest?.('table');
-    const tableWidth = table?.style?.width || undefined;
+    const table = element.closest('table');
+    const tableWidth = table !== null && table.style.width !== '' ? table.style.width : undefined;
     const widths = { ...(this.state().columnWidths ?? {}), [field]: width };
     this.saveState({ columnWidths: widths, ...(tableWidth ? { tableWidth } : {}) });
   }
@@ -459,7 +464,7 @@ export class DataTableComponent {
 
     // persist sort + page size
     this.saveState({
-      sortField: sortField || '',
+      sortField: sortField ?? '',
       sortDir: event.sortOrder ?? 0,
       rows,
     });

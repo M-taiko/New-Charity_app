@@ -8,6 +8,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
@@ -84,6 +85,7 @@ interface DashboardData {
     SelectModule,
     FormsModule,
     PageHeaderComponent,
+    AsyncPageComponent,
     StatTileComponent,
     ChartCardComponent,
     StatusStampComponent,
@@ -93,13 +95,8 @@ interface DashboardData {
   template: `
     <app-page-header [title]="'dashboard.welcome' | translate: { name: userName() }" />
 
-    @if (data.isLoading() && !data.value()) {
-      <div class="kpi-grid">
-        @for (s of [1, 2, 3, 4]; track s) {
-          <div class="skeleton skeleton--tile"></div>
-        }
-      </div>
-    } @else if (data.value(); as d) {
+    <app-async-page [resource]="data" variant="list">
+      @if (data.value(); as d) {
       @if (d.view === 'finance') {
         <div class="kpi-grid">
           <a class="tile-link" routerLink="/treasury" [title]="'common.open_page' | translate">
@@ -265,7 +262,8 @@ interface DashboardData {
           </div>
         </section>
       }
-    }
+      }
+    </app-async-page>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

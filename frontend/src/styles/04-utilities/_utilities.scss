@@ -76,6 +76,22 @@
   margin-block-end: var(--space-4);
 }
 
+.u-justify-end {
+  justify-content: flex-end;
+}
+
+.u-scroll-x {
+  overflow-x: auto;
+}
+
+.u-fw-bold {
+  font-weight: 700;
+}
+
+.u-m-0 {
+  margin: 0;
+}
+
 .u-full {
   width: 100%;
 }
