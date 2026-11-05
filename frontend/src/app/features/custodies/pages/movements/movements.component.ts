@@ -2,15 +2,11 @@
 
 import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { CheckboxModule } from 'primeng/checkbox';
-import { DatePickerModule } from 'primeng/datepicker';
-import { InputNumberModule } from 'primeng/inputnumber';
-import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
@@ -24,7 +20,6 @@ import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse, ListResponse, Lookups } from '@shared/models/api.models';
-import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface Row {
   id: number;
@@ -70,8 +65,7 @@ const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'e
   selector: 'app-custody-movements',
   standalone: true,
   imports: [SectionNavComponent, 
-    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, CheckboxModule, DatePickerModule, InputNumberModule, SelectModule,
-    PageHeaderComponent, AsyncPageComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    TranslatePipe, RouterLink, ButtonModule, CheckboxModule, PageHeaderComponent, AsyncPageComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,

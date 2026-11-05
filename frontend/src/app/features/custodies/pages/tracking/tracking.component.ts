@@ -2,12 +2,10 @@
 
 import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
@@ -27,7 +25,6 @@ import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.compo
 import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse } from '@shared/models/api.models';
 import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog.component';
-import { FieldComponent } from '@shared/ui/field/field.component';
 
 /** /custodies/tracking payload — one full dataset, no server pagination */
 interface TrackingAgent {
@@ -86,8 +83,7 @@ interface CustodyMovements {
   selector: 'app-custody-tracking',
   standalone: true,
   imports: [SectionNavComponent, 
-    ContentDialogComponent, AppTabsComponent, AutoRefreshComponent, FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    ContentDialogComponent, AppTabsComponent, AutoRefreshComponent, TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
