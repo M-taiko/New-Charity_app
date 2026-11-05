@@ -25,8 +25,9 @@ class CustodyTransferService
                 throw new \Exception('هذه العهدة لا تخص هذا المندوب');
             }
 
-            // Verify custody is in accepted or active status
-            if (!in_array($custody->status, ['accepted', 'active'])) {
+            // Verify custody is in an open status — partially_returned still holds
+            // real money, so its remaining balance stays transferable
+            if (!in_array($custody->status, ['accepted', 'active', 'partially_returned'])) {
                 throw new \Exception('العهدة يجب أن تكون في حالة مقبولة أو نشطة');
             }
 
@@ -155,7 +156,7 @@ class CustodyTransferService
                 // المستقبل حدد العهدة بنفسه — نتحقق من ملكيتها وتوافق الخزينة وكونها مفتوحة
                 $toAgentCustody = Custody::where('id', $targetCustodyId)
                     ->where('agent_id', $transfer->to_agent_id)
-                    ->whereIn('status', ['accepted', 'active'])
+                    ->whereIn('status', ['accepted', 'active', 'partially_returned'])
                     ->first();
                 if (!$toAgentCustody) {
                     throw new \Exception('العهدة المختارة للاستلام غير صالحة (يجب أن تكون عهدتك المفتوحة وبنفس خزينة المُرسل)');
@@ -166,7 +167,7 @@ class CustodyTransferService
             } else {
                 $toAgentCustody = Custody::where('treasury_id', $custody->treasury_id)
                     ->where('agent_id', $transfer->to_agent_id)
-                    ->whereIn('status', ['accepted', 'active'])
+                    ->whereIn('status', ['accepted', 'active', 'partially_returned'])
                     ->orderBy('accepted_at')
                     ->orderBy('id')
                     ->first();

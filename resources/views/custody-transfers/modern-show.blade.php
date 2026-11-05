@@ -157,7 +157,7 @@
                             // عهدات المستقبل المفتوحة بنفس خزينة المُرسل — مرشحة لاستلام المبلغ
                             $receiverCustodies = \App\Models\Custody::where('agent_id', $custodyTransfer->to_agent_id)
                                 ->where('treasury_id', $custodyTransfer->custody->treasury_id)
-                                ->whereIn('status', ['accepted', 'active'])
+                                ->whereIn('status', ['accepted', 'active', 'partially_returned'])
                                 ->orderBy('accepted_at')
                                 ->orderBy('id')
                                 ->get();
@@ -202,9 +202,23 @@
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i> في انتظار موافقة المندوب المستلم
                         </div>
+                        {{-- Sender or manager may cancel before the receiver decides --}}
+                        @if (auth()->id() === $custodyTransfer->from_agent_id || auth()->user()->can('approve_custody_transfer'))
+                            <form action="{{ route('custody-transfers.cancel', $custodyTransfer) }}" method="POST"
+                                  onsubmit="return confirm('هل تريد إلغاء هذا التحويل؟ سيتم تحرير المبلغ المجمد فوراً');">
+                                @csrf
+                                <button type="submit" class="btn btn-dark w-100">
+                                    <i class="fas fa-ban"></i> إلغاء التحويل
+                                </button>
+                            </form>
+                        @endif
                     @elseif ($custodyTransfer->status === 'approved')
                         <div class="alert alert-success">
                             <i class="fas fa-check-circle"></i> تم الموافقة على التحويل
+                        </div>
+                    @elseif ($custodyTransfer->status === 'cancelled')
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-ban"></i> تم إلغاء التحويل من المُرسل
                         </div>
                     @else
                         <div class="alert alert-danger">

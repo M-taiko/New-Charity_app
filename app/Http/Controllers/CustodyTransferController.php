@@ -61,9 +61,10 @@ class CustodyTransferController extends Controller
 
         $user = auth()->user();
 
-        // Get custodies for current agent that are active/accepted with remaining balance > 0
+        // Get custodies for current agent that are open (a partially returned
+        // custody still holds money) with remaining balance > 0
         $custodies = Custody::where('agent_id', $user->id)
-            ->whereIn('status', ['accepted', 'active'])
+            ->whereIn('status', ['accepted', 'active', 'partially_returned'])
             ->with('agent', 'treasury')
             ->get()
             ->filter(function ($custody) {
@@ -325,6 +326,7 @@ class CustodyTransferController extends Controller
             'pending' => '<span class="badge bg-warning">قيد الانتظار</span>',
             'approved' => '<span class="badge bg-success">تم القبول</span>',
             'rejected' => '<span class="badge bg-danger">تم الرفض</span>',
+            'cancelled' => '<span class="badge bg-dark">ملغي</span>',
         ];
 
         return $badges[$status] ?? '<span class="badge bg-secondary">غير معروف</span>';

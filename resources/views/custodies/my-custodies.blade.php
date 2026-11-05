@@ -371,6 +371,7 @@
                                     <th>المبلغ</th>
                                     <th>الحالة</th>
                                     <th>التاريخ</th>
+                                    <th>إجراءات</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -389,11 +390,26 @@
                                             <span class="badge bg-warning">قيد الانتظار</span>
                                         @elseif($transfer->status === 'approved')
                                             <span class="badge bg-success">تم الاستقبال</span>
+                                        @elseif($transfer->status === 'cancelled')
+                                            <span class="badge bg-dark">ملغي</span>
                                         @else
                                             <span class="badge bg-danger">مرفوض</span>
                                         @endif
                                     </td>
                                     <td>{!! dt_span($transfer->created_at) !!}</td>
+                                    <td>
+                                        @if($transfer->status === 'pending')
+                                            <form action="{{ route('custody-transfers.cancel', $transfer) }}" method="POST"
+                                                  onsubmit="return confirm('هل تريد إلغاء هذا التحويل؟ سيتم تحرير المبلغ المجمد على عهدتك فوراً');">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="fas fa-times"></i> إلغاء
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -1236,7 +1252,7 @@ window.receiveTransferOptions = @php
         $tid = $pendingTransfer->id;
         $treasuryId = $pendingTransfer->custody?->treasury_id;
         $receiveOptions[$tid] = $myCustodies
-            ->whereIn('status', ['accepted', 'active'])
+            ->whereIn('status', ['accepted', 'active', 'partially_returned'])
             ->filter(fn ($c) => (int) $c->treasury_id === (int) $treasuryId)
             ->map(fn ($c) => [
                 'id' => $c->id,

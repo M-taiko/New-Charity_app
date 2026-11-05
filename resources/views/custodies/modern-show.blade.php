@@ -210,9 +210,9 @@
                                 </button>
                             @endif
 
-                            {{-- Transfer and return buttons for active custodies --}}
+                            {{-- Transfer and return buttons for open custodies --}}
                             @if(auth()->user()->id === $custody->agent_id && in_array($custody->status, ['accepted', 'active', 'partially_returned']))
-                                @if($custody->status === 'active' || ($custody->status === 'accepted' && $custody->initiated_by === 'accountant'))
+                                @if(in_array($custody->status, ['active', 'partially_returned']) || ($custody->status === 'accepted' && $custody->initiated_by === 'accountant'))
                                     <a href="{{ route('custody-transfers.create') }}" class="btn btn-info">
                                         <i class="fas fa-exchange-alt"></i> تحويل إلى مندوب آخر
                                     </a>
