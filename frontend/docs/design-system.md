@@ -21,10 +21,12 @@ Every page composes the same skeleton, in this order:
   render blank — a failed load always shows the error state.
 - **`app-data-table`** stays the one table for interactive lists (pagination,
   column drag, saved state).
-- **`app-ledger-table`** is the one static table for detail pages, reports
-  and secondary lists: projected rows via `<ng-template appLedgerBody>`,
-  cells tagged `<td appLedgerCol="…">`, built-in empty row, horizontal
-  scroll, optional sortable columns and a `<tfoot footer>` totals slot.
+- **`app-data-table`** is the ONLY table (T6-20): `mode="static"` covers
+  detail pages, reports and secondary lists (client sort/pagination/search/
+  filters), totals ride the `[footer]` slot, and `app-ledger-table` is
+  DELETED. The `filter-bar` markup survives ONLY as report parameters
+  (date range / direction pickers that change the data set) — never for
+  row filtering.
 - **`app-field`** wraps every form control: label + required marker + hint +
   error with `for`/`id` wiring; server 422 messages land under their field.
   Field groups sit in **`app-form-section`** cards.

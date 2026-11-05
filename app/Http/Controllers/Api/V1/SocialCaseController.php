@@ -24,6 +24,15 @@ final class SocialCaseController extends Controller
             SocialCase::with(['researcher']),
             $request,
             sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'name' => 'name', 'amount' => 'assistance_amount', 'phone' => 'phone', 'governorate' => 'city', 'researcher' => 'researcher_id', 'status' => 'status'],
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'pending', 'label' => 'قيد الدراسة'],
+                    ['value' => 'approved', 'label' => 'مقبولة'],
+                    ['value' => 'rejected', 'label' => 'مرفوضة'],
+                ]],
+                'governorate' => ['type' => 'select', 'column' => 'city', 'options' => fn () => \App\Models\SocialCase::distinct()->whereNotNull('city')->pluck('city')->map(fn ($c) => ['value' => $c, 'label' => $c])->values()->all()],
+                'researcher' => ['type' => 'lookup', 'column' => 'researcher_id'],
+            ],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$term}%")
                 ->orWhere('phone', 'like', "%{$term}%")

@@ -11,6 +11,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { MenuModule } from 'primeng/menu';
+import type { MenuItem } from 'primeng/api';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -62,7 +64,7 @@ interface SalaryDetail {
 @Component({
   selector: 'app-salary-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, InputNumberModule, InputTextModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, MoneyPipe],
+  imports: [MenuModule, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, InputNumberModule, InputTextModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, MoneyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .allowance-list {
@@ -86,15 +88,10 @@ interface SalaryDetail {
         <app-print-sheet [title]="'hr.salaries.detail.title' | translate">
           <app-page-header [title]="itemTitle(item)">
             <div actions class="u-flex u-gap-2 u-flex-wrap">
+              <!-- T6-10: max 3 visible buttons; edit/allowance in the More menu -->
               @if (item.status !== 'paid') {
-                <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/hr/salaries', item.id, 'edit']" />
-                <p-button [label]="'hr.salaries.detail.add_allowance' | translate" size="small" severity="info" [outlined]="true" (onClick)="openAllowance()" />
-              }
-              @if (item.status === 'calculated') {
-                <p-button [label]="'hr.salaries.detail.approve' | translate" size="small" severity="success" [outlined]="true" (onClick)="act('approve')" [loading]="sending()" />
-              }
-              @if (item.status === 'approved') {
-                
+                <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="salaryMoreMenu.toggle($event)" />
+                <p-menu #salaryMoreMenu appendTo="body" [model]="moreMenuItems()" popup="true" />
               }
               <p-button [label]="'hr.salaries.detail.payslip' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="downloadPayslip()" />
               <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/hr/salaries" />
@@ -152,6 +149,12 @@ interface SalaryDetail {
   `,
 })
 export class SalaryDetailPage {
+  /** T6-10: edit + add-allowance live in the header More menu */
+  readonly moreMenuItems = computed<MenuItem[]>(() => [
+    { label: this.translate.instant('common.edit'), routerLink: ['/hr/salaries', this.id(), 'edit'] },
+    { label: this.translate.instant('hr.salaries.detail.add_allowance'), command: () => { this.openAllowance(); } },
+  ]);
+
   /** T6-71.6: individual payslip PDF — authenticated blob download */
   downloadPayslip(): void {
     void firstValueFrom(this.api.getBlob(`/api/v1/hr/salaries/${this.id()}/payslip`))

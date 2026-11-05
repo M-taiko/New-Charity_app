@@ -17,7 +17,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
@@ -68,7 +68,7 @@ type DonationType = 'external_donation' | 'expense_refund';
 @Component({
   selector: 'app-custody-detail',
   standalone: true,
-  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, AppTabsComponent, MenuModule, FlowRibbonComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
+  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, AppTabsComponent, MenuModule, FlowRibbonComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'custody.detail.title' | translate">
@@ -148,23 +148,23 @@ type DonationType = 'external_donation' | 'expense_refund';
           @if (detailTab() === 'returns') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.returns' | translate }}</span></div>
-            <app-ledger-table [columns]="returnRequestCols" [rows]="c.return_requests">
-              <ng-template appLedgerBody let-row>
+            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="returnRequestCols" [rows]="c.return_requests">
+              <ng-template appTableBody let-row>
                 <tr class="ledger-table__row">
-                  <td appLedgerCol="requested_at" class="u-bidi">{{ row.requested_at | datetime }}</td>
-                  <td appLedgerCol="amount">{{ row.amount | money }}</td>
-                  <td appLedgerCol="reason">
+                  <td appTableCol="requested_at" class="u-bidi">{{ row.requested_at | datetime }}</td>
+                  <td appTableCol="amount">{{ row.amount | money }}</td>
+                  <td appTableCol="reason">
                     {{ row.reason || '—' }}
                     @if (row.rejection_reason) { <span class="u-small u-muted">{{ row.rejection_reason }}</span> }
                   </td>
-                  <td appLedgerCol="status"><app-status-stamp [status]="row.status" namespace="return_request" /></td>
-                  <td appLedgerCol="requested_by">{{ row.requested_by ?? '—' }}</td>
-                  <td appLedgerCol="decided">
+                  <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="return_request" /></td>
+                  <td appTableCol="requested_by">{{ row.requested_by ?? '—' }}</td>
+                  <td appTableCol="decided">
                     @if (row.approved_by) {
                       <span class="u-bidi">{{ row.approved_by }} — {{ row.approved_at | datetime: false }}</span>
                     } @else { <span class="u-muted">—</span> }
                   </td>
-                  <td appLedgerCol="actions">
+                  <td appTableCol="actions">
                     @if (row.status === 'pending') {
                       @if (canManageTreasury()) {
                         <p-button [label]="'custody.detail.approve_rr' | translate" size="small" severity="success" [outlined]="true" (onClick)="rrDlg.open(); openRrApprove(row)" />
@@ -175,7 +175,7 @@ type DonationType = 'external_donation' | 'expense_refund';
                   </td>
                 </tr>
               </ng-template>
-            </app-ledger-table>
+            </app-data-table>
           </section>
 
           }
@@ -183,16 +183,16 @@ type DonationType = 'external_donation' | 'expense_refund';
           @if (detailTab() === 'transactions') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.transactions' | translate }}</span></div>
-            <app-ledger-table [columns]="transactionCols" [rows]="c.transactions">
-              <ng-template appLedgerBody let-row>
+            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="transactionCols" [rows]="c.transactions">
+              <ng-template appTableBody let-row>
                 <tr class="ledger-table__row">
-                  <td appLedgerCol="date" class="u-bidi">{{ row.date | datetime }}</td>
-                  <td appLedgerCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-                  <td appLedgerCol="description">{{ row.description }}</td>
-                  <td appLedgerCol="amount">{{ row.amount | money }}</td>
+                  <td appTableCol="date" class="u-bidi">{{ row.date | datetime }}</td>
+                  <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
+                  <td appTableCol="description">{{ row.description }}</td>
+                  <td appTableCol="amount">{{ row.amount | money }}</td>
                 </tr>
               </ng-template>
-            </app-ledger-table>
+            </app-data-table>
           </section>
 
           }
@@ -200,19 +200,19 @@ type DonationType = 'external_donation' | 'expense_refund';
           @if (detailTab() === 'expenses') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.expenses' | translate }}</span></div>
-            <app-ledger-table [columns]="expenseCols" [rows]="c.expenses">
-              <ng-template appLedgerBody let-row>
+            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="expenseCols" [rows]="c.expenses">
+              <ng-template appTableBody let-row>
                 <tr class="ledger-table__row">
-                  <td appLedgerCol="date" class="u-bidi">{{ row.date | datetime: false }}</td>
-                  <td appLedgerCol="description">
+                  <td appTableCol="date" class="u-bidi">{{ row.date | datetime: false }}</td>
+                  <td appTableCol="description">
                     <a [routerLink]="['/expenses', row.id]">{{ row.description || '—' }}</a>
                     @if (row.split.length > 1) { <span class="stamp stamp--info">{{ 'expense.detail.custody_split_note' | translate }}</span> }
                   </td>
-                  <td appLedgerCol="direction" class="u-small">{{ row.direction || ('expense.list.filter.no_direction' | translate) }}</td>
-                  <td appLedgerCol="amount">{{ row.amount | money }}</td>
+                  <td appTableCol="direction" class="u-small">{{ row.direction || ('expense.list.filter.no_direction' | translate) }}</td>
+                  <td appTableCol="amount">{{ row.amount | money }}</td>
                 </tr>
               </ng-template>
-            </app-ledger-table>
+            </app-data-table>
           </section>
 
           }

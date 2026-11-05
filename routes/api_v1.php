@@ -147,6 +147,8 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             // ── Reports ────────────────────────────────────────
             Route::get('dashboard', [ApiDashboard::class, 'show']);
             Route::get('dashboard/money-flow', [ApiDashboard::class, 'moneyFlow']);
+            Route::get('dashboard/layout', [ApiDashboard::class, 'layout']);
+            Route::post('dashboard/layout', [ApiDashboard::class, 'layout']);
             Route::get('directional-stats', [ApiDashboard::class, 'directionalStats']);
             Route::get('reports', [ApiReport::class, 'dashboard']);
             Route::get('reports/governorates', [ApiReport::class, 'governorates']);

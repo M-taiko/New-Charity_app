@@ -42,19 +42,26 @@ interface MaintenanceDetail { id: number; [key: string]: string | number | boole
         <app-print-sheet [title]="'procurement.maintenance.detail.title' | translate">
           <app-page-header [title]="itemTitle(item)">
             <div actions class="u-flex u-gap-2 u-flex-wrap">
-              @if (canReview() && statusOf(item) === 'pending') {
-                <p-button [label]="'procurement.maintenance.detail.assign' | translate" size="small" (onClick)="openAssign()" />
-                <p-button [label]="'procurement.maintenance.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDlg.open()" />
-              }
-              @if (canResolve(item)) {
-                <p-button [label]="'procurement.maintenance.detail.resolve' | translate" size="small" (onClick)="resolveDlg.open()" />
-              }
-              @if (canDelete()) {
-                <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg.open()" />
-              }
-              <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/procurement/maintenance" />
+              <!-- T6-10: decisions live in the sticky bar; back is the async-page backLink -->
+              <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/procurement/maintenance" />
             </div>
           </app-page-header>
+          <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
+          <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
+            @if (canReview() && statusOf(item) === 'pending') {
+              <p-button [label]="'procurement.maintenance.detail.assign' | translate" size="small" severity="success" (onClick)="openAssign()" />
+            }
+            @if (canResolve(item)) {
+              <p-button [label]="'procurement.maintenance.detail.resolve' | translate" size="small" severity="success" (onClick)="resolveDlg.open()" />
+            }
+            @if (canReview() && statusOf(item) === 'pending') {
+              <p-button [label]="'procurement.maintenance.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDlg.open()" />
+            }
+            @if (canDelete()) {
+              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg.open()" />
+            }
+          </div>
+
           <div class="u-mb-4"><app-status-stamp [status]="statusOf(item)" namespace="maintenance_request" [large]="true" /></div>
           <app-key-value-list [items]="keyValues(item)" />
           <ng-content />

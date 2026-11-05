@@ -3,6 +3,26 @@
 // heads, rows never split, actions/interactive controls hidden, 9–10px fixed
 // table layout, totals kept, charts printed as flat images.
 @media print {
+  // page numbers "x / y" — @page margin boxes need Chrome 131+; Chrome 109
+  // ignores this block harmlessly (the repeated footer still prints)
+  @page {
+    @bottom-center {
+      content: counter(page) ' / ' counter(pages);
+      font-size: 9px;
+      color: #7d5f4e;
+    }
+  }
+
+  // T6-70: include/exclude sections from the Print menu
+  .print-no-org-header .print-sheet__org {
+    display: none !important;
+  }
+
+  .print-no-totals tfoot,
+  .print-no-totals .ledger-table__summary {
+    display: none !important;
+  }
+
   // ── Named pages (Chrome 109+): pages opt into landscape per column count ──
   @page portrait {
     size: A4 portrait;

@@ -8,7 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -30,7 +30,7 @@ interface AgentsData {
   imports: [
     TranslatePipe, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    DataTableComponent, TableBodyDirective, TableColDirective,
     StatTileComponent, PrintSheetComponent, MoneyPipe,
   ],
   template: `
@@ -49,22 +49,22 @@ interface AgentsData {
             <app-stat-tile [label]="'report.agents_balance.total_returned'" [value]="total('total_returned')" [money]="true" />
           </div>
 
-          <app-ledger-table [columns]="cols" [rows]="d.agents" [emptyLabel]="'report.agents_balance.empty'">
-            <ng-template appLedgerBody let-row>
+          <app-data-table mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.agents" [emptyLabel]="'report.agents_balance.empty'">
+            <ng-template appTableBody let-row>
               <tr class="ledger-table__row">
-                <td appLedgerCol="agent">{{ row.agent.name }}</td>
-                <td appLedgerCol="total_custodies" class="u-bidi">{{ row.total_custodies }}</td>
-                <td appLedgerCol="active_custodies" class="u-bidi">{{ row.active_custodies }}</td>
-                <td appLedgerCol="closed_custodies" class="u-bidi">{{ row.closed_custodies }}</td>
-                <td appLedgerCol="total_received"><span class="u-bidi">{{ row.total_received | money }}</span></td>
-                <td appLedgerCol="transferred_in"><span class="u-bidi">{{ row.transferred_in | money }}</span></td>
-                <td appLedgerCol="transferred_out"><span class="u-bidi">{{ row.transferred_out | money }}</span></td>
-                <td appLedgerCol="total_spent"><span class="u-bidi">{{ row.total_spent | money }}</span></td>
-                <td appLedgerCol="total_returned"><span class="u-bidi">{{ row.total_returned | money }}</span></td>
-                <td appLedgerCol="current_balance"><span class="u-bidi">{{ row.current_balance | money }}</span></td>
+                <td appTableCol="agent">{{ row.agent.name }}</td>
+                <td appTableCol="total_custodies" class="u-bidi">{{ row.total_custodies }}</td>
+                <td appTableCol="active_custodies" class="u-bidi">{{ row.active_custodies }}</td>
+                <td appTableCol="closed_custodies" class="u-bidi">{{ row.closed_custodies }}</td>
+                <td appTableCol="total_received"><span class="u-bidi">{{ row.total_received | money }}</span></td>
+                <td appTableCol="transferred_in"><span class="u-bidi">{{ row.transferred_in | money }}</span></td>
+                <td appTableCol="transferred_out"><span class="u-bidi">{{ row.transferred_out | money }}</span></td>
+                <td appTableCol="total_spent"><span class="u-bidi">{{ row.total_spent | money }}</span></td>
+                <td appTableCol="total_returned"><span class="u-bidi">{{ row.total_returned | money }}</span></td>
+                <td appTableCol="current_balance"><span class="u-bidi">{{ row.current_balance | money }}</span></td>
               </tr>
             </ng-template>
-          </app-ledger-table>
+          </app-data-table>
         }
         <div empty>
           <app-empty-state [title]="'report.agents_balance.empty'" [text]="'common.no_data'" />

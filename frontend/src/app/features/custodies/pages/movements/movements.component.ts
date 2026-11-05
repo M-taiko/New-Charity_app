@@ -14,6 +14,7 @@ import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import type { TableFilterDef, TableQuery } from '@shared/lib/table-filters';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
@@ -93,37 +94,9 @@ const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'e
           <app-stat-tile [label]="'custody.movements.spent'" [value]="summaryValue('spent')" [money]="true" />
         </div>
 
-        <div class="filter-bar no-print">
-          <div class="filter-bar__row">
-            <app-field label="custody.movements.date_range" controlId="mv-filter-date" class="field--lg">
-              <p-datepicker appendTo="body" inputId="mv-filter-date" name="date" selectionMode="range" [showIcon]="true"
-                dateFormat="yy-mm-dd" [ngModel]="draftDateRange()" (ngModelChange)="onDateRange($event)" styleClass="u-full" />
-            </app-field>
-            <app-field label="custody.movements.agent" controlId="mv-filter-agent" class="field--md">
-              <p-select appendTo="body" inputId="mv-filter-agent" [options]="agentOptions()" optionLabel="label" optionValue="value"
-                [filter]="true" [ngModel]="draft().agent_id" (ngModelChange)="patchDraft('agent_id', $event)"
-                name="agent" styleClass="u-full" [autofocus]="false" />
-            </app-field>
-            <app-field label="custody.movements.type" controlId="mv-filter-type" class="field--md">
-              <p-select appendTo="body" inputId="mv-filter-type" [options]="typeOptions()" optionLabel="label" optionValue="value"
-                [ngModel]="draft().type" (ngModelChange)="patchDraft('type', $event)" name="type"
-                styleClass="u-full" [autofocus]="false" />
-            </app-field>
-            <app-field label="custody.movements.custody_number" controlId="mv-filter-custody" class="field--sm">
-              <p-inputnumber inputId="mv-filter-custody" [ngModel]="draft().custody_id"
-                (ngModelChange)="patchDraft('custody_id', $event)" [min]="1" [useGrouping]="false" name="custody" styleClass="u-full" />
-            </app-field>
-            <app-field label="custody.movements.show_closures" controlId="mv-filter-closures">
-              <p-checkbox inputId="mv-filter-closures" [binary]="true" [ngModel]="draft().show_closures"
-                (ngModelChange)="patchDraft('show_closures', $event)" name="show_closures" />
-            </app-field>
-            <div class="filter-bar__spacer"></div>
-            <p-button [label]="'custody.movements.apply' | translate" size="small" (onClick)="applyFilters()" />
-            <p-button [label]="'common.reset' | translate" severity="secondary" [outlined]="true" size="small" (onClick)="resetFilters()" />
-          </div>
-        </div>
-
         <app-data-table
+          [filters]="filterDefs()"
+          (queryChange)="onQuery($event)"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -213,6 +186,41 @@ export class MovementsPage {
   }
 
   params = signal<MovementsParams>({ page: 1, per_page: 25, q: '', ...DEFAULT_FILTERS });
+
+  /** T6-30: JSON filter defs — the table draws the controls, no page markup */
+  readonly filterDefs = computed<TableFilterDef[]>(() => [
+    { key: 'date', label: 'custody.movements.date_range', type: 'date-range', order: 1 },
+    {
+      key: 'agent_id', label: 'custody.movements.agent', type: 'select', order: 2,
+      options: this.agentOptions().filter((o) => o.value !== null),
+    },
+    {
+      key: 'type', label: 'custody.movements.type', type: 'select', order: 3,
+      options: this.typeOptions().filter((o) => o.value !== 'all'),
+    },
+    { key: 'custody_id', label: 'custody.movements.custody_number', type: 'text', order: 4 },
+    { key: 'show_closures', label: 'custody.movements.show_closures', type: 'boolean', order: 5 },
+  ]);
+
+  /** the table emits the full query — filters reach the server (T6-30) */
+  onQuery(query: TableQuery): void {
+    const f = query.filters;
+    const date = (f.date ?? {}) as { from?: string; to?: string };
+    this.params.update((p) => ({
+      ...p,
+      page: query.page,
+      per_page: query.perPage,
+      sort: query.sort !== '' ? query.sort : p.sort,
+      q: query.q,
+      date_from: date.from ?? '',
+      date_to: date.to ?? '',
+      agent_id: (f.agent_id as number) ?? null,
+      type: (f.type as string) ?? 'all',
+      custody_id: f.custody_id !== undefined && f.custody_id !== '' ? Number(f.custody_id) : null,
+      show_closures: f.show_closures === true,
+    }));
+    this.data.reload();
+  }
 
   data = resource<ListResponse<Row>, unknown>({
     loader: () =>

@@ -12,13 +12,13 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
 import { AutoRefreshComponent } from '@shared/ui/auto-refresh/auto-refresh.component';
+import type { TableFilterDef } from '@shared/lib/table-filters';
 import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
@@ -87,7 +87,7 @@ interface CustodyMovements {
   standalone: true,
   imports: [SectionNavComponent, 
     ContentDialogComponent, AppTabsComponent, AutoRefreshComponent, FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
-    PageHeaderComponent, AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -171,24 +171,13 @@ interface CustodyMovements {
       }
 
       @if (trackTab() === 'custodies') {
-      <div class="filter-bar">
-        <div class="filter-bar__row">
-          <app-field label="custody.tracking.col_agent" controlId="track-filter-agent" class="field--lg">
-            <p-select appendTo="body" inputId="track-filter-agent" [options]="agentOptions()" optionLabel="label" optionValue="value"
-              [filter]="true" [ngModel]="agentFilter()" (ngModelChange)="agentFilter.set($event)" name="agent" styleClass="u-full" [autofocus]="false" />
-          </app-field>
-          <app-field label="common.status" controlId="track-filter-status" class="field--md">
-            <p-select appendTo="body" inputId="track-filter-status" [options]="statusOptions()" optionLabel="label" optionValue="value"
-              [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)" name="status" styleClass="u-full" [autofocus]="false" />
-          </app-field>
-        </div>
-      </div>
-
       <app-data-table
         [tableKey]="tableKey + '-custodies'"
         [columns]="custodyColumns"
-        [rows]="filteredCustodies()"
-        [total]="filteredCustodies().length"
+        [rows]="allCustodies()"
+        mode="static"
+        [filters]="trackingFilters"
+        [total]="allCustodies().length"
         [perPage]="perPage"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap u-justify-end"><app-auto-refresh key="tracking" (refresh)="data.reload()" /></div>
@@ -278,17 +267,17 @@ interface CustodyMovements {
           <app-stat-tile [label]="'custody.tracking.returned'" [value]="m.returned" [money]="true" />
           <app-stat-tile [label]="'custody.tracking.remaining'" [value]="m.remaining" [money]="true" />
         </div>
-        <app-ledger-table class="u-mt-4" [columns]="movementCols" [rows]="m.transactions">
-          <ng-template appLedgerBody let-row>
+        <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" class="u-mt-4" [columns]="movementCols" [rows]="m.transactions">
+          <ng-template appTableBody let-row>
             <tr class="ledger-table__row">
-              <td appLedgerCol="date" class="u-bidi">{{ row.date | datetime: false }}</td>
-              <td appLedgerCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-              <td appLedgerCol="description">{{ row.description ?? '—' }}</td>
-              <td appLedgerCol="user">{{ row.user ?? '—' }}</td>
-              <td appLedgerCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
+              <td appTableCol="date" class="u-bidi">{{ row.date | datetime: false }}</td>
+              <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
+              <td appTableCol="description">{{ row.description ?? '—' }}</td>
+              <td appTableCol="user">{{ row.user ?? '—' }}</td>
+              <td appTableCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
             </tr>
           </ng-template>
-        </app-ledger-table>
+        </app-data-table>
       }
     </app-content-dialog>
   `,
@@ -345,8 +334,7 @@ export class TrackingPage {
   /** one full dataset — the paginator is a single page */
   readonly perPage = 1000;
 
-  agentFilter = signal('all');
-  statusFilter = signal('all');
+
 
   data = resource<TrackingResponse, unknown>({
     loader: () =>
@@ -382,13 +370,14 @@ export class TrackingPage {
   });
 
   /** status + agent filters are client-side — the endpoint takes no params */
-  filteredCustodies = computed(() => {
-    const status = this.statusFilter();
-    const agent = this.agentFilter();
-    return (this.data.value()?.data.custodies ?? []).filter(
-      (c) => (status === 'all' || c.status === status) && (agent === 'all' || c.agent === agent),
-    );
-  });
+  /** the table's static filter engine filters these rows (T6-30) */
+  allCustodies = computed(() => this.data.value()?.data.custodies ?? []);
+
+  /** T6-30: agent + status as JSON defs — the table draws and runs them */
+  readonly trackingFilters: TableFilterDef[] = [
+    { key: 'agent', label: 'custody.tracking.col_agent', type: 'select', optionsFrom: 'rows', order: 1 },
+    { key: 'status', label: 'common.status', type: 'select', optionsFrom: 'rows', order: 2 },
+  ];
 
   movementsOpen = signal(false);
   movementsLoading = signal(false);

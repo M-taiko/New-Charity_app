@@ -26,8 +26,6 @@ export { ErrorStateComponent } from './error-state/error-state.component';
 export { PageSkeletonComponent } from './page-skeleton/page-skeleton.component';
 export { AsyncPageComponent } from './async-page/async-page.component';
 export type { LoadableResource } from './async-page/async-page.component';
-export { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from './ledger-table/ledger-table.component';
-export type { LedgerColumn } from './ledger-table/ledger-table.component';
 export { FieldComponent } from './field/field.component';
 export { FormSectionComponent } from './form-section/form-section.component';
 export { RowActionsComponent } from './row-actions/row-actions.component';

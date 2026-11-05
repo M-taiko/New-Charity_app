@@ -10,7 +10,7 @@ import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
@@ -62,7 +62,7 @@ interface DrillExpense {
   imports: [
     FieldComponent, TranslatePipe, ContentDialogComponent, RouterLink, FormsModule, ButtonModule, DatePickerModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    DataTableComponent, TableBodyDirective, TableColDirective,
     PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe, DatetimePipe,
   ],
   template: `
@@ -99,23 +99,23 @@ interface DrillExpense {
           </div>
 
           <div class="u-mt-4">
-            <app-ledger-table [title]="'report.directions.details'" [columns]="rowCols" [rows]="d.rows" [emptyLabel]="'report.directions.empty'">
-              <ng-template appLedgerBody let-row>
+            <app-data-table mode="static" [autoFilters]="true" [title]="'report.directions.details'" [columns]="rowCols" [rows]="d.rows" [emptyLabel]="'report.directions.empty'">
+              <ng-template appTableBody let-row>
                 <tr class="ledger-table__row ledger-table__row--link" tabindex="0" role="button"
                   (click)="openDrill(row)" (keydown.enter)="openDrill(row)"
                   [attr.aria-label]="'report.directions.expenses_dialog' | translate">
-                  <td appLedgerCol="level"><span class="stamp">{{ levelKey(row.level) | translate }}</span></td>
-                  <td appLedgerCol="name">{{ row.name }}</td>
-                  <td appLedgerCol="code" class="u-bidi">{{ row.code ?? '—' }}</td>
-                  <td appLedgerCol="parent_name">{{ row.parent_name ?? '—' }}</td>
-                  <td appLedgerCol="total_amount"><span class="u-bidi">{{ row.total_amount | money }}</span></td>
-                  <td appLedgerCol="expense_count" class="u-bidi">{{ row.expense_count }}</td>
-                  <td appLedgerCol="average_amount"><span class="u-bidi">{{ row.average_amount | money }}</span></td>
-                  <td appLedgerCol="reviewed_by">{{ row.reviewed_by ?? '—' }}</td>
-                  <td appLedgerCol="percentage" class="u-bidi">{{ row.percentage }}%</td>
+                  <td appTableCol="level"><span class="stamp">{{ levelKey(row.level) | translate }}</span></td>
+                  <td appTableCol="name">{{ row.name }}</td>
+                  <td appTableCol="code" class="u-bidi">{{ row.code ?? '—' }}</td>
+                  <td appTableCol="parent_name">{{ row.parent_name ?? '—' }}</td>
+                  <td appTableCol="total_amount"><span class="u-bidi">{{ row.total_amount | money }}</span></td>
+                  <td appTableCol="expense_count" class="u-bidi">{{ row.expense_count }}</td>
+                  <td appTableCol="average_amount"><span class="u-bidi">{{ row.average_amount | money }}</span></td>
+                  <td appTableCol="reviewed_by">{{ row.reviewed_by ?? '—' }}</td>
+                  <td appTableCol="percentage" class="u-bidi">{{ row.percentage }}%</td>
                 </tr>
               </ng-template>
-            </app-ledger-table>
+            </app-data-table>
           </div>
         }
         <div empty>
@@ -133,20 +133,20 @@ interface DrillExpense {
         @if (drillLoading()) {
           <div class="skeleton skeleton--tile" role="status"></div>
         } @else {
-          <app-ledger-table [columns]="drillCols" [rows]="drillRows()" [emptyLabel]="'report.directions.empty_drill'">
-            <ng-template appLedgerBody let-row>
+          <app-data-table mode="static" [autoFilters]="true" [columns]="drillCols" [rows]="drillRows()" [emptyLabel]="'report.directions.empty_drill'">
+            <ng-template appTableBody let-row>
               <tr class="ledger-table__row">
-                <td appLedgerCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-                <td appLedgerCol="description">{{ row.description ?? '—' }}</td>
-                <td appLedgerCol="created_by">{{ row.created_by ?? '—' }}</td>
-                <td appLedgerCol="approved_by">{{ row.approved_by ?? '—' }}</td>
-                <td appLedgerCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
-                <td appLedgerCol="actions">
+                <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
+                <td appTableCol="description">{{ row.description ?? '—' }}</td>
+                <td appTableCol="created_by">{{ row.created_by ?? '—' }}</td>
+                <td appTableCol="approved_by">{{ row.approved_by ?? '—' }}</td>
+                <td appTableCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
+                <td appTableCol="actions">
                   <a [routerLink]="['/expenses', row.id]">{{ 'common.view' | translate }}</a>
                 </td>
               </tr>
             </ng-template>
-          </app-ledger-table>
+          </app-data-table>
           <p class="u-flex u-flex-between u-mt-2">
             <span>{{ 'report.directions.drill_count' | translate }}: {{ drillRows().length }}</span>
             <span class="u-bidi">{{ 'common.total' | translate }}: {{ drillTotal() | money }}</span>

@@ -28,6 +28,16 @@ final class SystemController extends Controller
             Task::with(['creator', 'assignee']),
             $request,
             sortable: ['date' => 'created_at', 'due_date' => 'due_date', 'title' => 'title', 'assigned_to' => 'assigned_to', 'status' => 'status', 'priority' => 'priority'],
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'pending', 'label' => 'معلنة'],
+                    ['value' => 'in_progress', 'label' => 'جارية'],
+                    ['value' => 'completed', 'label' => 'مكتملة'],
+                    ['value' => 'cancelled', 'label' => 'ملغاة'],
+                ]],
+                'priority' => ['type' => 'select', 'column' => 'priority'],
+                'assigned_to' => ['type' => 'lookup', 'column' => 'assigned_to'],
+            ],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('title', 'like', "%{$term}%")->orWhere('description', 'like', "%{$term}%")),
             filters: [
@@ -123,6 +133,10 @@ final class SystemController extends Controller
             $request,
             sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'title' => 'title', 'message' => 'message'],
             filters: ['unread' => fn ($q, $v) => $v === '1' ? $q->where('is_read', false) : null],
+            filterable: [
+                'unread' => ['type' => 'boolean', 'column' => 'is_read'],
+                'type' => ['type' => 'select', 'column' => 'type'],
+            ],
         );
         $paginator->getCollection()->transform(fn ($n) => [
             'id' => $n->id,
@@ -151,6 +165,17 @@ final class SystemController extends Controller
             $request,
             sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'expires_at' => 'expires_at', 'title' => 'title', 'level' => 'level', 'sender' => 'created_by'],
             filters: ['status' => fn ($q, $v) => $q->where('is_active', $v === 'active')],
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'is_active', 'options' => fn () => [
+                    ['value' => 'active', 'label' => 'نشطة'],
+                    ['value' => 'expired', 'label' => 'منتهية'],
+                ]],
+                'level' => ['type' => 'select', 'column' => 'level', 'options' => fn () => [
+                    ['value' => 'info', 'label' => 'معلومة'],
+                    ['value' => 'warning', 'label' => 'تحذير'],
+                    ['value' => 'danger', 'label' => 'خطورة'],
+                ]],
+            ],
         );
         $paginator->getCollection()->transform(fn ($b) => [
             'id' => $b->id,
@@ -203,6 +228,11 @@ final class SystemController extends Controller
             $scope(ActivityLog::with('user')),
             $request,
             sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'user' => 'user_id', 'event' => 'event', 'description' => 'description'],
+            filterable: [
+                'event' => ['type' => 'select', 'column' => 'event', 'options' => fn () => ActivityLog::distinct()->pluck('event')->map(fn ($e) => ['value' => $e, 'label' => $e])->values()->all()],
+                'user' => ['type' => 'lookup', 'column' => 'user_id'],
+                'created_at' => ['type' => 'date-range', 'column' => 'created_at'],
+            ],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('description', 'like', "%{$term}%")
                 ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$term}%"))),
@@ -234,6 +264,12 @@ final class SystemController extends Controller
             User::with('roles'),
             $request,
             sortable: ['name' => 'name', 'date' => 'created_at', 'email' => 'email', 'phone' => 'phone', 'is_active' => 'is_active'],
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'is_active', 'options' => fn () => [
+                    ['value' => '1', 'label' => 'نشط'],
+                    ['value' => '0', 'label' => 'موقوف'],
+                ]],
+            ],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$term}%")
                 ->orWhere('email', 'like', "%{$term}%")

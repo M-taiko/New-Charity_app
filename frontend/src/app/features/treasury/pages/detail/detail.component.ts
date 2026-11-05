@@ -5,6 +5,8 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { MenuModule } from 'primeng/menu';
+import type { MenuItem } from 'primeng/api';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
@@ -41,7 +43,7 @@ interface TransactionRow {
 @Component({
   selector: 'app-treasury-detail',
   standalone: true,
-  imports: [
+  imports: [MenuModule, 
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent,
     AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, PrintSheetComponent, ConfirmDeleteComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
@@ -50,11 +52,11 @@ interface TransactionRow {
     <app-print-sheet [title]="'treasury.detail.title' | translate">
       <app-page-header [title]="headerTitle()" [subtitle]="safeValue()?.notes ?? ''">
         <div actions class="u-flex u-gap-2 u-flex-wrap">
-          <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="print()" />
-          <p-button [label]="'treasury.list.transfer' | translate" size="small" [outlined]="true" routerLink="/treasury/transfer" />
-          <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/treasury', id(), 'edit']" />
-          <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg()?.open()" />
-          <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/treasury" />
+          <!-- T6-10: max 3 visible buttons; back lives on the async-page backLink -->
+          <p-button [label]="'common.print' | translate" size="small" severity="secondary" [outlined]="true" (click)="print()" />
+          <p-button [label]="'common.edit' | translate" size="small" severity="secondary" [outlined]="true" [routerLink]="['/treasury', id(), 'edit']" />
+          <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="moreMenu.toggle($event)" />
+          <p-menu #moreMenu appendTo="body" [model]="moreMenuItems()" popup="true" />
         </div>
       </app-page-header>
 
@@ -132,6 +134,12 @@ interface TransactionRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TreasuryDetailPage {
+  /** T6-10: transfer + delete live in the header More menu */
+  readonly moreMenuItems = computed<MenuItem[]>(() => [
+    { label: this.translate.instant('treasury.list.transfer'), routerLink: '/treasury/transfer' },
+    { label: this.translate.instant('common.delete'), command: () => this.deleteDlg()?.open() },
+  ]);
+
   private http = inject(HttpClient);
   private router = inject(Router);
   private translate = inject(TranslateService);

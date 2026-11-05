@@ -14,6 +14,8 @@ import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
+import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
@@ -59,7 +61,7 @@ interface ReturnRequestParams {
 @Component({
   selector: 'app-return-requests',
   standalone: true,
-  imports: [SectionNavComponent, 
+  imports: [AppTabsComponent, SectionNavComponent, 
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
@@ -86,19 +88,8 @@ interface ReturnRequestParams {
           </div>
         }
 
-      <div class="filter-bar">
-        <div class="filter-bar__chips">
-          @for (tab of statusTabs; track tab.value) {
-            <p-button
-              [label]="tab.label | translate"
-              size="small"
-              [outlined]="params().status !== tab.value"
-              [severity]="params().status === tab.value ? undefined : 'secondary'"
-              (onClick)="setParam('status', tab.value)"
-            />
-          }
-        </div>
-      </div>
+      <!-- T6-11/T6-30: the status chips become tabs — no page-level filter markup -->
+      <app-tabs id="return-requests" [tabs]="statusTabDefs" [(active)]="statusTab" (tabChange)="setParam('status', $event)" />
 
       <app-data-table
         [tableKey]="tableKey"
@@ -260,6 +251,15 @@ export class ReturnRequestsPage {
   ];
 
   params = signal<ReturnRequestParams>({ page: 1, per_page: 25, q: '', status: 'all' });
+
+  /** T6-11: status tabs drive the same `status` query param */
+  statusTab = signal<string>('all');
+  readonly statusTabDefs: AppTab[] = [
+    { id: 'all', label: 'custody.list.tab_all' },
+    { id: 'pending', label: 'enums.return_request.pending' },
+    { id: 'approved', label: 'enums.return_request.approved' },
+    { id: 'rejected', label: 'enums.return_request.rejected' },
+  ];
 
   data = resource<ListResponse<Row>, unknown>({
     loader: () =>

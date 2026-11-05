@@ -9,6 +9,8 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
+import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -52,7 +54,7 @@ const TYPE_VALUES = [
 @Component({
   selector: 'app-my-movements',
   standalone: true,
-  imports: [
+  imports: [AppTabsComponent, 
     FieldComponent, TranslatePipe, FormsModule, ButtonModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
@@ -75,26 +77,8 @@ const TYPE_VALUES = [
           <app-stat-tile [label]="'custody.my_movements.remaining'" [value]="summaryValue('remaining')" [money]="true" />
         </div>
 
-      <div class="filter-bar">
-        <div class="filter-bar__chips">
-          @for (tab of transferTabs; track tab.value) {
-            <p-button
-              [label]="tab.label | translate"
-              size="small"
-              [outlined]="params().type !== tab.value"
-              [severity]="params().type === tab.value ? undefined : 'secondary'"
-              (onClick)="setParam('type', tab.value)"
-            />
-          }
-        </div>
-        <div class="filter-bar__row">
-          <app-field label="common.type" controlId="mm-filter-type" class="field--lg">
-            <p-select appendTo="body" inputId="mm-filter-type" [options]="typeOptions()" optionLabel="label" optionValue="value"
-              [ngModel]="params().type" (ngModelChange)="setParam('type', $event)" name="type"
-              styleClass="u-full" [autofocus]="false" />
-          </app-field>
-        </div>
-      </div>
+      <!-- T6-11/T6-30: the type chips become tabs — no page-level filter markup -->
+      <app-tabs id="my-movements" [tabs]="typeTabs()" [(active)]="typeTab" (tabChange)="setParam('type', $event)" />
 
       <app-data-table
         [tableKey]="tableKey"
@@ -169,6 +153,13 @@ export class MyMovementsPage {
   ];
 
   params = signal<MyMovementsParams>({ page: 1, per_page: 25, q: '', type: 'all' });
+
+  /** T6-11: type tabs drive the same `type` query param */
+  typeTab = signal<string>('all');
+  readonly typeTabs = computed<AppTab[]>(() => [
+    { id: 'all', label: 'expense.list.option_all' },
+    ...this.transferTabs.map((t) => ({ id: String(t.value), label: t.label })),
+  ]);
 
   data = resource<ListResponse<Row>, unknown>({
     loader: () =>

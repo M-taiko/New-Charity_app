@@ -17,8 +17,8 @@ import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
-import type { LedgerColumn } from '@shared/ui/ledger-table/ledger-table.component';
+import type { TableColumn } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
@@ -30,7 +30,7 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 @Component({
   selector: 'app-expense-detail',
   standalone: true,
-  imports: [MenuModule, TranslatePipe, SharedModule, ContentDialogComponent, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, StatTileComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, ConfirmDeleteComponent, MoneyPipe],
+  imports: [MenuModule, TranslatePipe, SharedModule, ContentDialogComponent, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective, ConfirmDeleteComponent, MoneyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'expense.detail.title' | translate">
@@ -104,22 +104,22 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
           @if (lineItems().length) {
             <section class="chart-card u-mt-4">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'expense.detail.line_items' | translate }}</span></div>
-              <app-ledger-table [columns]="lineItemColumns" [rows]="lineItems()">
-                <ng-template appLedgerBody let-item>
+              <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="lineItemColumns" [rows]="lineItems()">
+                <ng-template appTableBody let-item>
                   <tr class="ledger-table__row">
-                    <td appLedgerCol="description">{{ item.description }}</td>
-                    <td appLedgerCol="quantity"><span class="u-bidi">{{ item.quantity }}</span></td>
-                    <td appLedgerCol="unit_price">{{ item.unit_price | money: false }}</td>
-                    <td appLedgerCol="total">{{ lineTotal(item) | money: false }}</td>
+                    <td appTableCol="description">{{ item.description }}</td>
+                    <td appTableCol="quantity"><span class="u-bidi">{{ item.quantity }}</span></td>
+                    <td appTableCol="unit_price">{{ item.unit_price | money: false }}</td>
+                    <td appTableCol="total">{{ lineTotal(item) | money: false }}</td>
                   </tr>
                 </ng-template>
-                <tfoot footer>
+                <ng-template footer>
                   <tr class="ledger-table__total">
                     <td colspan="3">{{ 'common.total' | translate }}</td>
                     <td class="ledger-table__cell-num">{{ itemsTotal() | money: false }}</td>
                   </tr>
-                </tfoot>
-              </app-ledger-table>
+                </ng-template>
+              </app-data-table>
             </section>
           }
 
@@ -261,7 +261,7 @@ export class ExpenseDetailPage {
   );
 
   /** the static ledger columns for the line-items card (T4-21) */
-  readonly lineItemColumns: LedgerColumn[] = [
+  readonly lineItemColumns: TableColumn[] = [
     { field: 'description', header: 'expense.detail.item_description' },
     { field: 'quantity', header: 'expense.detail.item_quantity', numeric: true },
     { field: 'unit_price', header: 'expense.detail.item_unit_price', numeric: true },

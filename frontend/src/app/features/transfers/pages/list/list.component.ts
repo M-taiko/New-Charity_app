@@ -10,6 +10,8 @@ import { ButtonModule } from 'primeng/button';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
+import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
+import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -57,7 +59,7 @@ interface TransferListParams {
 @Component({
   selector: 'app-transfer-list',
   standalone: true,
-  imports: [ConfirmDialogComponent, 
+  imports: [AppTabsComponent, ConfirmDialogComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, RowActionsComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
@@ -71,19 +73,8 @@ interface TransferListParams {
     </app-page-header>
 
     <!-- scope tabs stay mounted even when a scope is empty so the user can switch -->
-    <div class="filter-bar">
-      <div class="filter-bar__chips">
-        @for (tab of scopeTabs(); track tab.value) {
-          <p-button
-            [label]="'transfer.list.tabs.' + tab.value | translate"
-            size="small"
-            [outlined]="params().scope !== tab.value"
-            [severity]="params().scope === tab.value ? undefined : 'secondary'"
-            (onClick)="setParam('scope', tab.value)"
-          />
-        }
-      </div>
-    </div>
+    <!-- T6-11/T6-30: the scope chips become tabs — no page-level filter markup -->
+    <app-tabs id="transfers-scope" [tabs]="scopeTabDefs()" [(active)]="scopeTab" (tabChange)="setParam('scope', $event)" />
 
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
@@ -233,6 +224,12 @@ export class TransferListPage {
   });
 
   params = signal<TransferListParams>({ page: 1, per_page: 25, q: '', scope: 'sent' });
+
+  /** T6-11: sent/received/all tabs drive the same `scope` query param */
+  scopeTab = signal<string>('sent');
+  readonly scopeTabDefs = computed<AppTab[]>(() =>
+    this.scopeTabs().map((t) => ({ id: String(t.value), label: 'transfer.list.tabs.' + String(t.value) })),
+  );
 
   data = resource<ListResponse<Row>, unknown>({
     loader: () =>

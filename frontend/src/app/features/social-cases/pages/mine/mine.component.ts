@@ -11,9 +11,9 @@ import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, type LedgerColumn } from '@shared/ui/ledger-table/ledger-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import type { TableColumn } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
@@ -71,7 +71,7 @@ interface QuickDetail {
   imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent,
-    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    DataTableComponent, TableBodyDirective, TableColDirective,
     DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, FormDialogComponent, ConfirmDeleteComponent,
     RowActionsComponent, KeyValueListComponent, StatusStampComponent, DatetimePipe,
@@ -148,18 +148,18 @@ interface QuickDetail {
     </app-async-page>
 
     <app-form-dialog [header]="familyHeader()" [submitLabel]="'case.modal.close'" [(visible)]="familyOpen" [sending]="familyLoading()">
-      <app-ledger-table [columns]="familyCols" [rows]="familyMembers()" [emptyLabel]="'case.modal.empty_family'">
-        <ng-template appLedgerBody let-row let-index="index">
+      <app-data-table mode="static" [autoFilters]="true" [columns]="familyCols" [rows]="familyMembers()" [emptyLabel]="'case.modal.empty_family'">
+        <ng-template appTableBody let-row let-index="index">
           <tr class="ledger-table__row">
-            <td appLedgerCol="index" class="u-bidi">{{ index + 1 }}</td>
-            <td appLedgerCol="name">{{ row.name }}</td>
-            <td appLedgerCol="relation">{{ label('case.enums.relation.' + row.relationship) }}</td>
-            <td appLedgerCol="gender">{{ label('case.enums.gender.' + row.gender) }}</td>
-            <td appLedgerCol="status">{{ label('case.enums.member_status.' + row.status) }}</td>
-            <td appLedgerCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
+            <td appTableCol="index" class="u-bidi">{{ index + 1 }}</td>
+            <td appTableCol="name">{{ row.name }}</td>
+            <td appTableCol="relation">{{ label('case.enums.relation.' + row.relationship) }}</td>
+            <td appTableCol="gender">{{ label('case.enums.gender.' + row.gender) }}</td>
+            <td appTableCol="status">{{ label('case.enums.member_status.' + row.status) }}</td>
+            <td appTableCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
           </tr>
         </ng-template>
-      </app-ledger-table>
+      </app-data-table>
     </app-form-dialog>
 
     <app-form-dialog [header]="'case.detail.title' | translate" [submitLabel]="'common.open_page'" [(visible)]="detailsOpen" [sending]="detailsLoading()" (submit)="openDetailPage()">
@@ -192,7 +192,7 @@ export class MyCasesPage {
   ];
 
   /** the family-members modal table (T4-21) */
-  readonly familyCols: LedgerColumn[] = [
+  readonly familyCols: TableColumn[] = [
     { field: 'index', header: 'case.detail.col_index' },
     { field: 'name', header: 'case.form.member_name' },
     { field: 'relation', header: 'case.form.relation' },

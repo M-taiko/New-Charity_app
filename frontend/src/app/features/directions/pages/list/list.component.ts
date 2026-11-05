@@ -13,7 +13,6 @@ import { ToastService } from '@core/errors/toast.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, type LedgerColumn } from '@shared/ui/ledger-table/ledger-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { RowActionsComponent, type RowActionItem } from '@shared/ui/row-actions/row-actions.component';
@@ -21,6 +20,8 @@ import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.componen
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import type { TableColumn } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 
 interface FlatNode {
   id: number; kind: 'category' | 'item'; name: string; code: string | null; level?: number;
@@ -56,8 +57,8 @@ interface DirectionsData {
   standalone: true,
   imports: [
     TranslatePipe, FormsModule, ButtonModule, InputTextModule, InputNumberModule, CheckboxModule,
-    SelectModule, PageHeaderComponent, AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective,
-    LedgerColDirective, StatTileComponent, EmptyStateComponent, RowActionsComponent,
+    SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective,
+    TableColDirective, StatTileComponent, EmptyStateComponent, RowActionsComponent,
     FormDialogComponent, FieldComponent, ConfirmDeleteComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -77,15 +78,15 @@ interface DirectionsData {
           <app-stat-tile [label]="'direction.list.inactive'" [value]="d.stats.inactive" />
         </div>
 
-        <app-ledger-table [columns]="columns" [rows]="visibleNodes()" [title]="'direction.list.title'" [emptyLabel]="'direction.list.empty'">
+        <app-data-table mode="static" [autoFilters]="true" [columns]="columns" [rows]="visibleNodes()" [title]="'direction.list.title'" [emptyLabel]="'direction.list.empty'">
           <span toolbar class="ledger-table__spacer"></span>
           <div toolbar class="u-flex u-gap-2">
             <p-button [label]="'direction.list.expand_all' | translate" size="small" [text]="true" (onClick)="setAllCollapsed(false)" />
             <p-button [label]="'direction.list.collapse_all' | translate" size="small" [text]="true" (onClick)="setAllCollapsed(true)" />
           </div>
-          <ng-template appLedgerBody let-row>
+          <ng-template appTableBody let-row>
             <tr class="ledger-table__row">
-              <td appLedgerCol="name" [style.padding-inline-start.px]="8 + (row.level ?? 1) * 14">
+              <td appTableCol="name" [style.padding-inline-start.px]="8 + (row.level ?? 1) * 14">
                 <span class="u-flex u-gap-1 u-flex-wrap">
                   @if (row.kind === 'category' && (childCounts().get(row.id) ?? 0) > 0) {
                     <!-- T5-04: intentionally a raw button — this is a tree-disclosure
@@ -110,18 +111,18 @@ interface DirectionsData {
                   }
                 </span>
               </td>
-              <td appLedgerCol="code" class="u-bidi">{{ row.code ?? '—' }}</td>
-              <td appLedgerCol="level">{{ row.level }}</td>
-              <td appLedgerCol="items_count">{{ row.itemsCount }}</td>
-              <td appLedgerCol="is_active">
+              <td appTableCol="code" class="u-bidi">{{ row.code ?? '—' }}</td>
+              <td appTableCol="level">{{ row.level }}</td>
+              <td appTableCol="items_count">{{ row.itemsCount }}</td>
+              <td appTableCol="is_active">
                 <span class="stamp" [class.stamp--success]="row.isActive" [class.stamp--neutral]="!row.isActive">
                   {{ (row.isActive ? 'common.true' : 'common.false') | translate }}
                 </span>
               </td>
-              <td appLedgerCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
+              <td appTableCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
             </tr>
           </ng-template>
-        </app-ledger-table>
+        </app-data-table>
       }
       <div empty>
         <app-empty-state [title]="'direction.list.empty' | translate" [text]="'common.no_data' | translate" />
@@ -182,7 +183,7 @@ export class DirectionListPage {
   deleteEntity = signal('');
 
   /** the tree table (T4-21) */
-  readonly columns: LedgerColumn[] = [
+  readonly columns: TableColumn[] = [
     { field: 'name', header: 'common.name' },
     { field: 'code', header: 'direction.form.code' },
     { field: 'level', header: 'direction.list.col_level' },

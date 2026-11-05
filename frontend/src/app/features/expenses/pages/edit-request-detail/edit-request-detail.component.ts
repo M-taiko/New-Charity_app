@@ -12,8 +12,8 @@ import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
-import type { LedgerColumn } from '@shared/ui/ledger-table/ledger-table.component';
+import type { TableColumn } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
@@ -44,7 +44,7 @@ interface ComparisonRow {
 @Component({
   selector: 'app-edit-request-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, ReasonDialogComponent],
+  imports: [TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, DataTableComponent, TableBodyDirective, TableColDirective, ReasonDialogComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'expense.edit_requests.detail.title' | translate">
@@ -73,15 +73,15 @@ interface ComparisonRow {
           @if (comparison(item); as rows) {
             <section class="chart-card u-mt-4">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'expense.edit_requests.detail.comparison' | translate }}</span></div>
-              <app-ledger-table [columns]="comparisonColumns" [rows]="rows">
-                <ng-template appLedgerBody let-row>
+              <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="comparisonColumns" [rows]="rows">
+                <ng-template appTableBody let-row>
                   <tr class="ledger-table__row">
-                    <td appLedgerCol="field">{{ row.label | translate }}</td>
-                    <td appLedgerCol="before"><span class="u-bidi">{{ row.before }}</span></td>
-                    <td appLedgerCol="after"><span class="u-bidi">{{ row.after }}</span></td>
+                    <td appTableCol="field">{{ row.label | translate }}</td>
+                    <td appTableCol="before"><span class="u-bidi">{{ row.before }}</span></td>
+                    <td appTableCol="after"><span class="u-bidi">{{ row.after }}</span></td>
                   </tr>
                 </ng-template>
-              </app-ledger-table>
+              </app-data-table>
             </section>
           }
 
@@ -145,7 +145,7 @@ export class EditRequestDetailPage {
   });
 
   /** the static ledger columns for the before/after comparison (T4-21) */
-  readonly comparisonColumns: LedgerColumn[] = [
+  readonly comparisonColumns: TableColumn[] = [
     { field: 'field', header: 'expense.edit_requests.detail.field' },
     { field: 'before', header: 'expense.edit_requests.detail.before' },
     { field: 'after', header: 'expense.edit_requests.detail.after' },

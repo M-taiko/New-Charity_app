@@ -9,7 +9,7 @@ import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
@@ -31,7 +31,7 @@ interface ItemsData {
   imports: [
     FieldComponent, TranslatePipe, FormsModule, ButtonModule, DatePickerModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    DataTableComponent, TableBodyDirective, TableColDirective,
     PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe,
   ],
   template: `
@@ -71,18 +71,18 @@ interface ItemsData {
           </div>
 
           <div class="u-mt-4">
-            <app-ledger-table [columns]="cols" [rows]="d.items" [emptyLabel]="'report.items.empty'">
-              <ng-template appLedgerBody let-row>
+            <app-data-table mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.items" [emptyLabel]="'report.items.empty'">
+              <ng-template appTableBody let-row>
                 <tr class="ledger-table__row">
-                  <td appLedgerCol="item">{{ row.item }}</td>
-                  <td appLedgerCol="category">{{ row.category ?? '—' }}</td>
-                  <td appLedgerCol="count" class="u-bidi">{{ row.count }}</td>
-                  <td appLedgerCol="total"><span class="u-bidi">{{ row.total | money }}</span></td>
-                  <td appLedgerCol="average"><span class="u-bidi">{{ row.average | money }}</span></td>
-                  <td appLedgerCol="percentage" class="u-bidi">{{ row.percentage }}%</td>
+                  <td appTableCol="item">{{ row.item }}</td>
+                  <td appTableCol="category">{{ row.category ?? '—' }}</td>
+                  <td appTableCol="count" class="u-bidi">{{ row.count }}</td>
+                  <td appTableCol="total"><span class="u-bidi">{{ row.total | money }}</span></td>
+                  <td appTableCol="average"><span class="u-bidi">{{ row.average | money }}</span></td>
+                  <td appTableCol="percentage" class="u-bidi">{{ row.percentage }}%</td>
                 </tr>
               </ng-template>
-            </app-ledger-table>
+            </app-data-table>
           </div>
 
           @if (d.items.length > 0) {

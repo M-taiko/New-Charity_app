@@ -8,7 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -25,7 +25,7 @@ interface ResearchersData {
   imports: [
     TranslatePipe, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    DataTableComponent, TableBodyDirective, TableColDirective,
     StatTileComponent, PrintSheetComponent, MoneyPipe,
   ],
   template: `
@@ -43,19 +43,19 @@ interface ResearchersData {
             <app-stat-tile [label]="'report.researchers.total_spent'" [value]="d.summary.total_spent" [money]="true" />
           </div>
 
-          <app-ledger-table [columns]="cols" [rows]="d.researchers" [emptyLabel]="'report.researchers.empty'">
-            <ng-template appLedgerBody let-row>
+          <app-data-table mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.researchers" [emptyLabel]="'report.researchers.empty'">
+            <ng-template appTableBody let-row>
               <tr class="ledger-table__row">
-                <td appLedgerCol="researcher">{{ row.researcher.name }}</td>
-                <td appLedgerCol="total_cases" class="u-bidi">{{ row.total_cases }}</td>
-                <td appLedgerCol="approved" class="u-bidi">{{ row.approved }}</td>
-                <td appLedgerCol="rejected" class="u-bidi">{{ row.rejected }}</td>
-                <td appLedgerCol="pending" class="u-bidi">{{ row.pending }}</td>
-                <td appLedgerCol="total_spent"><span class="u-bidi">{{ row.total_spent | money }}</span></td>
-                <td appLedgerCol="approval_rate" class="u-bidi">{{ row.approval_rate }}%</td>
+                <td appTableCol="researcher">{{ row.researcher.name }}</td>
+                <td appTableCol="total_cases" class="u-bidi">{{ row.total_cases }}</td>
+                <td appTableCol="approved" class="u-bidi">{{ row.approved }}</td>
+                <td appTableCol="rejected" class="u-bidi">{{ row.rejected }}</td>
+                <td appTableCol="pending" class="u-bidi">{{ row.pending }}</td>
+                <td appTableCol="total_spent"><span class="u-bidi">{{ row.total_spent | money }}</span></td>
+                <td appTableCol="approval_rate" class="u-bidi">{{ row.approval_rate }}%</td>
               </tr>
             </ng-template>
-          </app-ledger-table>
+          </app-data-table>
         }
         <div empty>
           <app-empty-state [title]="'report.researchers.empty'" [text]="'common.no_data'" />

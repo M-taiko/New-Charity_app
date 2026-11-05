@@ -6,7 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -35,7 +35,7 @@ interface ReconciliationData {
   imports: [
     TranslatePipe, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    DataTableComponent, TableBodyDirective, TableColDirective,
     PrintSheetComponent, StatTileComponent, MoneyPipe,
   ],
   template: `
@@ -53,18 +53,18 @@ interface ReconciliationData {
             <app-stat-tile [label]="'common.status'" [value]="d.totals.is_reconciled ? ('report.reconciliation.reconciled' | translate) : ('report.reconciliation.not_reconciled' | translate)" />
           </div>
 
-          <app-ledger-table [columns]="cols" [rows]="d.treasuries" [emptyLabel]="'report.reconciliation.empty'">
-            <ng-template appLedgerBody let-row>
+          <app-data-table mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.treasuries" [emptyLabel]="'report.reconciliation.empty'">
+            <ng-template appTableBody let-row>
               <tr class="ledger-table__row">
-                <td appLedgerCol="treasury">{{ row.treasury.name }}</td>
-                <td appLedgerCol="donations"><span class="u-bidi">{{ row.donations | money }}</span></td>
-                <td appLedgerCol="custodies_issued"><span class="u-bidi">{{ row.custodies_issued | money }}</span></td>
-                <td appLedgerCol="custodies_returned"><span class="u-bidi">{{ row.custodies_returned | money }}</span></td>
-                <td appLedgerCol="direct_expenses"><span class="u-bidi">{{ row.direct_expenses | money }}</span></td>
-                <td appLedgerCol="net_transfers"><span class="u-bidi">{{ netTransfers(row) | money }}</span></td>
-                <td appLedgerCol="expected_balance"><span class="u-bidi">{{ row.expected_balance | money }}</span></td>
-                <td appLedgerCol="actual_balance"><span class="u-bidi">{{ row.actual_balance | money }}</span></td>
-                <td appLedgerCol="difference">
+                <td appTableCol="treasury">{{ row.treasury.name }}</td>
+                <td appTableCol="donations"><span class="u-bidi">{{ row.donations | money }}</span></td>
+                <td appTableCol="custodies_issued"><span class="u-bidi">{{ row.custodies_issued | money }}</span></td>
+                <td appTableCol="custodies_returned"><span class="u-bidi">{{ row.custodies_returned | money }}</span></td>
+                <td appTableCol="direct_expenses"><span class="u-bidi">{{ row.direct_expenses | money }}</span></td>
+                <td appTableCol="net_transfers"><span class="u-bidi">{{ netTransfers(row) | money }}</span></td>
+                <td appTableCol="expected_balance"><span class="u-bidi">{{ row.expected_balance | money }}</span></td>
+                <td appTableCol="actual_balance"><span class="u-bidi">{{ row.actual_balance | money }}</span></td>
+                <td appTableCol="difference">
                   @if (row.is_reconciled) {
                     <span class="stamp">{{ 'report.reconciliation.reconciled' | translate }}</span>
                   } @else {
@@ -73,7 +73,7 @@ interface ReconciliationData {
                 </td>
               </tr>
             </ng-template>
-            <tfoot footer>
+            <ng-template footer>
               <tr class="ledger-table__row">
                 <th>{{ 'common.total' | translate }}</th>
                 <td class="ledger-table__cell-num"><span class="u-bidi">{{ columnSum('donations') | money }}</span></td>
@@ -85,8 +85,8 @@ interface ReconciliationData {
                 <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.totals.actual_balance | money }}</span></td>
                 <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.totals.difference | money }}</span></td>
               </tr>
-            </tfoot>
-          </app-ledger-table>
+            </ng-template>
+          </app-data-table>
           <p class="field__hint u-mt-2">{{ 'report.reconciliation.expected_formula' | translate }}</p>
         }
         <div empty>

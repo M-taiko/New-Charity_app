@@ -121,7 +121,7 @@ export class TableColDirective {
   standalone: true,
   imports: [TranslatePipe, TableModule, NgTemplateOutlet, FormsModule, InputTextModule, ButtonModule, TableFiltersComponent, MenuModule],
   template: `
-    <div class="ledger-table" [class.print-landscape]="printOrientation() === 'landscape'"
+    <div class="ledger-table" [class.print-no-totals]="!printIncludeTotals()" [class.print-landscape]="printOrientation() === 'landscape'"
          [class.ledger-table--compact]="density() === 'compact'" [attr.aria-busy]="loading() || null">
       @if (printCapNotice() !== '') {
         <p class="print-cap-notice" style="display: none">{{ printCapNotice() }}</p>
@@ -142,7 +142,7 @@ export class TableColDirective {
           />
           <!-- T6-30: the table owns filtering — one Filters control everywhere -->
           @if (effectiveFilters().length > 0) {
-            <app-table-filters [defs]="effectiveFilters()" [customTemplates]="customFilterTemplates()"
+            <app-table-filters [defs]="effectiveFilters()" [customTemplates]="customFilterTemplates()" [rows]="rows()"
                                [(values)]="filterValues" (applied)="onFiltersApplied($event)" />
           }
           <span class="ledger-table__spacer"></span>
@@ -267,6 +267,11 @@ export class TableColDirective {
               }
             </td>
           </tr>
+        </ng-template>
+
+        <ng-template pTemplate="footer">
+          <!-- T6-20: totals as a real table footer — repeats with the header in print -->
+          <ng-content select="[footer]" />
         </ng-template>
 
         <ng-template pTemplate="loadingbody">
@@ -646,10 +651,26 @@ export class DataTableComponent {
   readonly printingAllRows = signal(false);
 
   /** the Print menu: portrait / landscape, and (static mode) all rows vs page */
+  /** T6-70: include/exclude sections — org header (body-wide) and the totals */
+  readonly printIncludeHeader = signal(true);
+  readonly printIncludeTotals = signal(true);
+
+  /** the Print menu: orientation, include/exclude sections, all rows, print */
   printItems = computed<MenuItem[]>(() => {
     const items: MenuItem[] = [
       { label: this.translate.instant('common.print_portrait'), command: () => { this.printTable('portrait'); } },
       { label: this.translate.instant('common.print_landscape'), command: () => { this.printTable('landscape'); } },
+      {
+        label: this.translate.instant(this.printIncludeHeader() ? 'common.print_omit_header' : 'common.print_include_header'),
+        command: () => {
+          this.printIncludeHeader.set(!this.printIncludeHeader());
+          document.body.classList.toggle('print-no-org-header', !this.printIncludeHeader());
+        },
+      },
+      {
+        label: this.translate.instant(this.printIncludeTotals() ? 'common.print_omit_totals' : 'common.print_include_totals'),
+        command: () => { this.printIncludeTotals.set(!this.printIncludeTotals()); },
+      },
     ];
     if (this.mode() === 'static') {
       items.push({
@@ -657,6 +678,7 @@ export class DataTableComponent {
         command: () => { this.printTable(this.printOrientation(), !this.printingAllRows()); },
       });
     }
+    items.push({ label: this.translate.instant('common.print'), command: () => { this.printTable(this.printOrientation()); } });
     return items;
   });
 

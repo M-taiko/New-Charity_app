@@ -43,6 +43,10 @@ final class TreasuryController extends Controller
             TreasuryTransaction::where('treasury_id', $treasury->id)->with('user'),
             $request,
             sortable: ['date' => 'transaction_date', 'amount' => 'amount', 'type' => 'type', 'description' => 'description', 'user' => 'user_id'],
+            filterable: [
+                'type' => ['type' => 'select', 'column' => 'type', 'options' => fn () => TreasuryTransaction::distinct()->pluck('type')->map(fn ($t) => ['value' => $t, 'label' => $t])->values()->all()],
+                'date' => ['type' => 'date-range', 'column' => 'transaction_date'],
+            ],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('description', 'like', "%{$term}%")
                 ->orWhere('type', 'like', "%{$term}%")),

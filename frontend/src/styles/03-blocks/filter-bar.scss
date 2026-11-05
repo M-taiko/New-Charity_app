@@ -1,3 +1,7 @@
+/* filter-bar — REPORT PARAMETERS ONLY (Task6 T6-30): the date-range/direction
+   controls that change a report's data set. Row-filter bars are gone; every
+   table filter now lives in app-table-filters. Only the classes reports
+   actually use remain (__row, __spacer). */
 .filter-bar {
   background: var(--color-surface);
   border: 1px solid var(--color-hairline);
@@ -13,19 +17,6 @@
   align-items: flex-end;
 }
 
-.filter-bar__chips {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  margin-block-start: var(--space-2);
-}
-
 .filter-bar__spacer {
   flex: 1;
-}
-
-/* the paired from/to amount inputs (T5-03) — one fixed step instead of
-   per-control style bindings */
-.filter-bar__amount {
-  width: 8rem;
 }

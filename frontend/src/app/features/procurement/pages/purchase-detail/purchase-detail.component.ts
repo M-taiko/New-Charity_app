@@ -47,19 +47,26 @@ interface PurchaseDetail { id: number; [key: string]: string | number | boolean 
         <app-print-sheet [title]="'procurement.purchase.detail.title' | translate">
           <app-page-header [title]="itemTitle(item)">
             <div actions class="u-flex u-gap-2 u-flex-wrap">
-              @if (canReview() && statusOf(item) === 'pending') {
-                <p-button [label]="'procurement.purchase.detail.approve' | translate" size="small" (onClick)="openApprove()" />
-                <p-button [label]="'procurement.purchase.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDlg.open()" />
-              }
-              @if (canReview() && statusOf(item) === 'approved') {
-                <p-button [label]="'procurement.purchase.detail.purchase' | translate" size="small" (onClick)="openPurchase()" />
-              }
-              @if (canDelete(item)) {
-                <p-button [label]="'procurement.purchase.detail.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg.open()" />
-              }
-              <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/procurement/purchase" />
+              <!-- T6-10: decisions live in the sticky bar; back is the async-page backLink -->
+              <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/procurement/purchase" />
             </div>
           </app-page-header>
+          <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
+          <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
+            @if (canReview() && statusOf(item) === 'pending') {
+              <p-button [label]="'procurement.purchase.detail.approve' | translate" size="small" severity="success" (onClick)="openApprove()" />
+            }
+            @if (canReview() && statusOf(item) === 'approved') {
+              <p-button [label]="'procurement.purchase.detail.purchase' | translate" size="small" severity="success" (onClick)="openPurchase()" />
+            }
+            @if (canReview() && statusOf(item) === 'pending') {
+              <p-button [label]="'procurement.purchase.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDlg.open()" />
+            }
+            @if (canDelete(item)) {
+              <p-button [label]="'procurement.purchase.detail.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg.open()" />
+            }
+          </div>
+
           <div class="u-mb-4"><app-status-stamp [status]="statusOf(item)" namespace="purchase_request" [large]="true" /></div>
           <app-key-value-list [items]="keyValues(item)" />
           <ng-content />

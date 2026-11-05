@@ -10,7 +10,6 @@ import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, type LedgerColumn } from '@shared/ui/ledger-table/ledger-table.component';
 import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
 import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
@@ -25,6 +24,8 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse } from '@shared/models/api.models';
+import type { TableColumn } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 
 interface CaseExpense { id: number; user: string | null; amount: string; description: string | null; date: string | null }
 interface CaseFamilyMember { id: number; name: string; relation: string | null; gender: string | null; phone: string | null; status: string | null }
@@ -76,7 +77,7 @@ interface CaseDetail {
   standalone: true,
   imports: [AppTabsComponent, 
     TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent,
-    AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     KeyValueListComponent, StatusStampComponent, StatTileComponent, PrintSheetComponent,
     ReasonDialogComponent, ConfirmDeleteComponent, RowActionsComponent, MoneyPipe, DatetimePipe,
   ],
@@ -170,17 +171,17 @@ interface CaseDetail {
           @if (caseTab() === 'expenses') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'case.detail.expenses' | translate }}</span></div>
-            <app-ledger-table [columns]="expenseCols" [rows]="item.expenses" [emptyLabel]="'case.detail.empty_expenses'">
-              <ng-template appLedgerBody let-row>
+            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="expenseCols" [rows]="item.expenses" [emptyLabel]="'case.detail.empty_expenses'">
+              <ng-template appTableBody let-row>
                 <tr class="ledger-table__row">
-                  <td appLedgerCol="id"><a [routerLink]="['/expenses', row.id]" class="u-bidi">#{{ row.id }}</a></td>
-                  <td appLedgerCol="user">{{ row.user ?? '—' }}</td>
-                  <td appLedgerCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
-                  <td appLedgerCol="date"><span class="u-bidi">{{ row.date | datetime: false }}</span></td>
-                  <td appLedgerCol="description">{{ row.description ?? '—' }}</td>
+                  <td appTableCol="id"><a [routerLink]="['/expenses', row.id]" class="u-bidi">#{{ row.id }}</a></td>
+                  <td appTableCol="user">{{ row.user ?? '—' }}</td>
+                  <td appTableCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
+                  <td appTableCol="date"><span class="u-bidi">{{ row.date | datetime: false }}</span></td>
+                  <td appTableCol="description">{{ row.description ?? '—' }}</td>
                 </tr>
               </ng-template>
-            </app-ledger-table>
+            </app-data-table>
           </section>
 
           }
@@ -188,17 +189,17 @@ interface CaseDetail {
           @if (caseTab() === 'family') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'case.detail.family_members' | translate }} ({{ item.family_members.length }})</span></div>
-            <app-ledger-table [columns]="familyCols" [rows]="item.family_members" [emptyLabel]="'case.modal.empty_family'">
-              <ng-template appLedgerBody let-row let-index="index">
+            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="familyCols" [rows]="item.family_members" [emptyLabel]="'case.modal.empty_family'">
+              <ng-template appTableBody let-row let-index="index">
                 <tr class="ledger-table__row">
-                  <td appLedgerCol="index" class="u-bidi">{{ index + 1 }}</td>
-                  <td appLedgerCol="name">{{ row.name }}</td>
-                  <td appLedgerCol="relation">{{ label('case.enums.relation.' + row.relation) }}</td>
-                  <td appLedgerCol="gender">{{ label('case.enums.gender.' + row.gender) }}</td>
-                  <td appLedgerCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
+                  <td appTableCol="index" class="u-bidi">{{ index + 1 }}</td>
+                  <td appTableCol="name">{{ row.name }}</td>
+                  <td appTableCol="relation">{{ label('case.enums.relation.' + row.relation) }}</td>
+                  <td appTableCol="gender">{{ label('case.enums.gender.' + row.gender) }}</td>
+                  <td appTableCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
                 </tr>
               </ng-template>
-            </app-ledger-table>
+            </app-data-table>
           </section>
 
           }
@@ -265,7 +266,7 @@ export class CaseDetailPage {
   docDeletePath = signal('');
   docDeleteEntity = signal('');
 
-  readonly expenseCols: LedgerColumn[] = [
+  readonly expenseCols: TableColumn[] = [
     { field: 'id', header: 'case.detail.col_index' },
     { field: 'user', header: 'case.detail.col_user' },
     { field: 'amount', header: 'case.detail.col_amount', numeric: true },
@@ -273,7 +274,7 @@ export class CaseDetailPage {
     { field: 'description', header: 'common.description' },
   ];
 
-  readonly familyCols: LedgerColumn[] = [
+  readonly familyCols: TableColumn[] = [
     { field: 'index', header: 'case.detail.col_index' },
     { field: 'name', header: 'case.form.member_name' },
     { field: 'relation', header: 'case.form.relation' },

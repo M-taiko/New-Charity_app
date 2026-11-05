@@ -25,6 +25,15 @@ final class ProcurementController extends Controller
             PurchaseRequest::with(['requester', 'supplier']),
             $request,
             sortable: ['date' => 'created_at', 'cost' => 'estimated_cost', 'estimated_cost' => 'estimated_cost', 'title' => 'title', 'category' => 'category', 'priority' => 'priority', 'status' => 'status', 'requested_by' => 'requested_by'],
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'pending', 'label' => 'معلق'],
+                    ['value' => 'approved', 'label' => 'معتمد'],
+                    ['value' => 'purchased', 'label' => 'تم الشراء'],
+                    ['value' => 'rejected', 'label' => 'مرفوض'],
+                ]],
+                'requested_by' => ['type' => 'lookup', 'column' => 'requested_by'],
+            ],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('title', 'like', "%{$term}%")->orWhere('description', 'like', "%{$term}%")),
             filters: ['status' => fn ($q, $v) => $q->where('status', $v)],
@@ -64,6 +73,10 @@ final class ProcurementController extends Controller
             MaintenanceRequest::with(['reporter', 'assignee']),
             $request,
             sortable: ['date' => 'created_at', 'title' => 'title', 'location' => 'location', 'priority' => 'priority', 'status' => 'status', 'reported_by' => 'reported_by'],
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'status'],
+                'priority' => ['type' => 'select', 'column' => 'priority'],
+            ],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('title', 'like', "%{$term}%")->orWhere('description', 'like', "%{$term}%")),
             filters: ['status' => fn ($q, $v) => $q->where('status', $v)],

@@ -350,8 +350,25 @@ export class DashboardPage {
 
   range = signal<string>('30d');
   customizeOpen = signal(false);
-  /** widget ids in the user's saved order; missing = hidden (T6-60: saved per user) */
+  /** widget ids in the user's saved order; missing = hidden (T6-60: GET/POST dashboard/layout) */
   widgetOrder = signal<string[]>(this.storage.get('dashboard.widgets', DEFAULT_WIDGETS.map((w) => w.id)));
+
+  constructor() {
+    // T6-60: the layout lives on the server per user; localStorage is the
+    // offline seed and the cache
+    void firstValueFrom(this.http.get<{ data: { widgets: string[] | null } }>('/dashboard/layout'))
+      .then((res) => {
+        const server = res.data?.widgets;
+        if (Array.isArray(server) && server.length > 0) {
+          this.widgetOrder.set(server);
+          this.storage.set('dashboard.widgets', server);
+        } else {
+          // seed the server with the local/default order
+          void firstValueFrom(this.http.post('/dashboard/layout', { widgets: this.widgetOrder() })).catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+  }
 
   userName = computed(() => this.auth.me()?.name ?? '');
 
@@ -380,6 +397,8 @@ export class DashboardPage {
         : [...DEFAULT_WIDGETS.map((w) => w.id).filter((w) => order.includes(w)), id],
     );
     this.storage.set('dashboard.widgets', this.widgetOrder());
+    // T6-60: persist per user server-side too
+    void firstValueFrom(this.http.post('/dashboard/layout', { widgets: this.widgetOrder() })).catch(() => undefined);
   }
 
   setRange(range: string): void {

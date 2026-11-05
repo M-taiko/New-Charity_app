@@ -10,7 +10,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { Router } from '@angular/router';
 import type { TableFilterDef, TableFilterValue } from '@shared/lib/table-filters';
-import { activeFilterCount, isFilterActive } from '@shared/lib/table-filters';
+import { activeFilterCount, fieldValue, isFilterActive } from '@shared/lib/table-filters';
 
 /**
  * T6-30 custom filter renderer: <ng-template appFilterCustom="direction" let-ctx>
@@ -212,6 +212,8 @@ export class TableFiltersComponent {
   lookupOptions = input<Record<string, { value: unknown; label: string }[]>>({});
   /** custom renderer templates by filter key (T6-30 type:'custom') */
   customTemplates = input<Record<string, TemplateRef<unknown> | null>>({});
+  /** the loaded rows — a def with optionsFrom:\'rows\' derives its options from them */
+  rows = input<unknown[]>([]);
 
   applied = output<Record<string, TableFilterValue | undefined>>();
 
@@ -255,7 +257,19 @@ export class TableFiltersComponent {
   }
 
   optionsFor(def: TableFilterDef): { value: unknown; label: string }[] {
-    return def.options ?? this.lookupOptions()[def.key] ?? [];
+    if (def.options) {
+      return def.options;
+    }
+    const lookup = this.lookupOptions()[def.key];
+    if (lookup) {
+      return lookup;
+    }
+    if (def.optionsFrom === 'rows') {
+      const field = def.field ?? def.key;
+      const distinct = [...new Set(this.rows().map((r) => fieldValue(r, field)).filter((v) => v !== null && v !== undefined && v !== ''))];
+      return distinct.sort((a, b) => String(a).localeCompare(String(b), 'ar')).map((v) => ({ value: v, label: String(v) }));
+    }
+    return [];
   }
 
   rangePart(key: string, part: string): number | string | null {

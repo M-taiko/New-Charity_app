@@ -9,7 +9,7 @@ import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
@@ -64,7 +64,7 @@ interface ReportsData {
   imports: [
     FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
+    DataTableComponent, TableBodyDirective, TableColDirective,
     StatTileComponent, ChartCardComponent, PrintSheetComponent, MoneyPipe,
   ],
   template: `
@@ -175,20 +175,20 @@ interface ReportsData {
               <span class="chart-card__spacer"></span>
               <p-button [label]="'report.governorates.title' | translate" size="small" [text]="true" routerLink="/reports/governorates" />
             </div>
-            <app-ledger-table [columns]="govCols" [rows]="governoratesTop()" [emptyLabel]="'report.governorates.empty'">
-              <ng-template appLedgerBody let-row>
+            <app-data-table mode="static" [autoFilters]="true" [columns]="govCols" [rows]="governoratesTop()" [emptyLabel]="'report.governorates.empty'">
+              <ng-template appTableBody let-row>
                 <tr class="ledger-table__row">
-                  <td appLedgerCol="label">
+                  <td appTableCol="label">
                     {{ row.label }}
                     @if (!row.standard) {
                       <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
                     }
                   </td>
-                  <td appLedgerCol="total" class="u-bidi">{{ row.total }}</td>
-                  <td appLedgerCol="expenses_total"><span class="u-bidi">{{ row.expenses_total | money }}</span></td>
+                  <td appTableCol="total" class="u-bidi">{{ row.total }}</td>
+                  <td appTableCol="expenses_total"><span class="u-bidi">{{ row.expenses_total | money }}</span></td>
                 </tr>
               </ng-template>
-            </app-ledger-table>
+            </app-data-table>
             <p class="u-muted u-small u-mt-2">{{ 'report.dashboard.governorates_hint' | translate }}</p>
           </section>
 

@@ -117,6 +117,30 @@ final class DashboardController extends BladeDashboardController
         ]);
     }
 
+    /**
+     * GET /api/v1/dashboard/layout — the user's widget order/visibility (T6-60).
+     * POST saves it. Stored per user; the SPA seeds from the default list.
+     */
+    public function layout(Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+        $key = "dashboard.layout.{$userId}";
+
+        if ($request->isMethod('post')) {
+            $validated = $request->validate([
+                'widgets' => 'present|array',
+                'widgets.*' => 'string|max:64',
+            ]);
+            cache()->put($key, $validated['widgets'], now()->addYear());
+
+            return response()->json(['data' => ['widgets' => $validated['widgets']]]);
+        }
+
+        return response()->json(['data' => [
+            'widgets' => cache()->get($key),
+        ]]);
+    }
+
     private function mapAgentStats(array $stats): array
     {
         if ($stats === []) {

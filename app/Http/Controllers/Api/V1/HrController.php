@@ -45,6 +45,13 @@ final class HrController extends Controller
             Employee::with('user'),
             $request,
             sortable: ['name' => 'user_id', 'department' => 'department', 'job_title' => 'job_title', 'salary' => 'salary', 'hire_date' => 'hire_date', 'status' => 'status'],
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'active', 'label' => 'نشط'],
+                    ['value' => 'inactive', 'label' => 'غير نشط'],
+                ]],
+                'department' => ['type' => 'select', 'column' => 'department', 'options' => fn () => \App\Models\Employee::distinct()->whereNotNull('department')->pluck('department')->map(fn ($d) => ['value' => $d, 'label' => $d])->values()->all()],
+            ],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('department', 'like', "%{$term}%")
                 ->orWhere('job_title', 'like', "%{$term}%")
@@ -71,6 +78,10 @@ final class HrController extends Controller
             AttendanceRecord::with('employee.user'),
             $request,
             sortable: ['date' => 'date', 'employee' => 'employee_id', 'check_in' => 'check_in', 'check_out' => 'check_out', 'status' => 'status'],
+            filterable: [
+                'employee' => ['type' => 'lookup', 'column' => 'employee_id'],
+                'status' => ['type' => 'select', 'column' => 'status'],
+            ],
             filters: [
                 'employee_id' => fn ($q, $v) => $q->where('employee_id', (int) $v),
                 'month' => fn ($q, $v) => $q->whereMonth('date', (int) $v),
@@ -95,6 +106,10 @@ final class HrController extends Controller
             KpiMetric::with('employee.user'),
             $request,
             sortable: ['date' => 'created_at', 'employee' => 'employee_id', 'name' => 'metric_name', 'target' => 'target_value', 'actual' => 'actual_value', 'percentage' => 'raw:ROUND((actual_value / NULLIF(target_value, 0)) * 100, 1)'],
+            filterable: [
+                'employee' => ['type' => 'lookup', 'column' => 'employee_id'],
+                'name' => ['type' => 'select', 'column' => 'metric_name', 'options' => fn () => \App\Models\KpiMetric::distinct()->pluck('metric_name')->map(fn ($n) => ['value' => $n, 'label' => $n])->values()->all()],
+            ],
             filters: ['employee_id' => fn ($q, $v) => $q->where('employee_id', (int) $v)],
         );
         $paginator->getCollection()->transform(fn ($k) => [
@@ -117,6 +132,14 @@ final class HrController extends Controller
             SalaryCalculation::with('employee.user'),
             $request,
             sortable: ['date' => 'created_at', 'final_salary' => 'final_salary', 'employee' => 'employee_id', 'year' => 'year', 'month' => 'month', 'base_salary' => 'base_salary', 'status' => 'status'],
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'calculated', 'label' => 'محسوب'],
+                    ['value' => 'approved', 'label' => 'معتمد'],
+                    ['value' => 'paid', 'label' => 'مدفوع'],
+                ]],
+                'employee' => ['type' => 'lookup', 'column' => 'employee_id'],
+            ],
             filters: [
                 'status' => fn ($q, $v) => $q->where('status', $v),
                 'month' => fn ($q, $v) => $q->where('month', (int) $v),

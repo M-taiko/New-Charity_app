@@ -73,7 +73,11 @@
     "print_all_rows": "طباعة كل الصفوف",
     "print_page_only": "طباعة الصفحة الحالية فقط",
     "print_cap_notice": "تم اقتصار الطباعة على أول {{count}} صف",
-    "file_hint": "PDF أو JPG أو PNG أو DOC أو DOCX — بحد أقصى 2 ميجابايت — رفع ملف جديد يستبدل الملف الحالي"
+    "file_hint": "PDF أو JPG أو PNG أو DOC أو DOCX — بحد أقصى 2 ميجابايت — رفع ملف جديد يستبدل الملف الحالي",
+    "print_omit_header": "إخفاء ترويسة الجهة",
+    "print_include_header": "إظهار ترويسة الجهة",
+    "print_omit_totals": "إخفاء صف الإجماليات",
+    "print_include_totals": "إظهار صف الإجماليات"
   },
   "nav": {
     "main_aria": "القائمة الرئيسية",
@@ -597,7 +601,6 @@
       "type": "نوع الحركة",
       "custody_number": "رقم العهدة",
       "show_closures": "إظهار الإغلاقات الصفرية",
-      "apply": "تطبيق",
       "date_range": "الفترة الزمنية"
     },
     "my_movements": {
