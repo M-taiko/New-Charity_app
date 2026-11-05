@@ -5,27 +5,33 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { MenuModule } from 'primeng/menu';
+import type { MenuItem } from 'primeng/api';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
+import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
+import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog.component';
+import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
+import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
+import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
-import type { ItemResponse } from '@shared/models/api.models';
+import type { ApiErrorBody, ItemResponse } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface MineCustody {
@@ -39,6 +45,7 @@ interface MineCustody {
 interface MineTransfer {
   id: number; custody_id: number; sender: string | null; receiver: string | null;
   amount: string; status: string; notes: string | null; created_at: string | null;
+  can_cancel?: boolean;
 }
 
 interface MyData {
@@ -69,24 +76,21 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
 @Component({
   selector: 'app-my-custodies',
   standalone: true,
-  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, DialogModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, StatTileComponent, EmptyStateComponent, FormDialogComponent, ReasonDialogComponent, StatusStampComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
+  imports: [SectionNavComponent, FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective, StatTileComponent, EmptyStateComponent, FormDialogComponent, ContentDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, AppTabsComponent, MenuModule, StatusStampComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'custody.mine.title' | translate">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
-        @if (showQuickActions()) {
-          <p-button [label]="'custody.mine.quick_donation' | translate" size="small" severity="success" [outlined]="true" (onClick)="donationDlg.open(); openDonation()" />
-          @if (isAgent()) {
-            <p-button [label]="'custody.mine.recover' | translate" size="small" severity="info" [outlined]="true" (onClick)="recoveryDlg.open(); openRecovery()" />
-          }
-          <p-button [label]="'custody.mine.return_to_treasury' | translate" size="small" severity="warn" [outlined]="true" (onClick)="refundDlg.open(); openRefund()" />
-        }
-        @if (showExternalReceipt()) {
-          <p-button [label]="'custody.mine.external_receipt' | translate" size="small" (onClick)="externalDialog.open()" />
+        <!-- T6-10: one primary + everything else in the More menu -->
+        @if (menuItems().length > 0) {
+          <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="moreMenu.toggle($event)" />
+          <p-menu #moreMenu appendTo="body" [model]="menuItems()" popup="true" />
         }
         <p-button [label]="'custody.mine.request_new' | translate" size="small" routerLink="/custodies/new" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="custodies" />
 
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as d) {
@@ -100,36 +104,27 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
           }
         </div>
 
-        <div class="u-flex u-gap-2 u-flex-wrap u-mt-4" role="tablist">
-          <p-button [label]="('custody.mine.tab_awaiting' | translate) + ' (' + pendingCount() + ')'" size="small"
-                    [outlined]="tab() !== 'pending'" [text]="tab() === 'pending'" (onClick)="tab.set('pending')" />
-          <p-button [label]="('custody.mine.active' | translate) + ' (' + activeCount() + ')'" size="small"
-                    [outlined]="tab() !== 'active'" [text]="tab() === 'active'" (onClick)="tab.set('active')" />
-          <p-button [label]="('custody.mine.tab_transfers' | translate) + ' (' + pendingTransferCount() + ')'" size="small"
-                    [outlined]="tab() !== 'transfers'" [text]="tab() === 'transfers'" (onClick)="tab.set('transfers')" />
-          <p-button [label]="('custody.mine.tab_closed' | translate) + ' (' + closedCount() + ')'" size="small"
-                    [outlined]="tab() !== 'closed'" [text]="tab() === 'closed'" (onClick)="tab.set('closed')" />
-        </div>
+        <app-tabs class="u-mt-4" id="mine" [tabs]="tabs()" [(active)]="tab" />
 
         @if (tab() !== 'transfers') {
-          <app-ledger-table class="u-mt-4" [columns]="custodyCols" [rows]="rows()"
+          <app-data-table mode="static" [autoFilters]="true" class="u-mt-4" [columns]="custodyCols" [rows]="rows()"
                             [title]="'custody.mine.title'" [emptyLabel]="'custody.mine.empty'">
-            <ng-template appLedgerBody let-row>
+            <ng-template appTableBody let-row>
               <tr class="ledger-table__row">
-                <td appLedgerCol="created_at" class="u-bidi">{{ row.created_at | datetime: false }}</td>
-                <td appLedgerCol="amount">{{ row.amount | money }}</td>
-                <td appLedgerCol="transferred_in">
+                <td appTableCol="created_at" class="u-bidi">{{ row.created_at | datetime: false }}</td>
+                <td appTableCol="amount">{{ row.amount | money }}</td>
+                <td appTableCol="transferred_in">
                   @if (parseFloat(row.transferred_in) > 0) { {{ row.transferred_in | money }} } @else { — }
                 </td>
-                <td appLedgerCol="spent">{{ row.spent | money }}</td>
-                <td appLedgerCol="returned">{{ row.returned | money }}</td>
-                <td appLedgerCol="remaining">
+                <td appTableCol="spent">{{ row.spent | money }}</td>
+                <td appTableCol="returned">{{ row.returned | money }}</td>
+                <td appTableCol="remaining">
                   {{ row.remaining | money }}
                   @if (parseFloat(row.frozen) > 0) {
                     <span class="u-small u-muted">{{ 'custody.detail.breakdown.frozen' | translate }}: {{ row.frozen | money }}</span>
                   }
                 </td>
-                <td appLedgerCol="status">
+                <td appTableCol="status">
                   <app-status-stamp [status]="row.status" namespace="custody_status" />
                   @if (row.status === 'pending') {
                     @if (row.initiated_by === 'accountant') {
@@ -139,7 +134,7 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
                     }
                   }
                 </td>
-                <td appLedgerCol="actions">
+                <td appTableCol="actions">
                   <div class="u-flex u-gap-1 u-flex-wrap">
                     <a [routerLink]="['/custodies', row.id]">{{ 'common.view' | translate }}</a>
                     <p-button [label]="'custody.mine.tx_button' | translate" size="small" [text]="true" (onClick)="openTransactions(row.id)" />
@@ -151,7 +146,7 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
                 </td>
               </tr>
             </ng-template>
-          </app-ledger-table>
+          </app-data-table>
         } @else {
           <div class="kpi-grid u-mt-4">
             <section class="chart-card">
@@ -162,6 +157,10 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
                   <span class="u-bidi">{{ t.amount | money }}</span>
                   <app-status-stamp [status]="t.status" namespace="transfer_status" />
                   <a [routerLink]="['/transfers', t.id]">{{ 'common.view' | translate }}</a>
+                  @if (t.can_cancel) {
+                    <!-- T6-80: the sender can cancel a pending transfer -->
+                    <p-button [label]="'transfers.cancel' | translate" size="small" severity="danger" [outlined]="true" (onClick)="cancelDlg.open(); cancelTarget.set(t)" />
+                  }
                 </div>
               } @empty { <p class="u-muted u-small">{{ 'common.no_data' | translate }}</p> }
             </section>
@@ -306,25 +305,29 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
                        [label]="'common.reason'" [submitLabel]="'common.confirm' | translate"
                        [sending]="sending()" [error]="actionError()" (submit)="submitTransferReject($event)" />
 
+    <!-- T6-80: confirm cancelling a pending transfer I sent -->
+    <app-confirm-dialog #cancelDlg [header]="'transfers.cancel' | translate"
+                        [message]="'transfers.cancel_confirm'" [confirmLabel]="'transfers.cancel'"
+                        confirmKind="cancel" (confirmed)="submitCancelTransfer()" />
+
     <!-- per-custody transactions drawer -->
-    <p-dialog appendTo="body" [visible]="txCustodyId() !== null" (visibleChange)="txCustodyId.set($event ? txCustodyId() : null)"
-              [header]="'custody.detail.transactions' | translate" [modal]="true" [draggable]="false" [resizable]="false"
-              [style]="{ width: 'min(680px, 94vw)' }">
+    <app-content-dialog [visible]="txCustodyId() !== null" (visibleChange)="txCustodyId.set($event ? txCustodyId() : null)"
+              [header]="'custody.detail.transactions'" [width]="'min(680px, 94vw)'">
       @if (txDetail.value(); as tx) {
-        <app-ledger-table [columns]="transactionCols" [rows]="tx.transactions">
-          <ng-template appLedgerBody let-row>
+        <app-data-table mode="static" [autoFilters]="true" [columns]="transactionCols" [rows]="tx.transactions">
+          <ng-template appTableBody let-row>
             <tr class="ledger-table__row">
-              <td appLedgerCol="date" class="u-bidi">{{ row.date | datetime }}</td>
-              <td appLedgerCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-              <td appLedgerCol="description">{{ row.description }}</td>
-              <td appLedgerCol="amount">{{ row.amount | money }}</td>
+              <td appTableCol="date" class="u-bidi">{{ row.date | datetime }}</td>
+              <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
+              <td appTableCol="description">{{ row.description }}</td>
+              <td appTableCol="amount">{{ row.amount | money }}</td>
             </tr>
           </ng-template>
-        </app-ledger-table>
+        </app-data-table>
       } @else if (txDetail.isLoading()) {
         <div class="skeleton skeleton--tile"></div>
       }
-    </p-dialog>
+    </app-content-dialog>
   `,
 })
 export class MyCustodiesPage {
@@ -355,6 +358,7 @@ export class MyCustodiesPage {
   receiveCustodyId = signal<number | null>(null);
   rejectTransfer = signal<MineTransfer | null>(null);
   txCustodyId = signal<number | null>(null);
+  cancelTarget = signal<MineTransfer | null>(null);
 
   readonly externalDialog = viewChild.required<FormDialogComponent>('externalDialog');
   readonly donationDlg = viewChild.required<FormDialogComponent>('donationDlg');
@@ -418,6 +422,42 @@ export class MyCustodiesPage {
   readonly activeCount = computed(() => this.custodies().filter((c) => ['accepted', 'active', 'partially_returned'].includes(c.status)).length);
   readonly closedCount = computed(() => this.custodies().filter((c) => ['closed', 'cancelled', 'rejected'].includes(c.status)).length);
   readonly pendingTransferCount = computed(() => (this.data.value()?.received_transfers ?? []).filter((t) => t.status === 'pending').length);
+
+  /** the lifecycle tabs (T6-11) — Active | Awaiting my acceptance | Transfers | Closed */
+  readonly tabs = computed<AppTab[]>(() => [
+    { id: 'active', label: 'custody.mine.active', count: this.activeCount() },
+    { id: 'pending', label: 'custody.mine.tab_awaiting', count: this.pendingCount() },
+    { id: 'transfers', label: 'custody.mine.tab_transfers', count: this.pendingTransferCount() },
+    { id: 'closed', label: 'custody.mine.tab_closed', count: this.closedCount() },
+  ]);
+
+  /** quick actions live in the header More menu (T6-10) */
+  readonly menuItems = computed<MenuItem[]>(() => {
+    const items: MenuItem[] = [];
+    if (this.showQuickActions()) {
+      items.push({
+        label: this.translate.instant('custody.mine.quick_donation'),
+        command: () => { this.donationDlg().open(); this.openDonation(); },
+      });
+      if (this.isAgent()) {
+        items.push({
+          label: this.translate.instant('custody.mine.recover'),
+          command: () => { this.recoveryDlg().open(); this.openRecovery(); },
+        });
+      }
+      items.push({
+        label: this.translate.instant('custody.mine.return_to_treasury'),
+        command: () => { this.refundDlg().open(); this.openRefund(); },
+      });
+    }
+    if (this.showExternalReceipt()) {
+      items.push({
+        label: this.translate.instant('custody.mine.external_receipt'),
+        command: () => { this.externalDialog().open(); },
+      });
+    }
+    return items;
+  });
 
   /** the page is empty only with no custodies and no transfers in either direction */
   isEmpty = (): boolean => {
@@ -485,6 +525,27 @@ export class MyCustodiesPage {
   }
 
   // ── dialog openers (reset stale state before showing) ──
+
+  /** T6-80: cancel a pending transfer I sent — releases the frozen amount */
+  submitCancelTransfer(): void {
+    const t = this.cancelTarget();
+    if (!t) {
+      return;
+    }
+    this.sending.set(true);
+    this.actionError.set(null);
+    void firstValueFrom(this.api.post(`/custody-transfers/${t.id}/cancel`, {}))
+      .then((res) => {
+        this.sending.set(false);
+        this.toast.success(((res as { message?: string })?.message) ?? this.translate.instant('transfers.cancel_success'));
+        this.data.reload();
+      })
+      .catch((err: HttpErrorResponse) => {
+        this.sending.set(false);
+        this.actionError.set(err);
+        this.toast.apiError((err.error as ApiErrorBody | null)?.message ?? 'errors.generic', (err.error as ApiErrorBody | null)?.code);
+      });
+  }
 
   openDonation(custodyId?: number): void {
     this.actionError.set(null);

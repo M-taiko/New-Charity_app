@@ -7,6 +7,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
@@ -20,7 +21,7 @@ interface HrData {
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent, StatTileComponent,
   ],
@@ -32,6 +33,8 @@ interface HrData {
         <p-button [label]="'hr.dashboard.view_kpi' | translate" size="small" [outlined]="true" routerLink="/hr/kpi" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="hr" />
 
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty" [backLink]="['/dashboard']">
       @if (data.value(); as d) {

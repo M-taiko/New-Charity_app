@@ -25,6 +25,8 @@ class CustodyTransfer extends Model
         'rejection_reason',
         'approved_at',
         'approved_by',
+        'cancelled_at',
+        'cancelled_by',
     ];
 
     /**
@@ -35,6 +37,7 @@ class CustodyTransfer extends Model
     protected $casts = [
         'amount' => 'decimal:2',
         'approved_at' => 'datetime',
+        'cancelled_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -61,6 +64,14 @@ class CustodyTransfer extends Model
     public function approver()
     {
         return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Get the user who cancelled the pending transfer (T6-80).
+     */
+    public function canceller()
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     /**
@@ -112,6 +123,14 @@ class CustodyTransfer extends Model
     }
 
     /**
+     * Scope to get cancelled transfers (T6-80).
+     */
+    public function scopeCancelled($query)
+    {
+        return $query->where('status', 'cancelled');
+    }
+
+    /**
      * Scope to get transfers sent by a specific user.
      */
     public function scopeSentBy($query, $userId)
@@ -149,5 +168,13 @@ class CustodyTransfer extends Model
     public function isRejected(): bool
     {
         return $this->status === 'rejected';
+    }
+
+    /**
+     * Check if transfer was cancelled by the sender (T6-80).
+     */
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
     }
 }

@@ -20,7 +20,8 @@ interface TransferDetail {
   id: number; sender: string | null; receiver: string | null; custody_id: number | null;
   amount: string; status: string; notes: string | null; rejection_reason: string | null;
   requested_at: string | null; decided_at: string | null; decided_by: string | null;
-  can_decide: boolean;
+  cancelled_at: string | null; cancelled_by: string | null;
+  can_decide: boolean; can_cancel: boolean;
   custody?: { id: number; agent: string | null; treasury: string | null; amount: string; remaining: string; frozen: string };
 }
 
@@ -33,10 +34,13 @@ interface TransferDetail {
     <app-page-header [title]="'transfer.detail.title' | translate" [subtitle]="'#' + id()">
       <div actions class="u-flex u-gap-2">
         @if (canDecide()) {
-          <p-button [label]="'transfer.detail.accept' | translate" size="small" (onClick)="acceptDialog.open()" [loading]="sending()" />
+          <p-button [label]="'transfer.detail.accept' | translate" size="small" severity="success" (onClick)="acceptDialog.open()" [loading]="sending()" />
           <p-button [label]="'transfer.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDialog.open()" />
         }
-        <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/transfers" />
+        @if (canCancel()) {
+          <p-button [label]="'transfers.cancel' | translate" size="small" severity="danger" [outlined]="true" (onClick)="cancelDialog.open()" />
+        }
+        <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/transfers" />
       </div>
     </app-page-header>
 
@@ -81,7 +85,18 @@ interface TransferDetail {
       [header]="'transfer.detail.accept' | translate"
       [message]="'transfer.detail.accept_confirm'"
       [confirmLabel]="'transfer.detail.accept' | translate"
+      confirmKind="accept"
       (confirmed)="accept()"
+    />
+
+    <!-- T6-80: the sender (or a manager) cancels a pending transfer -->
+    <app-confirm-dialog
+      #cancelDialog
+      [header]="'transfers.cancel' | translate"
+      [message]="'transfers.cancel_confirm'"
+      [confirmLabel]="'transfers.cancel' | translate"
+      confirmKind="cancel"
+      (confirmed)="cancelTransfer()"
     />
   `,
 })
@@ -113,6 +128,26 @@ export class TransferDetailPage {
   /** the accept/reject header actions belong to the receiver only */
   readonly canDecide = computed(() => this.safeValue()?.can_decide === true);
 
+  /** T6-80: the sender or a manager may cancel while pending */
+  readonly canCancel = computed(() => this.safeValue()?.can_cancel === true);
+
+  /** T6-80: cancel this pending transfer (sender/manager only) */
+  cancelTransfer(): void {
+    this.sending.set(true);
+    this.actionError.set(null);
+    void firstValueFrom(this.http.post<ActionResponse>(`/custody-transfers/${this.id()}/cancel`, {}))
+      .then((res) => {
+        this.sending.set(false);
+        this.toast.success(res.message);
+        this.data.reload();
+      })
+      .catch((err: HttpErrorResponse) => {
+        this.sending.set(false);
+        this.actionError.set(err);
+        this.toast.apiError(err.error?.message ?? 'errors.generic', err.error?.code);
+      });
+  }
+
   keyValues(t: TransferDetail): { label: string; value: string }[] {
     return [
       { label: 'glossary.sender', value: t.sender ?? '—' },
@@ -124,6 +159,7 @@ export class TransferDetailPage {
       { label: 'transfer.list.col_decided_at', value: t.decided_at ?? '—' },
       { label: 'transfer.list.col_decided_by', value: t.decided_by ?? '—' },
       { label: 'transfer.list.col_rejection', value: t.rejection_reason ?? '—' },
+      { label: 'transfers.cancelled_by', value: t.cancelled_by ?? '—' },
     ];
   }
 

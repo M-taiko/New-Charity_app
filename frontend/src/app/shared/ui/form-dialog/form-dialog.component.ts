@@ -18,7 +18,7 @@ import type { ApiErrorBody } from '../../models/api.models';
   template: `
     <p-dialog appendTo="body"
       [visible]="visible()"
-      (visibleChange)="visible.set($event)"
+      (visibleChange)="onVisibleChange($event)"
       [header]="header() | translate"
       [modal]="true"
       [draggable]="false"
@@ -27,6 +27,8 @@ import type { ApiErrorBody } from '../../models/api.models';
       [breakpoints]="{ '576px': '100vw' }"
       [style]="{ width: 'min(560px, 94vw)' }"
       [closable]="!sending()"
+      [dismissableMask]="!sending()"
+      [closeOnEscape]="!sending()"
     >
       <ng-content />
       @if (alert()) {
@@ -67,6 +69,8 @@ export class FormDialogComponent {
   visible = model(false);
   submit = output();
   closed = output();
+  /** fires on ANY hide (mask click, Esc, cancel button) — pages that need to react (T6-16) */
+  dismissed = output();
 
   alert = computed(() => {
     const err = this.error();
@@ -81,8 +85,15 @@ export class FormDialogComponent {
     this.visible.set(true);
   }
 
+  onVisibleChange(next: boolean): void {
+    if (!next) {
+      this.dismissed.emit();
+    }
+    this.visible.set(next);
+  }
+
   close(): void {
-    this.visible.set(false);
+    this.onVisibleChange(false);
     this.closed.emit();
   }
 

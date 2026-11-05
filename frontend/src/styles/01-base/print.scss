@@ -1,10 +1,27 @@
-// One print stylesheet for every page (plan 23): light palette, org header,
-// repeated table heads, no shell chrome. print-sheet__org is hidden on screen
-// and revealed only in print.
+// The A4 print system (Task6 T6-70): one stylesheet for every page — light
+// palette, org header, CSS named pages for portrait/landscape, repeated table
+// heads, rows never split, actions/interactive controls hidden, 9–10px fixed
+// table layout, totals kept, charts printed as flat images.
 @media print {
+  // ── Named pages (Chrome 109+): pages opt into landscape per column count ──
+  @page portrait {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  @page landscape {
+    size: A4 landscape;
+    margin: 10mm;
+  }
+
+  // default: portrait; wide tables add .print-landscape on the print sheet
   @page {
-    size: A4;
-    margin: 14mm;
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  .print-landscape {
+    page: landscape;
   }
 
   :root {
@@ -14,18 +31,32 @@
     --color-surface-raised: var(--palette-sand);
     --color-hairline: var(--palette-sand);
     --color-margin-rule: var(--palette-taupe);
+    --color-control-border: var(--palette-light);
     --color-text: var(--palette-ink);
     --color-text-muted: var(--palette-mid);
     --color-primary: var(--palette-brand);
   }
 
+  html,
+  body {
+    background: var(--palette-white) !important;
+  }
+
+  // ── No shell chrome, no interactive controls, no dialogs/sticky bars ──
   .app-shell__sidebar,
   .app-shell__topbar,
   .app-shell__bottom-nav,
   .filter-bar,
+  .table-filters,
   .toast-host,
   .sticky-actions,
   .p-paginator,
+  .p-dialog,
+  .p-menu,
+  .row-actions,
+  .app-tabs,
+  .ledger-table__filter,
+  .auto-refresh,
   .u-print-hidden {
     display: none !important;
   }
@@ -36,8 +67,10 @@
     padding: 0 !important;
     margin: 0 !important;
     max-width: none !important;
+    overflow: visible !important;
   }
 
+  // ── The org header block: logo, name, title, date/time, user ──
   .print-sheet__org {
     display: flex !important;
     align-items: center;
@@ -47,15 +80,122 @@
     margin-block-end: 12px;
   }
 
+  // the applied filters/period summary line (set by the print sheet)
+  .print-sheet__filters {
+    font-size: 10px;
+    color: var(--palette-mid);
+    margin-block-end: 8px;
+  }
+
+  // ── Repeated footer (fixed elements repeat on every printed page; @page
+  //    margin boxes are not available in Chrome 109, so no page number) ──
+  .print-sheet__footer {
+    display: flex !important;
+    justify-content: space-between;
+    position: fixed;
+    inset-block-end: 0;
+    inset-inline: 0;
+    font-size: 9px;
+    color: var(--palette-mid);
+    border-block-start: 1px solid var(--palette-sand);
+    padding-block-start: 2px;
+  }
+
+  // ── Tables: repeat headers, never split rows, compact fixed layout ──
   table {
     border-collapse: collapse;
+    table-layout: fixed;
+    width: 100% !important;
+    font-size: 9.5px;
   }
 
   thead {
     display: table-header-group;
   }
 
+  tfoot {
+    display: table-footer-group;
+  }
+
   tr {
+    break-inside: avoid;
+  }
+
+  th,
+  td {
+    overflow-wrap: anywhere;
+    padding: 3px 4px !important;
+    border: 0.5px solid var(--palette-sand) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  th {
+    font-weight: 700;
+  }
+
+  // numbers right-aligned (RTL: left), LTR digits isolated
+  .ledger-table__cell-num,
+  td[class*='num'] {
+    text-align: start;
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  // the actions column never prints
+  th[data-field='actions'],
+  td[data-field='actions'] {
+    display: none !important;
+  }
+
+  // ── Cards & sections ──
+  .chart-card,
+  .form-section,
+  .stat-tile,
+  .kpi-grid {
+    break-inside: avoid;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    background: var(--palette-white) !important;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+
+  // status stamps and the totals row are the only places exact colors print
+  .stamp,
+  .ledger-table__summary,
+  tfoot th,
+  tfoot td {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .ledger-table__summary {
+    border-block-start: 1.5px solid var(--palette-ink);
+    font-weight: 700;
+  }
+
+  // charts print as the flattened canvas image (chart-card swaps it on
+  // beforeprint — T6-70.5); hide the live canvas to avoid re-layout glitches
+  .chart-canvas-print-img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  // a notice printed when the all-rows cap was hit (set by data-table)
+  .print-cap-notice {
+    display: block !important;
+    font-size: 9px;
+    color: var(--palette-mid);
+    margin-block-start: 6px;
+  }
+
+  // key-value lists keep their rule lines
+  .key-value-list__item {
     break-inside: avoid;
   }
 }

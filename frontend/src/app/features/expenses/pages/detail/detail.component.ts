@@ -5,9 +5,12 @@ import { firstValueFrom } from 'rxjs';
 import type { HttpErrorResponse} from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+import { SharedModule } from 'primeng/api';
+import { MenuModule } from 'primeng/menu';
+import type { MenuItem } from 'primeng/api';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
+import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
@@ -27,43 +30,39 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 @Component({
   selector: 'app-expense-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, ButtonModule, DialogModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, StatTileComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, ConfirmDeleteComponent, MoneyPipe],
+  imports: [MenuModule, TranslatePipe, SharedModule, ContentDialogComponent, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, StatTileComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, ConfirmDeleteComponent, MoneyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'expense.detail.title' | translate">
       <app-page-header [title]="headerTitle()" [subtitle]="safeValue()?.user ?? ''">
         <div actions class="u-flex u-gap-2 u-flex-wrap">
-          <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/expenses" />
-          <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
-          @if (safeValue()?.has_attachment) {
-            <p-button [label]="'expense.detail.view_attachment' | translate" size="small" [outlined]="true" (onClick)="openPreview()" />
-          }
-          @if (canRequestEdit()) {
-            <p-button
-              [label]="safeValue()?.reviewed
-                ? ('expense.detail.request_edit_pending' | translate)
-                : ('expense.detail.request_edit' | translate)"
-              size="small" severity="warn" [outlined]="true"
-              [routerLink]="['/expenses', id(), 'edit-request']"
-            />
-          }
+          <!-- T6-10: max 3 visible buttons; decisions live in the sticky bar -->
+          <p-button [label]="'common.print' | translate" size="small" severity="secondary" [outlined]="true" (click)="printPage()" />
           @if (safeValue()?.can_edit) {
-            <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/expenses', id(), 'edit']" />
+            <p-button [label]="'common.edit' | translate" size="small" severity="secondary" [outlined]="true" routerLink="['/expenses', id(), 'edit']" />
           }
-          @if (safeValue()?.can_review) {
-            <p-button [label]="'expense.list.review' | translate" size="small" (onClick)="act('mark-reviewed')" [loading]="sending()" />
-          }
-          @if (safeValue()?.can_unreview) {
-            <p-button [label]="'expense.list.unreview' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="act('unreview')" [loading]="sending()" />
-          }
-          @if (canDelete()) {
-            <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="confirmDelete.open()" />
+          @if (moreMenuItems().length > 0) {
+            <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="moreMenu.toggle($event)" />
+            <p-menu #moreMenu appendTo="body" [model]="moreMenuItems()" popup="true" />
           }
         </div>
       </app-page-header>
 
       <app-async-page [resource]="data" variant="detail" [backLink]="['/expenses']">
         @if (safeValue(); as e) {
+          <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
+          <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
+            @if (e.can_review) {
+              <p-button [label]="'expense.list.review' | translate" size="small" severity="success" (onClick)="act('mark-reviewed')" [loading]="sending()" />
+            }
+            @if (e.can_unreview) {
+              <p-button [label]="'expense.list.unreview' | translate" size="small" severity="warn" [outlined]="true" (onClick)="act('unreview')" [loading]="sending()" />
+            }
+            @if (canDelete()) {
+              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="confirmDelete.open()" />
+            }
+          </div>
+
           <!-- summary band: amount / type / date / source -->
           <div class="kpi-grid">
             <app-stat-tile [label]="'expense.detail.amount'" [value]="e.amount" [money]="true" />
@@ -140,15 +139,11 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
       </app-async-page>
 
       <!-- attachment preview (T3-20): images inline, other files open/download -->
-      <p-dialog
-        appendTo="body"
+      <app-content-dialog
         [visible]="previewOpen()"
         (visibleChange)="previewOpen.set($event)"
-        [header]="'expense.detail.attachment' | translate"
-        [modal]="true"
-        [draggable]="false"
-        [resizable]="false"
-        [style]="{ width: 'min(720px, 94vw)' }"
+        [header]="'expense.detail.attachment'"
+        [width]="'min(720px, 94vw)'"
       >
         <div class="u-column u-gap-3 u-center">
           @if (attachmentIsImage()) {
@@ -179,7 +174,7 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
             </a>
           </div>
         </p-footer>
-      </p-dialog>
+      </app-content-dialog>
 
       <app-confirm-delete
         #confirmDelete
@@ -191,6 +186,24 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
   `,
 })
 export class ExpenseDetailPage {
+  /** secondary actions in the header More menu (T6-10) */
+  readonly moreMenuItems = computed<MenuItem[]>(() => {
+    const items: MenuItem[] = [];
+    const e = this.safeValue();
+    if (e?.has_attachment) {
+      items.push({ label: this.translate.instant('expense.detail.view_attachment'), command: () => { this.openPreview(); } });
+    }
+    if (this.canRequestEdit()) {
+      items.push({
+        label: e?.reviewed
+          ? this.translate.instant('expense.detail.request_edit_pending')
+          : this.translate.instant('expense.detail.request_edit'),
+        routerLink: ['/expenses', this.id(), 'edit-request'],
+      });
+    }
+    return items;
+  });
+
   private http = inject(HttpClient);
   private toast = inject(ToastService);
   private translate = inject(TranslateService);

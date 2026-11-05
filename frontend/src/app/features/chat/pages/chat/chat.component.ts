@@ -180,15 +180,17 @@ interface PollFeedMsg {
         }
       </div>
       <div class="chat__composer">
-        <textarea
-          pTextarea
-          rows="1"
-          class="chat-composer-input"
-          [(ngModel)]="draft"
-          name="draft"
-          [placeholder]="'chat.placeholder' | translate"
-          (keydown.enter)="$event.preventDefault(); send()"
-        ></textarea>
+        <app-field controlId="chat-draft" class="chat__composer-field">
+          <textarea
+            pTextarea
+            rows="1"
+            class="chat-composer-input"
+            [(ngModel)]="draft"
+            name="draft"
+            [placeholder]="'chat.placeholder' | translate"
+            (keydown.enter)="$event.preventDefault(); send()"
+          ></textarea>
+        </app-field>
         <p-button (onClick)="send()" [ariaLabel]="'chat.send' | translate">
           <ng-template pTemplate="icon"><app-icon name="send" [size]="16" /></ng-template>
         </p-button>
@@ -219,15 +221,17 @@ interface PollFeedMsg {
         <div class="u-column u-gap-2">
           @for (opt of pollOptions(); track $index) {
             <div class="u-flex u-gap-2">
-              <input
-                pInputText
-                class="chat-option-input"
-                maxlength="200"
-                [ngModel]="pollOptions()[$index]"
-                [name]="'option' + $index"
-                [placeholder]="'chat.poll.option' | translate: { index: $index + 1 }"
-                (ngModelChange)="setOption($index, $event)"
-              />
+              <app-field controlId="poll-option-{{ $index }}" class="u-full">
+                <input
+                  pInputText
+                  class="chat-option-input"
+                  maxlength="200"
+                  [ngModel]="pollOptions()[$index]"
+                  [name]="'option' + $index"
+                  [placeholder]="'chat.poll.option' | translate: { index: $index + 1 }"
+                  (ngModelChange)="setOption($index, $event)"
+                />
+              </app-field>
               @if (pollOptions().length > 2) {
                 <p-button
                   size="small"

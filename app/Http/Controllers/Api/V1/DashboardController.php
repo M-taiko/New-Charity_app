@@ -14,7 +14,51 @@ use Illuminate\Http\Request;
  */
 final class DashboardController extends BladeDashboardController
 {
+    /** the accepted range values (T6-60): today / 7d / 30d / month / year / custom */
+    public const RANGES = ['today', '7d', '30d', 'month', 'year', 'custom'];
+
+    /**
+     * GET /api/v1/dashboard?range=today|7d|30d|month|year|custom&from=&to=
+     * All KPIs and series in one request, cached ~60 s per user/role (T6-60).
+     */
     public function show(Request $request): JsonResponse
+    {
+        $range = in_array((string) $request->query('range'), self::RANGES, true) ? (string) $request->query('range') : '30d';
+
+        return cache()->remember("dashboard.{$request->user()->id}.{$range}", 60, function () use ($request, $range) {
+            return $this->dashboardPayload($request, $range);
+        });
+    }
+
+    /**
+     * GET /api/v1/dashboard/money-flow — the heavier chart series, loaded
+     * lazily by the widgets that need them (T6-60 backend).
+     */
+    public function moneyFlow(Request $request): JsonResponse
+    {
+        $months = collect(range(5, 0))->map(function ($back) {
+            $now = now()->subMonths($back);
+            $start = $now->copy()->startOfMonth();
+            $end = $now->copy()->endOfMonth();
+
+            return [
+                'month' => $start->format('Y-m'),
+                'income' => number_format((float) \App\Models\TreasuryTransaction::where('type', 'like', '%in%')->whereBetween('transaction_date', [$start, $end])->sum('amount'), 2, '.', ''),
+                'expenses' => number_format((float) \App\Models\Expense::whereBetween('expense_date', [$start, $end])->sum('amount'), 2, '.', ''),
+            ];
+        });
+
+        $statusBreakdown = \App\Models\Custody::selectRaw('status, COUNT(*) as count, COALESCE(SUM(amount + transferred_in - spent - returned), 0) as total')
+            ->groupBy('status')->pluck('count', 'status');
+
+        return response()->json(['data' => [
+            'income_vs_expenses' => $months->values(),
+            'custody_status_breakdown' => $statusBreakdown,
+            'treasury_balance' => number_format((float) (\App\Models\Treasury::sum('balance') ?? 0), 2, '.', ''),
+        ]]);
+    }
+
+    private function dashboardPayload(Request $request, string $range): JsonResponse
     {
         $data = $this->buildDashboardData($request);
 
@@ -29,6 +73,7 @@ final class DashboardController extends BladeDashboardController
         return response()->json([
             'data' => [
                 'view' => $view,
+                'range' => $range,
                 'treasury_balance' => number_format((float) ($data['treasury']->balance ?? 0), 2, '.', ''),
                 'active_custodies' => (int) $data['activeCustodies'],
                 'pending_cases' => (int) $data['pendingCases'],

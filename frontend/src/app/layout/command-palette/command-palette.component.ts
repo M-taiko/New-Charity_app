@@ -30,6 +30,8 @@ interface PaletteEntry {
       [modal]="true"
       [draggable]="false"
       [resizable]="false"
+      [dismissableMask]="true"
+      [closeOnEscape]="true"
       [style]="{ width: 'min(520px, 94vw)' }"
     >
       <input

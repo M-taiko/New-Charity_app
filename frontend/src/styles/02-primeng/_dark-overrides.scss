@@ -322,8 +322,8 @@
     .topbar__title { color: var(--palette-cream); }
 
     .topbar__icon-btn {
-      background: var(--dark-2);
-      border-color: var(--dark-4);
+      background: transparent;
+      border: none;
       color: var(--palette-cream);
       &:hover { background: var(--dark-3); }
     }
@@ -395,32 +395,7 @@
     }
   }
 
-  // Stamps
-  .stamp--success {
-    border-color: var(--palette-cream);
-    color: var(--palette-cream);
-    background: transparent;
-  }
-
-  .stamp--danger {
-    background: var(--palette-brand);
-    color: var(--palette-white);
-  }
-
-  .stamp--pending {
-    border-color: var(--palette-light);
-    color: var(--palette-taupe);
-  }
-
-  .stamp--info {
-    background: var(--dark-3);
-    color: var(--palette-white);
-  }
-
-  .stamp--neutral {
-    background: var(--dark-1);
-    color: var(--palette-taupe);
-  }
+  // Stamps — semantic tokens (stamp.scss) cover both themes; nothing to override.
 
   // Empty state
   .empty-state { color: var(--palette-taupe); }

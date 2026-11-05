@@ -47,7 +47,7 @@ interface GovData {
     PrintSheetComponent, StatTileComponent, MoneyPipe,
   ],
   template: `
-    <app-print-sheet [title]="'report.governorates.title' | translate">
+    <app-print-sheet orientation="landscape" [title]="'report.governorates.title' | translate">
       <app-page-header [title]="'report.governorates.title' | translate">
         <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
       </app-page-header>

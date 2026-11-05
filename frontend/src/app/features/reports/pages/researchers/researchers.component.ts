@@ -29,7 +29,7 @@ interface ResearchersData {
     StatTileComponent, PrintSheetComponent, MoneyPipe,
   ],
   template: `
-    <app-print-sheet [title]="'report.researchers.title' | translate">
+    <app-print-sheet orientation="landscape" [title]="'report.researchers.title' | translate">
       <app-page-header [title]="'report.researchers.title' | translate">
         <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (onClick)="printPage()" /></div>
       </app-page-header>

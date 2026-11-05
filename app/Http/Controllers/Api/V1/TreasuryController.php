@@ -20,7 +20,7 @@ final class TreasuryController extends Controller
         $paginator = ApiList::paginate(
             Treasury::query()->orderBy('name'),
             $request,
-            sortable: ['name' => 'name', 'balance' => 'balance', 'created_at' => 'created_at'],
+            sortable: ['name' => 'name', 'balance' => 'balance', 'created_at' => 'created_at', 'transactions_count' => 'raw:transactions_count'],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$term}%")
                 ->orWhere('notes', 'like', "%{$term}%")),

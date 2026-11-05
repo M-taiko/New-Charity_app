@@ -31,6 +31,11 @@ export class ApiClient {
     return this.http.post<ActionResponse>(path, body);
   }
 
+  /** T6-71: an export/file download — the authenticated blob path for Excel/PDF/CSV. */
+  getBlob(path: string): Observable<Blob> {
+    return this.http.get(path, { responseType: 'blob' });
+  }
+
   /** The app-wide delete convention: POST {resource}/{id}/delete (T3-01). */
   remove(path: string): Observable<ActionResponse> {
     return this.action(path);

@@ -18,6 +18,22 @@
   --dark-4: #3a3835;
   --dark-5: #4a4845;
 
+  // Semantic action colors (T6-13) — same values as the PrimeNG preset scales.
+  --semantic-success: #1e7a46;
+  --semantic-danger: #b3261e;
+  --semantic-warning: #96650a;
+  --semantic-info: #0e6e77;
+
+  // Module accent set (T6-40) — light-theme foregrounds (pass 4.5:1 on white).
+  --accent-custodies: #0e7168; // teal
+  --accent-expenses: #8f5700; // amber
+  --accent-treasury: #66701a; // gold-green
+  --accent-cases: #b03b4b; // rose
+  --accent-hr: #2f5fa3; // blue
+  --accent-tasks: #6d4fc1; // violet
+  --accent-procurement: #9c4a1f; // orange-brown
+  --accent-reports: #4848a0; // indigo
+
   // Shape (10.2)
   --radius-s: 3px;
   --radius-m: 6px;
@@ -55,6 +71,9 @@
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
+  // Motion scale for JS hooks (T6-50): 0 = off, 1 = lite, 2 = full
+  --motion-scale: 2;
+
   // Layout (10.2)
   --content-max: 1440px;
   --sidebar-w: 300px;
@@ -83,6 +102,26 @@
   --color-primary-soft: var(--palette-sand);
   --color-accent: var(--palette-light);
   --color-focus: var(--palette-brand);
+
+  // Semantic pairs — solid foreground + ~12% tinted background (T6-13/T6-40)
+  --color-success: var(--semantic-success);
+  --color-success-soft: color-mix(in srgb, var(--semantic-success) 12%, transparent);
+  --color-danger: var(--semantic-danger);
+  --color-danger-soft: color-mix(in srgb, var(--semantic-danger) 10%, transparent);
+  --color-warning: var(--semantic-warning);
+  --color-warning-soft: color-mix(in srgb, var(--semantic-warning) 12%, transparent);
+  --color-info: var(--semantic-info);
+  --color-info-soft: color-mix(in srgb, var(--semantic-info) 10%, transparent);
+
+  // Accent soft chips (T6-40) — tinted backgrounds for the module icon chips
+  --accent-custodies-soft: color-mix(in srgb, var(--accent-custodies) 12%, transparent);
+  --accent-expenses-soft: color-mix(in srgb, var(--accent-expenses) 12%, transparent);
+  --accent-treasury-soft: color-mix(in srgb, var(--accent-treasury) 12%, transparent);
+  --accent-cases-soft: color-mix(in srgb, var(--accent-cases) 10%, transparent);
+  --accent-hr-soft: color-mix(in srgb, var(--accent-hr) 10%, transparent);
+  --accent-tasks-soft: color-mix(in srgb, var(--accent-tasks) 12%, transparent);
+  --accent-procurement-soft: color-mix(in srgb, var(--accent-procurement) 12%, transparent);
+  --accent-reports-soft: color-mix(in srgb, var(--accent-reports) 10%, transparent);
 }
 
 // ── Dark theme — dark neutral bases + brand accents ──
@@ -104,14 +143,39 @@
   --color-accent: var(--palette-light);
   --color-focus: var(--palette-taupe);
 
+  // Dark theme: lighter accent foregrounds (pass 4.5:1 on the dark surfaces)
+  --accent-custodies: #5ec6ba;
+  --accent-expenses: #e0a43c;
+  --accent-treasury: #b6c051;
+  --accent-cases: #e2798a;
+  --accent-hr: #7aa5e8;
+  --accent-tasks: #a68fec;
+  --accent-procurement: #d98e5f;
+  --accent-reports: #9090e8;
+
+  // Semantic pairs stay solid; soft tints sit on dark surfaces
+  --color-success: #4fbf82;
+  --color-success-soft: color-mix(in srgb, #4fbf82 16%, transparent);
+  --color-danger: #ef8377;
+  --color-danger-soft: color-mix(in srgb, #ef8377 14%, transparent);
+  --color-warning: #e0b45c;
+  --color-warning-soft: color-mix(in srgb, #e0b45c 16%, transparent);
+  --color-info: #63bfc9;
+  --color-info-soft: color-mix(in srgb, #63bfc9 14%, transparent);
+
+  --accent-custodies-soft: color-mix(in srgb, var(--accent-custodies) 16%, transparent);
+  --accent-expenses-soft: color-mix(in srgb, var(--accent-expenses) 16%, transparent);
+  --accent-treasury-soft: color-mix(in srgb, var(--accent-treasury) 16%, transparent);
+  --accent-cases-soft: color-mix(in srgb, var(--accent-cases) 14%, transparent);
+  --accent-hr-soft: color-mix(in srgb, var(--accent-hr) 14%, transparent);
+  --accent-tasks-soft: color-mix(in srgb, var(--accent-tasks) 16%, transparent);
+  --accent-procurement-soft: color-mix(in srgb, var(--accent-procurement) 16%, transparent);
+  --accent-reports-soft: color-mix(in srgb, var(--accent-reports) 14%, transparent);
+
   color-scheme: dark;
 }
 
-// Adaptive motion levels (12.4)
-:root[data-motion='off'] *,
-:root[data-motion='off'] *::before,
-:root[data-motion='off'] *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
-}
+// Adaptive motion levels (12.4 + T6-50): --motion-scale 0/1/2 for JS hooks;
+// the CSS rules per level live in 01-base/motion.scss (Off disables everything)
+// (declared inside the main :root block above: --motion-scale)
+

@@ -40,6 +40,8 @@ import { FileUploadModule } from 'primeng/fileupload';
           [auto]="true"
           [maxFileSize]="maxSize()"
         />
+        <!-- T6-03: one file hint, one place — types, size, replace behavior -->
+        <p class="field__hint">{{ 'common.file_hint' | translate }}</p>
         @if (error()) {
           <p class="field__error">{{ error() | translate }}</p>
         }
@@ -56,7 +58,8 @@ export class AttachmentFieldComponent {
   current = input<string | null>(null);
   downloadUrl = input<string | null>(null);
   canRemove = input(true);
-  maxSize = input(5_000_000);
+  /** Blade limit: 2 MB (T6-03) */
+  maxSize = input(2_000_000);
 
   removed = signal(false);
   error = signal('');
@@ -69,7 +72,7 @@ export class AttachmentFieldComponent {
     if (!file) {
       return;
     }
-    if (!['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.type)) {
+    if (!['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type)) {
       this.error.set('validation.file_type');
       return;
     }

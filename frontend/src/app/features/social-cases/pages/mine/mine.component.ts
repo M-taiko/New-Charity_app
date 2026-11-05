@@ -9,6 +9,7 @@ import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, type LedgerColumn } from '@shared/ui/ledger-table/ledger-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
@@ -67,7 +68,7 @@ interface QuickDetail {
 @Component({
   selector: 'app-my-cases',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent,
     LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
@@ -82,6 +83,8 @@ interface QuickDetail {
         <p-button [label]="'case.mine.create' | translate" size="small" routerLink="/cases/new" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="cases" />
 
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {

@@ -83,6 +83,16 @@ textarea {
 /* ── All SVG icons: no fill, stroke follows parent color ──────── */
 /* This must be global because SVGs appear in many components     */
 /* that don't use the <app-icon> wrapper component.               */
+
+/* Nothing is natively draggable (T6-17): links, images and SVG icons
+   must not start ghost drags. Table column reorder is driven by
+   PrimeNG on the header cell, not by native drag. */
+img,
+a,
+svg {
+  -webkit-user-drag: none; /* stylelint-disable-line property-no-unknown -- the only native-drag switch Chrome supports */
+}
+
 svg {
   &[viewBox] {
     display: inline-block;

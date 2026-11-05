@@ -10,6 +10,8 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { MenuModule } from 'primeng/menu';
+import type { MenuItem } from 'primeng/api';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
@@ -21,6 +23,8 @@ import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.compo
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
+import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
+import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import type { RibbonStep } from '@shared/ui/flow-ribbon/flow-ribbon.component';
 import { FlowRibbonComponent } from '@shared/ui/flow-ribbon/flow-ribbon.component';
 import type { RingSegment } from '@shared/ui/balance-ring/balance-ring.component';
@@ -64,55 +68,22 @@ type DonationType = 'external_donation' | 'expense_refund';
 @Component({
   selector: 'app-custody-detail',
   standalone: true,
-  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, FlowRibbonComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
+  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, AppTabsComponent, MenuModule, FlowRibbonComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'custody.detail.title' | translate">
       @if (safeValue(); as c) {
         <app-page-header [title]="'#' + c.id" [subtitle]="c.agent ?? ''">
           <div actions class="u-flex u-gap-2 u-flex-wrap">
-            <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/custodies" />
-            <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
+            <!-- T6-10: max 3 visible buttons — print, edit and a More menu;
+                 status decisions live in the sticky action bar below -->
+            <p-button [label]="'common.print' | translate" size="small" severity="secondary" [outlined]="true" (click)="printPage()" />
             @if (canManageTreasury()) {
-              <p-button [label]="'common.edit' | translate" size="small" [outlined]="true" routerLink="/custodies/{{ c.id }}/edit" />
+              <p-button [label]="'common.edit' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/custodies/{{ c.id }}/edit" />
             }
-
-            @if (showApproveRequest(c)) {
-              <p-button [label]="'custody.detail.approve_request' | translate" size="small" severity="success" (onClick)="acceptDlg.open(); openAccept()" />
-              <p-button [label]="'custody.detail.reject_request' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDlg.open()" />
-            }
-            @if (showCancel(c)) {
-              <p-button [label]="'custody.detail.cancel_custody' | translate" size="small" severity="danger" [outlined]="true" (onClick)="cancelDlg.open()" />
-            }
-
-            @if (showAgentAccept(c)) {
-              <p-button [label]="'custody.detail.agent_accept' | translate" size="small" severity="success" (onClick)="agentAcceptDlg.open()" />
-              <p-button [label]="'custody.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="agentRejectDlg.open()" />
-            }
-            @if (showReceive(c)) {
-              <p-button [label]="'custody.detail.receive' | translate" size="small" (onClick)="receiveDlg.open()" />
-            }
-
-            @if (showTransferShortcut(c)) {
-              <p-button [label]="'custody.detail.transfer_to_agent' | translate" size="small" severity="info" [outlined]="true" routerLink="/transfers/new" />
-            }
-            @if (showAgentReturn(c)) {
-              <p-button [label]="'custody.detail.return' | translate" size="small" severity="warn" [outlined]="true" (onClick)="returnOpen.set(!returnOpen())" />
-            }
-            @if (isAgent()) {
-              <p-button [label]="'custody.mine.request_new' | translate" size="small" severity="success" [outlined]="true" routerLink="/custodies/new" />
-            }
-
-            @if (showRequestReturn(c)) {
-              @if (hasPendingReturnRequest(c)) {
-                <span class="u-small u-muted">{{ 'custody.detail.pending_return_note' | translate }}</span>
-              } @else {
-                <p-button [label]="'custody.detail.request_return' | translate" size="small" severity="warn" [outlined]="true" (onClick)="reqReturnDlg.open(); openReqReturn()" />
-              }
-            }
-
-            @if (showDonation(c)) {
-              <p-button [label]="'custody.detail.donation_add' | translate" size="small" severity="success" [outlined]="true" (onClick)="donationDlg.open(); openDonation()" />
+            @if (moreMenuItems(c).length > 0) {
+              <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="moreMenu.toggle($event)" />
+              <p-menu #moreMenu appendTo="body" [model]="moreMenuItems(c)" popup="true" />
             }
           </div>
         </app-page-header>
@@ -120,6 +91,37 @@ type DonationType = 'external_donation' | 'expense_refund';
 
       <app-async-page [resource]="data" variant="detail" [backLink]="['/custodies']">
         @if (safeValue(); as c) {
+          <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
+          <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
+            @if (showApproveRequest(c)) {
+              <p-button [label]="'custody.detail.approve_request' | translate" size="small" severity="success" (onClick)="acceptDlg.open(); openAccept()" />
+            }
+            @if (showAgentAccept(c)) {
+              <p-button [label]="'custody.detail.agent_accept' | translate" size="small" severity="success" (onClick)="agentAcceptDlg.open()" />
+            }
+            @if (showReceive(c)) {
+              <p-button [label]="'custody.detail.receive' | translate" size="small" (onClick)="receiveDlg.open()" />
+            }
+            @if (showAgentReturn(c)) {
+              <p-button [label]="'custody.detail.return' | translate" size="small" severity="warn" [outlined]="true" (onClick)="returnOpen.set(!returnOpen())" />
+            }
+            @if (showRequestReturn(c) && !hasPendingReturnRequest(c)) {
+              <p-button [label]="'custody.detail.request_return' | translate" size="small" severity="warn" [outlined]="true" (onClick)="reqReturnDlg.open(); openReqReturn()" />
+            }
+            @if (showRequestReturn(c) && hasPendingReturnRequest(c)) {
+              <span class="u-small u-muted">{{ 'custody.detail.pending_return_note' | translate }}</span>
+            }
+            @if (showAgentAccept(c)) {
+              <p-button [label]="'custody.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="agentRejectDlg.open()" />
+            }
+            @if (showApproveRequest(c)) {
+              <p-button [label]="'custody.detail.reject_request' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDlg.open()" />
+            }
+            @if (showCancel(c)) {
+              <p-button [label]="'custody.detail.cancel_custody' | translate" size="small" severity="danger" [outlined]="true" (onClick)="cancelDlg.open()" />
+            }
+          </div>
+
           @if (showReturnDisabledHint(c)) {
             <p class="field__hint u-mb-2">{{ 'custody.detail.return_disabled_hint' | translate }}</p>
           }
@@ -141,6 +143,9 @@ type DonationType = 'external_donation' | 'expense_refund';
 
           <app-key-value-list [items]="keyValues(c)" />
 
+          <app-tabs class="u-mt-4" id="custody-detail" [tabs]="tabs()" [(active)]="detailTab" />
+
+          @if (detailTab() === 'returns') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.returns' | translate }}</span></div>
             <app-ledger-table [columns]="returnRequestCols" [rows]="c.return_requests">
@@ -173,6 +178,9 @@ type DonationType = 'external_donation' | 'expense_refund';
             </app-ledger-table>
           </section>
 
+          }
+
+          @if (detailTab() === 'transactions') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.transactions' | translate }}</span></div>
             <app-ledger-table [columns]="transactionCols" [rows]="c.transactions">
@@ -187,6 +195,9 @@ type DonationType = 'external_donation' | 'expense_refund';
             </app-ledger-table>
           </section>
 
+          }
+
+          @if (detailTab() === 'expenses') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.expenses' | translate }}</span></div>
             <app-ledger-table [columns]="expenseCols" [rows]="c.expenses">
@@ -203,6 +214,8 @@ type DonationType = 'external_donation' | 'expense_refund';
               </ng-template>
             </app-ledger-table>
           </section>
+
+          }
 
           @if (returnOpen()) {
             <section class="form-section u-mt-4">
@@ -376,6 +389,15 @@ export class CustodyDetailPage {
 
   id = input.required<number>();
   sending = signal(false);
+
+  /** detail sections (T6-11): one table visible at a time */
+  detailTab = signal<string>('overview');
+  readonly tabs = computed<AppTab[]>(() => [
+    { id: 'overview', label: 'custody.detail.tab_overview' },
+    { id: 'returns', label: 'custody.detail.returns' },
+    { id: 'transactions', label: 'custody.detail.transactions' },
+    { id: 'expenses', label: 'custody.detail.expenses' },
+  ]);
   actionError = signal<HttpErrorResponse | null>(null);
 
   returnOpen = signal(false);
@@ -461,6 +483,21 @@ export class CustodyDetailPage {
 
   meId(): number {
     return this.auth.me()?.id ?? 0;
+  }
+
+  /** secondary actions live in the header More menu (T6-10) */
+  moreMenuItems(c: CustodyDetail): MenuItem[] {
+    const items: MenuItem[] = [];
+    if (this.showTransferShortcut(c)) {
+      items.push({ label: this.translate.instant('custody.detail.transfer_to_agent'), routerLink: '/transfers/new' });
+    }
+    if (this.isAgent()) {
+      items.push({ label: this.translate.instant('custody.mine.request_new'), routerLink: '/custodies/new' });
+    }
+    if (this.showDonation(c)) {
+      items.push({ label: this.translate.instant('custody.detail.donation_add'), command: () => { this.donationDlg().open(); this.openDonation(); } });
+    }
+    return items;
   }
 
   isAgent(): boolean {

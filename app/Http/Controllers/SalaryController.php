@@ -12,7 +12,7 @@ class SalaryController extends Controller
 {
     private $salaryService;
 
-    public function __construct(SalaryCalculationService $salaryService)
+    public function __construct(private \App\Services\ExportService $exports, SalaryCalculationService $salaryService)
     {
         $this->salaryService = $salaryService;
         $this->middleware('auth');
@@ -246,34 +246,66 @@ class SalaryController extends Controller
             'month' => 'required|integer',
         ]);
 
+        // T6-71: the shared export service — UTF-8 BOM, xlsx/pdf/csv, totals,
+        // a real response (no header()+exit), audit-logged
         $report = $this->salaryService->getMonthlyReport($request->year, $request->month);
+        $rows = collect($report['salaries'])->map(fn ($salary) => [
+            'employee' => $salary->employee->user->name,
+            'base_salary' => (float) $salary->base_salary,
+            'attendance_days' => (int) $salary->attendance_days,
+            'absence_days' => (int) $salary->absence_days,
+            'calculated_salary' => (float) $salary->calculated_salary,
+            'deductions' => (float) $salary->deductions,
+            'bonuses' => (float) $salary->bonuses,
+            'final_salary' => (float) $salary->final_salary,
+        ]);
 
-        // Generate CSV or Excel
-        $fileName = "salary_report_{$request->year}_{$request->month}.csv";
-        $handle = fopen('php://output', 'w');
+        return $this->exports->export($request, $rows, [
+            ['key' => 'employee', 'label' => 'اسم الموظف'],
+            ['key' => 'base_salary', 'label' => 'المرتب الأساسي', 'numeric' => true, 'total' => true],
+            ['key' => 'attendance_days', 'label' => 'أيام الحضور', 'numeric' => true],
+            ['key' => 'absence_days', 'label' => 'أيام الغياب', 'numeric' => true],
+            ['key' => 'calculated_salary', 'label' => 'المرتب المحسوب', 'numeric' => true],
+            ['key' => 'deductions', 'label' => 'الخصومات', 'numeric' => true, 'total' => true],
+            ['key' => 'bonuses', 'label' => 'العلاوات', 'numeric' => true, 'total' => true],
+            ['key' => 'final_salary', 'label' => 'المرتب النهائي', 'numeric' => true, 'total' => true],
+        ], 'salary-report');
+    }
 
-        header('Content-Type: text/csv;charset=utf-8');
-        header("Content-Disposition: attachment; filename=\"$fileName\"");
+    /**
+     * GET /api/v1/hr/salaries/{salary}/payslip (T6-71.6) — a one-page Arabic PDF payslip.
+     */
+    public function payslip(int $salaryId)
+    {
+        $this->checkHrAccess();
 
-        fputcsv($handle, ['اسم الموظف', 'المرتب الأساسي', 'أيام الحضور', 'أيام الغياب', 'المرتب المحسوب', 'الخصومات', 'العلاوات', 'المرتب النهائي']);
+        $salary = \App\Models\SalaryCalculation::with(['employee.user'])->findOrFail($salaryId);
+        $employee = $salary->employee;
+        $org = (string) \App\Models\Setting::get('org_name', 'Naguib Selim Charity');
 
-        foreach ($report['salaries'] as $salary) {
-            fputcsv($handle, [
-                $salary->employee->user->name,
-                $salary->base_salary,
-                $salary->attendance_days,
-                $salary->absence_days,
-                $salary->calculated_salary,
-                $salary->deductions,
-                $salary->bonuses,
-                $salary->final_salary,
-            ]);
-        }
+        $mpdf = new \Mpdf\Mpdf(['mode' => 'utf-8', 'format' => 'A4', 'directionality' => 'rtl', 'default_font' => 'dejavusans']);
+        $row = fn (string $label, string $value) => "<tr><td style=\"border:0.5px solid #999;padding:6px;width:45%;background:#F7F3EF;\">{$label}</td><td style=\"border:0.5px solid #999;padding:6px;direction:ltr;text-align:right;\">{$value}</td></tr>";
+        $html = '<html dir="rtl"><body style="font-family: dejavusans;">'
+            . '<h2 style="text-align:center;margin:0;">' . e($org) . '</h2>'
+            . '<p style="text-align:center;margin:0 0 10px;">قسيمة مرتب — ' . $salary->year . '/' . str_pad((string) $salary->month, 2, '0', STR_PAD_LEFT) . '</p>'
+            . '<table style="border-collapse:collapse;width:100%;font-size:12px;">'
+            . $row('الموظف', e($employee->user->name ?? '-'))
+            . $row('الوظيفة', e($employee->job_title ?? '-'))
+            . $row('المرتب الأساسي', number_format((float) $salary->base_salary, 2) . ' ج.م')
+            . $row('أيام الحضور', (string) $salary->attendance_days)
+            . $row('أيام الغياب', (string) $salary->absence_days)
+            . $row('المرتب المحسوب', number_format((float) $salary->calculated_salary, 2) . ' ج.م')
+            . $row('الخصومات', number_format((float) $salary->deductions, 2) . ' ج.م')
+            . $row('العلاوات', number_format((float) $salary->bonuses, 2) . ' ج.م')
+            . '<tr><th colspan="2" style="border:0.5px solid #999;padding:8px;background:#DFD7D3;text-align:center;font-size:14px;">الصافي: ' . number_format((float) $salary->final_salary, 2) . ' ج.م</th></tr>'
+            . '</table></body></html>';
+        $mpdf->WriteHTML($html);
 
-        fputcsv($handle, ['', '', '', '', '', '', 'الإجمالي', $report['total_salaries']]);
-
-        fclose($handle);
-        exit;
+        return response()->streamDownload(
+            fn () => $mpdf->Output('payslip-' . ($employee->user->name ?? 'employee') . '-' . $salary->year . '-' . $salary->month . '.pdf', \Mpdf\Output\Destination::DOWNLOAD),
+            'payslip.pdf',
+            ['Content-Type' => 'application/pdf'],
+        );
     }
 
     /**

@@ -12,6 +12,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -35,7 +36,7 @@ interface Row {
 @Component({
   selector: 'app-suppliers-page',
   standalone: true,
-  imports: [FormsModule, 
+  imports: [SectionNavComponent, FormsModule, 
     TranslatePipe, ButtonModule, InputTextModule, TextareaModule,
     PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, ConfirmDeleteComponent, FormDialogComponent, FieldComponent, RowActionsComponent,
@@ -47,6 +48,8 @@ interface Row {
         <p-button [label]="'procurement.suppliers.add' | translate" size="small" (onClick)="dialogOpen.set(true)" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="procurement" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {

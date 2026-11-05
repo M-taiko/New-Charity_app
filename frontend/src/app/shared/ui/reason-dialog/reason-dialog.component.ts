@@ -20,7 +20,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
   template: `
     <p-dialog appendTo="body"
       [visible]="visible()"
-      (visibleChange)="visible.set($event)"
+      (visibleChange)="onVisibleChange($event)"
       [header]="header() | translate"
       [modal]="true"
       [draggable]="false"
@@ -29,6 +29,8 @@ import type { ApiErrorBody } from '@shared/models/api.models';
       [breakpoints]="{ '576px': '100vw' }"
       [style]="{ width: 'min(480px, 94vw)' }"
       [closable]="!sending()"
+      [dismissableMask]="!sending()"
+      [closeOnEscape]="!sending()"
     >
       <div class="field">
         <label class="field__label" for="reason-dialog-input">{{ label() | translate }} *</label>
@@ -56,7 +58,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
       }
       <p-footer>
         <div class="u-flex u-gap-2 u-justify-end">
-          <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" [disabled]="sending()" (onClick)="visible.set(false)" />
+          <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" [disabled]="sending()" (onClick)="onVisibleChange(false)" />
           <p-button [label]="submitLabel() | translate" [loading]="sending()" [disabled]="sending()" (onClick)="confirm()" />
         </div>
       </p-footer>
@@ -76,6 +78,8 @@ export class ReasonDialogComponent {
   maxLength = input(1000);
 
   submit = output<string>();
+  /** fires on ANY hide (mask click, Esc, cancel button) — pages that need to react (T6-16) */
+  dismissed = output();
 
   visible = signal(false);
   reason = signal('');
@@ -99,7 +103,14 @@ export class ReasonDialogComponent {
   }
 
   done(): void {
-    this.visible.set(false);
+    this.onVisibleChange(false);
+  }
+
+  onVisibleChange(next: boolean): void {
+    if (!next) {
+      this.dismissed.emit();
+    }
+    this.visible.set(next);
   }
 
   confirm(): void {

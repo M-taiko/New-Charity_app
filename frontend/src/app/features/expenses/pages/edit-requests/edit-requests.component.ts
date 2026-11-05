@@ -5,6 +5,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
@@ -28,7 +29,7 @@ interface Row {
 @Component({
   selector: 'app-edit-requests',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
@@ -36,6 +37,8 @@ interface Row {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'expense.edit_requests.title' | translate" />
+
+    <app-section-nav module="expenses" />
 
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {

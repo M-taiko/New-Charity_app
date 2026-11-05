@@ -61,30 +61,34 @@ interface TaskDetail {
     <app-print-sheet [title]="'task.detail.title' | translate">
       <app-page-header [title]="headerTitle()">
         <div actions class="u-flex u-gap-2 u-flex-wrap">
-          @if (safeValue(); as item) {
-            @if (canStart(item)) {
-              <p-button [label]="'task.detail.start' | translate" size="small" (onClick)="setStatus('in_progress')" [loading]="sending()" />
-            }
-            @if (isManager() && isOpen(item)) {
-              <p-button [label]="'task.detail.complete' | translate" size="small" severity="success" (onClick)="setStatus('completed')" [loading]="sending()" />
-              <p-button [label]="'common.cancel' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="cancelDlg()?.open()" [loading]="sending()" />
-            }
-            @if (isManager() && isClosed(item)) {
-              <p-button [label]="'task.detail.reopen' | translate" size="small" severity="warn" (onClick)="setStatus('pending')" [loading]="sending()" />
-            }
-            @if (canDelegate(item)) {
-              <p-button [label]="'task.detail.delegate' | translate" size="small" severity="warn" [outlined]="true" (onClick)="openDelegate()" />
-            }
-            @if (isManager()) {
-              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [text]="true" (onClick)="deleteDlg()?.open()" />
-            }
-          }
-          <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/tasks" />
+          <!-- T6-10: max 3 visible buttons; status decisions live in the sticky bar -->
+          <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/tasks" />
         </div>
       </app-page-header>
 
       <app-async-page [resource]="pageResource" variant="detail" [backLink]="['/tasks']">
         @if (safeValue(); as item) {
+          <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
+          <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
+            @if (canStart(item)) {
+              <p-button [label]="'task.detail.start' | translate" size="small" (onClick)="setStatus('in_progress')" [loading]="sending()" />
+            }
+            @if (isManager() && isOpen(item)) {
+              <p-button [label]="'task.detail.complete' | translate" size="small" severity="success" (onClick)="setStatus('completed')" [loading]="sending()" />
+            }
+            @if (canDelegate(item)) {
+              <p-button [label]="'task.detail.delegate' | translate" size="small" severity="warn" [outlined]="true" (onClick)="openDelegate()" />
+            }
+            @if (isManager() && isOpen(item)) {
+              <p-button [label]="'common.cancel' | translate" size="small" severity="danger" [outlined]="true" (onClick)="setStatus('cancelled')" [loading]="sending()" />
+            }
+            @if (isManager() && isClosed(item)) {
+              <p-button [label]="'task.detail.reopen' | translate" size="small" severity="warn" [outlined]="true" (onClick)="setStatus('pending')" [loading]="sending()" />
+            }
+            @if (isManager()) {
+              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [text]="true" (onClick)="deleteDlg()?.open()" />
+            }
+          </div>
           <div class="u-flex u-gap-2 u-flex-wrap u-mb-4">
             <app-status-stamp [status]="item.status" namespace="task" [large]="true" />
             <span class="stamp">{{ item.priority | enumLabel: 'priority' }}</span>

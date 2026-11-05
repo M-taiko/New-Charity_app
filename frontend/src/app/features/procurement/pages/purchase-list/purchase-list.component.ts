@@ -8,6 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
@@ -33,7 +34,7 @@ interface Row {
 @Component({
   selector: 'app-purchase-list-page',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, ConfirmDeleteComponent, MoneyPipe, RowActionsComponent,
@@ -45,6 +46,8 @@ interface Row {
         <p-button [label]="'procurement.purchase.create' | translate" size="small" routerLink="/procurement/purchase/new" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="procurement" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {

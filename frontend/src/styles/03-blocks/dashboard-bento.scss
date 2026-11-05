@@ -1,0 +1,294 @@
+/* The dashboard rewrite (Task6 T6-60): a responsive bento grid — 1 column on
+   phones, 2 on tablets, 12-column spans on desktop. Widgets are cards with
+   title, "view all" link, skeleton and empty states. */
+.dash-topbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-block-end: var(--space-4);
+}
+
+.dash-topbar__greeting {
+  font-size: var(--text-xl);
+  margin: 0;
+}
+
+.dash-topbar__date {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.dash-topbar__select {
+  min-width: 130px;
+}
+
+.bento {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .bento {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .bento__widget {
+    grid-column: span 4;
+  }
+
+  .bento__widget--wide {
+    grid-column: span 8;
+  }
+}
+
+.bento__widget {
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-l);
+  padding: var(--space-4);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dash-viewall {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin-inline-start: auto;
+}
+
+.dash-viewall:hover {
+  color: var(--color-primary);
+}
+
+/* KPI strip: mini tiles that count up and link to their page */
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.dash-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-m);
+  background: var(--color-surface-inset);
+  color: inherit;
+}
+
+a.dash-kpi:hover {
+  border-color: var(--color-control-border);
+}
+
+.dash-kpi__label {
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+}
+
+.dash-kpi__value {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  direction: ltr;
+  unicode-bidi: isolate;
+  text-align: start;
+}
+
+/* quick-action chips: 44px-high icon chips (T6-60.2) */
+.dash-chips {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.dash-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-m);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.dash-chip:hover {
+  border-color: var(--color-control-border);
+  background: var(--color-surface-inset);
+}
+
+.dash-attention {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dash-attention a {
+  display: block;
+  padding: var(--space-2);
+  border: 1px dashed var(--color-hairline);
+  border-radius: var(--radius-m);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.dash-attention a:hover {
+  border-color: var(--color-warning);
+  background: var(--color-warning-soft);
+}
+
+/* the HTML legend under charts — color chip + label + value, never canvas dots */
+.dash-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-1) var(--space-3);
+}
+
+.dash-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-2xs);
+}
+
+.dash-legend__chip {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.dash-legend__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-legend__value {
+  font-weight: 700;
+}
+
+/* ranked lists with progress bars (T6-60.5 — ratings are bars, not doughnuts) */
+.dash-rank {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dash-rank__title {
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.dash-rank li {
+  display: grid;
+  grid-template-columns: minmax(90px, 30%) 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.dash-rank__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-rank__bar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-raised);
+  overflow: hidden;
+}
+
+.dash-rank__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--accent-custodies);
+}
+
+.dash-rank__fill--alt {
+  background: var(--accent-hr);
+}
+
+.dash-rank__score {
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.dash-activity {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dash-activity li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+  border-block-end: 1px solid var(--color-hairline);
+  padding-block-end: var(--space-2);
+}
+
+.dash-activity li:last-child {
+  border-block-end: none;
+}
+
+/* the Customize panel: checkbox chips per widget */
+.dash-customize__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-m);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  /* chart legends are HTML lists already — nothing to hide in-canvas */
+  .dash-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  .dash-topbar__actions,
+  .app-auto-refresh {
+    display: none !important;
+  }
+}

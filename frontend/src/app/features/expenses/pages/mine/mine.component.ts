@@ -13,6 +13,7 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
@@ -38,7 +39,7 @@ interface Row {
 @Component({
   selector: 'app-my-expenses',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule, TextareaModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, FormDialogComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
@@ -51,6 +52,8 @@ interface Row {
         <p-button [label]="'expense.mine.create' | translate" size="small" routerLink="/expenses/new" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="expenses" />
 
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {

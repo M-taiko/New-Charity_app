@@ -12,6 +12,7 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
@@ -67,19 +68,21 @@ const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'e
 @Component({
   selector: 'app-custody-movements',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, CheckboxModule, DatePickerModule, InputNumberModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-print-sheet [title]="'custody.movements.title' | translate">
+    <app-print-sheet orientation="landscape" [title]="'custody.movements.title' | translate">
       <app-page-header [title]="'custody.movements.title' | translate">
         <div actions class="u-flex u-gap-2">
           <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
         </div>
       </app-page-header>
+
+    <app-section-nav module="custodies" />
 
       <app-async-page [resource]="data" variant="list">
         @if (data.value(); as page) {

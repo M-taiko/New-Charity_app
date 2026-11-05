@@ -73,7 +73,7 @@ export class StatTileComponent implements AfterViewInit {
     if (!el) {
       return;
     }
-    if (level === 'off' || level === 'lite' || !this.parse(this.value())) {
+    if (level === 'off' || !this.parse(this.value())) {
       return;
     }
     this.counted.set(true);

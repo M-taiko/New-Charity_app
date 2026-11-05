@@ -7,12 +7,16 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\ExpenseEditRequest;
+use App\Services\ExportService;
 use App\Support\Api\ApiList;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
 
 final class ExpenseController extends Controller
 {
+    public function __construct(private readonly ExportService $exports) {}
+
     /**
      * GET /api/v1/expenses — all expenses with the full T31 filter set
      * (direction cascade, no-direction, custody incl. split rows, amount range)
@@ -23,40 +27,7 @@ final class ExpenseController extends Controller
         $this->authorize('view_all_expenses');
 
         $query = Expense::with(['user', 'custody', 'socialCase', 'reviewer', 'category.parent.parent', 'item']);
-
-        if ($request->filled('date_from')) {
-            $query->whereDate('created_at', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->whereDate('created_at', '<=', $request->date_to);
-        }
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-        if ($request->filled('reviewed')) {
-            $request->reviewed === 'reviewed'
-                ? $query->whereNotNull('reviewed_at')
-                : $query->whereNull('reviewed_at');
-        }
-        if ($request->filled('user_id')) {
-            $query->where('user_id', (int) $request->user_id);
-        }
-        if ($request->filled('q')) {
-            $term = (string) $request->q;
-            $query->where(fn ($w) => $w
-                ->where('description', 'like', "%{$term}%")
-                ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$term}%")));
-        }
-
-        // T31: التوجيه — العقدة المختارة وكل ما تحتها، أو "بلا توجيه"
-        if ($request->boolean('no_direction')) {
-            $query->whereNull('expense_category_id')->whereNull('expense_item_id');
-        } elseif ($request->filled('category_id') || $request->filled('item_id')) {
-            $query->inDirection(
-                $request->filled('category_id') ? (int) $request->category_id : null,
-                $request->filled('item_id') ? (int) $request->item_id : null,
-            );
-        }
+        $this->applyListFilters($query, $request);
 
         // T31: العهدة — مباشرة أو عبر توزيع expense_custody (T27)
         if ($request->filled('custody_id')) {
@@ -76,8 +47,25 @@ final class ExpenseController extends Controller
         $filteredQuery = clone $query;
 
         $paginator = ApiList::paginate($query, $request, sortable: [
-            'date' => 'created_at', 'amount' => 'amount', 'user' => 'user_id', 'type' => 'type',
+            'date' => 'expense_date', 'created_at' => 'created_at', 'amount' => 'amount', 'user' => 'user_id', 'type' => 'type',
             'direction' => 'expense_category_id', 'reviewed' => 'reviewed_at',
+        ], filterable: [
+            // T6-30: the declared allowlist — meta.filters drives the table UI
+            'type' => ['type' => 'select', 'column' => 'type', 'options' => fn () => [
+                ['value' => 'cash', 'label' => 'نقدي'],
+                ['value' => 'cheque', 'label' => 'شيك'],
+                ['value' => 'transfer', 'label' => 'تحويل'],
+            ]],
+            'reviewed' => ['type' => 'select', 'column' => 'reviewed_at', 'options' => fn () => [
+                ['value' => '1', 'label' => 'مراجع'],
+                ['value' => '0', 'label' => 'غير مراجع'],
+            ]],
+            'user' => ['type' => 'lookup', 'column' => 'user_id'],
+            'custody' => ['type' => 'lookup', 'column' => 'custody_id'],
+            'amount' => ['type' => 'number-range', 'column' => 'amount'],
+            'date' => ['type' => 'date-range', 'column' => 'expense_date'],
+            'direction' => ['type' => 'select', 'column' => 'expense_category_id'],
+            'no_direction' => ['type' => 'boolean', 'column' => 'expense_category_id'],
         ]);
 
         $user = $request->user();
@@ -87,10 +75,51 @@ final class ExpenseController extends Controller
 
         $paginator->getCollection()->transform(fn (Expense $e) => $this->listRow($e, $isManager, $isAccountant, $pendingEditIds));
 
+        // T6-01: the Blade expenses header combines expenses + purchased
+        // requests' actual cost + paid salaries — the tiles must match
+        $expensesTotal = (float) $filteredQuery->sum('amount');
+        $purchasesTotal = (float) \App\Models\PurchaseRequest::where('status', 'purchased')->sum('actual_cost');
+        $salariesTotal = (float) \App\Models\SalaryCalculation::where('status', 'paid')->sum('final_salary');
+
         return response()->json(ApiList::envelope($paginator, fn () => [
-            'filtered_total' => number_format((float) $filteredQuery->sum('amount'), 2, '.', ''),
+            'filtered_total' => number_format($expensesTotal, 2, '.', ''),
             'count' => $filteredQuery->count(),
+            'purchases_total' => number_format($purchasesTotal, 2, '.', ''),
+            'salaries_total' => number_format($salariesTotal, 2, '.', ''),
+            'grand_total' => number_format($expensesTotal + $purchasesTotal + $salariesTotal, 2, '.', ''),
         ]));
+    }
+
+    /**
+     * GET /api/v1/expenses/export?format=xlsx|pdf|csv (T6-71)
+     * The SAME query as index() — same filters, sort, search and authorization.
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $this->authorize('view_all_expenses');
+
+        $query = Expense::with(['user', 'custody', 'socialCase', 'reviewer', 'category.parent.parent', 'item'])
+            ->orderBy('expense_date', 'desc');
+        $this->applyListFilters($query, $request);
+
+        $rows = $query->limit(ExportService::MAX_ROWS + 1)->get()
+            ->map(fn (Expense $e) => [
+                'user' => $e->user?->name,
+                'type' => $e->type === 'cash' ? 'نقدي' : ($e->type === 'cheque' ? 'شيك' : 'تحويل'),
+                'direction' => $e->accounting_path,
+                'amount' => (float) $e->amount,
+                'date' => optional($e->expense_date)->format('Y-m-d'),
+                'reviewed' => $e->reviewed_at !== null ? 'مراجع' : 'غير مراجع',
+            ]);
+
+        return $this->exports->export($request, $rows, [
+            ['key' => 'user', 'label' => 'المستخدم'],
+            ['key' => 'type', 'label' => 'النوع'],
+            ['key' => 'direction', 'label' => 'التوجيه'],
+            ['key' => 'amount', 'label' => 'المبلغ', 'numeric' => true, 'total' => true],
+            ['key' => 'date', 'label' => 'التاريخ'],
+            ['key' => 'reviewed', 'label' => 'المراجعة'],
+        ], 'expenses');
     }
 
     /** GET /api/v1/my-expenses */
@@ -99,7 +128,7 @@ final class ExpenseController extends Controller
         $paginator = ApiList::paginate(
             Expense::where('user_id', $request->user()->id)->with(['socialCase', 'category', 'item']),
             $request,
-            sortable: ['date' => 'created_at', 'amount' => 'amount', 'type' => 'type', 'description' => 'description'],
+            sortable: ['date' => 'expense_date', 'created_at' => 'created_at', 'amount' => 'amount', 'type' => 'type', 'description' => 'description'],
             search: fn ($q, $term) => $q->where('description', 'like', "%{$term}%"),
             filters: ['type' => fn ($q, $v) => $q->where('type', $v)],
         );
@@ -203,6 +232,55 @@ final class ExpenseController extends Controller
             'reviewed_by' => $r->reviewer?->name,
             'reviewed_at' => $r->reviewed_at?->toIso8601ZuluString(),
         ];
+    }
+
+    /** the shared index/export filter chain — one implementation of "same query as the table" (T6-71) */
+    private function applyListFilters($query, Request $request): void
+    {
+        if ($request->filled('date_from')) {
+            $query->whereDate('expense_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('expense_date', '<=', $request->date_to);
+        }
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+        if ($request->filled('reviewed')) {
+            $request->reviewed === 'reviewed'
+                ? $query->whereNotNull('reviewed_at')
+                : $query->whereNull('reviewed_at');
+        }
+        if ($request->filled('user_id')) {
+            $query->where('user_id', (int) $request->user_id);
+        }
+        if ($request->filled('custody_id')) {
+            $custodyId = (int) $request->custody_id;
+            $query->where(function ($q) use ($custodyId) {
+                $q->where('custody_id', $custodyId)
+                    ->orWhereHas('custodies', fn ($qc) => $qc->where('custodies.id', $custodyId));
+            });
+        }
+        if ($request->filled('q')) {
+            $term = (string) $request->q;
+            $query->where(fn ($w) => $w
+                ->where('description', 'like', "%{$term}%")
+                ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$term}%")));
+        }
+        if ($request->boolean('no_direction')) {
+            $query->whereNull('expense_category_id')->whereNull('expense_item_id');
+        } elseif ($request->filled('category_id') || $request->filled('item_id')) {
+            $query->inDirection(
+                $request->filled('category_id') ? (int) $request->category_id : null,
+                $request->filled('item_id') ? (int) $request->item_id : null,
+            );
+        }
+        if ($request->filled('amount_from')) {
+            $query->where('amount', '>=', round((float) $request->amount_from, 2));
+        }
+        if ($request->filled('amount_to')) {
+            $query->where('amount', '<=', round((float) $request->amount_to, 2));
+        }
     }
 
     private function listRow(Expense $e, bool $isManager, bool $isAccountant, ?\Illuminate\Support\Collection $pendingEditIds): array

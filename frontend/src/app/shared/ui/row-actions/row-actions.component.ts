@@ -2,13 +2,16 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 
+/** Row action severity follows the action-kind map (T6-13): danger red, success green, warn amber, info blue-teal. */
+export type RowActionSeverity = 'default' | 'danger' | 'success' | 'warn' | 'info';
+
 /** One row action: route link or handler, icon button with visible label on small screens. */
 export interface RowActionItem {
   /** tabler icon name, e.g. 'eye' */
   readonly icon: string;
   /** i18n key */
   readonly label: string;
-  readonly severity?: 'default' | 'danger';
+  readonly severity?: RowActionSeverity;
   readonly visible?: boolean;
   readonly disabled?: boolean;
   /** routerLink commands — renders an <a> */
@@ -32,7 +35,7 @@ export interface RowActionItem {
         @if (action.route; as route) {
           <a
             class="row-actions__btn"
-            [class.row-actions__btn--danger]="action.severity === 'danger'"
+            [class]="rowActionClass(action)"
             [class.row-actions__btn--disabled]="action.disabled === true"
             [title]="action.label | translate"
             [attr.aria-label]="action.label | translate"
@@ -48,7 +51,7 @@ export interface RowActionItem {
           <button
             type="button"
             class="row-actions__btn"
-            [class.row-actions__btn--danger]="action.severity === 'danger'"
+            [class]="rowActionClass(action)"
             [title]="action.label | translate"
             [attr.aria-label]="action.label | translate"
             [disabled]="action.disabled === true"
@@ -81,7 +84,7 @@ export interface RowActionItem {
             @if (action.route; as route) {
               <a
                 class="row-actions-menu__item"
-                [class.row-actions-menu__item--danger]="action.severity === 'danger'"
+                [class]="rowMenuClass(action)"
                 role="menuitem"
                 [routerLink]="route"
                 (click)="close()"
@@ -95,7 +98,7 @@ export interface RowActionItem {
               <button
                 type="button"
                 class="row-actions-menu__item"
-                [class.row-actions-menu__item--danger]="action.severity === 'danger'"
+                [class]="rowMenuClass(action)"
                 role="menuitem"
                 [disabled]="action.disabled === true"
                 (click)="action.handler?.(); close()"
@@ -120,6 +123,20 @@ export class RowActionsComponent {
   menuOpen = false;
 
   visibleActions = computed(() => this.actions().filter((a) => a.visible !== false));
+
+  /** icon-button class per action severity (T6-13) */
+  rowActionClass(action: RowActionItem): string {
+    return action.severity && action.severity !== 'default'
+      ? `row-actions__btn row-actions__btn--${action.severity}`
+      : 'row-actions__btn';
+  }
+
+  /** dropdown-item class per action severity (T6-13) */
+  rowMenuClass(action: RowActionItem): string {
+    return action.severity && action.severity !== 'default'
+      ? `row-actions-menu__item row-actions-menu__item--${action.severity}`
+      : 'row-actions-menu__item';
+  }
 
   toggle(): void {
     this.menuOpen = !this.menuOpen;

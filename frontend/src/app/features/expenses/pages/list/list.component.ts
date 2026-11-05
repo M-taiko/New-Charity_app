@@ -8,14 +8,16 @@ import type { HttpErrorResponse} from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
+import { SharedModule } from 'primeng/api';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
+import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
@@ -25,6 +27,11 @@ import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component
 import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { DirectionPickerComponent } from '@shared/ui/direction-picker/direction-picker.component';
+import type { DirectionSelection } from '@shared/ui/direction-picker/direction-picker.component';
+import { FilterCustomDirective } from '@shared/ui/table-filters/table-filters.component';
+import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
+import type { AppTab } from '@shared/ui/tabs/tabs.component';
+import type { TableFilterDef, TableQuery } from '@shared/lib/table-filters';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
@@ -115,8 +122,8 @@ const AMOUNT_DEBOUNCE_MS = 500;
 @Component({
   selector: 'app-expense-list',
   standalone: true,
-  imports: [
-    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, DialogModule, InputNumberModule, TextareaModule, DatePickerModule, SelectModule,
+  imports: [FilterCustomDirective, AppTabsComponent, SectionNavComponent, 
+    FieldComponent, TranslatePipe, SharedModule, ContentDialogComponent, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, DatePickerModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, RowActionsComponent, ConfirmDialogComponent, FormDialogComponent, DirectionPickerComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -131,60 +138,30 @@ const AMOUNT_DEBOUNCE_MS = 500;
       </div>
     </app-page-header>
 
-    <div class="filter-bar">
-      <div class="filter-bar__row">
-        <app-field label="expense.list.filter.type" controlId="exp-filter-type" class="field--md">
-          <p-select appendTo="body" inputId="exp-filter-type" [options]="typeOptions()" optionLabel="label" optionValue="value"
-            [ngModel]="params().type" (ngModelChange)="setParams({ type: $event })" name="type"
-            styleClass="u-full" [autofocus]="false" />
-        </app-field>
-        <app-field label="expense.list.filter.reviewed" controlId="exp-filter-reviewed" class="field--md">
-          <p-select appendTo="body" inputId="exp-filter-reviewed" [options]="reviewedOptions" optionLabel="label" optionValue="value"
-            [ngModel]="params().reviewed" (ngModelChange)="setParams({ reviewed: $event })" name="reviewed"
-            styleClass="u-full" [autofocus]="false" />
-        </app-field>
-        <app-field label="expense.list.filter.user" controlId="exp-filter-user" class="field--lg">
-          <p-select appendTo="body" inputId="exp-filter-user" [options]="userOptions()" optionLabel="label" optionValue="value"
-            [filter]="true" [ngModel]="params().user_id" (ngModelChange)="setParams({ user_id: $event })" name="user"
-            styleClass="u-full" [autofocus]="false" />
-        </app-field>
-        <app-field label="expense.list.filter.direction" controlId="exp-filter-direction" class="field--xl">
-          <p-select appendTo="body" inputId="exp-filter-direction" [options]="directionOptions()" optionLabel="label" optionValue="value"
-            [filter]="true" [ngModel]="direction()" (ngModelChange)="onDirection($event)" name="direction"
-            styleClass="u-full" [autofocus]="false" />
-        </app-field>
-        <app-field label="expense.list.filter.custody" controlId="exp-filter-custody" class="field--lg">
-          <p-select appendTo="body" inputId="exp-filter-custody" [options]="custodyOptions()" optionLabel="label" optionValue="value"
-            [filter]="true" [ngModel]="params().custody_id" (ngModelChange)="setParams({ custody_id: $event })" name="custody"
-            styleClass="u-full" [autofocus]="false" />
-        </app-field>
-        <app-field label="expense.list.filter.date_range" controlId="exp-filter-date" class="field--xl">
-          <p-datepicker appendTo="body" inputId="exp-filter-date" name="date" selectionMode="range" [showIcon]="true"
-            dateFormat="yy-mm-dd" [ngModel]="dateRange()" (ngModelChange)="onDateRange($event)"
-            styleClass="u-full" />
-        </app-field>
-        <app-field label="expense.list.filter.amount_range" controlId="exp-filter-amount-from">
-          <div class="u-flex u-gap-1">
-            <p-inputnumber inputId="exp-filter-amount-from" [ngModel]="amountFrom()" (ngModelChange)="onAmount('from', $event)"
-              mode="decimal" [min]="0" [minFractionDigits]="0" [useGrouping]="false"
-              placeholder="{{ 'expense.list.filter.amount_from' | translate }}"
-              styleClass="filter-bar__amount" inputStyleClass="u-full" />
-            <p-inputnumber inputId="exp-filter-amount-to" [ngModel]="amountTo()" (ngModelChange)="onAmount('to', $event)"
-              mode="decimal" [min]="0" [minFractionDigits]="0" [useGrouping]="false"
-              placeholder="{{ 'expense.list.filter.amount_to' | translate }}"
-              styleClass="filter-bar__amount" inputStyleClass="u-full" />
-          </div>
-        </app-field>
-        <div class="filter-bar__spacer"></div>
-        <p-button [label]="'common.reset' | translate" severity="secondary" [outlined]="true" size="small" (onClick)="resetFilters()" />
-      </div>
-    </div>
+    <app-section-nav module="expenses" />
 
-    <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
+<app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
+        <!-- T6-01: Expenses | Purchases | Salaries — the Blade page's three
+             panels; purchases and salaries live on their own filtered pages -->
+        <app-tabs id="expenses" [tabs]="expenseTabs" [(active)]="expenseTab" class="u-mb-2" />
+
         <div class="kpi-grid">
         <app-stat-tile [label]="'expense.list.filtered_total'" [value]="summaryValue('filtered_total')" [money]="true" />
         <app-stat-tile [label]="'common.count'" [value]="summaryValue('count')" />
+        @if (summaryValue('purchases_total') !== '0') {
+          <a class="tile-link" routerLink="/procurement/purchase" [title]="'common.open_page' | translate">
+            <app-stat-tile [label]="'expense.list.purchases_total'" [value]="summaryValue('purchases_total')" [money]="true" />
+          </a>
+        }
+        @if (summaryValue('salaries_total') !== '0') {
+          <a class="tile-link" routerLink="/hr/salaries" [title]="'common.open_page' | translate">
+            <app-stat-tile [label]="'expense.list.salaries_total'" [value]="summaryValue('salaries_total')" [money]="true" />
+          </a>
+        }
+        @if (summaryValue('grand_total') !== '0') {
+          <app-stat-tile [label]="'expense.list.grand_total'" [value]="summaryValue('grand_total')" [money]="true" [inset]="true" />
+        }
         </div>
 
 
@@ -195,8 +172,17 @@ const AMOUNT_DEBOUNCE_MS = 500;
         [total]="page.meta.total"
         [perPage]="params().per_page"
         [loading]="data.isLoading()"
+        [sortableKeys]="page.meta.sortable ?? null"
+        [filters]="filterDefs()"
+        exportPath="/expenses/export"
         (pageChange)="onPage($event)"
+        (queryChange)="onQuery($event)"
       >
+        <!-- T6-30: the direction cascade rides the table's custom filter hook -->
+        <ng-template appFilterCustom="direction" let-ctx>
+          <app-direction-picker [tree]="tree()" [idBase]="'exp-filter-direction'" [required]="false"
+                                (selectionChange)="ctx.set(encodeDirection($event))" />
+        </ng-template>
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
         <ng-template appTableBody let-row>
           <tr class="ledger-table__row">
@@ -205,7 +191,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
             <td appTableCol="direction">{{ row.direction ?? '—' }}</td>
             <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
             <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-            <td appTableCol="reviewed">{{ row.reviewed | enumLabel: 'review_state' }}</td>
+            <td appTableCol="reviewed">{{ (row.reviewed ? 'reviewed' : 'not_reviewed') | enumLabel: 'review_state' }}</td>
             <td appTableCol="attachment">
               @if (row.has_attachment) {
                 <app-row-actions [actions]="attachmentActions(row)" />
@@ -238,7 +224,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
             </div>
             <div class="ledger-table__stacked-item">
               <span class="ledger-table__stacked-label">{{ 'expense.list.col_review' | translate }}</span>
-              {{ row.reviewed | enumLabel: 'review_state' }}
+              {{ (row.reviewed ? 'reviewed' : 'not_reviewed') | enumLabel: 'review_state' }}
             </div>
             <div class="ledger-table__stacked-item">
               <span class="ledger-table__stacked-label">{{ 'expense.list.col_attachment' | translate }}</span>
@@ -260,15 +246,11 @@ const AMOUNT_DEBOUNCE_MS = 500;
     </app-async-page>
 
     <!-- attachment preview: images inline, other files open/download (T3-22) -->
-    <p-dialog
-      appendTo="body"
+    <app-content-dialog
       [visible]="preview() !== null"
       (visibleChange)="previewVisibleChange($event)"
-      [header]="'expense.detail.attachment' | translate"
-      [modal]="true"
-      [draggable]="false"
-      [resizable]="false"
-      [style]="{ width: 'min(720px, 94vw)' }"
+      [header]="'expense.detail.attachment'"
+      [width]="'min(720px, 94vw)'"
     >
       @if (preview(); as p) {
         <div class="u-column u-gap-3">
@@ -303,7 +285,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
           </div>
         }
       </p-footer>
-    </p-dialog>
+    </app-content-dialog>
 
     <!-- plain review confirm (expense already has a direction) -->
     <app-confirm-dialog
@@ -404,7 +386,80 @@ export class ExpenseListPage {
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
 
+  /** T6-01: the three-panel tabs — purchases/salaries cross to their pages */
+  expenseTab = signal('expenses');
+  readonly expenseTabs: AppTab[] = [
+    { id: 'expenses', label: 'nav.expenses' },
+    { id: 'purchases', label: 'expense.list.tab_purchases', route: '/procurement/purchase' },
+    { id: 'salaries', label: 'expense.list.tab_salaries', route: '/hr/salaries' },
+  ];
+
   params = signal<ExpenseListParams>({ page: 1, per_page: 25, q: '', ...DEFAULT_FILTERS });
+
+  // ── T6-30: table-driven filter definitions ─────────────────────────────
+  /** JSON descriptions only — the table draws the controls (filter-bar markup is gone) */
+  readonly filterDefs = computed<TableFilterDef[]>(() => [
+    {
+      key: 'type', label: 'expense.list.filter.type', type: 'select', order: 1,
+      options: (this.lookups.value()?.expense_types ?? []).map((t) => ({ value: t, label: this.typeLabel(t) })),
+    },
+    {
+      key: 'reviewed', label: 'expense.list.filter.reviewed', type: 'select', order: 2,
+      options: [
+        { value: 'reviewed', label: this.translate.instant('enums.review_state.reviewed') },
+        { value: 'not_reviewed', label: this.translate.instant('enums.review_state.not_reviewed') },
+      ],
+    },
+    {
+      key: 'user', label: 'expense.list.filter.user', type: 'select', order: 3,
+      options: (this.lookups.value()?.users ?? []).map((u) => ({ value: u.id, label: u.name })),
+    },
+    { key: 'direction', label: 'expense.list.filter.direction', type: 'custom', order: 4 },
+    {
+      key: 'custody', label: 'expense.list.filter.custody', type: 'select', order: 5,
+      options: (this.custodies.value() ?? []).map((c) => ({ value: c.id, label: this.custodyLabel(c) })),
+    },
+    { key: 'date', label: 'expense.list.filter.date_range', type: 'date-range', order: 6 },
+    { key: 'amount', label: 'expense.list.filter.amount_range', type: 'number-range', order: 7 },
+  ]);
+
+  encodeDirection(selection: DirectionSelection): string {
+    if (selection.item_id !== null) {
+      return 'i:' + selection.item_id;
+    }
+    if (selection.category_id !== null) {
+      return 'c:' + selection.category_id;
+    }
+    return 'all';
+  }
+
+  /** T6-30: the table emits the full query — search and filters go to the server */
+  onQuery(query: TableQuery): void {
+    const f = query.filters;
+    const direction = typeof f.direction === 'string' ? (f.direction) : 'all';
+    const date = (f.date ?? {}) as { from?: string; to?: string };
+    const amount = (f.amount ?? {}) as { min?: number; max?: number };
+    const reviewed = f.reviewed;
+    this.params.update((p) => ({
+      ...p,
+      page: query.page,
+      per_page: query.perPage,
+      sort: query.sort !== '' ? query.sort : p.sort,
+      q: query.q,
+      type: (f.type as string) ?? 'all',
+      reviewed: reviewed === undefined || reviewed === null || reviewed === '' ? 'all' : String(reviewed),
+      user_id: (f.user as number) ?? null,
+      custody_id: (f.custody as number) ?? null,
+      category_id: direction.startsWith('c:') ? Number(direction.slice(2)) : null,
+      item_id: direction.startsWith('i:') ? Number(direction.slice(2)) : null,
+      no_direction: direction === 'none',
+      date_from: date.from ?? '',
+      date_to: date.to ?? '',
+      amount_from: amount.min ?? null,
+      amount_to: amount.max ?? null,
+    }));
+    this.data.reload();
+  }
 
   data = resource<ListResponse<Row>, unknown>({
     loader: () =>

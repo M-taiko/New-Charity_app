@@ -8,6 +8,10 @@ export interface ListMeta {
   from: number | null;
   to: number | null;
   summary?: Record<string, unknown>;
+  /** accepted server sort keys (T6-21) */
+  sortable?: string[];
+  /** filter definitions from the API (T6-30) — same JSON as the page-level defs */
+  filters?: { key: string; label: string; type: string; field?: string; options?: { value: unknown; label: string }[] }[];
 }
 
 export interface ListResponse<T> {

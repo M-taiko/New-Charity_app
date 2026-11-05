@@ -185,6 +185,46 @@ class CustodyTransferController extends Controller
     }
 
     /**
+     * Cancel a pending transfer (Task6 T6-80): the sender or a manager may
+     * cancel while the receiver has not accepted; the frozen amount is
+     * released immediately.
+     */
+    public function cancel(Request $request, CustodyTransfer $custodyTransfer)
+    {
+        $user = $request->user();
+        $isSender = (int) $custodyTransfer->from_agent_id === (int) $user->id;
+        $isManager = $user->can('approve_custody_transfer') || $user->hasRole('مدير');
+        abort_unless($isSender || $isManager, 403, 'فقط المندوب المُرسل أو المدير يمكنه إلغاء التحويل');
+
+        if ($custodyTransfer->status !== 'pending') {
+            // race with the receiver's decision — surface a 409 to the SPA
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => 'لا يمكن إلغاء تحويل تم البت فيه مسبقاً',
+                    'code' => 'transfer.not_pending',
+                ], 409);
+            }
+            return redirect()->back()->with('error', 'لا يمكن إلغاء تحويل تم البت فيه مسبقاً');
+        }
+
+        try {
+            $this->service->cancelTransfer($custodyTransfer, $user->id);
+
+            return $this->formBackOrJson($request, 'success', 'تم إلغاء التحويل وتحرير المبلغ المجمد');
+        } catch (\RuntimeException $e) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => 'لا يمكن إلغاء تحويل تم البت فيه مسبقاً',
+                    'code' => $e->getMessage(),
+                ], 409);
+            }
+            return $this->formBackOrJson($request, 'error', 'لا يمكن إلغاء تحويل تم البت فيه مسبقاً');
+        } catch (\Exception $e) {
+            return $this->formBackOrJson($request, 'error', $e->getMessage());
+        }
+    }
+
+    /**
      * Get DataTable data for sent transfers
      */
     public function sentTransfersData()

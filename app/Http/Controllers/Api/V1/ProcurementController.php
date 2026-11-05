@@ -115,7 +115,7 @@ final class ProcurementController extends Controller
         $paginator = ApiList::paginate(
             Supplier::withCount('purchaseRequests'),
             $request,
-            sortable: ['name' => 'name', 'phone' => 'phone', 'email' => 'email'],
+            sortable: ['name' => 'name', 'phone' => 'phone', 'email' => 'email', 'purchase_requests_count' => 'raw:purchase_requests_count'],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$term}%")->orWhere('phone', 'like', "%{$term}%")),
             filters: ['status' => fn ($q, $v) => $q->where('is_active', $v === 'active')],

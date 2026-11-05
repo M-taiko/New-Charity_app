@@ -94,7 +94,7 @@ final class HrController extends Controller
         $paginator = ApiList::paginate(
             KpiMetric::with('employee.user'),
             $request,
-            sortable: ['date' => 'created_at', 'employee' => 'employee_id', 'name' => 'metric_name', 'target' => 'target_value', 'actual' => 'actual_value'],
+            sortable: ['date' => 'created_at', 'employee' => 'employee_id', 'name' => 'metric_name', 'target' => 'target_value', 'actual' => 'actual_value', 'percentage' => 'raw:ROUND((actual_value / NULLIF(target_value, 0)) * 100, 1)'],
             filters: ['employee_id' => fn ($q, $v) => $q->where('employee_id', (int) $v)],
         );
         $paginator->getCollection()->transform(fn ($k) => [

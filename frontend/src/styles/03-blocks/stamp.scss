@@ -1,4 +1,6 @@
-/* Stamps: meaning by icon+fill+border, never by color alone (plan 10.1.3) */
+/* Stamps: meaning by icon + semantic color, never by color alone (plan 10.1.3 + T6-40).
+   Pending amber, approved green, rejected red, info blue-teal, closed gray —
+   tinted background + solid foreground from the semantic tokens, light and dark. */
 .stamp {
   display: inline-flex;
   align-items: center;
@@ -17,41 +19,36 @@
   flex-shrink: 0;
 }
 
-/* success / approved */
+/* success / approved — green */
 .stamp--success {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
-  background: var(--color-surface);
-}
-
-/* rejected / error — strongest: solid fill + double border */
-.stamp--danger {
-  background: var(--palette-ink);
-  color: var(--palette-white);
-  box-shadow: 0 0 0 1px var(--palette-ink), 0 0 0 2px var(--color-surface), 0 0 0 3px var(--palette-ink);
-}
-
-:root[data-theme='dark'] .stamp--danger {
-  background: var(--palette-cream);
-  color: var(--palette-ink);
-  box-shadow: 0 0 0 1px var(--palette-cream), 0 0 0 2px var(--color-surface), 0 0 0 3px var(--palette-cream);
-}
-
-/* pending — dashed */
-.stamp--pending {
-  border-style: dashed;
-  border-color: var(--color-text-muted);
-  color: var(--color-text-muted);
-}
-
-/* info — filled soft */
-.stamp--info {
-  background: var(--color-primary-soft);
-  color: var(--color-text);
+  background: var(--color-success-soft);
+  color: var(--color-success);
   border-color: transparent;
 }
 
-/* neutral / closed */
+/* rejected / error — red */
+.stamp--danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border-color: transparent;
+}
+
+/* pending — amber, dashed edge keeps the "in progress" meaning */
+.stamp--pending {
+  border-style: dashed;
+  border-color: var(--color-warning);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+/* info / accepted — blue-teal */
+.stamp--info {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+  border-color: transparent;
+}
+
+/* neutral / closed — gray */
 .stamp--neutral {
   background: var(--color-surface-inset);
   color: var(--color-text-muted);

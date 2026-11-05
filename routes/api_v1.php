@@ -110,6 +110,7 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::get('custody-transfers/{custodyTransfer}', [ApiTransfer::class, 'show']);
             Route::post('custody-transfers/{custodyTransfer}/approve', [CustodyTransferController::class, 'approve']);
             Route::post('custody-transfers/{custodyTransfer}/reject', [CustodyTransferController::class, 'reject']);
+            Route::post('custody-transfers/{custodyTransfer}/cancel', [CustodyTransferController::class, 'cancel']);
 
             // ── Expenses ───────────────────────────────────────
             Route::get('expenses', [ApiExpense::class, 'index']);
@@ -145,6 +146,7 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
 
             // ── Reports ────────────────────────────────────────
             Route::get('dashboard', [ApiDashboard::class, 'show']);
+            Route::get('dashboard/money-flow', [ApiDashboard::class, 'moneyFlow']);
             Route::get('directional-stats', [ApiDashboard::class, 'directionalStats']);
             Route::get('reports', [ApiReport::class, 'dashboard']);
             Route::get('reports/governorates', [ApiReport::class, 'governorates']);
@@ -182,8 +184,12 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::post('hr/salaries/calculate', [SalaryController::class, 'calculate']);
             Route::get('hr/salaries-report/export', [SalaryController::class, 'exportReport'])
                 ->withoutMiddleware(ApiV1Response::class);
+            // T6-71: shared export endpoints — same query/filters as the table
+            Route::get('expenses/export', [ApiExpense::class, 'export'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('custodies/export', [ApiCustody::class, 'export'])->withoutMiddleware(ApiV1Response::class);
             Route::get('hr/employees/{employee}/salary-history', [ApiHr::class, 'salaryHistory']);
             Route::get('hr/salaries/{salary}', [ApiHr::class, 'salaryShow']);
+            Route::get('hr/salaries/{salaryId}/payslip', [SalaryController::class, 'payslip'])->withoutMiddleware(ApiV1Response::class);
             Route::post('hr/salaries/{salary}/update', [SalaryController::class, 'update']);
             Route::post('hr/salaries/{salary}/allowance', [SalaryController::class, 'addAllowance']);
             Route::post('hr/salaries/{salary}/approve', [SalaryController::class, 'approve']);

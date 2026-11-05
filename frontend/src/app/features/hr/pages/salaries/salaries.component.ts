@@ -6,13 +6,15 @@ import { ChangeDetectionStrategy, Component, inject, resource, signal } from '@a
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
+import { ApiClient } from '@core/http/api-client';
+import { ToastService } from '@core/errors/toast.service';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
-import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
@@ -37,7 +39,7 @@ interface Row {
 @Component({
   selector: 'app-salaries-page',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe, FormsModule, ButtonModule, SelectModule, InputNumberModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, StatusStampComponent,
@@ -51,6 +53,8 @@ interface Row {
         <p-button [label]="'hr.salaries.calculate' | translate" size="small" (onClick)="dialogOpen.set(true)" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="hr" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
@@ -69,10 +73,10 @@ interface Row {
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap">
             <app-field label="hr.salaries.month" controlId="sal-filter-month" class="u-m-0">
-              <p-select inputId="sal-filter-month" [options]="monthOptions" optionLabel="label" optionValue="value" [ngModel]="params().month" name="month" (ngModelChange)="setParam('month', $event)" styleClass="u-full" />
+              <p-select inputId="sal-filter-month" appendTo="body" [options]="monthOptions" optionLabel="label" optionValue="value" [ngModel]="params().month" name="month" (ngModelChange)="setParam('month', $event)" styleClass="u-full" />
             </app-field>
             <app-field label="hr.salaries.year" controlId="sal-filter-year" class="u-m-0">
-              <p-select inputId="sal-filter-year" [options]="yearOptions" optionLabel="label" optionValue="value" [ngModel]="params().year" name="year" (ngModelChange)="setParam('year', $event)" styleClass="u-full" />
+              <p-select inputId="sal-filter-year" appendTo="body" [options]="yearOptions" optionLabel="label" optionValue="value" [ngModel]="params().year" name="year" (ngModelChange)="setParam('year', $event)" styleClass="u-full" />
             </app-field>
           </div>
           <ng-template appTableBody let-row>
@@ -136,6 +140,7 @@ interface Row {
 export class SalariesPage {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+  private api = inject(ApiClient);
   private translate = inject(TranslateService);
 
   readonly tableKey = 'salaries.component';
@@ -161,9 +166,22 @@ export class SalariesPage {
   /** same range as the Blade page: two years back through next year */
   readonly yearOptions = Array.from({ length: 4 }, (_, i) => ({ label: String(new Date().getFullYear() - 2 + i), value: new Date().getFullYear() - 2 + i }));
 
-  /** the export downloads the CSV for the filtered month/year (SalaryController@exportReport) */
-  exportReport(): void {
-    window.open(`/api/v1/hr/salaries-report/export?year=${this.params().year}&month=${this.params().month}`, '_blank');
+  /** T6-71: the shared export — authenticated blob download (xlsx/pdf/csv), no window.open */
+  exportReport(format: 'xlsx' | 'pdf' | 'csv' = 'xlsx'): void {
+    const url = `/api/v1/hr/salaries-report/export?year=${this.params().year}&month=${this.params().month}&format=${format}`;
+    void firstValueFrom(this.api.getBlob(url))
+      .then((blob) => {
+        const link = document.createElement('a');
+        const objectUrl = URL.createObjectURL(blob);
+        link.href = objectUrl;
+        link.download = `salary-report-${this.params().year}-${this.params().month}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+        this.toast.success(this.translate.instant('common.export_done'));
+      })
+      .catch(() => { this.toast.apiError('errors.generic'); });
   }
 
   summaryValue(key: string): string {

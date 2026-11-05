@@ -11,6 +11,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
@@ -27,7 +28,7 @@ interface TreasuryOption {
 @Component({
   selector: 'app-treasury-transfer',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule,
     TextareaModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe,
   ],
@@ -37,6 +38,8 @@ interface TreasuryOption {
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/treasury" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="treasury" />
     <form (ngSubmit)="submit()" #f="ngForm">
       <app-form-section>
         <app-field label="treasury.transfer.from" controlId="transfer-from" [required]="true" [error]="serverFieldError(error(), 'from_treasury_id')">

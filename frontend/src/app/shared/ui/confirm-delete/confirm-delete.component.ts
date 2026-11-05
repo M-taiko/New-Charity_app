@@ -26,6 +26,8 @@ import type { ActionResponse, ApiErrorBody } from '@shared/models/api.models';
       [draggable]="false"
       [resizable]="false"
       [closable]="!sending()"
+      [dismissableMask]="!sending()"
+      [closeOnEscape]="!sending()"
       [style]="{ width: 'min(440px, 94vw)' }"
     >
       <p>{{ 'common.delete_message' | translate: { name: entity() } }}</p>

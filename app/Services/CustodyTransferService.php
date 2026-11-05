@@ -360,6 +360,98 @@ class CustodyTransferService
         });
     }
 
+    /**
+     * Cancel a pending transfer (Task6 T6-80).
+     *
+     * Allowed while the transfer is `pending` and the receiver has not
+     * accepted it yet; only the sender or a manager may cancel. Releases the
+     * frozen amount on the source custody exactly like rejectTransfer.
+     *
+     * @param  int  $cancellerId  the cancelling user (sender or manager)
+     * @throws \RuntimeException  transfer.not_pending when a race with the
+     *                            receiver's decision already decided it
+     */
+    public function cancelTransfer($transfer, $cancellerId)
+    {
+        return DB::transaction(function () use ($transfer, $cancellerId) {
+            // Lock the row: a concurrent approve/reject must not slip through
+            $transfer = CustodyTransfer::where('id', $transfer->id)->lockForUpdate()->firstOrFail();
+
+            if ($transfer->status !== 'pending') {
+                throw new \RuntimeException('transfer.not_pending');
+            }
+
+            $canceller = \App\Models\User::find($cancellerId);
+            $isSender = (int) $transfer->from_agent_id === (int) $cancellerId;
+            $isManager = $canceller && $canceller->hasRole('مدير');
+            if (! $isSender && ! $isManager) {
+                throw new \Exception('فقط المندوب المُرسل أو المدير يمكنه إلغاء التحويل');
+            }
+
+            // تحرير تجميد هذا التحويل (مثل rejectTransfer — لا ينزل عن صفر)
+            $custody = Custody::where('id', $transfer->custody_id)->lockForUpdate()->first();
+            if ($custody) {
+                $release = min((float) $transfer->amount, (float) $custody->pending_transfer_out);
+                if ($release > 0) {
+                    $custody->decrement('pending_transfer_out', $release);
+                }
+            }
+
+            $transfer->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'cancelled_by' => $cancellerId,
+            ]);
+
+            // Notify receiver + accountant + managers; the message names who cancelled
+            $notifiedUsers = [$cancellerId];
+
+            if (! in_array($transfer->to_agent_id, $notifiedUsers)) {
+                $this->notifyUser(
+                    $transfer->to_agent_id,
+                    'تم إلغاء التحويل',
+                    "ألغى {$canceller?->name} تحويل {$transfer->amount} ج.م الوارد إليك",
+                    'error',
+                    $transfer->id,
+                    'custody_transfer'
+                );
+                $notifiedUsers[] = $transfer->to_agent_id;
+            }
+
+            $accountantId = $custody?->accountant_id;
+            if ($accountantId && ! in_array($accountantId, $notifiedUsers)) {
+                $this->notifyUser(
+                    $accountantId,
+                    'تم إلغاء التحويل',
+                    "ألغى {$canceller?->name} تحويل عهدة بقيمة {$transfer->amount} ج.م",
+                    'error',
+                    $transfer->id,
+                    'custody_transfer'
+                );
+                $notifiedUsers[] = $accountantId;
+            }
+
+            $this->notifyManagers(
+                'تم إلغاء التحويل',
+                "ألغى {$canceller?->name} تحويل عهدة بقيمة {$transfer->amount} ج.م",
+                'error',
+                $transfer->id,
+                'custody_transfer',
+                $notifiedUsers
+            );
+
+            \App\Services\ActivityLogService::log(
+                'cancelled',
+                "ألغى {$canceller?->name} تحويل عهدة #{$transfer->id} بقيمة {$transfer->amount} ج.م",
+                $transfer,
+                ['status' => 'cancelled', 'amount' => $transfer->amount],
+                $cancellerId
+            );
+
+            return $transfer->fresh();
+        });
+    }
+
     private function notifyUser($userId, $title, $message, $type, $relatedId, $relatedType)
     {
         Notification::create([

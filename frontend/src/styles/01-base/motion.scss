@@ -1,0 +1,214 @@
+// The motion system (Task6 T6-50): Off is completely static, Lite keeps the
+// standard transitions, Full adds the rich layer. Everything keys off
+// <html data-motion="off|lite|full"> set by MotionService.
+
+// ── OFF: no animation of any kind (removed, not shortened) ────────────────
+:root[data-motion='off'] {
+  scroll-behavior: auto;
+
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+
+  // no skeleton shimmer — a flat placeholder
+  .skeleton,
+  .skeleton--row,
+  .skeleton--tile,
+  .skeleton--title {
+    animation: none !important;
+    background: var(--color-surface-raised);
+  }
+}
+
+// ── LITE (= the old Full): standard transitions + shimmer run by default ──
+// no extra rules needed — the base styles are Lite.
+
+// ── FULL: the rich layer — pages, cards, overlays, micro-interactions ─────
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-motion='full'] {
+    // route/page enter: fade + 10px slide-up (lists); detail pages slide from
+    // the inline-end — applied by appReveal on each page root
+    .page-enter {
+      animation: page-enter 280ms var(--ease-out) both;
+    }
+
+    .page-enter--detail {
+      animation: page-enter-side 300ms var(--ease-out) both;
+    }
+
+    .page-enter--form {
+      animation: page-enter-scale 280ms var(--ease-out) both;
+    }
+
+    // cards / tiles / sections reveal on first appearance (appReveal)
+    .reveal-item {
+      animation: reveal-up 320ms var(--ease-out) both;
+    }
+
+    // micro-interactions
+    .p-button {
+      transition: transform var(--dur-fast) var(--ease-out), background-color var(--dur-base) var(--ease-out),
+        border-color var(--dur-base) var(--ease-out), color var(--dur-base) var(--ease-out);
+    }
+
+    .p-button:active:not(:disabled, .p-disabled) {
+      transform: scale(0.97);
+    }
+
+    .chart-card,
+    .stat-tile,
+    .form-section {
+      transition: transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+      will-change: transform;
+    }
+
+    .chart-card:hover,
+    .stat-tile:hover {
+      transform: translateY(-2px);
+    }
+
+    // status stamp pop on change (status-stamp adds .stamp--stamp-in)
+    .stamp--stamp-in {
+      animation: stamp-in 220ms var(--ease-out) 1;
+    }
+
+    // dialogs: scale 0.96→1 + fade; mask fades
+    .p-dialog {
+      animation: dialog-in 240ms var(--ease-out) both;
+    }
+
+    .p-dialog-mask {
+      animation: mask-in 200ms linear both;
+    }
+
+    // select / datepicker / menu / popover panels: fade + 6px slide
+    .p-select-overlay,
+    .p-multiselect-overlay,
+    .p-datepicker-panel,
+    .p-menu,
+    .p-popover,
+    .p-autocomplete-panel {
+      animation: overlay-in 180ms var(--ease-out) both;
+    }
+
+    // toasts slide in/out
+    .toast-host__item {
+      animation: toast-in 220ms var(--ease-out) both;
+    }
+
+    // first table render staggers up to 12 rows (appStagger adds the class)
+    .stagger-row {
+      animation: reveal-up 260ms var(--ease-out) both;
+    }
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes page-enter-side {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes page-enter-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes mask-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stamp-in {
+  0% {
+    transform: scale(1.08) rotate(-2deg);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}

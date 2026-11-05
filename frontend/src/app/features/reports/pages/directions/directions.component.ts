@@ -6,7 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
-import { DialogModule } from 'primeng/dialog';
+import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -60,7 +60,7 @@ interface DrillExpense {
   selector: 'app-directions-report',
   standalone: true,
   imports: [
-    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, DatePickerModule, DialogModule,
+    FieldComponent, TranslatePipe, ContentDialogComponent, RouterLink, FormsModule, ButtonModule, DatePickerModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
     LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
     PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe, DatetimePipe,
@@ -126,10 +126,9 @@ interface DrillExpense {
 
     <!-- Drill-down: the row's expenses (GET /category-item-expenses) -->
     @if (data.value()) {
-      <p-dialog appendTo="body" [visible]="drillVisible()" (visibleChange)="drillVisible.set($event)"
-        [header]="'report.directions.expenses_dialog' | translate" [modal]="true"
-        [draggable]="false" [resizable]="false" styleClass="dialog"
-        [breakpoints]="{ '576px': '100vw' }" [style]="{ width: 'min(720px, 94vw)' }">
+      <app-content-dialog [visible]="drillVisible()" (visibleChange)="drillVisible.set($event)"
+        [header]="'report.directions.expenses_dialog'"
+        [width]="'min(720px, 94vw)'">
         <p class="u-small u-mt-2">{{ drillTitle() }}</p>
         @if (drillLoading()) {
           <div class="skeleton skeleton--tile" role="status"></div>
@@ -153,7 +152,7 @@ interface DrillExpense {
             <span class="u-bidi">{{ 'common.total' | translate }}: {{ drillTotal() | money }}</span>
           </p>
         }
-      </p-dialog>
+      </app-content-dialog>
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

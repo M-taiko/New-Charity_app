@@ -7,9 +7,12 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
+import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
+import { AutoRefreshComponent } from '@shared/ui/auto-refresh/auto-refresh.component';
+import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective } from '@shared/ui/ledger-table/ledger-table.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
@@ -23,6 +26,7 @@ import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse } from '@shared/models/api.models';
+import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
 
 /** /custodies/tracking payload — one full dataset, no server pagination */
@@ -81,8 +85,8 @@ interface CustodyMovements {
 @Component({
   selector: 'app-custody-tracking',
   standalone: true,
-  imports: [
-    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, DialogModule, SelectModule,
+  imports: [SectionNavComponent, 
+    ContentDialogComponent, AppTabsComponent, AutoRefreshComponent, FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
   ],
@@ -93,6 +97,8 @@ interface CustodyMovements {
         <p-button [label]="'custody.list.create' | translate" size="small" routerLink="/custodies/new" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="custodies" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
@@ -105,7 +111,9 @@ interface CustodyMovements {
           <app-stat-tile [label]="'custody.tracking.remaining'" [value]="summaryValue('total_remaining')" [money]="true" />
         </div>
 
-      <h2 class="u-small u-muted">{{ 'custody.tracking.by_agent' | translate }}</h2>
+      <app-tabs id="tracking" [tabs]="tabs" [(active)]="trackTab" />
+
+      @if (trackTab() === 'agents') {
       <app-data-table
         [tableKey]="tableKey + '-agents'"
         [columns]="agentColumns"
@@ -160,7 +168,9 @@ interface CustodyMovements {
         </div>
       </app-data-table>
 
-      <h2 class="u-small u-muted">{{ 'custody.tracking.custodies' | translate }}</h2>
+      }
+
+      @if (trackTab() === 'custodies') {
       <div class="filter-bar">
         <div class="filter-bar__row">
           <app-field label="custody.tracking.col_agent" controlId="track-filter-agent" class="field--lg">
@@ -181,7 +191,7 @@ interface CustodyMovements {
         [total]="filteredCustodies().length"
         [perPage]="perPage"
       >
-        <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
+        <div toolbar class="u-flex u-gap-2 u-flex-wrap u-justify-end"><app-auto-refresh key="tracking" (refresh)="data.reload()" /></div>
         <ng-template appTableBody let-row>
           <tr class="ledger-table__row">
             <td appTableCol="id" class="ledger-table__cell-num"><span class="u-bidi">#{{ row.id }}</span></td>
@@ -249,19 +259,15 @@ interface CustodyMovements {
         </div>
       </app-data-table>
       }
+      }
     </app-async-page>
 
     <!-- per-custody movements (all-custodies.blade.php modal) -->
-    <p-dialog appendTo="body"
+    <app-content-dialog
       [visible]="movementsOpen()"
       (visibleChange)="movementsOpen.set($event)"
-      [header]="'custody.detail.transactions' | translate"
-      [modal]="true"
-      [draggable]="false"
-      [resizable]="false"
-      styleClass="dialog"
-      [breakpoints]="{ '576px': '100vw' }"
-      [style]="{ width: 'min(680px, 94vw)' }"
+      [header]="'custody.detail.transactions'"
+      [width]="'min(680px, 94vw)'"
     >
       @if (movementsLoading()) {
         <div class="skeleton skeleton--row" role="status"></div>
@@ -284,16 +290,20 @@ interface CustodyMovements {
           </ng-template>
         </app-ledger-table>
       }
-      <p-footer>
-        <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" (onClick)="movementsOpen.set(false)" />
-      </p-footer>
-    </p-dialog>
+    </app-content-dialog>
   `,
 })
 export class TrackingPage {
   private http = inject(HttpClient);
 
   readonly tableKey = 'tracking.component';
+
+  /** sections (T6-11): one table visible at a time */
+  trackTab = signal<string>('custodies');
+  readonly tabs: AppTab[] = [
+    { id: 'custodies', label: 'custody.tracking.custodies' },
+    { id: 'agents', label: 'custody.tracking.by_agent' },
+  ];
 
   readonly agentColumns = [
     { field: 'agent', searchField: 'agent.name', header: 'custody.tracking.col_agent', sortable: false },

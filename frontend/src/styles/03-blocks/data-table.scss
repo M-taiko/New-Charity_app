@@ -153,9 +153,25 @@
   outline-offset: 1px;
 }
 
+/* Semantic row-action hovers (T6-13): the glyph takes its action color */
 .row-actions__btn--danger:hover {
-  color: var(--color-text);
-  background: var(--color-primary-soft);
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.row-actions__btn--success:hover {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.row-actions__btn--warn:hover {
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+}
+
+.row-actions__btn--info:hover {
+  color: var(--color-info);
+  background: var(--color-info-soft);
 }
 
 /* Phones: the SAME table as desktop — one layout everywhere — inside a

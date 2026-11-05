@@ -8,6 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
@@ -41,7 +42,7 @@ interface TreasuryRow {
 @Component({
   selector: 'app-treasury-list',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, SelectModule,
     InputNumberModule, TextareaModule, PageHeaderComponent, AsyncPageComponent, StatTileComponent,
     DataTableComponent, TableBodyDirective, TableColDirective, EmptyStateComponent, FormDialogComponent,
@@ -55,6 +56,8 @@ interface TreasuryRow {
         <p-button [label]="'treasury.list.add' | translate" size="small" routerLink="/treasury/new" />
       </div>
     </app-page-header>
+
+    <app-section-nav module="treasury" />
 
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {

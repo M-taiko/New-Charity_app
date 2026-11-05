@@ -9,13 +9,15 @@ use App\Models\Custody;
 use App\Models\CustodyReturnRequest;
 use App\Models\TreasuryTransaction;
 use App\Services\TreasuryService;
+use App\Services\ExportService;
 use App\Support\Api\ApiList;
 use Illuminate\Http\JsonResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
 
 final class CustodyController extends Controller
 {
-    public function __construct(private TreasuryService $service) {}
+    public function __construct(private TreasuryService $service, private readonly ExportService $exports) {}
 
     /** GET /api/v1/custodies — management list (T9 cards add up to the total) */
     public function index(Request $request): JsonResponse
@@ -25,12 +27,21 @@ final class CustodyController extends Controller
         $paginator = ApiList::paginate(
             Custody::with(['agent', 'accountant', 'treasury']),
             $request,
-            sortable: ['amount' => 'amount', 'created_at' => 'created_at', 'date' => 'created_at', 'agent' => 'agent_id', 'transferred_in' => 'transferred_in', 'spent' => 'spent', 'status' => 'status'],
+            sortable: ['amount' => 'amount', 'created_at' => 'created_at', 'date' => 'created_at', 'agent' => 'agent_id', 'transferred_in' => 'transferred_in', 'spent' => 'spent', 'status' => 'status', 'remaining' => 'raw:(amount + transferred_in - spent - returned - pending_return)', 'spent_percent' => 'raw:ROUND(((spent + returned) / NULLIF(amount + transferred_in, 0)) * 100, 1)'],
             search: fn ($q, $term) => $q->whereHas('agent', fn ($a) => $a->where('name', 'like', "%{$term}%"))
                 ->orWhere('notes', 'like', "%{$term}%"),
-            filters: [
-                'status' => fn ($q, $v) => $q->where('status', $v),
-                'agent_id' => fn ($q, $v) => $q->where('agent_id', (int) $v),
+            filterable: [
+                // T6-30: the declared allowlist — meta.filters drives the table UI
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'pending', 'label' => 'معلقة'],
+                    ['value' => 'accepted', 'label' => 'مقبولة'],
+                    ['value' => 'active', 'label' => 'نشطة'],
+                    ['value' => 'partially_returned', 'label' => 'مرتجع جزئياً'],
+                    ['value' => 'closed', 'label' => 'مغلقة'],
+                    ['value' => 'cancelled', 'label' => 'ملغاة'],
+                    ['value' => 'rejected', 'label' => 'مرفوضة'],
+                ]],
+                'agent_id' => ['type' => 'lookup', 'column' => 'agent_id'],
             ],
         );
 
@@ -122,6 +133,53 @@ final class CustodyController extends Controller
     }
 
     /** GET /api/v1/custodies/mine — my custodies page (open to every user, round 3) */
+    /**
+     * GET /api/v1/custodies/export?format=xlsx|pdf|csv (T6-71) — same query
+     * and authorization as index().
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $this->authorize('may_manage_treasury');
+
+        $query = Custody::with(['agent', 'treasury'])->orderBy('created_at', 'desc');
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('agent_id')) {
+            $query->where('agent_id', (int) $request->agent_id);
+        }
+        if ($request->filled('q')) {
+            $term = (string) $request->q;
+            $query->whereHas('agent', fn ($a) => $a->where('name', 'like', "%{$term}%"))
+                ->orWhere('notes', 'like', "%{$term}%");
+        }
+
+        $rows = $query->limit(ExportService::MAX_ROWS + 1)->get()
+            ->map(fn (Custody $c) => [
+                'id' => $c->id,
+                'agent' => $c->agent?->name,
+                'treasury' => $c->treasury?->name,
+                'amount' => (float) $c->amount,
+                'spent' => (float) $c->spent,
+                'returned' => (float) $c->returned,
+                'remaining' => (float) $c->getRemainingBalance(),
+                'status' => $c->status,
+                'created_at' => optional($c->created_at)->format('Y-m-d'),
+            ]);
+
+        return $this->exports->export($request, $rows, [
+            ['key' => 'id', 'label' => '#'],
+            ['key' => 'agent', 'label' => 'المندوب'],
+            ['key' => 'treasury', 'label' => 'الخزينة'],
+            ['key' => 'amount', 'label' => 'المبلغ', 'numeric' => true, 'total' => true],
+            ['key' => 'spent', 'label' => 'المنصرف', 'numeric' => true, 'total' => true],
+            ['key' => 'returned', 'label' => 'المرتجع', 'numeric' => true, 'total' => true],
+            ['key' => 'remaining', 'label' => 'المتبقي', 'numeric' => true, 'total' => true],
+            ['key' => 'status', 'label' => 'الحالة'],
+            ['key' => 'created_at', 'label' => 'التاريخ'],
+        ], 'custodies');
+    }
+
     public function mine(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -270,7 +328,7 @@ final class CustodyController extends Controller
         $paginator = ApiList::paginate(
             CustodyReturnRequest::with(['custody.agent', 'requester', 'approver']),
             $request,
-            sortable: ['date' => 'created_at', 'amount' => 'amount', 'custody_id' => 'custody_id', 'agent' => 'custody_id', 'requested_by' => 'requested_by', 'reason' => 'reason', 'status' => 'status'],
+            sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'amount' => 'amount', 'custody_id' => 'custody_id', 'agent' => 'custody_id', 'requested_by' => 'requested_by', 'reason' => 'reason', 'status' => 'status', 'approved_by' => 'approved_by', 'approved_at' => 'approved_at'],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('reason', 'like', "%{$term}%")
                 ->orWhereHas('custody.agent', fn ($a) => $a->where('name', 'like', "%{$term}%"))),
@@ -391,6 +449,9 @@ final class CustodyController extends Controller
             'status' => $t->status,
             'notes' => $t->notes,
             'created_at' => $t->created_at?->toIso8601ZuluString(),
+            // T6-80: المرسل (أو المدير) يمكنه إلغاء تحويله المعلق
+            'can_cancel' => $t->status === 'pending'
+                && ((int) $t->from_agent_id === (int) auth()->id() || auth()->user()?->hasRole('مدير')),
         ];
     }
 

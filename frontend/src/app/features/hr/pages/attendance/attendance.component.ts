@@ -13,6 +13,7 @@ import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -35,7 +36,7 @@ interface Row {
 @Component({
   selector: 'app-attendance-page',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe, FormsModule, ButtonModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, DatetimePipe, EnumLabelPipe,
@@ -46,6 +47,8 @@ interface Row {
     <app-page-header [title]="'hr.attendance.title' | translate">
       <div actions><p-button [label]="'hr.attendance.add' | translate" size="small" (onClick)="dialogOpen.set(true)" /></div>
     </app-page-header>
+
+    <app-section-nav module="hr" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
@@ -60,10 +63,10 @@ interface Row {
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap">
             <app-field label="hr.attendance.month" controlId="att-filter-month" class="u-m-0">
-              <p-select inputId="att-filter-month" [options]="monthOptions" optionLabel="label" optionValue="value" [ngModel]="params().month" name="month" (ngModelChange)="setParam('month', $event)" styleClass="u-full" />
+              <p-select inputId="att-filter-month" appendTo="body" [options]="monthOptions" optionLabel="label" optionValue="value" [ngModel]="params().month" name="month" (ngModelChange)="setParam('month', $event)" styleClass="u-full" />
             </app-field>
             <app-field label="hr.attendance.year" controlId="att-filter-year" class="u-m-0">
-              <p-select inputId="att-filter-year" [options]="yearOptions" optionLabel="label" optionValue="value" [ngModel]="params().year" name="year" (ngModelChange)="setParam('year', $event)" styleClass="u-full" />
+              <p-select inputId="att-filter-year" appendTo="body" [options]="yearOptions" optionLabel="label" optionValue="value" [ngModel]="params().year" name="year" (ngModelChange)="setParam('year', $event)" styleClass="u-full" />
             </app-field>
           </div>
           <ng-template appTableBody let-row>

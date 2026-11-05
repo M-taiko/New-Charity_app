@@ -144,6 +144,10 @@ export class NotificationBellComponent implements OnDestroy {
 
   constructor() {
     document.addEventListener('click', this.outsideClick);
+    // the chime needs an unlocked AudioContext — the first user gesture
+    // anywhere in the app provides it (once per session)
+    document.addEventListener('pointerdown', this.unlockAudio, { once: true });
+    document.addEventListener('keydown', this.unlockAudio, { once: true });
 
     // T22: loud chime on a NEW unread notification, unless muted
     effect(() => {
@@ -157,6 +161,8 @@ export class NotificationBellComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    document.removeEventListener('pointerdown', this.unlockAudio);
+    document.removeEventListener('keydown', this.unlockAudio);
     document.removeEventListener('click', this.outsideClick);
   }
 
@@ -179,7 +185,11 @@ export class NotificationBellComponent implements OnDestroy {
     }
   }
 
-  private chime(): void {
+  /** one shared context — created only inside a user gesture (autoplay policy),
+   * so the browser never logs "AudioContext was not allowed to start" */
+  private audioCtx: AudioContext | null = null;
+
+  private readonly unlockAudio = (): void => {
     try {
       const Ctx =
         window.AudioContext ??
@@ -187,7 +197,21 @@ export class NotificationBellComponent implements OnDestroy {
       if (!Ctx) {
         return;
       }
-      const ctx = new Ctx();
+      this.audioCtx = this.audioCtx ?? new Ctx();
+      void this.audioCtx.resume();
+    } catch {
+      this.audioCtx = null;
+    }
+  };
+
+  private chime(): void {
+    try {
+      const ctx = this.audioCtx;
+      // without a prior user gesture the context stays suspended — skip
+      // silently (the unread badge still shows the count)
+      if (!ctx || ctx.state !== 'running') {
+        return;
+      }
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';

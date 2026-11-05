@@ -52,7 +52,28 @@
     "org_name": "مؤسسة نجيب سليم الخيرية",
     "list_separator": "، ",
     "retry": "إعادة المحاولة",
-    "loading": "جارٍ التحميل"
+    "loading": "جارٍ التحميل",
+    "more": "المزيد",
+    "auto_refresh": "تحديث تلقائي",
+    "filters": "عوامل التصفية",
+    "apply": "تطبيق",
+    "clear_all": "مسح الكل",
+    "min": "الأدنى",
+    "max": "الأقصى",
+    "from": "من",
+    "to": "إلى",
+    "filter_custom": "عامل تصفية مخصص",
+    "export": "تصدير",
+    "export_excel": "Excel (xlsx)",
+    "export_pdf": "PDF",
+    "export_csv": "CSV",
+    "export_done": "تم التصدير بنجاح",
+    "print_portrait": "طباعة (طولي A4)",
+    "print_landscape": "طباعة (عرضي A4)",
+    "print_all_rows": "طباعة كل الصفوف",
+    "print_page_only": "طباعة الصفحة الحالية فقط",
+    "print_cap_notice": "تم اقتصار الطباعة على أول {{count}} صف",
+    "file_hint": "PDF أو JPG أو PNG أو DOC أو DOCX — بحد أقصى 2 ميجابايت — رفع ملف جديد يستبدل الملف الحالي"
   },
   "nav": {
     "main_aria": "القائمة الرئيسية",
@@ -95,7 +116,7 @@
       "work": "العمل",
       "admin": "الإدارة"
     },
-    "transfers": "transfers",
+    "transfers": "التحويلات",
     "open_menu": "فتح القائمة"
   },
   "auth": {
@@ -147,7 +168,8 @@
     "transfer_status": {
       "pending": "معلق",
       "approved": "مقبول",
-      "rejected": "مرفوض"
+      "rejected": "مرفوض",
+      "cancelled": "ملغي"
     },
     "return_request": {
       "pending": "معلق",
@@ -246,70 +268,55 @@
   "dashboard": {
     "welcome": "أهلاً بك، {{name}}",
     "finance": {
-      "year": "السنة",
       "charts": {
         "expenses_by_day": "المصروفات آخر ٧ أيام"
       },
       "agents_eval": "تقييم المناديب",
       "researchers_eval": "تقييم الباحثين",
-      "total_treasury_and_custodies": "إجمالي الخزينة والعهد",
       "treasury_balance": "رصيد الخزينة",
       "total_custodies": "إجمالي العهد",
       "total_spent": "إجمالي المصروفات",
       "today_expenses": "مصروفات اليوم",
       "active_custodies": "العهد النشطة",
-      "agents_count": "إجمالي المناديب"
+      "agents_count": "إجمالي المناديب",
+      "pending_custodies": "عهد معلقة",
+      "pending_cases": "حالات معلقة"
     },
     "researcher": {
       "recent_cases": "أحدث الحالات",
       "total_cases": "إجمالي حالاتي",
       "approved": "حالات موافق عليها",
       "pending": "حالات معلقة",
-      "rejected": "حالات مرفوضة",
-      "approval_rate": "نسبة الموافقة"
+      "approval_rate": "نسبة الموافقة",
+      "new_case": "حالة جديدة"
     },
     "agent": {
       "frozen": "مجمّد لتحويل معلق",
-      "pending_return": "قيد الرد",
       "received": "إجمالي المستلم",
       "remaining": "رصيدي الحالي",
       "returned": "إجمالي المبالغ المردودة",
       "spent": "إجمالي المصروفات",
-      "transferred_out": "محول منه"
+      "quick_expense": "مصروف جديد"
     },
     "title": "الرئيسية",
-    "shortcuts_title": "اختصارات سريعة",
-    "shortcuts": {
-      "active_custodies": "العهد النشطة",
-      "active_custodies_desc": "العهد قيد الاستخدام الحالي",
-      "all_cases": "جميع الحالات",
-      "all_cases_desc": "عرض جميع الحالات في النظام",
-      "approved_cases": "الحالات الموافق عليها",
-      "approved_cases_desc": "الحالات التي تم الموافقة عليها",
-      "cases_desc": "عرض ومتابعة الحالات",
-      "custodies_desc": "إدارة العهد والمتابعة",
-      "expenses_desc": "عرض وتسجيل المصروفات",
-      "my_cases_desc": "عرض جميع حالاتي الاجتماعية",
-      "my_custodies_desc": "عرض العهد الموكولة إليّ",
-      "my_expenses_desc": "تسجيل ومتابعة مصروفاتي",
-      "my_report": "تقريري",
-      "my_report_desc": "عرض ملخص الأداء والإحصائيات",
-      "new_case": "حالة جديدة",
-      "new_case_desc": "تسجيل حالة اجتماعية جديدة",
-      "new_custody": "عهدة جديدة",
-      "new_custody_desc": "تخصيص عهدة لمندوب",
-      "new_expense": "مصروف جديد",
-      "new_expense_desc": "تسجيل مصروف جديد",
-      "pending_cases": "الحالات المعلقة",
-      "pending_cases_desc": "حالاتي التي تحتاج متابعة",
-      "quick_expense": "مصروف سريع",
-      "quick_expense_desc": "تسجيل مصروف جديد بسرعة",
-      "reports_desc": "عرض التقارير والإحصائيات",
-      "track_custody": "تتبع العهد",
-      "track_custody_desc": "متابعة تفاصيل العهد الحالية",
-      "treasury_desc": "عرض وإدارة جميع الخزائن والأرصدة",
-      "users_desc": "إدارة المندوبين والفريق"
-    }
+    "bento": {
+      "kpi": "مؤشرات سريعة",
+      "quick_actions": "إجراءات سريعة",
+      "attention": "بحاجة إلى انتباه",
+      "money_flow": "حركة الأموال",
+      "performance": "الأداء",
+      "activity": "النشاط الأخير",
+      "customize": "تخصيص اللوحة",
+      "view_all": "عرض الكل"
+    },
+    "range": {
+      "today": "اليوم",
+      "7d": "آخر ٧ أيام",
+      "30d": "آخر ٣٠ يوم",
+      "month": "هذا الشهر",
+      "year": "هذا العام"
+    },
+    "date_format": "EEEE، d MMMM y"
   },
   "treasury": {
     "list": {
@@ -386,12 +393,10 @@
       "total": "إجمالي العهد",
       "col_transferred_out": "تحويلات صادرة",
       "tab_all": "الكل",
-      "all_custodies": "جميع العهدات",
       "personal_request": "طلب عهدة شخصية",
       "create_for_user": "إنشاء عهدة لمستخدم",
       "agent_request": "طلب عهدة جديدة",
       "transfer_custody": "تحويل عهدة",
-      "my_transfers": "تحويلاتي",
       "reject_action": "رفض العهدة"
     },
     "create": {
@@ -495,7 +500,8 @@
       "donation_type": "نوع العملية",
       "donation_type_external": "تبرع خارجي (عهدة جديدة مستقلة)",
       "donation_type_refund": "استرداد مصروف (يضاف لهذه العهدة)",
-      "donation_hint": "التبرع الخارجي ينشئ عهدة جديدة مستقلة، أما استرداد المصروف فيُعاد لرصيد هذه العهدة مباشرة"
+      "donation_hint": "التبرع الخارجي ينشئ عهدة جديدة مستقلة، أما استرداد المصروف فيُعاد لرصيد هذه العهدة مباشرة",
+      "tab_overview": "نظرة عامة"
     },
     "edit": {
       "title": "تعديل العهدة"
@@ -664,7 +670,8 @@
       "notes": "ملاحظات",
       "available": "المتاح بعد التجميد",
       "over_limit": "المبلغ يتجاوز الحد الأقصى القابل للتحويل",
-      "submit": "إرسال الطلب"
+      "submit": "إرسال الطلب",
+      "choose_custody_first": "اختر العهدة أولاً لمعرفة الرصيد المتاح"
     },
     "detail": {
       "title": "تفاصيل التحويل",
@@ -695,8 +702,6 @@
         "direction": "التوجيه المحاسبي",
         "custody": "العهدة",
         "amount_range": "نطاق المبلغ",
-        "amount_from": "من مبلغ",
-        "amount_to": "إلى مبلغ",
         "date_range": "نطاق التاريخ"
       },
       "empty": "لا توجد مصروفات مطابقة للفلاتر",
@@ -716,7 +721,12 @@
         "warning": "هذا المصروف بدون توجيه محاسبي. اختر التوجيه الآن أو أكمل المراجعة وحدده لاحقاً بالتعديل"
       },
       "option_all": "الكل",
-      "custody_fallback": "عهدة رقم {{id}}"
+      "custody_fallback": "عهدة رقم {{id}}",
+      "tab_purchases": "المشتريات",
+      "tab_salaries": "المرتبات",
+      "purchases_total": "تكلفة المشتريات المنفذة",
+      "salaries_total": "المرتبات المدفوعة",
+      "grand_total": "الإجمالي العام"
     },
     "form": {
       "create_title": "إضافة مصروف جديد",
@@ -1329,7 +1339,8 @@
         "description": "البيان",
         "amount": "المبلغ (ج.م)",
         "approved_at": "موافقة في",
-        "paid_at": "دفع في"
+        "paid_at": "دفع في",
+        "payslip": "قسيمة المرتب (PDF)"
       },
       "edit_title": "تعديل حساب المرتب",
       "history_title": "سجل مرتبات الموظف",
@@ -1640,5 +1651,11 @@
     "skip_to_content": "تخطَّ إلى المحتوى الرئيسي",
     "portrait_only": "الوضع الأفقي معطّل",
     "rotate_device": "أدر جهازك إلى الوضع العمودي لاستخدام النظام"
+  },
+  "transfers": {
+    "cancel": "إلغاء التحويل",
+    "cancel_confirm": "هل تريد إلغاء هذا التحويل المعلق؟ سيتم تحرير المبلغ المجمد فوراً وإخطار المستقبل.",
+    "cancel_success": "تم إلغاء التحويل وتحرير المبلغ المجمد",
+    "cancelled_by": "ألغاه"
   }
 }

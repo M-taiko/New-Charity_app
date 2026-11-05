@@ -7,8 +7,9 @@ import { HttpClient } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { SelectModule } from 'primeng/select';
-import { FormsModule } from '@angular/forms';
+import { SplitButtonModule } from 'primeng/splitbutton';
+import type { MenuItem } from 'primeng/api';
+import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { ApiClient } from '@core/http/api-client';
 import { ToastService } from '@core/errors/toast.service';
@@ -24,7 +25,8 @@ import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.co
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ActionResponse, ListResponse } from '@shared/models/api.models';
-import { FieldComponent } from '@shared/ui/field/field.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
+import type { TableFilterDef, TableQuery } from '@shared/lib/table-filters';
 
 interface Row {
   id: number;
@@ -60,32 +62,32 @@ interface CustodyListParams {
   selector: 'app-custody-list',
   standalone: true,
   imports: [
-    FieldComponent, TranslatePipe, RouterLink, ButtonModule, SelectModule, FormsModule,
+    TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, StatusStampComponent,
-    ReasonDialogComponent,
+    ReasonDialogComponent, SectionNavComponent, SplitButtonModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'custody.list.title' | translate">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
+        <!-- T6-10: creation variants collapse into one split button; navigation
+             moved to the module section-nav below the header -->
         @if (canCreate()) {
           @if (isOffice()) {
-            <p-button [label]="'custody.list.all_custodies' | translate" size="small" [outlined]="true" routerLink="/custodies/tracking" />
-            <p-button [label]="'custody.list.personal_request' | translate" size="small" [outlined]="true" routerLink="/custodies/new?for=self" />
-            <p-button [label]="'custody.list.create_for_user' | translate" size="small" routerLink="/custodies/new?for=agent" />
+            <p-splitbutton appendTo="body" [label]="'custody.list.create_for_user' | translate" size="small"
+                           (onClick)="router.navigateByUrl('/custodies/new?for=agent')" [model]="createMenuItems()" />
           } @else {
             <p-button [label]="'custody.list.create' | translate" size="small" routerLink="/custodies/new" />
           }
         }
-        @if (isAgent()) {
-          <p-button [label]="'custody.mine.title' | translate" size="small" [outlined]="true" routerLink="/custodies/mine" />
-          <p-button [label]="'custody.list.agent_request' | translate" size="small" [outlined]="isOffice() ? false : true" routerLink="/custodies/new" />
-          <p-button [label]="'custody.list.transfer_custody' | translate" size="small" routerLink="/transfers/new" />
-          <p-button [label]="'custody.list.my_transfers' | translate" size="small" [outlined]="true" routerLink="/transfers" />
+        @if (!canCreate() && isAgent()) {
+          <p-button [label]="'custody.list.agent_request' | translate" size="small" routerLink="/custodies/new" />
         }
       </div>
     </app-page-header>
+
+    <app-section-nav module="custodies" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
@@ -97,45 +99,18 @@ interface CustodyListParams {
           <app-stat-tile [label]="'custody.list.total'" [value]="summaryValue('total')" />
         </div>
 
-      <div class="filter-bar">
-        <div class="filter-bar__row">
-          <app-field label="common.status" controlId="cl-status" class="field--lg">
-            <p-select appendTo="body" inputId="cl-status"
-              [options]="statusOptions()"
-              optionLabel="label"
-              optionValue="value"
-              [ngModel]="params().status"
-              (ngModelChange)="setParam('status', $event)"
-              name="status"
-              styleClass="u-full"
-            />
-          </app-field>
-          <app-field label="custody.list.col_agent" controlId="cl-agent" class="field--lg">
-            <p-select appendTo="body" inputId="cl-agent"
-              [options]="agentOptions()"
-              optionLabel="name"
-              optionValue="id"
-              [filter]="true"
-              [showClear]="true"
-              [placeholder]="'common.choose' | translate"
-              [ngModel]="params().agent_id ?? null"
-              (ngModelChange)="setParam('agent_id', $event)"
-              name="agent_id"
-              styleClass="u-full"
-            />
-          </app-field>
-          <span class="filter-bar__spacer"></span>
-        </div>
-      </div>
-
       <app-data-table
         [tableKey]="tableKey"
         [columns]="columns"
         [rows]="page.data"
         [total]="page.meta.total"
+        [sortableKeys]="page.meta.sortable ?? null"
+        [filters]="filterDefs()"
+        exportPath="/custodies/export"
         [perPage]="params().per_page"
         [loading]="data.isLoading()"
         (pageChange)="onPage($event)"
+        (queryChange)="onQuery($event)"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
         <ng-template appTableBody let-row>
@@ -207,6 +182,7 @@ export class CustodyListPage {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
+  protected router = inject(Router);
   private api = inject(ApiClient);
   private translate = inject(TranslateService);
 
@@ -270,6 +246,40 @@ export class CustodyListPage {
   isAgent = computed(() => this.auth.can('is_agent'));
   /** Blade: accountants and managers get the office variants of the create buttons */
   isOffice = computed(() => this.auth.can('is_accountant') || this.auth.can('is_manager'));
+
+  /** creation variants in the split button (T6-10): for me / as agent / transfer */
+  createMenuItems = computed<MenuItem[]>(() => [
+    { label: this.translate.instant('custody.list.personal_request'), command: () => void this.router.navigateByUrl('/custodies/new?for=self') },
+    { label: this.translate.instant('custody.list.agent_request'), command: () => void this.router.navigateByUrl('/custodies/new') },
+    { label: this.translate.instant('custody.list.transfer_custody'), command: () => void this.router.navigateByUrl('/transfers/new') },
+  ]);
+
+  // ── T6-30: table-driven filter definitions (agent, status) ────────────
+  readonly filterDefs = computed<TableFilterDef[]>(() => [
+    {
+      key: 'status', label: 'common.status', type: 'select', order: 1,
+      options: this.statusOptions().filter((o) => o.value !== 'all'),
+    },
+    {
+      key: 'agent_id', label: 'custody.list.col_agent', type: 'select', order: 2,
+      options: this.agentOptions().map((a) => ({ value: a.id, label: a.name })),
+    },
+  ]);
+
+  /** the table emits the full query — filters reach the server (T6-30) */
+  onQuery(query: TableQuery): void {
+    const f = query.filters;
+    this.params.update((p) => ({
+      ...p,
+      page: query.page,
+      per_page: query.perPage,
+      sort: query.sort !== '' ? query.sort : p.sort,
+      q: query.q,
+      status: (f.status as string) ?? 'all',
+      agent_id: (f.agent_id as number) ?? null,
+    }));
+    this.data.reload();
+  }
 
   active = signal<Row | null>(null);
   sending = signal(false);

@@ -94,8 +94,10 @@
   <path d="M11 6l9 0" />
   <path d="M11 12l9 0" />
   <path d="M11 18l9 0" /></symbol>
-<symbol id="tabler-message-circle" viewBox="0 0 24 24"><path  d="M0 0h24v24H0z" fill="none" />
-  <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" /></symbol>
+<symbol id="tabler-message" viewBox="0 0 24 24"><path  d="M0 0h24v24H0z" fill="none" />
+  <path d="M8 9h8" />
+  <path d="M8 13h6" />
+  <path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12" /></symbol>
 <symbol id="tabler-bell" viewBox="0 0 24 24"><path  d="M0 0h24v24H0z" fill="none" />
   <path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" />
   <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></symbol>
@@ -128,10 +130,7 @@
   <path d="M6.5 17h11" />
   <path d="M6 20v-2a6 6 0 1 1 12 0v2a1 1 0 0 1 -1 1h-10a1 1 0 0 1 -1 -1" />
   <path d="M6 4v2a6 6 0 1 0 12 0v-2a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1" /></symbol>
-<symbol id="tabler-info-circle" viewBox="0 0 24 24"><path  d="M0 0h24v24H0z" fill="none" />
-  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
-  <path d="M12 9h.01" />
-  <path d="M11 12h1v4h1" /></symbol>
+<symbol id="tabler-info" viewBox="0 0 24 24"><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></symbol>
 <symbol id="tabler-lock" viewBox="0 0 24 24"><path  d="M0 0h24v24H0z" fill="none" />
   <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6" />
   <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
@@ -211,10 +210,9 @@
   <path d="M7.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
   <path d="M11.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" />
   <path d="M15.5 10.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></symbol>
-<symbol id="tabler-user-circle" viewBox="0 0 24 24"><path  d="M0 0h24v24H0z" fill="none" />
-  <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
-  <path d="M9 10a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" />
-  <path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855" /></symbol>
+<symbol id="tabler-user" viewBox="0 0 24 24"><path  d="M0 0h24v24H0z" fill="none" />
+  <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+  <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /></symbol>
 <symbol id="tabler-pin" viewBox="0 0 24 24"><path  d="M0 0h24v24H0z" fill="none" />
   <path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4" />
   <path d="M9 15l-4.5 4.5" />

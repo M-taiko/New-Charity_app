@@ -4,6 +4,7 @@
 @use '01-base/reset';
 @use '01-base/typography';
 @use '01-base/print';
+@use '01-base/motion';
 @use '02-primeng/dark-overrides';
 @use '02-primeng/polish';
 @use '03-blocks/app-shell';
@@ -15,7 +16,11 @@
 @use '03-blocks/data-table';
 @use '03-blocks/stat-tile';
 @use '03-blocks/kpi-grid';
+@use '03-blocks/dashboard-bento';
 @use '03-blocks/stamp';
+@use '03-blocks/app-tabs';
+@use '03-blocks/section-nav';
+@use '03-blocks/icon-chip';
 @use '03-blocks/flow-ribbon';
 @use '03-blocks/balance-ring';
 @use '03-blocks/direction-trail';

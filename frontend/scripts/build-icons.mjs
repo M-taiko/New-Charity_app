@@ -10,9 +10,21 @@ const root = resolve(here, '..');
 const mapSource = readFileSync(resolve(root, 'src/app/shared/ui/icon/icon-map.ts'), 'utf8');
 const iconNames = [...mapSource.matchAll(/'([a-z0-9-]+)'\s*[,}]/g)].map((m) => m[1]);
 
+// Frameless overrides (T6-41): Tabler ships some glyphs only inside an
+// enclosing circle/square. Inside buttons that circle draws a second frame,
+// so these names resolve to the bare inner strokes instead.
+const BARE_OVERRIDES = {
+  // the "i" strokes of info-circle without the ring
+  info: '<path d="M12 9h.01" /><path d="M11 12h1v4h1" />',
+};
+
 const symbols = [];
 const missing = [];
 for (const name of iconNames) {
+  if (name in BARE_OVERRIDES) {
+    symbols.push(`<symbol id="tabler-${name}" viewBox="0 0 24 24">${BARE_OVERRIDES[name]}</symbol>`);
+    continue;
+  }
   const file = resolve(root, `node_modules/@tabler/icons/icons/outline/${name}.svg`);
   if (!existsSync(file)) {
     missing.push(name);

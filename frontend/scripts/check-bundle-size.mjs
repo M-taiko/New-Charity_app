@@ -18,7 +18,8 @@ if (!existsSync(dist)) {
 // gzipped bytes; targets keep us honest, maxes guard the build
 const BUDGETS = {
   initial: { target: 300 * 1024, max: 350 * 1024 }, // initial JS
-  lazyChunk: { target: 100 * 1024, max: 120 * 1024 }, // per lazy chunk
+  // Task6: the shared table chunk (filters UI + datepicker + export/print menus) lands at ~124KB — max raised once (user: skip the bundle size)
+  lazyChunk: { target: 100 * 1024, max: 128 * 1024 }, // per lazy chunk
   globalCss: { target: 50 * 1024, max: 60 * 1024 },
 };
 

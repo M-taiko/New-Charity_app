@@ -11,6 +11,8 @@ import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { LedgerTableComponent, LedgerBodyDirective, LedgerColDirective, type LedgerColumn } from '@shared/ui/ledger-table/ledger-table.component';
+import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
+import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
@@ -72,7 +74,7 @@ interface CaseDetail {
 @Component({
   selector: 'app-case-detail',
   standalone: true,
-  imports: [
+  imports: [AppTabsComponent, 
     TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent,
     AsyncPageComponent, LedgerTableComponent, LedgerBodyDirective, LedgerColDirective,
     KeyValueListComponent, StatusStampComponent, StatTileComponent, PrintSheetComponent,
@@ -83,17 +85,11 @@ interface CaseDetail {
     <app-print-sheet [title]="'case.detail.title' | translate">
       <app-page-header [title]="headerTitle()">
         <div actions class="u-flex u-gap-2 u-flex-wrap">
-          @if (safeValue(); as item) {
-            @if (canReview() && item.status === 'pending') {
-              <p-button [label]="'case.detail.approve' | translate" size="small" (onClick)="act('approve')" [loading]="sending()" />
-              <p-button [label]="'case.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="openReject()" [loading]="sending()" />
-            }
-            @if (canManage()) {
-              <p-button [label]="item.is_active ? ('case.actions.deactivate' | translate) : ('case.actions.activate' | translate)" size="small" severity="secondary" [outlined]="true" (onClick)="act('toggle-active')" [loading]="sending()" />
-            }
+          <!-- T6-10: max 3 visible buttons; decisions live in the sticky bar -->
+          @if (canManage()) {
+            <p-button [label]="'common.edit' | translate" size="small" severity="secondary" [outlined]="true" [routerLink]="['/cases', id(), 'edit']" />
           }
           @if (canManage()) {
-            <p-button [label]="'common.edit' | translate" size="small" [routerLink]="['/cases', id(), 'edit']" />
             <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="openCaseDelete()" />
           }
           <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/cases" />
@@ -102,6 +98,19 @@ interface CaseDetail {
 
       <app-async-page [resource]="pageResource" variant="detail" [backLink]="['/cases']">
         @if (safeValue(); as item) {
+          <!-- T6-10: one sticky action bar — primary decision first, destructive-free ordering -->
+          <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
+            @if (canReview() && item.status === 'pending') {
+              <p-button [label]="'case.detail.approve' | translate" size="small" severity="success" (onClick)="act('approve')" [loading]="sending()" />
+            }
+            @if (canReview() && item.status === 'pending') {
+              <p-button [label]="'case.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="openReject()" [loading]="sending()" />
+            }
+            @if (canManage()) {
+              <p-button [label]="item.is_active ? ('case.actions.deactivate' | translate) : ('case.actions.activate' | translate)"
+                        size="small" severity="warn" [outlined]="true" (onClick)="act('toggle-active')" [loading]="sending()" />
+            }
+          </div>
           <div class="u-mb-4"><app-status-stamp [status]="item.status" namespace="social_case" [large]="true" /></div>
 
           <div class="kpi-grid">
@@ -156,6 +165,9 @@ interface CaseDetail {
             </section>
           }
 
+          <app-tabs id="case-detail" [tabs]="tabs()" [(active)]="caseTab" />
+
+          @if (caseTab() === 'expenses') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'case.detail.expenses' | translate }}</span></div>
             <app-ledger-table [columns]="expenseCols" [rows]="item.expenses" [emptyLabel]="'case.detail.empty_expenses'">
@@ -171,6 +183,9 @@ interface CaseDetail {
             </app-ledger-table>
           </section>
 
+          }
+
+          @if (caseTab() === 'family') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'case.detail.family_members' | translate }} ({{ item.family_members.length }})</span></div>
             <app-ledger-table [columns]="familyCols" [rows]="item.family_members" [emptyLabel]="'case.modal.empty_family'">
@@ -186,7 +201,9 @@ interface CaseDetail {
             </app-ledger-table>
           </section>
 
-          @if (item.documents.length) {
+          }
+
+          @if (caseTab() === 'documents' && item.documents.length) {
             <section class="chart-card u-mt-4">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'case.detail.documents' | translate }}</span></div>
               <div class="u-column">
@@ -221,6 +238,14 @@ interface CaseDetail {
   `,
 })
 export class CaseDetailPage {
+  /** sections (T6-11): family members / expenses / documents — one table at a time */
+  caseTab = signal<string>('expenses');
+  readonly tabs = computed<AppTab[]>(() => [
+    { id: 'expenses', label: 'case.detail.expenses' },
+    { id: 'family', label: 'case.detail.family_members' },
+    { id: 'documents', label: 'case.detail.documents' },
+  ]);
+
   private http = inject(HttpClient);
   private api = inject(ApiClient);
   private auth = inject(AuthService);

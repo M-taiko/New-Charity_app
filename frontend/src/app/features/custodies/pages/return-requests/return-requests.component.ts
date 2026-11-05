@@ -12,6 +12,7 @@ import { SelectModule } from 'primeng/select';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
@@ -58,7 +59,7 @@ interface ReturnRequestParams {
 @Component({
   selector: 'app-return-requests',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
@@ -71,6 +72,8 @@ interface ReturnRequestParams {
 
       </div>
     </app-page-header>
+
+    <app-section-nav module="custodies" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {

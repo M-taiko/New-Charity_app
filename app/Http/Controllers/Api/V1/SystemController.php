@@ -121,7 +121,7 @@ final class SystemController extends Controller
         $paginator = ApiList::paginate(
             Notification::where('user_id', $request->user()->id),
             $request,
-            sortable: ['date' => 'created_at', 'title' => 'title', 'message' => 'message'],
+            sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'title' => 'title', 'message' => 'message'],
             filters: ['unread' => fn ($q, $v) => $v === '1' ? $q->where('is_read', false) : null],
         );
         $paginator->getCollection()->transform(fn ($n) => [
@@ -149,7 +149,7 @@ final class SystemController extends Controller
         $paginator = ApiList::paginate(
             Broadcast::with('creator'),
             $request,
-            sortable: ['date' => 'created_at', 'title' => 'title', 'level' => 'level', 'sender' => 'created_by'],
+            sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'expires_at' => 'expires_at', 'title' => 'title', 'level' => 'level', 'sender' => 'created_by'],
             filters: ['status' => fn ($q, $v) => $q->where('is_active', $v === 'active')],
         );
         $paginator->getCollection()->transform(fn ($b) => [
@@ -202,7 +202,7 @@ final class SystemController extends Controller
         $paginator = ApiList::paginate(
             $scope(ActivityLog::with('user')),
             $request,
-            sortable: ['date' => 'created_at'],
+            sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'user' => 'user_id', 'event' => 'event', 'description' => 'description'],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('description', 'like', "%{$term}%")
                 ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$term}%"))),

@@ -43,6 +43,8 @@ interface UserCustody {
                     [(ngModel)]="custodyId" name="custody" required styleClass="u-full" />
           @if (selected(); as c) {
             <span class="field__hint u-bidi">{{ 'transfer.create.available' | translate }}: {{ c.remaining | money }}</span>
+          } @else {
+            <span class="field__hint">{{ 'transfer.create.choose_custody_first' | translate }}</span>
           }
         </app-field>
         <app-field label="transfer.create.receiver" controlId="receiver" [required]="true" [error]="serverFieldError(error(), 'to_agent_id')">

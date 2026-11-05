@@ -23,7 +23,7 @@ final class SocialCaseController extends Controller
         $paginator = ApiList::paginate(
             SocialCase::with(['researcher']),
             $request,
-            sortable: ['date' => 'created_at', 'name' => 'name', 'amount' => 'assistance_amount', 'phone' => 'phone', 'governorate' => 'city', 'researcher' => 'researcher_id', 'status' => 'status'],
+            sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'name' => 'name', 'amount' => 'assistance_amount', 'phone' => 'phone', 'governorate' => 'city', 'researcher' => 'researcher_id', 'status' => 'status'],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$term}%")
                 ->orWhere('phone', 'like', "%{$term}%")
@@ -62,7 +62,7 @@ final class SocialCaseController extends Controller
         $paginator = ApiList::paginate(
             SocialCase::where('researcher_id', $request->user()->id),
             $request,
-            sortable: ['date' => 'created_at', 'name' => 'name', 'phone' => 'phone', 'assistance_type' => 'assistance_type', 'status' => 'status'],
+            sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'name' => 'name', 'phone' => 'phone', 'assistance_type' => 'assistance_type', 'status' => 'status'],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$term}%")->orWhere('phone', 'like', "%{$term}%")),
             filters: ['status' => fn ($q, $v) => $q->where('status', $v)],

@@ -165,7 +165,7 @@ export class TopbarComponent {
   }
 
   levelIcon(level: string): string {
-    return level === 'info' ? 'info-circle' : 'alert-triangle';
+    return level === 'info' ? 'info' : 'alert-triangle';
   }
 
   levelKey(level: string): string {

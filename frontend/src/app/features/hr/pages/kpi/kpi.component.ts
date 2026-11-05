@@ -12,6 +12,7 @@ import { SelectModule } from 'primeng/select';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -34,7 +35,7 @@ interface Row {
 @Component({
   selector: 'app-kpi-page',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe, FormsModule, ButtonModule,
     InputTextModule, SelectModule, InputNumberModule,
     PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
@@ -45,6 +46,8 @@ interface Row {
     <app-page-header [title]="'hr.kpi.title' | translate">
       <div actions><p-button [label]="'hr.kpi.add' | translate" size="small" (onClick)="dialogOpen.set(true)" /></div>
     </app-page-header>
+
+    <app-section-nav module="hr" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {

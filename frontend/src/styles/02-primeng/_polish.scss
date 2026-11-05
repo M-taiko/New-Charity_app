@@ -262,10 +262,10 @@
   color: var(--palette-cream);
 }
 
-/* Topbar icon buttons */
+/* Topbar icon buttons — ghost: glyph only at rest (T6-41) */
 :root[data-theme='light'] .topbar__icon-btn {
-  background: var(--palette-white);
-  border: 1px solid var(--palette-sand);
+  background: transparent;
+  border: none;
   color: var(--palette-mid);
 
   &:hover {

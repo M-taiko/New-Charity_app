@@ -74,6 +74,15 @@ interface SalaryDetail {
   template: `
     <app-async-page [resource]="data" variant="detail" [backLink]="['/hr/salaries']">
       @if (safeValue(); as item) {
+          <!-- T6-10: one sticky action bar — primary decision first -->
+          <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
+            @if (item.status === 'calculated') {
+              <p-button [label]="'hr.salaries.detail.approve' | translate" size="small" severity="success" (onClick)="act('approve')" [loading]="sending()" />
+            }
+            @if (item.status === 'approved') {
+              <p-button [label]="'hr.salaries.detail.record_expense' | translate" size="small" severity="success" (onClick)="act('record-expense')" [loading]="sending()" />
+            }
+          </div>
         <app-print-sheet [title]="'hr.salaries.detail.title' | translate">
           <app-page-header [title]="itemTitle(item)">
             <div actions class="u-flex u-gap-2 u-flex-wrap">
@@ -82,12 +91,13 @@ interface SalaryDetail {
                 <p-button [label]="'hr.salaries.detail.add_allowance' | translate" size="small" severity="info" [outlined]="true" (onClick)="openAllowance()" />
               }
               @if (item.status === 'calculated') {
-                <p-button [label]="'hr.salaries.detail.approve' | translate" size="small" severity="warn" (onClick)="act('approve')" [loading]="sending()" />
+                <p-button [label]="'hr.salaries.detail.approve' | translate" size="small" severity="success" [outlined]="true" (onClick)="act('approve')" [loading]="sending()" />
               }
               @if (item.status === 'approved') {
-                <p-button [label]="'hr.salaries.detail.record_expense' | translate" size="small" severity="success" (onClick)="act('record-expense')" [loading]="sending()" />
+                
               }
-              <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/hr/salaries" />
+              <p-button [label]="'hr.salaries.detail.payslip' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="downloadPayslip()" />
+              <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/hr/salaries" />
             </div>
           </app-page-header>
           <div class="u-mb-4"><app-status-stamp [status]="item.status" namespace="salary" [large]="true" /></div>
@@ -142,6 +152,22 @@ interface SalaryDetail {
   `,
 })
 export class SalaryDetailPage {
+  /** T6-71.6: individual payslip PDF — authenticated blob download */
+  downloadPayslip(): void {
+    void firstValueFrom(this.api.getBlob(`/api/v1/hr/salaries/${this.id()}/payslip`))
+      .then((blob) => {
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = 'payslip.pdf';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => { this.toast.apiError('errors.generic'); });
+  }
+
   private api = inject(ApiClient);
   private toast = inject(ToastService);
   private translate = inject(TranslateService);

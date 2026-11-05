@@ -67,6 +67,7 @@ Route::get('/', function () {
     Route::get('/custody-return-requests', [CustodyReturnRequestController::class, 'index'])->name('custody-return-requests.index');
     Route::post('/custody-transfers/{custodyTransfer}/approve', [CustodyTransferController::class, 'approve'])->name('custody-transfers.approve');
     Route::post('/custody-transfers/{custodyTransfer}/reject', [CustodyTransferController::class, 'reject'])->name('custody-transfers.reject');
+    Route::post('/custody-transfers/{custodyTransfer}/cancel', [CustodyTransferController::class, 'cancel'])->name('custody-transfers.cancel');
     Route::get('/agent/my-custodies', [CustodyController::class, 'myCustodies'])->name('agent.my-custodies');
     // T28: استلام خارجي ذاتي متاح لكل مستخدم مسجل أياً كان دوره (المتحكم لا يفرض دوراً)
     Route::post('/my-external-receipt', [CustodyController::class, 'storeExternalReceipt'])->name('external-receipt.store');
@@ -98,6 +99,7 @@ Route::get('/', function () {
     Route::resource('custody-transfers', CustodyTransferController::class)->only(['index', 'create', 'store', 'show']);
     Route::post('/custody-transfers/{custodyTransfer}/approve', [CustodyTransferController::class, 'approve'])->name('custody-transfers.approve');
     Route::post('/custody-transfers/{custodyTransfer}/reject', [CustodyTransferController::class, 'reject'])->name('custody-transfers.reject');
+    Route::post('/custody-transfers/{custodyTransfer}/cancel', [CustodyTransferController::class, 'cancel'])->name('custody-transfers.cancel');
     Route::get('/api/custody-transfers/sent', [CustodyTransferController::class, 'sentTransfersData'])->name('api.custody-transfers.sent');
     Route::get('/api/custody-transfers/received', [CustodyTransferController::class, 'receivedTransfersData'])->name('api.custody-transfers.received');
     Route::get('/api/custody-transfers/all', [CustodyTransferController::class, 'allTransfersData'])->name('api.custody-transfers.all');

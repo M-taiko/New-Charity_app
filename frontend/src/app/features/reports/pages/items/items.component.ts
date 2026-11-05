@@ -35,7 +35,7 @@ interface ItemsData {
     PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe,
   ],
   template: `
-    <app-print-sheet [title]="'report.items.title' | translate">
+    <app-print-sheet orientation="landscape" [title]="'report.items.title' | translate">
       <app-page-header [title]="'report.items.title' | translate">
         <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
       </app-page-header>

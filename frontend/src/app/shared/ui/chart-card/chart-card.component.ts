@@ -15,6 +15,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { MotionService } from '@core/motion/motion.service';
+import { ChartPrintHelperComponent } from '../print-sheet/print-sheet.component';
 
 export interface ChartSeries {
   label: string;
@@ -29,7 +30,7 @@ export interface ChartSeries {
 @Component({
   selector: 'app-chart-card',
   standalone: true,
-  imports: [TranslatePipe, ButtonModule, MoneyPipe],
+  imports: [TranslatePipe, ButtonModule, MoneyPipe, ChartPrintHelperComponent],
   template: `
     <div class="chart-card">
       <div class="chart-card__head">
@@ -69,6 +70,7 @@ export interface ChartSeries {
           </table>
         } @else {
           <div #host class="u-full" [style.height.px]="height()" style="position: relative;"></div>
+          <app-chart-print-helper [canvas]="printCanvas()" />
         }
       </div>
     </div>
@@ -85,9 +87,12 @@ export class ChartCardComponent implements OnDestroy {
   private host = viewChild<ElementRef<HTMLDivElement>>('host');
   readonly asTable = signal(false);
 
-  // fixed series order: brand, light, ink, taupe, mid, sand (plan 10.1.4)
-  private readonly palette = ['#5D3722', '#9E877A', '#4F2F1D', '#BEAFA7', '#7D5F4E', '#DFD7D3'];
+  // multi-hue, color-blind-safe series palette (T6-40) — 8 colors, ordered so
+  // adjacent slices stay distinguishable in both themes
+  private readonly palette = ['#0F766E', '#B8860B', '#7A4F9E', '#2F6CB3', '#B3555E', '#4F8F3A', '#8A6D3B', '#5E5E5E'];
   private chart: { destroy: () => void; data: { labels: string[]; datasets: { data: number[] }[] } } | null = null;
+  /** the live canvas — the print helper flattens it to an image on beforeprint (T6-70.5) */
+  readonly printCanvas = signal<HTMLCanvasElement | null>(null);
   private chartLib: (new (
     el: HTMLCanvasElement,
     cfg: Record<string, unknown>,
@@ -150,12 +155,16 @@ export class ChartCardComponent implements OnDestroy {
     canvas.style.width = '100%';
     canvas.style.height = '100%';
     el.appendChild(canvas);
+    this.printCanvas.set(canvas);
 
     const labels = series.map((s) => s.label);
     const values = series.map((s) => s.value);
     const colors = series.map((_, i) => this.palette[i % this.palette.length]);
-    const surfaceColor =
-      getComputedStyle(document.documentElement).getPropertyValue('--color-surface').trim() || '#fff';
+    const styles = getComputedStyle(document.documentElement);
+    const surfaceColor = styles.getPropertyValue('--color-surface').trim() || '#fff';
+    // legend/label text follows the theme text color (T6-60 rule: never the
+    // surface color, which made legend text invisible)
+    const textColor = styles.getPropertyValue('--color-text').trim() || '#4F2F1D';
 
     this.chart = new this.chartLib(canvas, {
       type: this.chartType(),
@@ -173,15 +182,27 @@ export class ChartCardComponent implements OnDestroy {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        animation: this.motion.level() === 'full' ? { duration: 350 } : false,
+        resizeDelay: 150,
+        animation: this.motion.level() === 'off'
+          ? false
+          : this.motion.level() === 'full'
+            ? { duration: 800, easing: 'easeOutQuart', delay: (ctx: { type?: string; dataIndex?: number }) => (ctx.type === 'data' ? (ctx.dataIndex ?? 0) * 90 : 0) }
+            : { duration: 350 },
         plugins: {
           legend: {
             display: series.length <= 6,
             position: 'bottom',
-            labels: { boxWidth: 10, font: { size: 11 }, color: surfaceColor },
+            labels: { boxWidth: 10, font: { size: 11 }, color: textColor },
           },
         },
-        ...(this.chartType() === 'bar' ? { scales: { y: { beginAtZero: true } } } : {}),
+        ...(this.chartType() === 'bar'
+          ? {
+              scales: {
+                y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: surfaceColor } },
+                x: { ticks: { color: textColor } },
+              },
+            }
+          : {}),
       },
     }) as typeof this.chart;
   }

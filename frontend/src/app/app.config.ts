@@ -17,6 +17,10 @@ import { firstValueFrom } from 'rxjs';
 import { routes } from './app.routes';
 import { apiUrlInterceptor, errorInterceptor, progressInterceptor } from '@core/http/interceptors';
 import { brandPreset } from '@core/theme/brand-preset';
+import { fixPrimeNgAutofocusDefault } from '@core/primeng/autofocus-default';
+
+// run once before any component renders (see autofocus-default.ts)
+fixPrimeNgAutofocusDefault();
 
 /**
  * Blocks Angular bootstrap until both the Arabic translations AND the web
@@ -53,6 +57,9 @@ export const appConfig: ApplicationConfig = {
       multi: true,
     },
     providePrimeNG({
+      // Global overlay default (T6-15): every dropdown panel attaches to <body>
+      // so it never clips inside scroll containers. Components may override.
+      overlayAppendTo: 'body',
       theme: {
         preset: brandPreset,
         options: {

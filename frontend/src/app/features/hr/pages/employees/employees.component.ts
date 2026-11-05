@@ -6,6 +6,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -28,7 +29,7 @@ interface Row {
 @Component({
   selector: 'app-employees-page',
   standalone: true,
-  imports: [
+  imports: [SectionNavComponent, 
     TranslatePipe,
     PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
     EmptyStateComponent, MoneyPipe, RowActionsComponent,
@@ -36,6 +37,8 @@ interface Row {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'hr.employees.title' | translate" />
+
+    <app-section-nav module="hr" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {

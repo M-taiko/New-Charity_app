@@ -75,7 +75,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'nav.groups.work',
     items: [
       { label: 'nav.tasks', icon: 'list-check', route: '/tasks' },
-      { label: 'nav.chat', icon: 'message-circle', route: '/chat', mobilePriority: 4 },
+      { label: 'nav.chat', icon: 'message', route: '/chat', mobilePriority: 4 },
     ],
   },
   {

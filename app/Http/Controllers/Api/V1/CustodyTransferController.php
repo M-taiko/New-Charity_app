@@ -21,7 +21,7 @@ final class CustodyTransferController extends Controller
         $user = $request->user();
         $scope = (string) $request->query('scope', 'sent');
 
-        $query = CustodyTransfer::with(['fromAgent', 'toAgent', 'custody.treasury', 'approver']);
+        $query = CustodyTransfer::with(['fromAgent', 'toAgent', 'custody.treasury', 'approver', 'canceller']);
 
         $isManagement = $user->can('approve_custody_transfer') || $user->can('manage_treasury');
         if ($scope === 'all') {
@@ -35,7 +35,7 @@ final class CustodyTransferController extends Controller
         $paginator = ApiList::paginate(
             $query,
             $request,
-            sortable: ['date' => 'created_at', 'amount' => 'amount', 'requested_at' => 'created_at', 'sender' => 'from_agent_id', 'receiver' => 'to_agent_id', 'custody_id' => 'custody_id', 'status' => 'status'],
+            sortable: ['date' => 'created_at', 'amount' => 'amount', 'requested_at' => 'created_at', 'sender' => 'from_agent_id', 'receiver' => 'to_agent_id', 'custody_id' => 'custody_id', 'status' => 'status', 'decided_at' => 'approved_at', 'decided_by' => 'approved_by'],
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('notes', 'like', "%{$term}%")
                 ->orWhereHas('fromAgent', fn ($a) => $a->where('name', 'like', "%{$term}%"))
@@ -59,7 +59,7 @@ final class CustodyTransferController extends Controller
         $isManagement = $user->can('approve_custody_transfer') || $user->can('manage_treasury');
         abort_unless($isParty || $isManagement, 403, 'غير مصرح لك بعرض هذا التحويل');
 
-        $custodyTransfer->load(['fromAgent', 'toAgent', 'custody.treasury', 'custody.agent', 'approver']);
+        $custodyTransfer->load(['fromAgent', 'toAgent', 'custody.treasury', 'custody.agent', 'approver', 'canceller']);
 
         $data = $this->row($custodyTransfer, $user->id);
         $custody = $custodyTransfer->custody;
@@ -92,8 +92,21 @@ final class CustodyTransferController extends Controller
             'requested_at' => $t->created_at?->toIso8601ZuluString(),
             'decided_at' => $t->approved_at?->toIso8601ZuluString(),
             'decided_by' => $t->approver?->name,
+            'cancelled_at' => $t->cancelled_at?->toIso8601ZuluString(),
+            'cancelled_by' => $t->canceller?->name,
             // T32: مرسل/مستلم — المستقبل وحده يرى أزرار القبول والرفض
             'can_decide' => $t->status === 'pending' && $t->to_agent_id === $currentUserId,
+            // T6-80: المرسل والمدير يمكنهما إلغاء التحويل المعلق
+            'can_cancel' => $t->status === 'pending'
+                && ((int) $t->from_agent_id === $currentUserId || $this->isManager($currentUserId)),
         ];
+    }
+
+    /** managers may cancel any pending transfer (T6-80) */
+    private function isManager(int $userId): bool
+    {
+        $user = \App\Models\User::find($userId);
+
+        return $user !== null && ($user->hasRole('مدير') || $user->can('approve_custody_transfer'));
     }
 }
