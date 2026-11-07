@@ -34,6 +34,7 @@ import { TopbarComponent } from '../topbar/topbar.component';
               <a
                 class="sidebar__link"
                 [class.sidebar__link--active]="isActive(item)"
+                [attr.data-accent]="isActive(item) ? accentFor(item) : null"
                 [routerLink]="item.route"
                 [attr.title]="collapsed() ? (item.label | translate) : null"
               >
@@ -134,6 +135,23 @@ export class ShellComponent {
     return item.route === '/dashboard'
       ? path === '/dashboard' || path === '/'
       : item.route === path;
+  }
+
+  /**
+   * T7-09: the module accent of a nav entry, derived from its route — the
+   * active link's indicator and icon carry the module color.
+   */
+  accentFor(item: NavItem): string {
+    const route = item.route ?? '';
+    if (route.startsWith('/custodies') || route.startsWith('/transfers')) return 'custodies';
+    if (route.startsWith('/expenses')) return 'expenses';
+    if (route.startsWith('/treasury')) return 'treasury';
+    if (route.startsWith('/cases')) return 'cases';
+    if (route.startsWith('/hr')) return 'hr';
+    if (route.startsWith('/tasks') || route.startsWith('/chat')) return 'tasks';
+    if (route.startsWith('/procurement')) return 'procurement';
+    if (route.startsWith('/reports')) return 'reports';
+    return '';
   }
 
   constructor() {

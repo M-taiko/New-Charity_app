@@ -27,6 +27,7 @@ import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.co
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { DirectionNode } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface PurchaseDetail { id: number; [key: string]: string | number | boolean | null | undefined }
 
@@ -39,31 +40,31 @@ interface PurchaseDetail { id: number; [key: string]: string | number | boolean 
 @Component({
   selector: 'app-purchase-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, ReasonDialogComponent, ConfirmDeleteComponent, MoneyPipe],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, ReasonDialogComponent, ConfirmDeleteComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-async-page [resource]="data" variant="detail" [backLink]="['/procurement/purchase']">
       @if (safeValue(); as item) {
         <app-print-sheet [title]="'procurement.purchase.detail.title' | translate">
-          <app-page-header [title]="itemTitle(item)">
+          <app-page-header [title]="itemTitle(item)" accent="procurement" iconName="shopping-cart">
             <div actions class="u-flex u-gap-2 u-flex-wrap">
               <!-- T6-10: decisions live in the sticky bar; back is the async-page backLink -->
-              <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/procurement/purchase" />
+              <app-action-button kind="back" label="common.back_to_list" size="small" [route]="['/procurement/purchase']" />
             </div>
           </app-page-header>
           <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
           <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
             @if (canReview() && statusOf(item) === 'pending') {
-              <p-button [label]="'procurement.purchase.detail.approve' | translate" size="small" severity="success" (onClick)="openApprove()" />
+              <app-action-button kind="approve" label="procurement.purchase.detail.approve" size="small" (action)="openApprove()" />
             }
             @if (canReview() && statusOf(item) === 'approved') {
-              <p-button [label]="'procurement.purchase.detail.purchase' | translate" size="small" severity="success" (onClick)="openPurchase()" />
+              <app-action-button kind="markPurchased" label="procurement.purchase.detail.purchase" size="small" (action)="openPurchase()" />
             }
             @if (canReview() && statusOf(item) === 'pending') {
-              <p-button [label]="'procurement.purchase.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDlg.open()" />
+              <app-action-button kind="reject" label="procurement.purchase.detail.reject" size="small" (action)="rejectDlg.open()" />
             }
             @if (canDelete(item)) {
-              <p-button [label]="'procurement.purchase.detail.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg.open()" />
+              <app-action-button kind="delete" label="procurement.purchase.detail.delete" size="small" (action)="deleteDlg.open()" />
             }
           </div>
 

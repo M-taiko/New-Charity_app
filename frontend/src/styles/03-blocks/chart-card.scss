@@ -30,6 +30,83 @@
   min-height: 220px;
 }
 
+/* plot wrapper — keeps the doughnut total overlay anchored to the canvas (T7-03) */
+.chart-card__plot {
+  position: relative;
+}
+
+.chart-card__total {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  font-size: var(--text-md);
+  pointer-events: none;
+}
+
+/* HTML legend (T7-03) — replaces the Chart.js canvas legend so narrow cards
+   never shrink the chart to fit dots; wraps in a grid, labels truncate with
+   a title tooltip, a click toggles the series */
+.chart-legend {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 2px var(--space-3);
+}
+
+.chart-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-1) var(--space-1);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-s);
+  font: inherit;
+  font-size: var(--text-2xs);
+  color: var(--color-text);
+  text-align: start;
+  cursor: pointer;
+}
+
+.chart-legend__item:hover {
+  background: var(--color-surface-inset);
+}
+
+.chart-legend__item:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.chart-legend__item.is-hidden {
+  opacity: 0.45;
+}
+
+.chart-legend__chip {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.chart-legend__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chart-legend__value {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .chart-card__table {
   width: 100%;
   border-collapse: collapse;

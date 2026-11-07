@@ -198,3 +198,60 @@ export function deriveFilters(columns: readonly { field: string; header: string;
   }
   return defs;
 }
+
+/**
+ * meta.filters from the API → TableFilterDef[] (T7-07). The server is the
+ * single source of truth: whatever allowlist the endpoint declares is what
+ * the table renders. Unknown types degrade to a text filter, never break.
+ */
+export function apiFilterDefs(
+  meta: { filters?: { key: string; label: string; type?: string; field?: string; options?: TableFilterOption[] }[] } | null | undefined,
+): TableFilterDef[] {
+  if (!meta?.filters) {
+    return [];
+  }
+  const KNOWN: readonly TableFilterType[] = ['text', 'select', 'multiselect', 'boolean', 'number-range', 'date-range', 'month', 'lookup'];
+  return meta.filters.map((def) => ({
+    key: def.key,
+    label: def.label,
+    type: (KNOWN as readonly string[]).includes(def.type ?? '') ? (def.type as TableFilterType) : 'text',
+    field: def.field,
+    options: def.options,
+  }));
+}
+
+/**
+ * Serialize the active filter values as the `filter[key]=…` query params of
+ * the T6-30/T7-07 server contract: scalars ride filter[key], ranges become
+ * filter[key][min|max] / filter[key][from|to], arrays join with commas.
+ * Empty values never reach the URL.
+ */
+export function filterParams(filters: Record<string, unknown> | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!filters) {
+    return out;
+  }
+  for (const [key, value] of Object.entries(filters)) {
+    if (value === undefined || value === null || value === '') {
+      continue;
+    }
+    if (Array.isArray(value)) {
+      const joined = value.filter((v) => v !== undefined && v !== null && v !== '').map(String).join(',');
+      if (joined !== '') {
+        out[`filter[${key}]`] = joined;
+      }
+      continue;
+    }
+    if (typeof value === 'object') {
+      const bag = value as Record<string, unknown>;
+      for (const part of ['min', 'max', 'from', 'to']) {
+        if (bag[part] !== undefined && bag[part] !== null && bag[part] !== '') {
+          out[`filter[${key}][${part}]`] = String(bag[part]);
+        }
+      }
+      continue;
+    }
+    out[`filter[${key}]`] = String(value);
+  }
+  return out;
+}

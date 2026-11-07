@@ -10,7 +10,7 @@ import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective, TableFooterCellDirective } from '@shared/ui/data-table/data-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -43,12 +43,12 @@ interface GovData {
   imports: [
     FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, DatePickerModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, TableFooterCellDirective, 
     PrintSheetComponent, StatTileComponent, MoneyPipe,
   ],
   template: `
     <app-print-sheet orientation="landscape" [title]="'report.governorates.title' | translate">
-      <app-page-header [title]="'report.governorates.title' | translate">
+      <app-page-header [title]="'report.governorates.title' | translate" accent="reports" iconName="report-analytics">
         <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
       </app-page-header>
 
@@ -77,7 +77,7 @@ interface GovData {
           </div>
 
           <div class="kpi-grid">
-            <app-stat-tile [label]="'report.governorates.col_total'" [value]="d.grand_total.total" />
+            <app-stat-tile [label]="'report.governorates.col_total'" [value]="d.grand_total.total" accent="reports" iconName="report-analytics" />
             <app-stat-tile [label]="'report.governorates.col_approved'" [value]="d.grand_total.approved" />
             <app-stat-tile [label]="'report.governorates.col_pending'" [value]="d.grand_total.pending" />
             <app-stat-tile [label]="'report.governorates.col_rejected'" [value]="d.grand_total.rejected" />
@@ -85,38 +85,29 @@ interface GovData {
           </div>
 
           <p class="u-muted u-small u-mb-4">{{ 'report.governorates.click_hint' | translate }}</p>
-          <app-data-table mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.governorates" [emptyLabel]="'report.governorates.empty'">
-            <ng-template appTableBody let-row>
-              <tr class="ledger-table__row">
-                <td appTableCol="label">
-                  <a [routerLink]="['/cases']" [queryParams]="{ governorate: row.label }">{{ row.label }}</a>
-                  @if (!row.standard) {
-                    <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
-                  }
-                </td>
-                <td appTableCol="total" class="u-bidi">{{ row.total }}</td>
-                <td appTableCol="approved" class="u-bidi">{{ row.approved }}</td>
-                <td appTableCol="pending" class="u-bidi">{{ row.pending }}</td>
-                <td appTableCol="rejected" class="u-bidi">{{ row.rejected }}</td>
-                <td appTableCol="expenses_total"><span class="u-bidi">{{ row.expenses_total | money }}</span></td>
-                <td appTableCol="average"><span class="u-bidi">{{ row.average | money }}</span></td>
-              </tr>
-            </ng-template>
-            <ng-template footer>
-              <tr class="ledger-table__row">
-                <th>{{ 'common.total' | translate }}</th>
-                <td class="ledger-table__cell-num u-bidi">{{ d.grand_total.total }}</td>
-                <td class="ledger-table__cell-num u-bidi">{{ d.grand_total.approved }}</td>
-                <td class="ledger-table__cell-num u-bidi">{{ d.grand_total.pending }}</td>
-                <td class="ledger-table__cell-num u-bidi">{{ d.grand_total.rejected }}</td>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.grand_total.expenses_total | money }}</span></td>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.grand_total.average | money }}</span></td>
-              </tr>
-            </ng-template>
+          <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/governorates" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.governorates" [emptyLabel]="'report.governorates.empty'">
+            <ng-template appCell="label" let-row><a [routerLink]="['/cases']" [queryParams]="{ governorate: row.label }">{{ row.label }}</a>
+@if (!row.standard) {
+  <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
+}</ng-template>
+            <ng-template appCell="total" let-row><span class="u-bidi">{{ row.total }}</span></ng-template>
+            <ng-template appCell="approved" let-row><span class="u-bidi">{{ row.approved }}</span></ng-template>
+            <ng-template appCell="pending" let-row><span class="u-bidi">{{ row.pending }}</span></ng-template>
+            <ng-template appCell="rejected" let-row><span class="u-bidi">{{ row.rejected }}</span></ng-template>
+            <ng-template appCell="expenses_total" let-row><span class="u-bidi">{{ row.expenses_total | money }}</span></ng-template>
+            <ng-template appCell="average" let-row><span class="u-bidi">{{ row.average | money }}</span></ng-template>
+            <!-- T7-04: totals row follows the column order — per-column footer cells -->
+            <ng-template appFooterCell="label">{{ 'common.total' | translate }}</ng-template>
+            <ng-template appFooterCell="total"><span class="u-bidi">{{ d.grand_total.total }}</span></ng-template>
+            <ng-template appFooterCell="approved"><span class="u-bidi">{{ d.grand_total.approved }}</span></ng-template>
+            <ng-template appFooterCell="pending"><span class="u-bidi">{{ d.grand_total.pending }}</span></ng-template>
+            <ng-template appFooterCell="rejected"><span class="u-bidi">{{ d.grand_total.rejected }}</span></ng-template>
+            <ng-template appFooterCell="expenses_total"><span class="u-bidi">{{ d.grand_total.expenses_total | money }}</span></ng-template>
+            <ng-template appFooterCell="average"><span class="u-bidi">{{ d.grand_total.average | money }}</span></ng-template>
           </app-data-table>
         }
         <div empty>
-          <app-empty-state [title]="'report.governorates.empty'" [text]="'common.no_data'" />
+          <app-empty-state [title]="'report.governorates.empty'" [text]="'common.no_data'" accent="reports" iconName="report-analytics" />
         </div>
       </app-async-page>
     </app-print-sheet>
@@ -131,6 +122,9 @@ export class GovernoratesPage {
   params = signal<{ direction: string | null; item: string | null; date_from: string; date_to: string }>({
     direction: null, item: null, date_from: '', date_to: '',
   });
+
+  /** T7-06: the report's own period filters ride the export query */
+  readonly exportQuery = computed(() => cleanParams(this.params()));
 
   data = resource<GovData, unknown>({
     loader: () =>

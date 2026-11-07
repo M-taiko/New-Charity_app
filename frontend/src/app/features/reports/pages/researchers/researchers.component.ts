@@ -8,7 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -25,40 +25,36 @@ interface ResearchersData {
   imports: [
     TranslatePipe, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, 
     StatTileComponent, PrintSheetComponent, MoneyPipe,
   ],
   template: `
     <app-print-sheet orientation="landscape" [title]="'report.researchers.title' | translate">
-      <app-page-header [title]="'report.researchers.title' | translate">
+      <app-page-header [title]="'report.researchers.title' | translate" accent="reports" iconName="report-analytics">
         <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (onClick)="printPage()" /></div>
       </app-page-header>
 
       <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
         @if (data.value(); as d) {
           <div class="kpi-grid">
-            <app-stat-tile [label]="'report.researchers.researchers_count'" [value]="d.summary.researchers_count" />
+            <app-stat-tile [label]="'report.researchers.researchers_count'" [value]="d.summary.researchers_count" accent="reports" iconName="report-analytics" />
             <app-stat-tile [label]="'report.researchers.total_cases'" [value]="d.summary.total_cases" />
             <app-stat-tile [label]="'report.researchers.approved_cases'" [value]="d.summary.approved_cases" />
             <app-stat-tile [label]="'report.researchers.total_spent'" [value]="d.summary.total_spent" [money]="true" />
           </div>
 
-          <app-data-table mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.researchers" [emptyLabel]="'report.researchers.empty'">
-            <ng-template appTableBody let-row>
-              <tr class="ledger-table__row">
-                <td appTableCol="researcher">{{ row.researcher.name }}</td>
-                <td appTableCol="total_cases" class="u-bidi">{{ row.total_cases }}</td>
-                <td appTableCol="approved" class="u-bidi">{{ row.approved }}</td>
-                <td appTableCol="rejected" class="u-bidi">{{ row.rejected }}</td>
-                <td appTableCol="pending" class="u-bidi">{{ row.pending }}</td>
-                <td appTableCol="total_spent"><span class="u-bidi">{{ row.total_spent | money }}</span></td>
-                <td appTableCol="approval_rate" class="u-bidi">{{ row.approval_rate }}%</td>
-              </tr>
-            </ng-template>
+          <app-data-table listUrl="/analytics/researchers" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.researchers" [emptyLabel]="'report.researchers.empty'">
+            <ng-template appCell="researcher" let-row>{{ row.researcher.name }}</ng-template>
+            <ng-template appCell="total_cases" let-row><span class="u-bidi">{{ row.total_cases }}</span></ng-template>
+            <ng-template appCell="approved" let-row><span class="u-bidi">{{ row.approved }}</span></ng-template>
+            <ng-template appCell="rejected" let-row><span class="u-bidi">{{ row.rejected }}</span></ng-template>
+            <ng-template appCell="pending" let-row><span class="u-bidi">{{ row.pending }}</span></ng-template>
+            <ng-template appCell="total_spent" let-row><span class="u-bidi">{{ row.total_spent | money }}</span></ng-template>
+            <ng-template appCell="approval_rate" let-row><span class="u-bidi">{{ row.approval_rate }}%</span></ng-template>
           </app-data-table>
         }
         <div empty>
-          <app-empty-state [title]="'report.researchers.empty'" [text]="'common.no_data'" />
+          <app-empty-state [title]="'report.researchers.empty'" [text]="'common.no_data'" accent="reports" iconName="report-analytics" />
         </div>
       </app-async-page>
     </app-print-sheet>

@@ -14,7 +14,7 @@ import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -38,12 +38,12 @@ interface Row {
   imports: [SectionNavComponent, 
     TranslatePipe, FormsModule, ButtonModule,
     InputTextModule, SelectModule, InputNumberModule,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, MoneyPipe, FormDialogComponent, FieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'hr.kpi.title' | translate">
+    <app-page-header [title]="'hr.kpi.title' | translate" accent="hr" iconName="briefcase">
       <div actions><p-button [label]="'hr.kpi.add' | translate" size="small" (onClick)="dialogOpen.set(true)" /></div>
     </app-page-header>
 
@@ -51,7 +51,7 @@ interface Row {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table
+        <app-data-table listUrl="/hr/kpi"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -61,39 +61,13 @@ interface Row {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="employee">{{ row.employee ?? '—' }}</td>
-              <td appTableCol="name">{{ row.name ?? '—' }}</td>
-              <td appTableCol="target" class="ledger-table__cell-num"><span class="u-bidi">{{ row.target | money }}</span></td>
-              <td appTableCol="actual" class="ledger-table__cell-num"><span class="u-bidi">{{ row.actual | money }}</span></td>
-              <td appTableCol="percentage">{{ row.percentage ?? '—' }}</td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.kpi.col_employee' | translate }}</span>
-                {{ row.employee ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.kpi.col_name' | translate }}</span>
-                {{ row.name ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.kpi.col_target' | translate }}</span>
-                <span class="u-bidi">{{ row.target | money }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.kpi.col_actual' | translate }}</span>
-                <span class="u-bidi">{{ row.actual | money }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.kpi.col_percent' | translate }}</span>
-                {{ row.percentage ?? '—' }}
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="employee" let-row>{{ row.employee ?? '—' }}</ng-template>
+          <ng-template appCell="name" let-row>{{ row.name ?? '—' }}</ng-template>
+          <ng-template appCell="target" let-row><span class="u-bidi">{{ row.target | money }}</span></ng-template>
+          <ng-template appCell="actual" let-row><span class="u-bidi">{{ row.actual | money }}</span></ng-template>
+          <ng-template appCell="percentage" let-row>{{ row.percentage ?? '—' }}</ng-template>
           <div empty>
-            <app-empty-state [title]="'hr.kpi.empty' | translate" [text]="'common.no_data' | translate" />
+            <app-empty-state [title]="'hr.kpi.empty' | translate" [text]="'common.no_data' | translate" accent="hr" iconName="briefcase" />
           </div>
         </app-data-table>
       }
@@ -126,8 +100,8 @@ export class KpiPage {
   readonly columns = [
     { field: 'employee', header: 'hr.kpi.col_employee', sortable: true },
     { field: 'name', header: 'hr.kpi.col_name', sortable: true },
-    { field: 'target', header: 'hr.kpi.col_target', sortable: true },
-    { field: 'actual', header: 'hr.kpi.col_actual', sortable: true },
+    { field: 'target', header: 'hr.kpi.col_target', sortable: true, numeric: true },
+    { field: 'actual', header: 'hr.kpi.col_actual', sortable: true, numeric: true },
     { field: 'percentage', header: 'hr.kpi.col_percent', sortable: true }
   ];
 

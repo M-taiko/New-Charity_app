@@ -16,6 +16,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 /**
  * New + edit treasury form (plan 20): one component serving both routes —
@@ -26,10 +27,10 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
   standalone: true,
   imports: [
     TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, TextareaModule,
-    PageHeaderComponent, FieldComponent, FormSectionComponent, AsyncPageComponent,
+    PageHeaderComponent, FieldComponent, FormSectionComponent, AsyncPageComponent, ActionButtonComponent,
   ],
   template: `
-    <app-page-header [title]="isEdit() ? ('treasury.form.edit_title' | translate) : ('treasury.form.new_title' | translate)">
+    <app-page-header [title]="isEdit() ? ('treasury.form.edit_title' | translate) : ('treasury.form.new_title' | translate)" accent="treasury" iconName="building-bank">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/treasury" />
       </div>
@@ -50,7 +51,7 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
           <div class="dialog__alert" role="alert">{{ msg }}</div>
         }
         <div class="sticky-actions">
-          <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/treasury" />
+          <app-action-button kind="back" label="common.back" [route]="['/treasury']" />
           <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
         </div>
       </form>

@@ -33,6 +33,7 @@ export const ACTION_KINDS = {
   remove: { severity: 'danger', variant: 'text', icon: 'x' },
   reverse: { severity: 'danger', variant: 'outlined', icon: 'arrows-exchange' },
   cancelTransfer: { severity: 'danger', variant: 'filled', icon: 'x' },
+  closePoll: { severity: 'danger', variant: 'text', icon: 'x' }, // T7-05: chat poll close
 
   // approve / confirm / success — green
   approve: { severity: 'success', variant: 'filled', icon: 'check' },
@@ -42,9 +43,16 @@ export const ACTION_KINDS = {
   markPaid: { severity: 'success', variant: 'outlined', icon: 'cash' },
   markPurchased: { severity: 'success', variant: 'outlined', icon: 'shopping-cart' },
   resolve: { severity: 'success', variant: 'outlined', icon: 'check' },
+  assign: { severity: 'success', variant: 'outlined', icon: 'user' }, // T7-05: maintenance assign
+  activate: { severity: 'success', variant: 'outlined', icon: 'user' }, // T7-05: case activate
+  recordExpense: { severity: 'success', variant: 'outlined', icon: 'cash' }, // T7-05: salary → expense
+  start: { severity: 'success', variant: 'outlined', icon: 'check' }, // T7-05: task start
+  complete: { severity: 'success', variant: 'outlined', icon: 'check' }, // T7-05: task complete
 
   // caution — amber, outlined
   requestReturn: { severity: 'warn', variant: 'outlined', icon: 'arrow-back-up' },
+  returnCustody: { severity: 'warn', variant: 'outlined', icon: 'arrow-back-up' }, // T7-05: return to treasury
+  reopen: { severity: 'warn', variant: 'outlined', icon: 'arrow-back-up' }, // T7-05: task reopen
   freeze: { severity: 'warn', variant: 'outlined', icon: 'lock' },
   sendReview: { severity: 'warn', variant: 'outlined', icon: 'eye' },
   unreview: { severity: 'warn', variant: 'outlined', icon: 'eye' },
@@ -53,18 +61,25 @@ export const ACTION_KINDS = {
   viewMovements: { severity: 'info', variant: 'text', icon: 'arrows-exchange' },
   openLinked: { severity: 'info', variant: 'text', icon: 'external-link' },
   transfer: { severity: 'info', variant: 'outlined', icon: 'arrows-exchange' },
+  delegate: { severity: 'info', variant: 'outlined', icon: 'arrows-exchange' }, // T7-05: task delegate
 
   // primary — brand brown, filled, one per header/dialog
   save: { variant: 'filled', icon: 'check' },
   create: { variant: 'filled', icon: 'plus' },
   submit: { variant: 'filled', icon: 'check' },
   apply: { variant: 'filled', icon: 'filter' },
+  send: { variant: 'filled', icon: 'check' }, // T7-05: task send
 
   // secondary — outlined brand
   back: { severity: 'secondary', variant: 'outlined', icon: 'chevron-right' },
   close: { severity: 'secondary', variant: 'text', icon: 'x' },
   export: { severity: 'secondary', variant: 'outlined', icon: 'download' },
   print: { severity: 'secondary', variant: 'outlined', icon: 'printer' },
+  download: { severity: 'secondary', variant: 'outlined', icon: 'download' }, // T7-05: payslip/attachment
+  quickAdd: { severity: 'secondary', variant: 'outlined', icon: 'plus' }, // T7-05: quick expense
+  customize: { severity: 'secondary', variant: 'outlined', icon: 'dots' }, // T7-05: dashboard customize
+  donate: { severity: 'secondary', variant: 'outlined', icon: 'cash' }, // T7-05: receive donation
+  reset: { severity: 'secondary', variant: 'text', icon: 'filter' }, // T7-05: clear filters
 
   // tertiary / row actions — text / icon-only
   view: { variant: 'text', icon: 'eye' },

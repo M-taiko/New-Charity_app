@@ -19,7 +19,7 @@ import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -63,13 +63,13 @@ interface CustodyListParams {
   standalone: true,
   imports: [
     TranslatePipe, RouterLink, ButtonModule,
-    PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, MoneyPipe, StatusStampComponent,
     ReasonDialogComponent, SectionNavComponent, SplitButtonModule,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'custody.list.title' | translate">
+    <app-page-header [title]="'custody.list.title' | translate" accent="custodies" iconName="wallet">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
         <!-- T6-10: creation variants collapse into one split button; navigation
              moved to the module section-nav below the header -->
@@ -92,7 +92,7 @@ interface CustodyListParams {
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'custody.list.accepted'" [value]="summaryValue('accepted')" />
+          <app-stat-tile [label]="'custody.list.accepted'" [value]="summaryValue('accepted')" accent="custodies" iconName="wallet" />
           <app-stat-tile [label]="'custody.list.pending'" [value]="summaryValue('pending')" />
           <app-stat-tile [label]="'custody.list.rejected'" [value]="summaryValue('rejected')" />
           <app-stat-tile [label]="'custody.list.closed_or_cancelled'" [value]="summaryValue('closed_or_cancelled')" />
@@ -106,62 +106,23 @@ interface CustodyListParams {
         [total]="page.meta.total"
         [sortableKeys]="page.meta.sortable ?? null"
         [filters]="filterDefs()"
-        exportPath="/custodies/export"
+        listUrl="/custodies"
         [perPage]="params().per_page"
         [loading]="data.isLoading()"
         (pageChange)="onPage($event)"
         (queryChange)="onQuery($event)"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="agent">{{ row.agent ?? '—' }}</td>
-            <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
-            <td appTableCol="transferred_in" class="ledger-table__cell-num"><span class="u-bidi">{{ row.transferred_in | money }}</span></td>
-            <td appTableCol="spent" class="ledger-table__cell-num"><span class="u-bidi">{{ row.spent | money }}</span></td>
-            <td appTableCol="remaining" class="ledger-table__cell-num"><span class="u-bidi">{{ row.remaining | money }}</span></td>
-            <td appTableCol="spent_percent" class="ledger-table__cell-num">{{ row.spent_percent ?? '—' }}</td>
-            <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="custody_status" /></td>
-            <td appTableCol="actions">
-              <app-row-actions [actions]="actionsFor(row)" />
-            </td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_agent' | translate }}</span>
-              {{ row.agent ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_amount' | translate }}</span>
-              <span class="u-bidi">{{ row.amount | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_transferred_in' | translate }}</span>
-              <span class="u-bidi">{{ row.transferred_in | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_spent' | translate }}</span>
-              <span class="u-bidi">{{ row.spent | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_remaining' | translate }}</span>
-              <span class="u-bidi">{{ row.remaining | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_spent_percent' | translate }}</span>
-              {{ row.spent_percent ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_status' | translate }}</span>
-              <app-status-stamp [status]="row.status" namespace="custody_status" />
-            </div>
-            <div class="ledger-table__stacked-item">
-              <app-row-actions [actions]="actionsFor(row)" />
-            </div>
-          </tr>
-        </ng-template>
+        <ng-template appCell="agent" let-row>{{ row.agent ?? '—' }}</ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="transferred_in" let-row><span class="u-bidi">{{ row.transferred_in | money }}</span></ng-template>
+        <ng-template appCell="spent" let-row><span class="u-bidi">{{ row.spent | money }}</span></ng-template>
+        <ng-template appCell="remaining" let-row><span class="u-bidi">{{ row.remaining | money }}</span></ng-template>
+        <ng-template appCell="spent_percent" let-row>{{ row.spent_percent ?? '—' }}</ng-template>
+        <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="custody_status" /></ng-template>
+        <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         <div empty>
-          <app-empty-state [title]="'custody.list.empty' | translate" [text]="'custody.list.empty_text' | translate" />
+          <app-empty-state [title]="'custody.list.empty' | translate" [text]="'custody.list.empty_text' | translate" accent="custodies" iconName="wallet" />
         </div>
       </app-data-table>
       }
@@ -196,11 +157,11 @@ export class CustodyListPage {
 
   readonly columns = [
     { field: 'agent', searchField: 'agent', header: 'custody.list.col_agent', sortable: true },
-    { field: 'amount', header: 'custody.list.col_amount', sortable: true },
-    { field: 'transferred_in', header: 'custody.list.col_transferred_in', sortable: true },
-    { field: 'spent', header: 'custody.list.col_spent', sortable: true },
-    { field: 'remaining', header: 'custody.list.col_remaining', sortable: true },
-    { field: 'spent_percent', header: 'custody.list.col_spent_percent', sortable: true },
+    { field: 'amount', header: 'custody.list.col_amount', sortable: true, numeric: true },
+    { field: 'transferred_in', header: 'custody.list.col_transferred_in', sortable: true, numeric: true },
+    { field: 'spent', header: 'custody.list.col_spent', sortable: true, numeric: true },
+    { field: 'remaining', header: 'custody.list.col_remaining', sortable: true, numeric: true },
+    { field: 'spent_percent', header: 'custody.list.col_spent_percent', sortable: true, numeric: true },
     { field: 'status', header: 'custody.list.col_status', sortable: true },
     { field: 'actions', header: 'common.actions', sortable: false },
   ];

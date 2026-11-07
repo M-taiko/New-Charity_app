@@ -11,7 +11,8 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
+import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
@@ -45,11 +46,11 @@ interface TreasuryRow {
   imports: [SectionNavComponent, 
     FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, SelectModule,
     InputNumberModule, TextareaModule, PageHeaderComponent, AsyncPageComponent, StatTileComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective, EmptyStateComponent, FormDialogComponent,
+    DataTableComponent, TableCellDirective, EmptyStateComponent, FormDialogComponent,
     ConfirmDeleteComponent, RowActionsComponent, MoneyPipe, DatetimePipe,
   ],
   template: `
-    <app-page-header [title]="'treasury.list.title' | translate">
+    <app-page-header [title]="'treasury.list.title' | translate" accent="treasury" iconName="building-bank">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
         <p-button [label]="'treasury.list.transfer' | translate" [outlined]="true" size="small" routerLink="/treasury/transfer" />
         <p-button [label]="'treasury.list.receive_donation' | translate" size="small" (onClick)="openDonation(null)" />
@@ -62,52 +63,36 @@ interface TreasuryRow {
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'treasury.list.count'" [value]="summaryCount()" />
+          <app-stat-tile [label]="'treasury.list.count'" [value]="summaryCount()" accent="treasury" iconName="building-bank" />
           <app-stat-tile [label]="'treasury.list.total_balance'" [value]="summaryBalance()" [money]="true" />
         </div>
 
-        <app-data-table
+        <app-data-table listUrl="/treasury"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
           [total]="page.meta.total"
           [perPage]="params().per_page"
           [loading]="data.isLoading()"
+          [filters]="metaFilters()"
+          (queryChange)="onQuery($event)"
+
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2">
           </div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="name">
-                <a [routerLink]="['/treasury', row.id]">{{ row.name }}</a>
-                @if (row.notes) {
-                  <div class="u-muted u-small u-truncate">{{ row.notes }}</div>
-                }
-              </td>
-              <td appTableCol="balance" class="ledger-table__cell-num">{{ row.balance | money }}</td>
-              <td appTableCol="transactions_count" class="ledger-table__cell-num">{{ row.transactions_count ?? '—' }}</td>
-              <td appTableCol="created_at" class="u-bidi">{{ row.created_at | datetime: false }}</td>
-              <td appTableCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'treasury.list.name' | translate }}</span>
-                <a [routerLink]="['/treasury', row.id]">{{ row.name }}</a>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'treasury.list.balance' | translate }}</span>
-                <span class="u-bidi">{{ row.balance | money }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="name" let-row><a [routerLink]="['/treasury', row.id]">{{ row.name }}</a>
+@if (row.notes) {
+  <div class="u-muted u-small u-truncate">{{ row.notes }}</div>
+}</ng-template>
+          <ng-template appCell="balance" let-row>{{ row.balance | money }}</ng-template>
+          <ng-template appCell="transactions_count" let-row>{{ row.transactions_count ?? '—' }}</ng-template>
+          <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime: false }}</span></ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         </app-data-table>
       }
       <div empty>
-        <app-empty-state [title]="'treasury.list.empty' | translate" [text]="'treasury.list.empty_text' | translate">
+        <app-empty-state [title]="'treasury.list.empty' | translate" [text]="'treasury.list.empty_text' | translate" accent="treasury" iconName="building-bank">
           <p-button [label]="'treasury.list.add' | translate" size="small" routerLink="/treasury/new" />
         </app-empty-state>
       </div>
@@ -189,6 +174,25 @@ export class TreasuryListPage {
   ];
 
   params = signal<{ page: number; per_page: number; q: string; sort?: string }>({ page: 1, per_page: 25, q: '' });
+
+  /** the active filter[...] values — forwarded verbatim (T7-07 server contract) */
+  filterBag: Record<string, unknown> = {};
+
+  /** T7-07: the endpoint's declared allowlist drives the table's Filters control */
+  readonly metaFilters = computed(() => apiFilterDefs(this.data.value()?.meta));
+
+  /** the table emits the full query — filters reach the server (T7-07) */
+  onQuery(query: TableQuery): void {
+    this.filterBag = query.filters;
+    this.params.update((p) => ({
+      ...p,
+      page: query.page,
+      per_page: query.perPage,
+      sort: query.sort !== '' ? query.sort : p.sort,
+      q: query.q,
+    }));
+    this.data.reload();
+  }
   sending = signal(false);
   donationOpen = signal(false);
   actionError = signal<HttpErrorResponse | null>(null);
@@ -202,7 +206,7 @@ export class TreasuryListPage {
     loader: () =>
       firstValueFrom(
         this.http.get<ListResponse<TreasuryRow>>('/treasury', {
-          params: cleanParams(this.params()),
+          params: { ...cleanParams(this.params()), ...filterParams(this.filterBag) },
         }),
       ),
   });

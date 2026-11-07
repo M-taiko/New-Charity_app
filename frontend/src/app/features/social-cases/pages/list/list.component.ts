@@ -13,7 +13,7 @@ import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.componen
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import type { TableColumn } from '@shared/ui/data-table/data-table.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
@@ -72,14 +72,14 @@ interface QuickDetail {
   imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, 
+    DataTableComponent, TableCellDirective, 
     EmptyStateComponent, FormDialogComponent, ConfirmDeleteComponent,
     RowActionsComponent, KeyValueListComponent, StatusStampComponent, DatetimePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'case.list.title' | translate">
+    <app-page-header [title]="'case.list.title' | translate" accent="cases" iconName="heart-handshake">
       <div actions class="u-flex u-gap-2">
         <p-button [label]="'case.list.create' | translate" size="small" routerLink="/cases/new" />
       </div>
@@ -90,13 +90,13 @@ interface QuickDetail {
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'case.list.total'" [value]="summaryValue('total')" />
+          <app-stat-tile [label]="'case.list.total'" [value]="summaryValue('total')" accent="cases" iconName="heart-handshake" />
           <app-stat-tile [label]="'case.list.pending'" [value]="summaryValue('pending')" />
           <app-stat-tile [label]="'case.list.approved'" [value]="summaryValue('approved')" />
           <app-stat-tile [label]="'case.list.rejected'" [value]="summaryValue('rejected')" />
         </div>
 
-        <app-data-table
+        <app-data-table listUrl="/social-cases"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -106,65 +106,28 @@ interface QuickDetail {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="name"><a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a></td>
-              <td appTableCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
-              <td appTableCol="governorate">{{ row.city ?? '—' }}</td>
-              <td appTableCol="researcher">{{ row.researcher?.name ?? '—' }}</td>
-              <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="social_case" /></td>
-              <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-              <td appTableCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.list.col_name' | translate }}</span>
-                <a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.list.col_phone' | translate }}</span>
-                <span class="u-bidi">{{ row.phone ?? '—' }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.form.governorate' | translate }}</span>
-                {{ row.city ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.list.col_researcher' | translate }}</span>
-                {{ row.researcher?.name ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.list.col_status' | translate }}</span>
-                <app-status-stamp [status]="row.status" namespace="social_case" />
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.date' | translate }}</span>
-                <span class="u-bidi">{{ row.created_at | datetime }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="name" let-row><a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a></ng-template>
+          <ng-template appCell="phone" let-row><span class="u-bidi">{{ row.phone ?? '—' }}</span></ng-template>
+          <ng-template appCell="governorate" let-row>{{ row.city ?? '—' }}</ng-template>
+          <ng-template appCell="researcher" let-row>{{ row.researcher?.name ?? '—' }}</ng-template>
+          <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="social_case" /></ng-template>
+          <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         </app-data-table>
       }
       <div empty>
-        <app-empty-state [title]="'case.list.empty' | translate" [text]="'common.no_data' | translate" />
+        <app-empty-state [title]="'case.list.empty' | translate" [text]="'common.no_data' | translate" accent="cases" iconName="heart-handshake" />
       </div>
     </app-async-page>
 
     <app-form-dialog [header]="familyHeader()" [submitLabel]="'case.modal.close'" [(visible)]="familyOpen" [sending]="familyLoading()">
       <app-data-table mode="static" [autoFilters]="true" [columns]="familyCols" [rows]="familyMembers()" [emptyLabel]="'case.modal.empty_family'">
-        <ng-template appTableBody let-row let-index="index">
-          <tr class="ledger-table__row">
-            <td appTableCol="index" class="u-bidi">{{ index + 1 }}</td>
-            <td appTableCol="name">{{ row.name }}</td>
-            <td appTableCol="relation">{{ label('case.enums.relation.' + row.relationship) }}</td>
-            <td appTableCol="gender">{{ label('case.enums.gender.' + row.gender) }}</td>
-            <td appTableCol="status">{{ label('case.enums.member_status.' + row.status) }}</td>
-            <td appTableCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
-          </tr>
-        </ng-template>
+        <ng-template appCell="index" let-row let-index="index"><span class="u-bidi">{{ index + 1 }}</span></ng-template>
+        <ng-template appCell="name" let-row let-index="index">{{ row.name }}</ng-template>
+        <ng-template appCell="relation" let-row let-index="index">{{ label('case.enums.relation.' + row.relationship) }}</ng-template>
+        <ng-template appCell="gender" let-row let-index="index">{{ label('case.enums.gender.' + row.gender) }}</ng-template>
+        <ng-template appCell="status" let-row let-index="index">{{ label('case.enums.member_status.' + row.status) }}</ng-template>
+        <ng-template appCell="phone" let-row let-index="index"><span class="u-bidi">{{ row.phone ?? '—' }}</span></ng-template>
       </app-data-table>
     </app-form-dialog>
 

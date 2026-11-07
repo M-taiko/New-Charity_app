@@ -16,6 +16,7 @@
       true,
       {
         "ignoreAtRules": [
+          "each",
           "use",
           "forward",
           "include",

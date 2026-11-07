@@ -18,7 +18,7 @@ import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
@@ -33,6 +33,7 @@ import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ApiErrorBody, ItemResponse } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface MineCustody {
   id: number; agent: string | null; treasury: string | null; amount: string;
@@ -76,14 +77,14 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
 @Component({
   selector: 'app-my-custodies',
   standalone: true,
-  imports: [SectionNavComponent, FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective, StatTileComponent, EmptyStateComponent, FormDialogComponent, ContentDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, AppTabsComponent, MenuModule, StatusStampComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
+  imports: [SectionNavComponent, FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, StatTileComponent, EmptyStateComponent, FormDialogComponent, ContentDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, AppTabsComponent, MenuModule, StatusStampComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'custody.mine.title' | translate">
+    <app-page-header [title]="'custody.mine.title' | translate" accent="custodies" iconName="wallet">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
         <!-- T6-10: one primary + everything else in the More menu -->
         @if (menuItems().length > 0) {
-          <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="moreMenu.toggle($event)" />
+          <app-action-button kind="more" label="common.more" size="small" (action)="moreMenu.toggle($event)" />
           <p-menu #moreMenu appendTo="body" [model]="menuItems()" popup="true" />
         }
         <p-button [label]="'custody.mine.request_new' | translate" size="small" routerLink="/custodies/new" />
@@ -95,7 +96,7 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as d) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'custody.mine.remaining'" [value]="stat('total_remaining')" [money]="true" />
+          <app-stat-tile [label]="'custody.mine.remaining'" [value]="stat('total_remaining')" [money]="true" accent="custodies" iconName="wallet" />
           <app-stat-tile [label]="'custody.mine.amount'" [value]="stat('total_amount')" [money]="true" />
           <app-stat-tile [label]="'custody.mine.spent'" [value]="stat('total_spent')" [money]="true" />
           <app-stat-tile [label]="'custody.mine.total'" [value]="stat('total_custodies')" />
@@ -109,43 +110,31 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
         @if (tab() !== 'transfers') {
           <app-data-table mode="static" [autoFilters]="true" class="u-mt-4" [columns]="custodyCols" [rows]="rows()"
                             [title]="'custody.mine.title'" [emptyLabel]="'custody.mine.empty'">
-            <ng-template appTableBody let-row>
-              <tr class="ledger-table__row">
-                <td appTableCol="created_at" class="u-bidi">{{ row.created_at | datetime: false }}</td>
-                <td appTableCol="amount">{{ row.amount | money }}</td>
-                <td appTableCol="transferred_in">
-                  @if (parseFloat(row.transferred_in) > 0) { {{ row.transferred_in | money }} } @else { — }
-                </td>
-                <td appTableCol="spent">{{ row.spent | money }}</td>
-                <td appTableCol="returned">{{ row.returned | money }}</td>
-                <td appTableCol="remaining">
-                  {{ row.remaining | money }}
-                  @if (parseFloat(row.frozen) > 0) {
-                    <span class="u-small u-muted">{{ 'custody.detail.breakdown.frozen' | translate }}: {{ row.frozen | money }}</span>
-                  }
-                </td>
-                <td appTableCol="status">
-                  <app-status-stamp [status]="row.status" namespace="custody_status" />
-                  @if (row.status === 'pending') {
-                    @if (row.initiated_by === 'accountant') {
-                      <span class="u-small u-muted">{{ 'custody.mine.awaiting_acceptance' | translate }}</span>
-                    } @else {
-                      <span class="u-small u-muted">{{ 'custody.mine.awaiting_approval' | translate }}</span>
-                    }
-                  }
-                </td>
-                <td appTableCol="actions">
-                  <div class="u-flex u-gap-1 u-flex-wrap">
-                    <a [routerLink]="['/custodies', row.id]">{{ 'common.view' | translate }}</a>
-                    <p-button [label]="'custody.mine.tx_button' | translate" size="small" [text]="true" (onClick)="openTransactions(row.id)" />
-                    @if (row.status === 'accepted' || row.status === 'active') {
-                      <p-button [label]="'custody.mine.quick_donation' | translate" size="small" [text]="true" (onClick)="donationDlg.open(); openDonation(row.id)" />
-                      <p-button [label]="'custody.mine.return_to_treasury' | translate" size="small" [text]="true" (onClick)="refundDlg.open(); openRefund(row.id)" />
-                    }
-                  </div>
-                </td>
-              </tr>
-            </ng-template>
+            <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime: false }}</span></ng-template>
+            <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
+            <ng-template appCell="transferred_in" let-row>@if (parseFloat(row.transferred_in) > 0) { {{ row.transferred_in | money }} } @else { — }</ng-template>
+            <ng-template appCell="spent" let-row>{{ row.spent | money }}</ng-template>
+            <ng-template appCell="returned" let-row>{{ row.returned | money }}</ng-template>
+            <ng-template appCell="remaining" let-row>{{ row.remaining | money }}
+@if (parseFloat(row.frozen) > 0) {
+  <span class="u-small u-muted">{{ 'custody.detail.breakdown.frozen' | translate }}: {{ row.frozen | money }}</span>
+}</ng-template>
+            <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="custody_status" />
+@if (row.status === 'pending') {
+  @if (row.initiated_by === 'accountant') {
+    <span class="u-small u-muted">{{ 'custody.mine.awaiting_acceptance' | translate }}</span>
+  } @else {
+    <span class="u-small u-muted">{{ 'custody.mine.awaiting_approval' | translate }}</span>
+  }
+}</ng-template>
+            <ng-template appCell="actions" let-row><div class="u-flex u-gap-1 u-flex-wrap">
+  <a [routerLink]="['/custodies', row.id]">{{ 'common.view' | translate }}</a>
+  <p-button [label]="'custody.mine.tx_button' | translate" size="small" [text]="true" (onClick)="openTransactions(row.id)" />
+  @if (row.status === 'accepted' || row.status === 'active') {
+    <p-button [label]="'custody.mine.quick_donation' | translate" size="small" [text]="true" (onClick)="donationDlg.open(); openDonation(row.id)" />
+    <p-button [label]="'custody.mine.return_to_treasury' | translate" size="small" [text]="true" (onClick)="refundDlg.open(); openRefund(row.id)" />
+  }
+</div></ng-template>
           </app-data-table>
         } @else {
           <div class="kpi-grid u-mt-4">
@@ -159,7 +148,7 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
                   <a [routerLink]="['/transfers', t.id]">{{ 'common.view' | translate }}</a>
                   @if (t.can_cancel) {
                     <!-- T6-80: the sender can cancel a pending transfer -->
-                    <p-button [label]="'transfers.cancel' | translate" size="small" severity="danger" [outlined]="true" (onClick)="cancelDlg.open(); cancelTarget.set(t)" />
+                    <app-action-button kind="cancel" label="transfers.cancel" size="small" (action)="cancelDlg.open(); cancelTarget.set(t)" />
                   }
                 </div>
               } @empty { <p class="u-muted u-small">{{ 'common.no_data' | translate }}</p> }
@@ -172,8 +161,8 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
                   <span class="u-bidi">{{ t.amount | money }}</span>
                   <app-status-stamp [status]="t.status" namespace="transfer_status" />
                   @if (t.status === 'pending') {
-                    <p-button [label]="'custody.mine.receive_transfer' | translate" size="small" severity="success" [outlined]="true" (onClick)="receiveDlg.open(); openReceive(t)" />
-                    <p-button [label]="'custody.mine.reject_btn' | translate" size="small" severity="danger" [text]="true" (onClick)="transferRejectDlg.open(); rejectTransfer.set(t)" />
+                    <app-action-button kind="receive" label="custody.mine.receive_transfer" size="small" (action)="receiveDlg.open(); openReceive(t)" />
+                    <app-action-button kind="reject" label="custody.mine.reject_btn" size="small" (action)="transferRejectDlg.open(); rejectTransfer.set(t)" />
                   } @else {
                     <a [routerLink]="['/transfers', t.id]">{{ 'common.view' | translate }}</a>
                   }
@@ -184,7 +173,7 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
         }
       }
       <div empty>
-        <app-empty-state [title]="'custody.mine.empty' | translate" [text]="'common.no_data' | translate" />
+        <app-empty-state [title]="'custody.mine.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
       </div>
     </app-async-page>
 
@@ -315,14 +304,10 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
               [header]="'custody.detail.transactions'" [width]="'min(680px, 94vw)'">
       @if (txDetail.value(); as tx) {
         <app-data-table mode="static" [autoFilters]="true" [columns]="transactionCols" [rows]="tx.transactions">
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="date" class="u-bidi">{{ row.date | datetime }}</td>
-              <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-              <td appTableCol="description">{{ row.description }}</td>
-              <td appTableCol="amount">{{ row.amount | money }}</td>
-            </tr>
-          </ng-template>
+          <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
+          <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}</ng-template>
+          <ng-template appCell="description" let-row>{{ row.description }}</ng-template>
+          <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
         </app-data-table>
       } @else if (txDetail.isLoading()) {
         <div class="skeleton skeleton--tile"></div>

@@ -23,6 +23,7 @@ import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.componen
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface MaintenanceDetail { id: number; [key: string]: string | number | boolean | null | undefined }
 
@@ -34,31 +35,31 @@ interface MaintenanceDetail { id: number; [key: string]: string | number | boole
 @Component({
   selector: 'app-maintenance-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, ReasonDialogComponent, ConfirmDeleteComponent],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, ReasonDialogComponent, ConfirmDeleteComponent, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-async-page [resource]="data" variant="detail" [backLink]="['/procurement/maintenance']">
       @if (safeValue(); as item) {
         <app-print-sheet [title]="'procurement.maintenance.detail.title' | translate">
-          <app-page-header [title]="itemTitle(item)">
+          <app-page-header [title]="itemTitle(item)" accent="procurement" iconName="shopping-cart">
             <div actions class="u-flex u-gap-2 u-flex-wrap">
               <!-- T6-10: decisions live in the sticky bar; back is the async-page backLink -->
-              <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/procurement/maintenance" />
+              <app-action-button kind="back" label="common.back_to_list" size="small" [route]="['/procurement/maintenance']" />
             </div>
           </app-page-header>
           <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
           <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
             @if (canReview() && statusOf(item) === 'pending') {
-              <p-button [label]="'procurement.maintenance.detail.assign' | translate" size="small" severity="success" (onClick)="openAssign()" />
+              <app-action-button kind="assign" label="procurement.maintenance.detail.assign" size="small" (action)="openAssign()" />
             }
             @if (canResolve(item)) {
-              <p-button [label]="'procurement.maintenance.detail.resolve' | translate" size="small" severity="success" (onClick)="resolveDlg.open()" />
+              <app-action-button kind="resolve" label="procurement.maintenance.detail.resolve" size="small" (action)="resolveDlg.open()" />
             }
             @if (canReview() && statusOf(item) === 'pending') {
-              <p-button [label]="'procurement.maintenance.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDlg.open()" />
+              <app-action-button kind="reject" label="procurement.maintenance.detail.reject" size="small" (action)="rejectDlg.open()" />
             }
             @if (canDelete()) {
-              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="deleteDlg.open()" />
+              <app-action-button kind="delete" label="common.delete" size="small" (action)="deleteDlg.open()" />
             }
           </div>
 

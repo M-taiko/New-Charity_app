@@ -9,6 +9,7 @@ use App\Models\Expense;
 use App\Models\ExpenseEditRequest;
 use App\Services\ExportService;
 use App\Support\Api\ApiList;
+use App\Support\Api\ListExport;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
@@ -131,6 +132,16 @@ final class ExpenseController extends Controller
             sortable: ['date' => 'expense_date', 'created_at' => 'created_at', 'amount' => 'amount', 'type' => 'type', 'description' => 'description'],
             search: fn ($q, $term) => $q->where('description', 'like', "%{$term}%"),
             filters: ['type' => fn ($q, $v) => $q->where('type', $v)],
+            // T7-07: declared allowlist — meta.filters drives the table UI
+            filterable: [
+                'type' => ['type' => 'select', 'column' => 'type', 'options' => fn () => [
+                    ['value' => 'cash', 'label' => 'نقدي'],
+                    ['value' => 'cheque', 'label' => 'شيك'],
+                    ['value' => 'transfer', 'label' => 'تحويل'],
+                ]],
+                'date' => ['type' => 'date-range', 'column' => 'expense_date'],
+                'amount' => ['type' => 'number-range', 'column' => 'amount'],
+            ],
         );
         $paginator->getCollection()->transform(fn (Expense $e) => $this->listRow($e, false, false, null));
 
@@ -141,6 +152,49 @@ final class ExpenseController extends Controller
             'general_count' => (clone $all)->where('type', 'general')->count(),
             'social_count' => (clone $all)->where('type', 'social_case')->count(),
         ]));
+    }
+
+    /**
+     * GET /api/v1/my-expenses/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME query/filters as mine(), own rows only.
+     */
+    public function mineExport(Request $request): StreamedResponse
+    {
+        $rows = ListExport::rows(
+            $request,
+            // same rows as mine(); user/reviewer eager-loaded because listRow()
+            // touches them and an export maps up to MAX_ROWS rows, not a page
+            Expense::where('user_id', $request->user()->id)->with(['user', 'reviewer', 'socialCase', 'category', 'item']),
+            ['date' => 'expense_date', 'created_at' => 'created_at', 'amount' => 'amount', 'type' => 'type', 'description' => 'description'],
+            [
+                'type' => ['type' => 'select', 'column' => 'type', 'options' => fn () => [
+                    ['value' => 'cash', 'label' => 'نقدي'],
+                    ['value' => 'cheque', 'label' => 'شيك'],
+                    ['value' => 'transfer', 'label' => 'تحويل'],
+                ]],
+                'date' => ['type' => 'date-range', 'column' => 'expense_date'],
+                'amount' => ['type' => 'number-range', 'column' => 'amount'],
+            ],
+            filters: ['type' => fn ($q, $v) => $q->where('type', $v)],
+            search: fn ($q, $term) => $q->where('description', 'like', "%{$term}%"),
+            row: fn (Expense $e) => $this->listRow($e, false, false, null),
+        )->map(fn (array $r) => [
+            'user' => $r['user'],
+            'type' => $r['type'] === 'cash' ? 'نقدي' : ($r['type'] === 'cheque' ? 'شيك' : 'تحويل'),
+            'direction' => $r['direction'],
+            'amount' => (float) $r['amount'],
+            'date' => ($r['expense_date'] ?? '') !== '' ? substr((string) $r['expense_date'], 0, 10) : '',
+            'reviewed' => $r['reviewed'] ? 'مراجع' : 'غير مراجع',
+        ]);
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'user', 'label' => 'المستخدم'],
+            ['key' => 'type', 'label' => 'النوع'],
+            ['key' => 'direction', 'label' => 'التوجيه'],
+            ['key' => 'amount', 'label' => 'المبلغ', 'numeric' => true, 'total' => true],
+            ['key' => 'date', 'label' => 'التاريخ'],
+            ['key' => 'reviewed', 'label' => 'المراجعة'],
+        ], 'my-expenses');
     }
 
     /** GET /api/v1/expenses/{id} */
@@ -197,6 +251,16 @@ final class ExpenseController extends Controller
             $request,
             sortable: ['date' => 'requested_at', 'amount' => 'amount', 'requested_at' => 'requested_at', 'requested_by' => 'requested_by', 'status' => 'status', 'expense_id' => 'expense_id', 'original_amount' => 'expense_id', 'requested_amount' => 'expense_id'],
             filters: ['status' => fn ($q, $v) => $q->where('status', $v)],
+            // T7-07: declared allowlist — meta.filters drives the table UI
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'pending', 'label' => 'معلق'],
+                    ['value' => 'approved', 'label' => 'موافق عليه'],
+                    ['value' => 'rejected', 'label' => 'مرفوض'],
+                ]],
+                'date' => ['type' => 'date-range', 'column' => 'requested_at'],
+                'amount' => ['type' => 'number-range', 'column' => 'amount'],
+            ],
         );
         $paginator->getCollection()->transform(fn ($r) => $this->editRequestRow($r));
 
@@ -205,6 +269,46 @@ final class ExpenseController extends Controller
             'approved' => ExpenseEditRequest::where('status', 'approved')->count(),
             'rejected' => ExpenseEditRequest::where('status', 'rejected')->count(),
         ]));
+    }
+
+    /**
+     * GET /api/v1/expenses/edit-requests/export?format=xlsx|pdf|csv (T7-06)
+     * — the SAME query/filters as editRequests().
+     */
+    public function editRequestsExport(Request $request): StreamedResponse
+    {
+        $rows = ListExport::rows(
+            $request,
+            ExpenseEditRequest::with(['expense', 'requester', 'reviewer']),
+            ['date' => 'requested_at', 'amount' => 'amount', 'requested_at' => 'requested_at', 'requested_by' => 'requested_by', 'status' => 'status', 'expense_id' => 'expense_id', 'original_amount' => 'expense_id', 'requested_amount' => 'expense_id'],
+            [
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'pending', 'label' => 'معلق'],
+                    ['value' => 'approved', 'label' => 'موافق عليه'],
+                    ['value' => 'rejected', 'label' => 'مرفوض'],
+                ]],
+                'date' => ['type' => 'date-range', 'column' => 'requested_at'],
+                'amount' => ['type' => 'number-range', 'column' => 'amount'],
+            ],
+            filters: ['status' => fn ($q, $v) => $q->where('status', $v)],
+            row: fn ($r) => $this->editRequestRow($r),
+        )->map(fn (array $r) => [
+            'id' => $r['id'],
+            'expense_id' => '#' . $r['expense_id'],
+            'requested_by' => $r['requested_by'],
+            'amount' => (float) $r['requested_amount'],
+            'status' => $r['status'] === 'approved' ? 'موافق عليه' : ($r['status'] === 'rejected' ? 'مرفوض' : 'معلق'),
+            'requested_at' => ($r['requested_at'] ?? '') !== '' ? substr((string) $r['requested_at'], 0, 10) : '',
+        ]);
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'id', 'label' => '#'],
+            ['key' => 'expense_id', 'label' => 'المصروف'],
+            ['key' => 'requested_by', 'label' => 'الطالب'],
+            ['key' => 'amount', 'label' => 'المبلغ المطلوب', 'numeric' => true, 'total' => true],
+            ['key' => 'status', 'label' => 'الحالة'],
+            ['key' => 'requested_at', 'label' => 'التاريخ'],
+        ], 'expense-edit-requests');
     }
 
     /** GET /api/v1/expense-edit-requests/{id} — before/after comparison (T16, T24) */

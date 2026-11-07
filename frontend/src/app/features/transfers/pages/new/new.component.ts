@@ -16,6 +16,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { serverFieldError } from '@shared/lib/server-field-errors';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface UserCustody {
   id: number;
@@ -32,13 +33,13 @@ interface UserCustody {
 @Component({
   selector: 'app-transfer-form',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule, TextareaModule, PageHeaderComponent, FormSectionComponent, FieldComponent, MoneyPipe],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule, TextareaModule, PageHeaderComponent, FormSectionComponent, FieldComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'transfer.create.title' | translate" />
+    <app-page-header [title]="'transfer.create.title' | translate" accent="custodies" iconName="arrows-exchange">
     <form (ngSubmit)="submit()" #f="ngForm">
       <app-form-section>
-        <app-field label="transfer.create.custody" controlId="custody" [required]="true" [error]="serverFieldError(error(), 'custody_id')">
+        <app-field label="transfer.create.custody" controlId="custody" [required]="true" hint="common.hint_choose_custody" [error]="serverFieldError(error(), 'custody_id')">
           <p-select appendTo="body" inputId="custody" [options]="custodyOptions()" optionLabel="reason" optionValue="id"
                     [(ngModel)]="custodyId" name="custody" required styleClass="u-full" />
           @if (selected(); as c) {
@@ -64,7 +65,7 @@ interface UserCustody {
       </app-form-section>
       @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
       <div class="sticky-actions">
-        <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/transfers" />
+        <app-action-button kind="back" label="common.back" [route]="['/transfers']" />
         <p-button type="submit" [label]="'transfer.create.submit' | translate" [loading]="sending()"
                   [disabled]="f.invalid || sending() || maxTransferable() <= 0" />
       </div>

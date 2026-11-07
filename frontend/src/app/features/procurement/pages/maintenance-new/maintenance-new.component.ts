@@ -30,7 +30,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
   imports: [ButtonModule, FormsModule, InputTextModule, TextareaModule, AttachmentFieldComponent, PageHeaderComponent, RouterLink, SelectModule, TranslatePipe, FieldComponent, FormSectionComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'procurement.maintenance.form.title' | translate">
+    <app-page-header [title]="'procurement.maintenance.form.title' | translate" accent="procurement" iconName="shopping-cart">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/procurement/maintenance" />
       </div>

@@ -14,9 +14,11 @@ use App\Models\Treasury;
 use App\Models\TreasuryTransaction;
 use App\Models\User;
 use App\Services\DirectionalStatsService;
+use App\Support\Api\ListExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class ReportController extends Controller
 {
@@ -114,6 +116,28 @@ final class ReportController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/v1/reports/export?format=xlsx|pdf|csv (T7-06) — the SAME
+     * computation/authorization as dashboard(); the main table flattened:
+     * expenses by day (آخر 7 أيام).
+     */
+    public function dashboardExport(Request $request): StreamedResponse
+    {
+        $this->authorize('manage_treasury');
+
+        $figures = $this->directionStats->figures(null, null);
+
+        $rows = collect(array_map(fn (array $day) => [
+            'date' => $day['date'],
+            'amount' => (float) $day['amount'],
+        ], $figures['by_day'] ?? []));
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'date', 'label' => 'التاريخ'],
+            ['key' => 'amount', 'label' => 'المبلغ', 'numeric' => true, 'total' => true],
+        ], 'reports-dashboard');
+    }
+
     /** GET /api/v1/analytics/researchers */
     public function researchers(Request $request): JsonResponse
     {
@@ -151,6 +175,44 @@ final class ReportController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/v1/analytics/researchers/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME computation/authorization as researchers().
+     */
+    public function researchersExport(Request $request): StreamedResponse
+    {
+        $this->authorize('manage_treasury');
+
+        $researchers = User::role('باحث اجتماعي')->with('socialCases')->get();
+        $rows = $researchers->map(function ($researcher) {
+            $cases = $researcher->socialCases;
+            $spent = (float) Expense::where('type', 'social_case')
+                ->whereIn('social_case_id', $cases->pluck('id'))->sum('amount');
+            $approved = $cases->where('status', 'approved')->count();
+            $total = $cases->count();
+
+            return [
+                'name' => $researcher->name,
+                'total_cases' => $total,
+                'approved' => $approved,
+                'rejected' => $cases->where('status', 'rejected')->count(),
+                'pending' => $cases->where('status', 'pending')->count(),
+                'total_spent' => round($spent, 2),
+                'approval_rate' => $total > 0 ? (int) round($approved / $total * 100) : 0,
+            ];
+        })->sortByDesc('total_spent')->values();
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'name', 'label' => 'اسم الباحث'],
+            ['key' => 'total_cases', 'label' => 'عدد الحالات', 'numeric' => true, 'total' => true],
+            ['key' => 'approved', 'label' => 'موافق عليها', 'numeric' => true, 'total' => true],
+            ['key' => 'rejected', 'label' => 'مرفوضة', 'numeric' => true, 'total' => true],
+            ['key' => 'pending', 'label' => 'قيد الانتظار', 'numeric' => true, 'total' => true],
+            ['key' => 'total_spent', 'label' => 'إجمالي المصروف', 'numeric' => true, 'total' => true],
+            ['key' => 'approval_rate', 'label' => 'نسبة الموافقة', 'numeric' => true],
+        ], 'report-researchers');
+    }
+
     /** GET /api/v1/reports/governorates (T34) */
     public function governorates(Request $request): JsonResponse
     {
@@ -173,6 +235,40 @@ final class ReportController extends Controller
         );
 
         return response()->json(['data' => ['governorates' => $governorates, 'grand_total' => $grandTotal]]);
+    }
+
+    /**
+     * GET /api/v1/reports/governorates/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME params/filters/authorization as governorates() (T34).
+     */
+    public function governoratesExport(Request $request): StreamedResponse
+    {
+        $this->authorize('manage_treasury');
+
+        [$directionId, $directionItemId] = $this->directionParams($request);
+        $governorates = $this->directionStats->governoratesSummary(
+            $directionId, $directionItemId, $request->input('date_from'), $request->input('date_to'),
+        );
+
+        $rows = collect($governorates)->map(fn (array $g) => [
+            'label' => $g['label'],
+            'total' => $g['total'],
+            'approved' => $g['approved'],
+            'pending' => $g['pending'],
+            'rejected' => $g['rejected'],
+            'expenses_total' => (float) $g['expenses_total'],
+            'average' => (float) $g['average'],
+        ]);
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'label', 'label' => 'المحافظة'],
+            ['key' => 'total', 'label' => 'إجمالي الحالات', 'numeric' => true, 'total' => true],
+            ['key' => 'approved', 'label' => 'موافق عليها', 'numeric' => true, 'total' => true],
+            ['key' => 'pending', 'label' => 'معلقة', 'numeric' => true, 'total' => true],
+            ['key' => 'rejected', 'label' => 'مرفوضة', 'numeric' => true, 'total' => true],
+            ['key' => 'expenses_total', 'label' => 'إجمالي المصروفات', 'numeric' => true, 'total' => true],
+            ['key' => 'average', 'label' => 'متوسط الصرف', 'numeric' => true],
+        ], 'report-governorates');
     }
 
     /** GET /api/v1/reports/social-case-expenses */
@@ -228,6 +324,50 @@ final class ReportController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/v1/reports/social-case-expenses/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME filters/authorization as socialCaseExpenses(); the main table
+     * flattened: one row per social-case expense.
+     */
+    public function socialCaseExpensesExport(Request $request): StreamedResponse
+    {
+        $this->authorize('manage_treasury');
+
+        $query = Expense::with(['user', 'socialCase', 'category', 'item'])->where('type', 'social_case');
+        if ($request->filled('social_case_id')) {
+            $query->where('social_case_id', (int) $request->social_case_id);
+        }
+        if ($request->filled('category_id')) {
+            $query->where('expense_category_id', (int) $request->category_id);
+        }
+        if ($request->filled('date_from')) {
+            $query->whereDate('expense_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('expense_date', '<=', $request->date_to);
+        }
+
+        $rows = $query->get()->map(fn ($e) => [
+            'date' => $e->expense_date?->toDateString(),
+            'case' => $e->socialCase?->name,
+            'item' => $e->item?->name,
+            'category' => $e->category?->name,
+            'user' => $e->user?->name,
+            'amount' => (float) $e->amount,
+            'description' => $e->description,
+        ]);
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'date', 'label' => 'التاريخ'],
+            ['key' => 'case', 'label' => 'الحالة'],
+            ['key' => 'item', 'label' => 'البند'],
+            ['key' => 'category', 'label' => 'الفئة'],
+            ['key' => 'user', 'label' => 'المسجل من'],
+            ['key' => 'amount', 'label' => 'المبلغ', 'numeric' => true, 'total' => true],
+            ['key' => 'description', 'label' => 'الوصف'],
+        ], 'report-social-case-expenses');
+    }
+
     /** GET /api/v1/reports/agents-balance (wording T32, formula T10b) */
     public function agentsBalance(Request $request): JsonResponse
     {
@@ -269,6 +409,53 @@ final class ReportController extends Controller
                 'agents' => $rows,
             ],
         ]);
+    }
+
+    /**
+     * GET /api/v1/reports/agents-balance/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME computation/authorization as agentsBalance() (wording T32,
+     * formula T10b).
+     */
+    public function agentsBalanceExport(Request $request): StreamedResponse
+    {
+        $this->authorize('manage_treasury');
+
+        $agents = User::role('مندوب')->get();
+        $rows = $agents->map(function ($agent) {
+            $custodies = Custody::where('agent_id', $agent->id)
+                ->whereIn('status', ['accepted', 'active', 'partially_returned', 'closed'])
+                ->get();
+
+            if ($custodies->isEmpty()) {
+                return null;
+            }
+
+            return [
+                'name' => $agent->name,
+                'total_custodies' => $custodies->count(),
+                'active_custodies' => $custodies->whereIn('status', ['accepted', 'active', 'partially_returned'])->count(),
+                'closed_custodies' => $custodies->where('status', 'closed')->count(),
+                'total_received' => round((float) ($custodies->sum('amount') + $custodies->sum('transferred_in')), 2),
+                'total_spent' => round((float) $custodies->sum('spent'), 2),
+                'total_returned' => round((float) $custodies->sum('returned'), 2),
+                'transferred_in' => round((float) $custodies->sum('transferred_in'), 2),
+                'transferred_out' => round((float) $custodies->sum('transferred_out'), 2),
+                'current_balance' => round((float) $custodies->sum(fn ($c) => $c->getRemainingBalance()), 2),
+            ];
+        })->filter()->sortByDesc('current_balance')->values();
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'name', 'label' => 'اسم المندوب'],
+            ['key' => 'total_custodies', 'label' => 'عدد العهدات', 'numeric' => true, 'total' => true],
+            ['key' => 'active_custodies', 'label' => 'النشطة', 'numeric' => true],
+            ['key' => 'closed_custodies', 'label' => 'المغلقة', 'numeric' => true],
+            ['key' => 'total_received', 'label' => 'المستلم', 'numeric' => true, 'total' => true],
+            ['key' => 'total_spent', 'label' => 'المصروف', 'numeric' => true, 'total' => true],
+            ['key' => 'total_returned', 'label' => 'المرتجع', 'numeric' => true, 'total' => true],
+            ['key' => 'transferred_in', 'label' => 'تحويلات واردة', 'numeric' => true, 'total' => true],
+            ['key' => 'transferred_out', 'label' => 'تحويلات صادرة', 'numeric' => true, 'total' => true],
+            ['key' => 'current_balance', 'label' => 'الرصيد الحالي', 'numeric' => true, 'total' => true],
+        ], 'report-agents-balance');
     }
 
     /** GET /api/v1/reports/expense-items */
@@ -322,11 +509,129 @@ final class ReportController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/v1/reports/expense-items/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME filters/authorization as expenseItems().
+     */
+    public function expenseItemsExport(Request $request): StreamedResponse
+    {
+        $this->authorize('manage_treasury');
+
+        $query = ExpenseItem::active();
+        if ($request->filled('category_id')) {
+            $query->where('expense_category_id', (int) $request->category_id);
+        }
+        $items = $query->ordered()->with('category')->get();
+
+        $rows = $items->map(function ($item) use ($request) {
+            $expenses = $item->expenses();
+            if ($request->filled('date_from')) {
+                $expenses->whereDate('expense_date', '>=', $request->date_from);
+            }
+            if ($request->filled('date_to')) {
+                $expenses->whereDate('expense_date', '<=', $request->date_to);
+            }
+            $count = (clone $expenses)->count();
+            if ($count === 0) {
+                return null;
+            }
+            $total = round((float) (clone $expenses)->sum('amount'), 2);
+
+            return [
+                'item' => $item->name,
+                'category' => $item->category?->name,
+                'count' => $count,
+                'total' => $total,
+                'average' => round($total / $count, 2),
+            ];
+        })->filter()->values();
+
+        $grandTotal = (float) $rows->sum('total');
+        $rows = $rows->map(fn (array $r) => $r + [
+            'percentage' => $grandTotal > 0 ? round($r['total'] / $grandTotal * 100, 2) : 0,
+        ]);
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'item', 'label' => 'البند'],
+            ['key' => 'category', 'label' => 'الفئة'],
+            ['key' => 'count', 'label' => 'عدد العمليات', 'numeric' => true, 'total' => true],
+            ['key' => 'total', 'label' => 'الإجمالي', 'numeric' => true, 'total' => true],
+            ['key' => 'average', 'label' => 'المتوسط', 'numeric' => true],
+            ['key' => 'percentage', 'label' => 'النسبة المئوية', 'numeric' => true],
+        ], 'report-expense-items');
+    }
+
     /** GET /api/v1/reports/categories-analytics — direction analytics (T33 drill-down source) */
     public function categoriesAnalytics(Request $request): JsonResponse
     {
         $this->authorize('manage_treasury');
 
+        [$all, $grandTotal] = $this->categoriesAnalyticsData($request);
+
+        return response()->json([
+            'data' => [
+                'grand_total' => $this->money($grandTotal),
+                'rows' => $all,
+                'roots' => $all->where('level', 1)->values(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /api/v1/reports/categories-analytics/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME computation/authorization as categoriesAnalytics() (T33).
+     */
+    public function categoriesAnalyticsExport(Request $request): StreamedResponse
+    {
+        $this->authorize('manage_treasury');
+
+        [$all] = $this->categoriesAnalyticsData($request);
+
+        $rows = $all->map(fn (array $r) => [
+            'level' => $this->categoryLevelLabel($r['level']),
+            'name' => $r['name'],
+            'code' => $r['code'],
+            'parent' => $r['parent_name'],
+            'total' => (float) $r['total_amount'],
+            'count' => $r['expense_count'],
+            'average' => (float) $r['average_amount'],
+            'percentage' => $r['percentage'],
+            'reviewed_by' => $r['reviewed_by'],
+        ]);
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'level', 'label' => 'المستوى'],
+            ['key' => 'name', 'label' => 'الاسم'],
+            ['key' => 'code', 'label' => 'الكود'],
+            ['key' => 'parent', 'label' => 'تحت'],
+            ['key' => 'total', 'label' => 'إجمالي المصروفات', 'numeric' => true, 'total' => true],
+            ['key' => 'count', 'label' => 'عدد العمليات', 'numeric' => true],
+            ['key' => 'average', 'label' => 'المتوسط', 'numeric' => true],
+            ['key' => 'percentage', 'label' => 'النسبة', 'numeric' => true],
+            ['key' => 'reviewed_by', 'label' => 'المعتمد من قبل'],
+        ], 'report-categories-analytics');
+    }
+
+    /** Arabic label for a categories-analytics tree level (export rows) */
+    private function categoryLevelLabel(int|string $level): string
+    {
+        return match ($level) {
+            1 => 'مستوى 1',
+            2 => 'مستوى 2',
+            3 => 'مستوى 3',
+            'item' => 'بند',
+            default => (string) $level,
+        };
+    }
+
+    /**
+     * Shared computation behind categoriesAnalytics()/categoriesAnalyticsExport() —
+     * identical logic for the JSON report and its export (T7-06).
+     *
+     * @return array{0: Collection<int, array<string, mixed>>, 1: float} the rows (with percentage) and the grand total
+     */
+    private function categoriesAnalyticsData(Request $request): array
+    {
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
@@ -417,13 +722,7 @@ final class ReportController extends Controller
             return $d;
         })->values();
 
-        return response()->json([
-            'data' => [
-                'grand_total' => $this->money($grandTotal),
-                'rows' => $all,
-                'roots' => $all->where('level', 1)->values(),
-            ],
-        ]);
+        return [$all, $grandTotal];
     }
 
     /** GET /api/v1/reports/reconciliation */
@@ -479,5 +778,58 @@ final class ReportController extends Controller
                 ],
             ],
         ]);
+    }
+
+    /**
+     * GET /api/v1/reports/reconciliation/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME computation/authorization as reconciliation(): one row per
+     * treasury with the net transfers column (واردة - صادرة).
+     */
+    public function reconciliationExport(Request $request): StreamedResponse
+    {
+        $this->authorize('manage_treasury');
+
+        $treasuries = Treasury::orderBy('id')->get();
+        abort_if($treasuries->isEmpty(), 404, 'لم يتم العثور على خزينة');
+
+        $rows = $treasuries->map(function ($treasury) {
+            $sum = fn (string $type, bool $withoutCustody = false): float => (float) TreasuryTransaction::where('treasury_id', $treasury->id)
+                ->when($withoutCustody, fn ($q) => $q->whereNull('custody_id'))
+                ->where('type', $type)->sum('amount');
+
+            $donations = $sum('donation', true);
+            $issued = $sum('custody_out');
+            $returned = $sum('custody_return');
+            $direct = $sum('expense', true);
+            $in = $sum('transfer_in');
+            $out = $sum('transfer_out');
+
+            $expected = $donations + $returned + $in - $issued - $direct - $out;
+            $actual = (float) $treasury->balance;
+
+            return [
+                'name' => $treasury->name,
+                'donations' => round($donations, 2),
+                'custodies_issued' => round($issued, 2),
+                'custodies_returned' => round($returned, 2),
+                'direct_expenses' => round($direct, 2),
+                'net_transfers' => round($in - $out, 2),
+                'expected_balance' => round($expected, 2),
+                'actual_balance' => round($actual, 2),
+                'difference' => round($actual - $expected, 2),
+            ];
+        });
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'name', 'label' => 'الخزينة'],
+            ['key' => 'donations', 'label' => 'تبرعات داخلة', 'numeric' => true, 'total' => true],
+            ['key' => 'custodies_issued', 'label' => 'عهد مصروفة', 'numeric' => true, 'total' => true],
+            ['key' => 'custodies_returned', 'label' => 'مرتجعات عهد', 'numeric' => true, 'total' => true],
+            ['key' => 'direct_expenses', 'label' => 'مصاريف مباشرة', 'numeric' => true, 'total' => true],
+            ['key' => 'net_transfers', 'label' => 'تحويلات من/إلى خزائن (صافي)', 'numeric' => true],
+            ['key' => 'expected_balance', 'label' => 'الرصيد المتوقع', 'numeric' => true, 'total' => true],
+            ['key' => 'actual_balance', 'label' => 'الرصيد الفعلي', 'numeric' => true, 'total' => true],
+            ['key' => 'difference', 'label' => 'الفرق', 'numeric' => true, 'total' => true],
+        ], 'report-reconciliation');
     }
 }

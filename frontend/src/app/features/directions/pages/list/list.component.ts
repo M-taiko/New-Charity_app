@@ -21,7 +21,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 import type { TableColumn } from '@shared/ui/data-table/data-table.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 
 interface FlatNode {
   id: number; kind: 'category' | 'item'; name: string; code: string | null; level?: number;
@@ -57,8 +57,8 @@ interface DirectionsData {
   standalone: true,
   imports: [
     TranslatePipe, FormsModule, ButtonModule, InputTextModule, InputNumberModule, CheckboxModule,
-    SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective,
-    TableColDirective, StatTileComponent, EmptyStateComponent, RowActionsComponent,
+    SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
+    StatTileComponent, EmptyStateComponent, RowActionsComponent,
     FormDialogComponent, FieldComponent, ConfirmDeleteComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -84,44 +84,36 @@ interface DirectionsData {
             <p-button [label]="'direction.list.expand_all' | translate" size="small" [text]="true" (onClick)="setAllCollapsed(false)" />
             <p-button [label]="'direction.list.collapse_all' | translate" size="small" [text]="true" (onClick)="setAllCollapsed(true)" />
           </div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="name" [style.padding-inline-start.px]="8 + (row.level ?? 1) * 14">
-                <span class="u-flex u-gap-1 u-flex-wrap">
-                  @if (row.kind === 'category' && (childCounts().get(row.id) ?? 0) > 0) {
-                    <!-- T5-04: intentionally a raw button — this is a tree-disclosure
-                         control whose aria-expanded belongs on the button itself;
-                         neither p-button nor app-row-actions forwards that attribute -->
-                    <button
-                      type="button"
-                      class="row-actions__btn"
-                      [attr.aria-expanded]="!isCollapsed(row.id)"
-                      [attr.aria-label]="(isCollapsed(row.id) ? 'direction.list.expand' : 'direction.list.collapse') | translate"
-                      [title]="(isCollapsed(row.id) ? 'direction.list.expand' : 'direction.list.collapse') | translate"
-                      (click)="toggleNode(row.id)"
-                    >
-                      <svg width="14" height="14" aria-hidden="true" [style.transform]="isCollapsed(row.id) ? 'none' : 'rotate(90deg)'">
-                        <use href="assets/icons/sprite.svg#tabler-chevron-right" />
-                      </svg>
-                    </button>
-                  }
-                  <span>{{ row.name }}</span>
-                  @if (row.kind === 'category' && isCollapsed(row.id)) {
-                    <span class="stamp stamp--neutral" aria-hidden="true">+{{ childCounts().get(row.id) }}</span>
-                  }
-                </span>
-              </td>
-              <td appTableCol="code" class="u-bidi">{{ row.code ?? '—' }}</td>
-              <td appTableCol="level">{{ row.level }}</td>
-              <td appTableCol="items_count">{{ row.itemsCount }}</td>
-              <td appTableCol="is_active">
-                <span class="stamp" [class.stamp--success]="row.isActive" [class.stamp--neutral]="!row.isActive">
-                  {{ (row.isActive ? 'common.true' : 'common.false') | translate }}
-                </span>
-              </td>
-              <td appTableCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
-            </tr>
-          </ng-template>
+          <ng-template appCell="name" let-row><span class="u-flex u-gap-1 u-flex-wrap">
+  @if (row.kind === 'category' && (childCounts().get(row.id) ?? 0) > 0) {
+    <!-- T5-04: intentionally a raw button — this is a tree-disclosure
+         control whose aria-expanded belongs on the button itself;
+         neither p-button nor app-row-actions forwards that attribute -->
+    <button
+      type="button"
+      class="row-actions__btn"
+      [attr.aria-expanded]="!isCollapsed(row.id)"
+      [attr.aria-label]="(isCollapsed(row.id) ? 'direction.list.expand' : 'direction.list.collapse') | translate"
+      [title]="(isCollapsed(row.id) ? 'direction.list.expand' : 'direction.list.collapse') | translate"
+      (click)="toggleNode(row.id)"
+    >
+      <svg width="14" height="14" aria-hidden="true" [style.transform]="isCollapsed(row.id) ? 'none' : 'rotate(90deg)'">
+        <use href="assets/icons/sprite.svg#tabler-chevron-right" />
+      </svg>
+    </button>
+  }
+  <span>{{ row.name }}</span>
+  @if (row.kind === 'category' && isCollapsed(row.id)) {
+    <span class="stamp stamp--neutral" aria-hidden="true">+{{ childCounts().get(row.id) }}</span>
+  }
+</span></ng-template>
+          <ng-template appCell="code" let-row><span class="u-bidi">{{ row.code ?? '—' }}</span></ng-template>
+          <ng-template appCell="level" let-row>{{ row.level }}</ng-template>
+          <ng-template appCell="items_count" let-row>{{ row.itemsCount }}</ng-template>
+          <ng-template appCell="is_active" let-row><span class="stamp" [class.stamp--success]="row.isActive" [class.stamp--neutral]="!row.isActive">
+  {{ (row.isActive ? 'common.true' : 'common.false') | translate }}
+</span></ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         </app-data-table>
       }
       <div empty>

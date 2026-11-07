@@ -15,6 +15,7 @@ import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.co
 import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface TransferDetail {
   id: number; sender: string | null; receiver: string | null; custody_id: number | null;
@@ -28,19 +29,19 @@ interface TransferDetail {
 @Component({
   selector: 'app-transfer-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, ReasonDialogComponent, ConfirmDialogComponent, MoneyPipe],
+  imports: [TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, ReasonDialogComponent, ConfirmDialogComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'transfer.detail.title' | translate" [subtitle]="'#' + id()">
+    <app-page-header [title]="'transfer.detail.title' | translate" [subtitle]="'#' + id()" accent="custodies" iconName="arrows-exchange">
       <div actions class="u-flex u-gap-2">
         @if (canDecide()) {
-          <p-button [label]="'transfer.detail.accept' | translate" size="small" severity="success" (onClick)="acceptDialog.open()" [loading]="sending()" />
-          <p-button [label]="'transfer.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDialog.open()" />
+          <app-action-button kind="accept" label="transfer.detail.accept" size="small" (action)="acceptDialog.open()" [loading]="sending()" />
+          <app-action-button kind="reject" label="transfer.detail.reject" size="small" (action)="rejectDialog.open()" />
         }
         @if (canCancel()) {
-          <p-button [label]="'transfers.cancel' | translate" size="small" severity="danger" [outlined]="true" (onClick)="cancelDialog.open()" />
+          <app-action-button kind="cancel" label="transfers.cancel" size="small" (action)="cancelDialog.open()" />
         }
-        <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/transfers" />
+        <app-action-button kind="back" label="common.back_to_list" size="small" [route]="['/transfers']" />
       </div>
     </app-page-header>
 

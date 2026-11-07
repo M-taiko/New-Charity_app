@@ -8,7 +8,7 @@ import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -30,44 +30,40 @@ interface AgentsData {
   imports: [
     TranslatePipe, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, 
     StatTileComponent, PrintSheetComponent, MoneyPipe,
   ],
   template: `
     <app-print-sheet [title]="'report.agents_balance.title' | translate">
-      <app-page-header [title]="'report.agents_balance.title' | translate">
+      <app-page-header [title]="'report.agents_balance.title' | translate" accent="reports" iconName="report-analytics">
         <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (onClick)="printPage()" /></div>
       </app-page-header>
 
       <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
         @if (data.value(); as d) {
           <div class="kpi-grid">
-            <app-stat-tile [label]="'report.agents_balance.total_balance'" [value]="total('total_balance')" [money]="true" />
+            <app-stat-tile [label]="'report.agents_balance.total_balance'" [value]="total('total_balance')" [money]="true" accent="reports" iconName="report-analytics" />
             <app-stat-tile [label]="'report.agents_balance.total_agents'" [value]="total('total_agents')" />
             <app-stat-tile [label]="'report.agents_balance.total_received'" [value]="total('total_received')" [money]="true" />
             <app-stat-tile [label]="'report.agents_balance.total_spent'" [value]="total('total_spent')" [money]="true" />
             <app-stat-tile [label]="'report.agents_balance.total_returned'" [value]="total('total_returned')" [money]="true" />
           </div>
 
-          <app-data-table mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.agents" [emptyLabel]="'report.agents_balance.empty'">
-            <ng-template appTableBody let-row>
-              <tr class="ledger-table__row">
-                <td appTableCol="agent">{{ row.agent.name }}</td>
-                <td appTableCol="total_custodies" class="u-bidi">{{ row.total_custodies }}</td>
-                <td appTableCol="active_custodies" class="u-bidi">{{ row.active_custodies }}</td>
-                <td appTableCol="closed_custodies" class="u-bidi">{{ row.closed_custodies }}</td>
-                <td appTableCol="total_received"><span class="u-bidi">{{ row.total_received | money }}</span></td>
-                <td appTableCol="transferred_in"><span class="u-bidi">{{ row.transferred_in | money }}</span></td>
-                <td appTableCol="transferred_out"><span class="u-bidi">{{ row.transferred_out | money }}</span></td>
-                <td appTableCol="total_spent"><span class="u-bidi">{{ row.total_spent | money }}</span></td>
-                <td appTableCol="total_returned"><span class="u-bidi">{{ row.total_returned | money }}</span></td>
-                <td appTableCol="current_balance"><span class="u-bidi">{{ row.current_balance | money }}</span></td>
-              </tr>
-            </ng-template>
+          <app-data-table listUrl="/reports/agents-balance" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.agents" [emptyLabel]="'report.agents_balance.empty'">
+            <ng-template appCell="agent" let-row>{{ row.agent.name }}</ng-template>
+            <ng-template appCell="total_custodies" let-row><span class="u-bidi">{{ row.total_custodies }}</span></ng-template>
+            <ng-template appCell="active_custodies" let-row><span class="u-bidi">{{ row.active_custodies }}</span></ng-template>
+            <ng-template appCell="closed_custodies" let-row><span class="u-bidi">{{ row.closed_custodies }}</span></ng-template>
+            <ng-template appCell="total_received" let-row><span class="u-bidi">{{ row.total_received | money }}</span></ng-template>
+            <ng-template appCell="transferred_in" let-row><span class="u-bidi">{{ row.transferred_in | money }}</span></ng-template>
+            <ng-template appCell="transferred_out" let-row><span class="u-bidi">{{ row.transferred_out | money }}</span></ng-template>
+            <ng-template appCell="total_spent" let-row><span class="u-bidi">{{ row.total_spent | money }}</span></ng-template>
+            <ng-template appCell="total_returned" let-row><span class="u-bidi">{{ row.total_returned | money }}</span></ng-template>
+            <ng-template appCell="current_balance" let-row><span class="u-bidi">{{ row.current_balance | money }}</span></ng-template>
           </app-data-table>
         }
         <div empty>
-          <app-empty-state [title]="'report.agents_balance.empty'" [text]="'common.no_data'" />
+          <app-empty-state [title]="'report.agents_balance.empty'" [text]="'common.no_data'" accent="reports" iconName="report-analytics" />
         </div>
       </app-async-page>
     </app-print-sheet>

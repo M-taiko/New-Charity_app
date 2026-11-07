@@ -13,18 +13,25 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { MotionService } from '@core/motion/motion.service';
+import { IconComponent } from '@shared/ui/icon/icon.component';
+import type { ModuleAccent } from '@shared/ui/icon/icon.component';
 
 /**
  * Stat tile (plan 11.2): label, hero figure in the display face, companion
  * line. The figure counts up once per session view when motion allows (12.2).
+ * T7-09: `accent` + `iconName` render the module chip — each module is
+ * recognizable by its accent in tiles as in headers and navigation.
  */
 @Component({
   selector: 'app-stat-tile',
   standalone: true,
-  imports: [TranslatePipe, MoneyPipe],
+  imports: [TranslatePipe, MoneyPipe, IconComponent],
   template: `
     <div class="stat-tile" [class.stat-tile--wide]="wide()" [class.stat-tile--inset]="inset()">
       <span class="stat-tile__label">
+        @if (accent() !== '' && iconName() !== '') {
+          <app-icon class="stat-tile__chip" [name]="iconName()" [chip]="accent()" [size]="16" />
+        }
         @if (icon()) {
           <ng-content select="[icon]" />
         }
@@ -57,6 +64,10 @@ export class StatTileComponent implements AfterViewInit {
   caption = input('');
   hint = input('');
   icon = input(false);
+  /** module key (T7-09) — renders the icon as a chip in the module accent */
+  accent = input<ModuleAccent | ''>('');
+  /** Tabler icon name shown as the accent chip (T7-09) */
+  iconName = input('');
 
   private motion = inject(MotionService);
   private valueEl = viewChild<ElementRef<HTMLElement>>('value');

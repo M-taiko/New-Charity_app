@@ -17,13 +17,14 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ListResponse, ActionResponse } from '@shared/models/api.models';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface Row {
   id: number;
@@ -41,15 +42,15 @@ interface Row {
   standalone: true,
   imports: [SectionNavComponent, 
     TranslatePipe, FormsModule, ButtonModule, SelectModule, InputNumberModule,
-    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, MoneyPipe, StatusStampComponent,
-    FormDialogComponent, FieldComponent,
+    FormDialogComponent, FieldComponent, ActionButtonComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'hr.salaries.title' | translate">
+    <app-page-header [title]="'hr.salaries.title' | translate" accent="hr" iconName="briefcase">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
-        <p-button [label]="'hr.salaries.export' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="exportReport()" />
+        <app-action-button kind="export" label="hr.salaries.export" size="small" (action)="exportReport()" />
         <p-button [label]="'hr.salaries.calculate' | translate" size="small" (onClick)="dialogOpen.set(true)" />
       </div>
     </app-page-header>
@@ -59,10 +60,10 @@ interface Row {
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'hr.salaries.detail.title'" [value]="summaryValue('total_final')" [money]="true" />
+          <app-stat-tile [label]="'hr.salaries.detail.title'" [value]="summaryValue('total_final')" [money]="true" accent="hr" iconName="briefcase" />
         </div>
 
-        <app-data-table
+        <app-data-table listUrl="/hr/salaries"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -79,44 +80,14 @@ interface Row {
               <p-select inputId="sal-filter-year" appendTo="body" [options]="yearOptions" optionLabel="label" optionValue="value" [ngModel]="params().year" name="year" (ngModelChange)="setParam('year', $event)" styleClass="u-full" />
             </app-field>
           </div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="employee">{{ row.employee ?? '—' }}</td>
-              <td appTableCol="year">{{ row.year ?? '—' }}</td>
-              <td appTableCol="month">{{ row.month ?? '—' }}</td>
-              <td appTableCol="base_salary" class="ledger-table__cell-num"><span class="u-bidi">{{ row.base_salary | money }}</span></td>
-              <td appTableCol="final_salary" class="ledger-table__cell-num"><span class="u-bidi">{{ row.final_salary | money }}</span></td>
-              <td appTableCol="status"><app-status-stamp [status]="row.status ?? ''" namespace="salary" /></td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_name' | translate }}</span>
-                {{ row.employee ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.salaries.year' | translate }}</span>
-                {{ row.year ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.salaries.month' | translate }}</span>
-                {{ row.month ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_base' | translate }}</span>
-                <span class="u-bidi">{{ row.base_salary | money }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_final' | translate }}</span>
-                <span class="u-bidi">{{ row.final_salary | money }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.salaries.col_status' | translate }}</span>
-                <app-status-stamp [status]="row.status ?? ''" namespace="salary" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="employee" let-row>{{ row.employee ?? '—' }}</ng-template>
+          <ng-template appCell="year" let-row>{{ row.year ?? '—' }}</ng-template>
+          <ng-template appCell="month" let-row>{{ row.month ?? '—' }}</ng-template>
+          <ng-template appCell="base_salary" let-row><span class="u-bidi">{{ row.base_salary | money }}</span></ng-template>
+          <ng-template appCell="final_salary" let-row><span class="u-bidi">{{ row.final_salary | money }}</span></ng-template>
+          <ng-template appCell="status" let-row><app-status-stamp [status]="row.status ?? ''" namespace="salary" /></ng-template>
           <div empty>
-            <app-empty-state [title]="'hr.salaries.empty' | translate" [text]="'common.no_data' | translate" />
+            <app-empty-state [title]="'hr.salaries.empty' | translate" [text]="'common.no_data' | translate" accent="hr" iconName="briefcase" />
           </div>
         </app-data-table>
       }
@@ -149,8 +120,8 @@ export class SalariesPage {
     { field: 'employee', header: 'hr.salaries.col_name', sortable: true },
     { field: 'year', header: 'hr.salaries.year', sortable: true },
     { field: 'month', header: 'hr.salaries.month', sortable: true },
-    { field: 'base_salary', header: 'hr.salaries.col_base', sortable: true },
-    { field: 'final_salary', header: 'hr.salaries.col_final', sortable: true },
+    { field: 'base_salary', header: 'hr.salaries.col_base', sortable: true, numeric: true },
+    { field: 'final_salary', header: 'hr.salaries.col_final', sortable: true, numeric: true },
     { field: 'status', header: 'hr.salaries.col_status', sortable: true }
   ];
 

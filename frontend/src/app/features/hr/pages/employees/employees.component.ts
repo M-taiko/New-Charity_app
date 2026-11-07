@@ -8,7 +8,7 @@ import { firstValueFrom } from 'rxjs';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
@@ -31,18 +31,18 @@ interface Row {
   standalone: true,
   imports: [SectionNavComponent, 
     TranslatePipe,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, MoneyPipe, RowActionsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'hr.employees.title' | translate" />
+    <app-page-header [title]="'hr.employees.title' | translate" accent="hr" iconName="briefcase">
 
     <app-section-nav module="hr" />
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table
+        <app-data-table listUrl="/hr/employees"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -52,46 +52,14 @@ interface Row {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="name">{{ row.name ?? '—' }}</td>
-              <td appTableCol="department">{{ row.department ?? '—' }}</td>
-              <td appTableCol="job_title">{{ row.job_title ?? '—' }}</td>
-              <td appTableCol="salary" class="ledger-table__cell-num"><span class="u-bidi">{{ row.salary | money }}</span></td>
-              <td appTableCol="status">{{ row.status ?? '—' }}</td>
-              <td appTableCol="actions">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.employees.col_name' | translate }}</span>
-                {{ row.name ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.employees.col_department' | translate }}</span>
-                {{ row.department ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.employees.col_title' | translate }}</span>
-                {{ row.job_title ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.salaries.detail.base' | translate }}</span>
-                <span class="u-bidi">{{ row.salary | money }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.status' | translate }}</span>
-                {{ row.status ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.actions' | translate }}</span>
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="name" let-row>{{ row.name ?? '—' }}</ng-template>
+          <ng-template appCell="department" let-row>{{ row.department ?? '—' }}</ng-template>
+          <ng-template appCell="job_title" let-row>{{ row.job_title ?? '—' }}</ng-template>
+          <ng-template appCell="salary" let-row><span class="u-bidi">{{ row.salary | money }}</span></ng-template>
+          <ng-template appCell="status" let-row>{{ row.status ?? '—' }}</ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
-            <app-empty-state [title]="'hr.employees.empty' | translate" [text]="'common.no_data' | translate" />
+            <app-empty-state [title]="'hr.employees.empty' | translate" [text]="'common.no_data' | translate" accent="hr" iconName="briefcase" />
           </div>
         </app-data-table>
       }
@@ -107,7 +75,7 @@ export class EmployeesPage {
     { field: 'name', header: 'hr.employees.col_name', sortable: true },
     { field: 'department', header: 'hr.employees.col_department', sortable: true },
     { field: 'job_title', header: 'hr.employees.col_title', sortable: true },
-    { field: 'salary', header: 'hr.salaries.detail.base', sortable: true },
+    { field: 'salary', header: 'hr.salaries.detail.base', sortable: true, numeric: true },
     { field: 'status', header: 'common.status', sortable: true },
     { field: 'actions', header: 'common.actions', sortable: false },
   ];

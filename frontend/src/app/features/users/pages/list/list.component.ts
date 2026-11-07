@@ -8,7 +8,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { RowActionsComponent, type RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import type { ListResponse } from '@shared/models/api.models';
@@ -28,7 +28,7 @@ interface Row {
   standalone: true,
   imports: [
     TranslatePipe, PageHeaderComponent, AsyncPageComponent, StatTileComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, 
     EmptyStateComponent, RowActionsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,7 +46,7 @@ interface Row {
           <app-stat-tile [label]="'user.list.active'" [value]="summaryValue('active')" />
         </div>
 
-        <app-data-table
+        <app-data-table listUrl="/users"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -56,36 +56,11 @@ interface Row {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="name">{{ row.name ?? '—' }}</td>
-              <td appTableCol="email">{{ row.email ?? '—' }}</td>
-              <td appTableCol="phone">{{ row.phone ?? '—' }}</td>
-              <td appTableCol="is_active">{{ row.is_active ?? '—' }}</td>
-              <td appTableCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'user.list.col_name' | translate }}</span>
-                {{ row.name ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'user.list.col_email' | translate }}</span>
-                {{ row.email ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'user.list.col_phone' | translate }}</span>
-                {{ row.phone ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'user.list.col_status' | translate }}</span>
-                {{ row.is_active ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="name" let-row>{{ row.name ?? '—' }}</ng-template>
+          <ng-template appCell="email" let-row>{{ row.email ?? '—' }}</ng-template>
+          <ng-template appCell="phone" let-row>{{ row.phone ?? '—' }}</ng-template>
+          <ng-template appCell="is_active" let-row>{{ row.is_active ?? '—' }}</ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         </app-data-table>
       }
       <div empty>

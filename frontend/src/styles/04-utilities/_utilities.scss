@@ -129,3 +129,8 @@ th.u-bidi {
   text-align: end;
   display: table-cell;
 }
+
+.u-flex-1 {
+  flex: 1;
+  min-width: 0;
+}

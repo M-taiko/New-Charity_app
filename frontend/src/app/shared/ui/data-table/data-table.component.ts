@@ -3,7 +3,6 @@ import {
   Component,
   Directive,
   contentChildren,
-  ElementRef,
   TemplateRef,
   computed,
   contentChild,
@@ -30,6 +29,7 @@ import { TableFiltersComponent, FilterCustomDirective } from '../table-filters/t
 import {
   defaultFilterValues,
   deriveFilters,
+  filterParams,
   filterRows,
   fieldValue,
   type TableFilterDef,
@@ -88,21 +88,14 @@ export class TableCellDirective {
 }
 
 /**
- * Marks a body <td> with its column field: <td appTableCol="agent">.
- * The cell places itself at the column's saved position on creation and
- * re-places itself when the user reorders columns — so data always moves
- * with its header, on first render AND after row re-creation.
+ * T7-04: per-column totals/footer cell — <ng-template appFooterCell="amount">.
+ * When present, the table renders its footer row from the ordered column
+ * list, so totals follow column reordering exactly like header and body.
  */
-@Directive({ selector: 'td[appTableCol]' })
-export class TableColDirective {
-  private table = inject(DataTableComponent);
-  private el = inject<ElementRef<HTMLTableCellElement>>(ElementRef);
-
-  appTableCol = input.required<string>();
-
-  private placer = effect(() => {
-    this.table.placeCell(this.el.nativeElement, this.appTableCol());
-  });
+@Directive({ selector: '[appFooterCell]' })
+export class TableFooterCellDirective {
+  appFooterCell = input.required<string>();
+  template = inject<TemplateRef<unknown>>(TemplateRef);
 }
 
 /**
@@ -146,8 +139,9 @@ export class TableColDirective {
                                [(values)]="filterValues" (applied)="onFiltersApplied($event)" />
           }
           <span class="ledger-table__spacer"></span>
-          <!-- T6-71: Export (Excel / PDF / CSV) - current filters ride the query string -->
-          @if (exportPath() !== '') {
+          <!-- T6-71/T7-06: Export (Excel / PDF / CSV) - derived from the list URL,
+               current filters/sort/search ride the query string -->
+          @if (effectiveExportPath() !== '') {
             <p-button [label]="'common.export' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="exportMenu.toggle($event)" />
             <p-menu #exportMenu appendTo="body" [model]="exportItems()" popup="true" />
           }
@@ -270,8 +264,26 @@ export class TableColDirective {
         </ng-template>
 
         <ng-template pTemplate="footer">
-          <!-- T6-20: totals as a real table footer — repeats with the header in print -->
-          <ng-content select="[footer]" />
+          <!-- T6-20: totals as a real table footer — repeats with the header in print.
+               T7-04: when per-column footer cells exist they render from the ordered
+               column list, so totals follow column reordering like header and body -->
+          @if (footerCellTemplates().size > 0) {
+            <tr class="ledger-table__row">
+              @for (col of headerColumns(); track col.field; let i = $index) {
+                @if (i === 0) {
+                  <th scope="row">
+                    <ng-container [ngTemplateOutlet]="footerCellTemplates().get(col.field) ?? null" />
+                  </th>
+                } @else {
+                  <td [class.ledger-table__cell-num]="col.numeric">
+                    <ng-container [ngTemplateOutlet]="footerCellTemplates().get(col.field) ?? null" />
+                  </td>
+                }
+              }
+            </tr>
+          } @else {
+            <ng-content select="[footer]" />
+          }
         </ng-template>
 
         <ng-template pTemplate="loadingbody">
@@ -308,7 +320,17 @@ export class DataTableComponent {
   private router = inject(Router);
   readonly body = contentChild(TableBodyDirective);
   readonly cells = contentChildren(TableCellDirective);
+  readonly footerCells = contentChildren(TableFooterCellDirective);
   readonly filterCustoms = contentChildren(FilterCustomDirective);
+
+  /** per-column footer templates by column field (T7-04) */
+  readonly footerCellTemplates = computed(() => {
+    const map = new Map<string, TemplateRef<unknown>>();
+    for (const cell of this.footerCells()) {
+      map.set(cell.appFooterCell(), cell.template);
+    }
+    return map;
+  });
 
   /** custom filter renderers by filter key (T6-30) */
   readonly customFilterTemplates = computed(() => {
@@ -353,6 +375,14 @@ export class DataTableComponent {
   staticPaginated = input(true);
   /** T6-71: API export path, e.g. '/expenses/export' - shows the Export menu (xlsx/pdf/csv) */
   exportPath = input('');
+  /**
+   * T7-06: the list endpoint this table loads from, e.g. '/expenses'. The
+   * Export menu is DERIVED (GET {listUrl}/export) so pages never declare a
+   * separate export path — export is part of the list contract.
+   */
+  listUrl = input('');
+  /** extra page-level params the export must replay (report period filters, scope…) */
+  exportQuery = input<Record<string, string>>({});
   /** T6-70: show the toolbar Print button (default true) */
   printable = input(true);
 
@@ -402,28 +432,6 @@ export class DataTableComponent {
         });
       }
     });
-  }
-
-  /**
-   * Places a body cell at its column's position (used by TableColDirective).
-   * Each cell places ITSELF when created and whenever the saved column order
-   * changes — no bulk DOM permutation that could race with PrimeNG's row
-   * re-rendering (pagination/sort/filter recreate rows in template order).
-   */
-  placeCell(td: HTMLTableCellElement, field: string): void {
-    const ordered = this.orderedColumns();
-    const targetIdx = ordered.findIndex((c) => c.field === field);
-    if (targetIdx < 0) return;
-    const tr = td.parentElement;
-    if (!tr) return;
-
-    const cells = [...tr.children].filter((c) => c.tagName === 'TD');
-    const currentIdx = cells.indexOf(td);
-    if (currentIdx === -1 || currentIdx === targetIdx) return;
-
-    // moving down needs the slot AFTER the target; moving up lands on it
-    const ref = currentIdx < targetIdx ? cells[targetIdx + 1] : cells[targetIdx];
-    tr.insertBefore(td, ref);
   }
 
   /** rows after the active table filters (T6-30 static engine) */
@@ -618,13 +626,43 @@ export class DataTableComponent {
     { label: this.translate.instant('common.export_csv'), command: () => void this.downloadExport('csv') },
   ]);
 
+  /** T7-06: GET {listUrl}/export unless the page set an explicit exportPath */
+  readonly effectiveExportPath = computed(() => {
+    const explicit = this.exportPath();
+    if (explicit !== '') {
+      return explicit;
+    }
+    const list = this.listUrl();
+    return list !== '' ? list.replace(/\/+$/, '') + '/export' : '';
+  });
+
+  /**
+   * T7-06: the export replays the table's CURRENT query — format + the page's
+   * own params + (server mode) the live sort/search/filter[…] values, so the
+   * file always matches what is on screen.
+   */
+  private exportParams(format: 'xlsx' | 'pdf' | 'csv'): Record<string, string> {
+    const params: Record<string, string> = { format, ...this.exportQuery() };
+    if (this.mode() === 'server') {
+      if (this.currentSort() !== '') {
+        params.sort = this.currentSort();
+      }
+      if (this.searchQuery().trim() !== '') {
+        params.q = this.searchQuery().trim();
+      }
+      Object.assign(params, filterParams(this.filterValues()));
+    }
+    return params;
+  }
+
   async downloadExport(format: 'xlsx' | 'pdf' | 'csv'): Promise<void> {
-    const path = this.exportPath();
+    const path = this.effectiveExportPath();
     if (path === '') {
       return;
     }
+    const query = new URLSearchParams(this.exportParams(format)).toString();
     try {
-      const blob = await firstValueFrom(this.api.getBlob(path + (path.includes('?') ? '&' : '?') + 'format=' + format));
+      const blob = await firstValueFrom(this.api.getBlob(path + '?' + query));
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;

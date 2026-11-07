@@ -1,12 +1,16 @@
 /** The shared UI catalog barrel (plan 16.2) — the reuse-first entry point. */
 export { PageHeaderComponent } from './page-header/page-header.component';
+export { PageActionsComponent } from './page-actions/page-actions.component';
+export type { PageAction } from './page-actions/page-actions.component';
 export { StatTileComponent } from './stat-tile/stat-tile.component';
 export { StatusStampComponent } from './status-stamp/status-stamp.component';
-export { DataTableComponent, TableBodyDirective, TableColDirective, TableCellDirective } from './data-table/data-table.component';
+export { DataTableComponent, TableBodyDirective, TableCellDirective, TableFooterCellDirective } from './data-table/data-table.component';
 export type { TableColumn, TablePageEvent } from './data-table/data-table.component';
 export { TableFiltersComponent, FilterCustomDirective } from './table-filters/table-filters.component';
 export type { TableFilterDef, TableFilterOption, TableFilterType, TableFilterValue, TableQuery } from '@shared/lib/table-filters';
 export { EmptyStateComponent } from './empty-state/empty-state.component';
+export { IconComponent } from './icon/icon.component';
+export type { ModuleAccent } from './icon/icon.component';
 export { FormDialogComponent } from './form-dialog/form-dialog.component';
 export { ContentDialogComponent } from './content-dialog/content-dialog.component';
 export { ConfirmDialogComponent } from './confirm-dialog/confirm-dialog.component';

@@ -17,6 +17,7 @@ import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface UserDetail {
   id: number; name: string; email: string; phone: string | null;
@@ -26,7 +27,7 @@ interface UserDetail {
 @Component({
   selector: 'app-user-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, ConfirmDeleteComponent],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, ConfirmDeleteComponent, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="headerTitle()" [subtitle]="'user.detail.title' | translate">
@@ -37,7 +38,7 @@ interface UserDetail {
             @if (isSelf(u.id)) {
               <span class="u-muted u-small" [title]="'user.detail.delete_self_hint' | translate">{{ 'user.detail.delete_self_hint' | translate }}</span>
             } @else {
-              <p-button [label]="'common.delete' | translate" severity="danger" size="small" [outlined]="true" (onClick)="deleteDialog()?.open()" />
+              <app-action-button kind="delete" label="common.delete" size="small" (action)="deleteDialog()?.open()" />
             }
           }
         }

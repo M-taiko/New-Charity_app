@@ -9,7 +9,7 @@ import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
@@ -31,12 +31,12 @@ interface ItemsData {
   imports: [
     FieldComponent, TranslatePipe, FormsModule, ButtonModule, DatePickerModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, 
     PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe,
   ],
   template: `
     <app-print-sheet orientation="landscape" [title]="'report.items.title' | translate">
-      <app-page-header [title]="'report.items.title' | translate">
+      <app-page-header [title]="'report.items.title' | translate" accent="reports" iconName="report-analytics">
         <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
       </app-page-header>
 
@@ -64,24 +64,20 @@ interface ItemsData {
           </div>
 
           <div class="kpi-grid">
-            <app-stat-tile [label]="'common.total'" [value]="d.summary.total_amount" [money]="true" />
+            <app-stat-tile [label]="'common.total'" [value]="d.summary.total_amount" [money]="true" accent="reports" iconName="report-analytics" />
             <app-stat-tile [label]="'common.count'" [value]="d.summary.count" />
             <app-stat-tile [label]="'report.items.items_count'" [value]="d.items.length" />
             <app-stat-tile [label]="'report.items.average'" [value]="average()" [money]="true" />
           </div>
 
           <div class="u-mt-4">
-            <app-data-table mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.items" [emptyLabel]="'report.items.empty'">
-              <ng-template appTableBody let-row>
-                <tr class="ledger-table__row">
-                  <td appTableCol="item">{{ row.item }}</td>
-                  <td appTableCol="category">{{ row.category ?? '—' }}</td>
-                  <td appTableCol="count" class="u-bidi">{{ row.count }}</td>
-                  <td appTableCol="total"><span class="u-bidi">{{ row.total | money }}</span></td>
-                  <td appTableCol="average"><span class="u-bidi">{{ row.average | money }}</span></td>
-                  <td appTableCol="percentage" class="u-bidi">{{ row.percentage }}%</td>
-                </tr>
-              </ng-template>
+            <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/expense-items" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.items" [emptyLabel]="'report.items.empty'">
+              <ng-template appCell="item" let-row>{{ row.item }}</ng-template>
+              <ng-template appCell="category" let-row>{{ row.category ?? '—' }}</ng-template>
+              <ng-template appCell="count" let-row><span class="u-bidi">{{ row.count }}</span></ng-template>
+              <ng-template appCell="total" let-row><span class="u-bidi">{{ row.total | money }}</span></ng-template>
+              <ng-template appCell="average" let-row><span class="u-bidi">{{ row.average | money }}</span></ng-template>
+              <ng-template appCell="percentage" let-row><span class="u-bidi">{{ row.percentage }}%</span></ng-template>
             </app-data-table>
           </div>
 
@@ -92,7 +88,7 @@ interface ItemsData {
           }
         }
         <div empty>
-          <app-empty-state [title]="'report.items.empty'" [text]="'common.no_data'" />
+          <app-empty-state [title]="'report.items.empty'" [text]="'common.no_data'" accent="reports" iconName="report-analytics" />
         </div>
       </app-async-page>
     </app-print-sheet>
@@ -107,6 +103,9 @@ export class ItemsReportPage {
   params = signal<{ category_id: number | null; date_from: string; date_to: string }>({
     category_id: null, date_from: '', date_to: '',
   });
+
+  /** T7-06: the report's own period filters ride the export query */
+  readonly exportQuery = computed(() => cleanParams(this.params()));
 
   data = resource<ItemsData, unknown>({
     loader: () =>

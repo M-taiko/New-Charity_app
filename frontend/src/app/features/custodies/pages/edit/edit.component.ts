@@ -16,6 +16,7 @@ import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import type { LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 
 interface CustodyEditDto {
@@ -26,10 +27,10 @@ interface CustodyEditDto {
 @Component({
   selector: 'app-custody-edit',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, PageHeaderComponent, AsyncPageComponent, FieldComponent, FormSectionComponent],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, PageHeaderComponent, AsyncPageComponent, FieldComponent, FormSectionComponent, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'custody.edit.title' | translate">
+    <app-page-header [title]="'custody.edit.title' | translate" accent="custodies" iconName="wallet">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/custodies" />
       </div>
@@ -47,7 +48,7 @@ interface CustodyEditDto {
         </app-form-section>
         @if (error()) { <div class="dialog__alert" role="alert">{{ error() }}</div> }
         <div class="sticky-actions">
-          <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/custodies" />
+          <app-action-button kind="back" label="common.back" [route]="['/custodies']" />
           <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
         </div>
       </form>

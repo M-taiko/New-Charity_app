@@ -24,6 +24,7 @@ import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import type { ActionResponse, ItemResponse, Lookups } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 /** One family-members repeater row (controller: family_members[i][…]). */
 interface MemberRow {
@@ -107,11 +108,11 @@ const MAX_DOC_SIZE = 5_000_000;
   imports: [
     TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, InputNumberModule,
     TextareaModule, SelectModule, FileUploadModule, PageHeaderComponent,
-    FieldComponent, FormSectionComponent, ConfirmDeleteComponent, RowActionsComponent, AsyncPageComponent,
+    FieldComponent, FormSectionComponent, ConfirmDeleteComponent, RowActionsComponent, AsyncPageComponent, ActionButtonComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="isEdit() ? ('case.form.edit_title' | translate) : ('case.form.create_title' | translate)">
+    <app-page-header [title]="isEdit() ? ('case.form.edit_title' | translate) : ('case.form.create_title' | translate)" accent="cases" iconName="heart-handshake">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/cases" />
       </div>
@@ -216,11 +217,11 @@ const MAX_DOC_SIZE = 5_000_000;
             </app-field>
             <div class="field">
               <span class="field__label">&nbsp;</span>
-              <p-button [label]="'common.remove' | translate" size="small" severity="danger" [text]="true" (onClick)="removeMember(i)" />
+              <app-action-button kind="remove" label="common.remove" size="small" (action)="removeMember(i)" />
             </div>
           </div>
         }
-        <p-button [label]="'case.form.add_member' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="addMember()" />
+        <app-action-button kind="quickAdd" label="case.form.add_member" size="small" (action)="addMember()" />
 
         <app-form-section [title]="'case.form.section_health'">
           <app-field label="case.form.health_conditions" controlId="c-health" [error]="serverFieldError(error(), 'health_conditions')">
@@ -276,7 +277,7 @@ const MAX_DOC_SIZE = 5_000_000;
                 <div class="attachments__file">
                   <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-paperclip" /></svg>
                   <span class="attachments__name u-bidi">{{ d.name }} — {{ label('case.enums.doc_type.' + d.type) }}</span>
-                  <p-button [label]="'common.remove' | translate" size="small" severity="danger" [text]="true" (onClick)="removeDoc(i)" />
+                  <app-action-button kind="remove" label="common.remove" size="small" (action)="removeDoc(i)" />
                 </div>
               }
             </div>
@@ -285,7 +286,7 @@ const MAX_DOC_SIZE = 5_000_000;
 
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
-          <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/cases" />
+          <app-action-button kind="back" label="common.back" [route]="['/cases']" />
           <p-button type="submit" [label]="isEdit() ? ('case.form.submit_update' | translate) : ('case.form.submit_create' | translate)" [loading]="sending()" [disabled]="f.invalid || sending()" />
         </div>
       </form>

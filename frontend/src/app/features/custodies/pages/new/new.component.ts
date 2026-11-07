@@ -17,6 +17,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import type { ActionResponse, ItemResponse, Lookups } from '@shared/models/api.models';
 
 type Variant = 'agent' | 'for-agent' | 'personal';
@@ -31,10 +32,10 @@ type Variant = 'agent' | 'for-agent' | 'personal';
 @Component({
   selector: 'app-custody-form',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="title() | translate" [subtitle]="subtitle() | translate">
+    <app-page-header [title]="title() | translate" [subtitle]="subtitle() | translate" accent="custodies" iconName="wallet">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/custodies" />
       </div>
@@ -48,9 +49,17 @@ type Variant = 'agent' | 'for-agent' | 'personal';
               <p-select appendTo="body" inputId="agent" [options]="users()" optionLabel="name" optionValue="id"
                 [filter]="true" [(ngModel)]="agentId" name="agent" required styleClass="u-full" [autofocus]="false" />
             </app-field>
-            <app-field label="custody.create.treasury" controlId="treasury" [required]="true" [error]="serverFieldError(error(), 'treasury_id')">
+            <app-field label="custody.create.treasury" controlId="treasury" [required]="true" hint="common.hint_treasury_balance" [error]="serverFieldError(error(), 'treasury_id')">
               <p-select appendTo="body" inputId="treasury" [options]="treasuries()" optionLabel="name" optionValue="id"
-                [(ngModel)]="treasuryId" name="treasury" required (ngModelChange)="onTreasury()" styleClass="u-full" [autofocus]="false" />
+                [(ngModel)]="treasuryId" name="treasury" required (ngModelChange)="onTreasury()" styleClass="u-full" [autofocus]="false" >
+              <!-- T7-11: the available balance rides every option's text -->
+              <ng-template let-option #item>
+                <div class="u-flex-between">
+                  <span>{{ option.name }}</span>
+                  <span class="u-bidi u-small">{{ option.balance | money }}</span>
+                </div>
+              </ng-template>
+            </p-select>
               @if (selectedTreasury(); as t) {
                 <span class="field__hint u-bidi">
                   {{ 'custody.create.treasury_balance' | translate }}: {{ t.balance | money }} —
@@ -59,7 +68,7 @@ type Variant = 'agent' | 'for-agent' | 'personal';
               }
             </app-field>
           }
-          <app-field label="custody.create.amount" controlId="amount" [required]="true" [error]="serverFieldError(error(), 'amount')">
+          <app-field label="custody.create.amount" controlId="amount" [required]="true" hint="common.hint_max_amount" [error]="serverFieldError(error(), 'amount')">
             <p-inputnumber inputId="amount" name="amount" [(ngModel)]="amount" mode="decimal" [minFractionDigits]="2"
               [min]="0.01" [max]="maxAmount()" required styleClass="u-full" />
             @if (maxAmount() !== null) {
@@ -79,7 +88,7 @@ type Variant = 'agent' | 'for-agent' | 'personal';
         </app-form-section>
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
-          <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/custodies" />
+          <app-action-button kind="back" label="common.back" [route]="['/custodies']" />
           <p-button type="submit" [label]="submitLabel() | translate" [loading]="sending()" [disabled]="f.invalid || sending() || overBalance()" />
         </div>
       </form>

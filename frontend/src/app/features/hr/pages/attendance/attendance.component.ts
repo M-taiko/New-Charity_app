@@ -15,7 +15,7 @@ import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
@@ -38,13 +38,13 @@ interface Row {
   standalone: true,
   imports: [SectionNavComponent, 
     TranslatePipe, FormsModule, ButtonModule, SelectModule,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, DatetimePipe, EnumLabelPipe,
     FormDialogComponent, FieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'hr.attendance.title' | translate">
+    <app-page-header [title]="'hr.attendance.title' | translate" accent="hr" iconName="briefcase">
       <div actions><p-button [label]="'hr.attendance.add' | translate" size="small" (onClick)="dialogOpen.set(true)" /></div>
     </app-page-header>
 
@@ -52,7 +52,7 @@ interface Row {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table
+        <app-data-table listUrl="/hr/attendance"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -69,39 +69,13 @@ interface Row {
               <p-select inputId="att-filter-year" appendTo="body" [options]="yearOptions" optionLabel="label" optionValue="value" [ngModel]="params().year" name="year" (ngModelChange)="setParam('year', $event)" styleClass="u-full" />
             </app-field>
           </div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="employee">{{ row.employee ?? '—' }}</td>
-              <td appTableCol="date"><span class="u-bidi">{{ row.date | datetime }}</span></td>
-              <td appTableCol="check_in"><span class="u-bidi">{{ row.check_in ?? '—' }}</span></td>
-              <td appTableCol="check_out"><span class="u-bidi">{{ row.check_out ?? '—' }}</span></td>
-              <td appTableCol="status"><span class="stamp">{{ row.status | enumLabel: 'attendance' }}</span></td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.employees.col_name' | translate }}</span>
-                {{ row.employee ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.date' | translate }}</span>
-                <span class="u-bidi">{{ row.date | datetime }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.attendance.check_in' | translate }}</span>
-                <span class="u-bidi">{{ row.check_in ?? '—' }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'hr.attendance.check_out' | translate }}</span>
-                <span class="u-bidi">{{ row.check_out ?? '—' }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.status' | translate }}</span>
-                {{ row.status | enumLabel: 'attendance' }}
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="employee" let-row>{{ row.employee ?? '—' }}</ng-template>
+          <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
+          <ng-template appCell="check_in" let-row><span class="u-bidi">{{ row.check_in ?? '—' }}</span></ng-template>
+          <ng-template appCell="check_out" let-row><span class="u-bidi">{{ row.check_out ?? '—' }}</span></ng-template>
+          <ng-template appCell="status" let-row><span class="stamp">{{ row.status | enumLabel: 'attendance' }}</span></ng-template>
           <div empty>
-            <app-empty-state [title]="'hr.attendance.empty' | translate" [text]="'common.no_data' | translate" />
+            <app-empty-state [title]="'hr.attendance.empty' | translate" [text]="'common.no_data' | translate" accent="hr" iconName="briefcase" />
           </div>
         </app-data-table>
       }

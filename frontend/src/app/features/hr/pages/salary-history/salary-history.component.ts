@@ -1,5 +1,5 @@
 // Employee salary history (plan 20) — async-page states + the static ledger table (T4-20/21).
-import { Component, inject, input, resource } from '@angular/core';
+import { Component, computed, inject, input, resource } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
@@ -8,9 +8,10 @@ import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
+import { apiFilterDefs } from '@shared/lib/table-filters';
 import type { ListResponse } from '@shared/models/api.models';
 
 interface SalaryRow { id: number; year: number; month: number; base_salary: string; final_salary: string; status: string }
@@ -20,11 +21,11 @@ interface SalaryRow { id: number; year: number; month: number; base_salary: stri
   standalone: true,
   imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
     StatusStampComponent, MoneyPipe,
   ],
   template: `
-    <app-page-header [title]="'hr.salaries.history_title' | translate">
+    <app-page-header [title]="'hr.salaries.history_title' | translate" accent="hr" iconName="briefcase">
       <div actions><p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/hr/employees" /></div>
     </app-page-header>
 
@@ -32,19 +33,13 @@ interface SalaryRow { id: number; year: number; month: number; base_salary: stri
 
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty" [backLink]="['/hr/employees']">
       @if (data.value(); as page) {
-        <app-data-table mode="static" [autoFilters]="true" [columns]="columns" [rows]="page.data" [emptyLabel]="'hr.salaries.empty'">
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="year" class="u-bidi">{{ row.year }}</td>
-              <td appTableCol="month" class="u-bidi">{{ row.month }}</td>
-              <td appTableCol="base_salary"><span class="u-bidi">{{ row.base_salary | money }}</span></td>
-              <td appTableCol="final_salary"><span class="u-bidi">{{ row.final_salary | money }}</span></td>
-              <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="salary" /></td>
-              <td appTableCol="actions">
-                <a [routerLink]="['/hr/salaries', row.id]">{{ 'common.view' | translate }}</a>
-              </td>
-            </tr>
-          </ng-template>
+        <app-data-table mode="static" [listUrl]="'/hr/employees/' + id() + '/salary-history'" [filters]="metaFilters()" [columns]="columns" [rows]="page.data" [emptyLabel]="'hr.salaries.empty'">
+          <ng-template appCell="year" let-row><span class="u-bidi">{{ row.year }}</span></ng-template>
+          <ng-template appCell="month" let-row><span class="u-bidi">{{ row.month }}</span></ng-template>
+          <ng-template appCell="base_salary" let-row><span class="u-bidi">{{ row.base_salary | money }}</span></ng-template>
+          <ng-template appCell="final_salary" let-row><span class="u-bidi">{{ row.final_salary | money }}</span></ng-template>
+          <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="salary" /></ng-template>
+          <ng-template appCell="actions" let-row><a [routerLink]="['/hr/salaries', row.id]">{{ 'common.view' | translate }}</a></ng-template>
         </app-data-table>
       }
     </app-async-page>
@@ -69,4 +64,7 @@ export class SalaryHistoryPage {
     params: () => ({ id: this.id() }),
     loader: ({ params }) => firstValueFrom(this.http.get<ListResponse<SalaryRow>>('/hr/employees/' + params.id + '/salary-history')),
   });
+
+  /** T7-07: the endpoint's declared month/year/status allowlist drives the static table's Filters control */
+  readonly metaFilters = computed(() => apiFilterDefs(this.data.value()?.meta));
 }

@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ListResponse } from '@shared/models/api.models';
@@ -24,7 +24,7 @@ interface Row {
   standalone: true,
   imports: [
     TranslatePipe,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, DatetimePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,7 +33,7 @@ interface Row {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table
+        <app-data-table listUrl="/activity-logs"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -43,27 +43,9 @@ interface Row {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-              <td appTableCol="event">{{ row.event ?? '—' }}</td>
-              <td appTableCol="description">{{ row.description ?? '—' }}</td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'activity.col_time' | translate }}</span>
-                <span class="u-bidi">{{ row.created_at | datetime }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'activity.col_event' | translate }}</span>
-                {{ row.event ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'activity.col_description' | translate }}</span>
-                {{ row.description ?? '—' }}
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+          <ng-template appCell="event" let-row>{{ row.event ?? '—' }}</ng-template>
+          <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
           <div empty>
             <app-empty-state [title]="'activity.empty' | translate" [text]="'common.no_data' | translate" />
           </div>

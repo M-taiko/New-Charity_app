@@ -10,7 +10,7 @@ import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
@@ -62,12 +62,12 @@ interface DrillExpense {
   imports: [
     FieldComponent, TranslatePipe, ContentDialogComponent, RouterLink, FormsModule, ButtonModule, DatePickerModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, 
     PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe, DatetimePipe,
   ],
   template: `
     <app-print-sheet [title]="'report.directions.title' | translate">
-      <app-page-header [title]="'report.directions.title' | translate">
+      <app-page-header [title]="'report.directions.title' | translate" accent="reports" iconName="report-analytics">
         <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
       </app-page-header>
 
@@ -88,7 +88,7 @@ interface DrillExpense {
           </div>
 
           <div class="kpi-grid">
-            <app-stat-tile [label]="'common.total'" [value]="d.grand_total" [money]="true" />
+            <app-stat-tile [label]="'common.total'" [value]="d.grand_total" [money]="true" accent="reports" iconName="report-analytics" />
             <app-stat-tile [label]="'report.directions.rows_count'" [value]="d.rows.length" />
             <app-stat-tile [label]="'report.directions.operations'" [value]="operationsCount()" />
             <app-stat-tile [label]="'report.directions.col_average'" [value]="averageAmount()" [money]="true" />
@@ -99,27 +99,21 @@ interface DrillExpense {
           </div>
 
           <div class="u-mt-4">
-            <app-data-table mode="static" [autoFilters]="true" [title]="'report.directions.details'" [columns]="rowCols" [rows]="d.rows" [emptyLabel]="'report.directions.empty'">
-              <ng-template appTableBody let-row>
-                <tr class="ledger-table__row ledger-table__row--link" tabindex="0" role="button"
-                  (click)="openDrill(row)" (keydown.enter)="openDrill(row)"
-                  [attr.aria-label]="'report.directions.expenses_dialog' | translate">
-                  <td appTableCol="level"><span class="stamp">{{ levelKey(row.level) | translate }}</span></td>
-                  <td appTableCol="name">{{ row.name }}</td>
-                  <td appTableCol="code" class="u-bidi">{{ row.code ?? '—' }}</td>
-                  <td appTableCol="parent_name">{{ row.parent_name ?? '—' }}</td>
-                  <td appTableCol="total_amount"><span class="u-bidi">{{ row.total_amount | money }}</span></td>
-                  <td appTableCol="expense_count" class="u-bidi">{{ row.expense_count }}</td>
-                  <td appTableCol="average_amount"><span class="u-bidi">{{ row.average_amount | money }}</span></td>
-                  <td appTableCol="reviewed_by">{{ row.reviewed_by ?? '—' }}</td>
-                  <td appTableCol="percentage" class="u-bidi">{{ row.percentage }}%</td>
-                </tr>
-              </ng-template>
+            <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/categories-analytics" mode="static" [autoFilters]="true" [title]="'report.directions.details'" [columns]="rowCols" [rows]="d.rows" [emptyLabel]="'report.directions.empty'">
+              <ng-template appCell="level" let-row><span class="stamp">{{ levelKey(row.level) | translate }}</span></ng-template>
+              <ng-template appCell="name" let-row>{{ row.name }}</ng-template>
+              <ng-template appCell="code" let-row><span class="u-bidi">{{ row.code ?? '—' }}</span></ng-template>
+              <ng-template appCell="parent_name" let-row>{{ row.parent_name ?? '—' }}</ng-template>
+              <ng-template appCell="total_amount" let-row><span class="u-bidi">{{ row.total_amount | money }}</span></ng-template>
+              <ng-template appCell="expense_count" let-row><span class="u-bidi">{{ row.expense_count }}</span></ng-template>
+              <ng-template appCell="average_amount" let-row><span class="u-bidi">{{ row.average_amount | money }}</span></ng-template>
+              <ng-template appCell="reviewed_by" let-row>{{ row.reviewed_by ?? '—' }}</ng-template>
+              <ng-template appCell="percentage" let-row><span class="u-bidi">{{ row.percentage }}%</span></ng-template>
             </app-data-table>
           </div>
         }
         <div empty>
-          <app-empty-state [title]="'report.directions.empty'" [text]="'common.no_data'" />
+          <app-empty-state [title]="'report.directions.empty'" [text]="'common.no_data'" accent="reports" iconName="report-analytics" />
         </div>
       </app-async-page>
     </app-print-sheet>
@@ -134,18 +128,12 @@ interface DrillExpense {
           <div class="skeleton skeleton--tile" role="status"></div>
         } @else {
           <app-data-table mode="static" [autoFilters]="true" [columns]="drillCols" [rows]="drillRows()" [emptyLabel]="'report.directions.empty_drill'">
-            <ng-template appTableBody let-row>
-              <tr class="ledger-table__row">
-                <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-                <td appTableCol="description">{{ row.description ?? '—' }}</td>
-                <td appTableCol="created_by">{{ row.created_by ?? '—' }}</td>
-                <td appTableCol="approved_by">{{ row.approved_by ?? '—' }}</td>
-                <td appTableCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
-                <td appTableCol="actions">
-                  <a [routerLink]="['/expenses', row.id]">{{ 'common.view' | translate }}</a>
-                </td>
-              </tr>
-            </ng-template>
+            <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+            <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
+            <ng-template appCell="created_by" let-row>{{ row.created_by ?? '—' }}</ng-template>
+            <ng-template appCell="approved_by" let-row>{{ row.approved_by ?? '—' }}</ng-template>
+            <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+            <ng-template appCell="actions" let-row><a [routerLink]="['/expenses', row.id]">{{ 'common.view' | translate }}</a></ng-template>
           </app-data-table>
           <p class="u-flex u-flex-between u-mt-2">
             <span>{{ 'report.directions.drill_count' | translate }}: {{ drillRows().length }}</span>
@@ -161,6 +149,9 @@ export class DirectionsReportPage {
   private http = inject(HttpClient);
 
   params = signal<{ date_from: string; date_to: string }>({ date_from: '', date_to: '' });
+
+  /** T7-06: the report's own period filters ride the export query */
+  readonly exportQuery = computed(() => cleanParams(this.params()));
 
   data = resource<AnalyticsData, unknown>({
     loader: () =>

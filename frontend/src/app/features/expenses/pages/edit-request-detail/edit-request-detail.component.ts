@@ -13,11 +13,12 @@ import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import type { TableColumn } from '@shared/ui/data-table/data-table.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 /** Edit request review (plan 20, T16/T17, T3-23): before/after comparison of
  *  original_data vs requested_changes + approve / reject-with-reason. */
 interface EditRequestDetail {
@@ -44,15 +45,15 @@ interface ComparisonRow {
 @Component({
   selector: 'app-edit-request-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, DataTableComponent, TableBodyDirective, TableColDirective, ReasonDialogComponent],
+  imports: [TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, DataTableComponent, TableCellDirective, ReasonDialogComponent, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'expense.edit_requests.detail.title' | translate">
-      <app-page-header [title]="itemTitle()">
+      <app-page-header [title]="itemTitle()" accent="expenses" iconName="receipt-2">
         <div actions class="u-flex u-gap-2 u-flex-wrap">
           @if (isPending()) {
             <p-button [label]="'expense.edit_requests.detail.approve' | translate" size="small" (onClick)="approve()" [loading]="sending()" />
-            <p-button [label]="'expense.edit_requests.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDialog.open()" [loading]="sending()" />
+            <app-action-button kind="reject" label="expense.edit_requests.detail.reject" size="small" (action)="rejectDialog.open()" [loading]="sending()" />
           }
           <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/expenses/edit-requests" />
         </div>
@@ -74,13 +75,9 @@ interface ComparisonRow {
             <section class="chart-card u-mt-4">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'expense.edit_requests.detail.comparison' | translate }}</span></div>
               <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="comparisonColumns" [rows]="rows">
-                <ng-template appTableBody let-row>
-                  <tr class="ledger-table__row">
-                    <td appTableCol="field">{{ row.label | translate }}</td>
-                    <td appTableCol="before"><span class="u-bidi">{{ row.before }}</span></td>
-                    <td appTableCol="after"><span class="u-bidi">{{ row.after }}</span></td>
-                  </tr>
-                </ng-template>
+                <ng-template appCell="field" let-row>{{ row.label | translate }}</ng-template>
+                <ng-template appCell="before" let-row><span class="u-bidi">{{ row.before }}</span></ng-template>
+                <ng-template appCell="after" let-row><span class="u-bidi">{{ row.after }}</span></ng-template>
               </app-data-table>
             </section>
           }

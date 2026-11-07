@@ -20,7 +20,7 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
@@ -35,6 +35,7 @@ import type { TableFilterDef, TableQuery } from '@shared/lib/table-filters';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 import type { DirectionNode, ListResponse, Lookups } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
@@ -124,14 +125,14 @@ const AMOUNT_DEBOUNCE_MS = 500;
   standalone: true,
   imports: [FilterCustomDirective, AppTabsComponent, SectionNavComponent, 
     FieldComponent, TranslatePipe, SharedModule, ContentDialogComponent, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, DatePickerModule, SelectModule,
-    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
-    EmptyStateComponent, RowActionsComponent, ConfirmDialogComponent, FormDialogComponent, DirectionPickerComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ],
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
+    EmptyStateComponent, RowActionsComponent, ConfirmDialogComponent, FormDialogComponent, DirectionPickerComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent, ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'expense.list.title' | translate">
+    <app-page-header [title]="'expense.list.title' | translate" accent="expenses" iconName="receipt-2">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
         @if (canQuickExpense) {
-          <p-button [label]="'expense.list.quick' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="quickOpen.set(true)" />
+          <app-action-button kind="quickAdd" label="expense.list.quick" size="small" (action)="quickOpen.set(true)" />
         }
 <p-button [label]="'expense.list.create' | translate" size="small" routerLink="/expenses/new" />
         <p-button [label]="'expense.list.edit_requests' | translate" size="small" [outlined]="true" routerLink="/expenses/edit-requests" />
@@ -147,7 +148,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
         <app-tabs id="expenses" [tabs]="expenseTabs" [(active)]="expenseTab" class="u-mb-2" />
 
         <div class="kpi-grid">
-        <app-stat-tile [label]="'expense.list.filtered_total'" [value]="summaryValue('filtered_total')" [money]="true" />
+        <app-stat-tile [label]="'expense.list.filtered_total'" [value]="summaryValue('filtered_total')" [money]="true" accent="expenses" iconName="receipt-2" />
         <app-stat-tile [label]="'common.count'" [value]="summaryValue('count')" />
         @if (summaryValue('purchases_total') !== '0') {
           <a class="tile-link" routerLink="/procurement/purchase" [title]="'common.open_page' | translate">
@@ -174,7 +175,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
         [loading]="data.isLoading()"
         [sortableKeys]="page.meta.sortable ?? null"
         [filters]="filterDefs()"
-        exportPath="/expenses/export"
+        listUrl="/expenses"
         (pageChange)="onPage($event)"
         (queryChange)="onQuery($event)"
       >
@@ -184,64 +185,20 @@ const AMOUNT_DEBOUNCE_MS = 500;
                                 (selectionChange)="ctx.set(encodeDirection($event))" />
         </ng-template>
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="user">{{ row.user ?? '—' }}</td>
-            <td appTableCol="type">{{ row.type | enumLabel: 'expense_type' }}</td>
-            <td appTableCol="direction">{{ row.direction ?? '—' }}</td>
-            <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
-            <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-            <td appTableCol="reviewed">{{ (row.reviewed ? 'reviewed' : 'not_reviewed') | enumLabel: 'review_state' }}</td>
-            <td appTableCol="attachment">
-              @if (row.has_attachment) {
-                <app-row-actions [actions]="attachmentActions(row)" />
-              } @else { <span aria-hidden="true">—</span> }
-            </td>
-            <td appTableCol="actions">
-              <app-row-actions [actions]="actionsFor(row)" />
-            </td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'expense.list.col_user' | translate }}</span>
-              {{ row.user ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'expense.list.col_type' | translate }}</span>
-              {{ row.type | enumLabel: 'expense_type' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'expense.list.col_direction' | translate }}</span>
-              {{ row.direction ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-              <span class="u-bidi">{{ row.amount | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'expense.list.col_date' | translate }}</span>
-              <span class="u-bidi">{{ row.created_at | datetime }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'expense.list.col_review' | translate }}</span>
-              {{ (row.reviewed ? 'reviewed' : 'not_reviewed') | enumLabel: 'review_state' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'expense.list.col_attachment' | translate }}</span>
-              @if (row.has_attachment) {
-                <app-row-actions [actions]="attachmentActions(row)" />
-              } @else { <span aria-hidden="true">—</span> }
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.actions' | translate }}</span>
-              <app-row-actions [actions]="actionsFor(row)" />
-            </div>
-          </tr>
-        </ng-template>
+        <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
+        <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'expense_type' }}</ng-template>
+        <ng-template appCell="direction" let-row>{{ row.direction ?? '—' }}</ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+        <ng-template appCell="reviewed" let-row>{{ (row.reviewed ? 'reviewed' : 'not_reviewed') | enumLabel: 'review_state' }}</ng-template>
+        <ng-template appCell="attachment" let-row>@if (row.has_attachment) {
+  <app-row-actions [actions]="attachmentActions(row)" />
+} @else { <span aria-hidden="true">—</span> }</ng-template>
+        <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
       </app-data-table>
       }
       <div empty>
-        <app-empty-state [title]="'expense.list.empty' | translate" [text]="'common.no_data' | translate" />
+        <app-empty-state [title]="'expense.list.empty' | translate" [text]="'common.no_data' | translate" accent="expenses" iconName="receipt-2" />
       </div>
     </app-async-page>
 
@@ -278,7 +235,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
       <p-footer>
         @if (preview(); as p) {
           <div class="u-flex u-gap-2 u-justify-end">
-            <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" (onClick)="preview.set(null)" />
+            <app-action-button kind="close" label="common.cancel" (action)="preview.set(null)" />
             <a class="p-button p-button-sm p-button-outlined p-button-text-only" [href]="attachmentUrl(p.id)" target="_blank" rel="noopener">
               {{ 'expense.detail.download' | translate }}
             </a>
@@ -379,7 +336,7 @@ export class ExpenseListPage {
     { field: 'user', header: 'expense.list.col_user', sortable: true },
     { field: 'type', header: 'expense.list.col_type', sortable: true },
     { field: 'direction', header: 'expense.list.col_direction', sortable: true },
-    { field: 'amount', header: 'common.amount', sortable: true },
+    { field: 'amount', header: 'common.amount', sortable: true, numeric: true },
     { field: 'created_at', header: 'expense.list.col_date', sortable: true },
     { field: 'reviewed', header: 'expense.list.col_review', sortable: true },
     { field: 'attachment', header: 'expense.list.col_attachment', sortable: false },

@@ -18,9 +18,10 @@ import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.compo
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import type { TableColumn } from '@shared/ui/data-table/data-table.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 
@@ -30,19 +31,19 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 @Component({
   selector: 'app-expense-detail',
   standalone: true,
-  imports: [MenuModule, TranslatePipe, SharedModule, ContentDialogComponent, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective, ConfirmDeleteComponent, MoneyPipe],
+  imports: [MenuModule, TranslatePipe, SharedModule, ContentDialogComponent, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableCellDirective, ConfirmDeleteComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'expense.detail.title' | translate">
-      <app-page-header [title]="headerTitle()" [subtitle]="safeValue()?.user ?? ''">
+      <app-page-header [title]="headerTitle()" [subtitle]="safeValue()?.user ?? ''" accent="expenses" iconName="receipt-2">
         <div actions class="u-flex u-gap-2 u-flex-wrap">
           <!-- T6-10: max 3 visible buttons; decisions live in the sticky bar -->
-          <p-button [label]="'common.print' | translate" size="small" severity="secondary" [outlined]="true" (click)="printPage()" />
+          <app-action-button kind="print" label="common.print" size="small" (action)="printPage()" />
           @if (safeValue()?.can_edit) {
-            <p-button [label]="'common.edit' | translate" size="small" severity="secondary" [outlined]="true" routerLink="['/expenses', id(), 'edit']" />
+            <app-action-button kind="edit" label="common.edit" size="small" [route]="['/expenses', id(), 'edit']" />
           }
           @if (moreMenuItems().length > 0) {
-            <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="moreMenu.toggle($event)" />
+            <app-action-button kind="more" label="common.more" size="small" (action)="moreMenu.toggle($event)" />
             <p-menu #moreMenu appendTo="body" [model]="moreMenuItems()" popup="true" />
           }
         </div>
@@ -53,19 +54,19 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
           <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
           <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
             @if (e.can_review) {
-              <p-button [label]="'expense.list.review' | translate" size="small" severity="success" (onClick)="act('mark-reviewed')" [loading]="sending()" />
+              <app-action-button kind="markReviewed" label="expense.list.review" size="small" (action)="act('mark-reviewed')" [loading]="sending()" />
             }
             @if (e.can_unreview) {
-              <p-button [label]="'expense.list.unreview' | translate" size="small" severity="warn" [outlined]="true" (onClick)="act('unreview')" [loading]="sending()" />
+              <app-action-button kind="unreview" label="expense.list.unreview" size="small" (action)="act('unreview')" [loading]="sending()" />
             }
             @if (canDelete()) {
-              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="confirmDelete.open()" />
+              <app-action-button kind="delete" label="common.delete" size="small" (action)="confirmDelete.open()" />
             }
           </div>
 
           <!-- summary band: amount / type / date / source -->
           <div class="kpi-grid">
-            <app-stat-tile [label]="'expense.detail.amount'" [value]="e.amount" [money]="true" />
+            <app-stat-tile [label]="'expense.detail.amount'" [value]="e.amount" [money]="true" accent="expenses" iconName="receipt-2" />
             <app-stat-tile [label]="'expense.detail.type'" [value]="typeLabel(e)" />
             <app-stat-tile [label]="'expense.detail.date'" [value]="fmtDate(e.expense_date)" />
             <app-stat-tile [label]="'expense.detail.source_tile'" [value]="sourceLabel(e)" />
@@ -105,14 +106,10 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
             <section class="chart-card u-mt-4">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'expense.detail.line_items' | translate }}</span></div>
               <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="lineItemColumns" [rows]="lineItems()">
-                <ng-template appTableBody let-item>
-                  <tr class="ledger-table__row">
-                    <td appTableCol="description">{{ item.description }}</td>
-                    <td appTableCol="quantity"><span class="u-bidi">{{ item.quantity }}</span></td>
-                    <td appTableCol="unit_price">{{ item.unit_price | money: false }}</td>
-                    <td appTableCol="total">{{ lineTotal(item) | money: false }}</td>
-                  </tr>
-                </ng-template>
+                <ng-template appCell="description" let-item>{{ item.description }}</ng-template>
+                <ng-template appCell="quantity" let-item><span class="u-bidi">{{ item.quantity }}</span></ng-template>
+                <ng-template appCell="unit_price" let-item>{{ item.unit_price | money: false }}</ng-template>
+                <ng-template appCell="total" let-item>{{ lineTotal(item) | money: false }}</ng-template>
                 <ng-template footer>
                   <tr class="ledger-table__total">
                     <td colspan="3">{{ 'common.total' | translate }}</td>
@@ -168,7 +165,7 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
         </div>
         <p-footer>
           <div class="u-flex u-gap-2 u-justify-end">
-            <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" (onClick)="previewOpen.set(false)" />
+            <app-action-button kind="close" label="common.cancel" (action)="previewOpen.set(false)" />
             <a class="p-button p-button-sm p-button-outlined p-button-text-only" [href]="downloadUrl()" target="_blank" rel="noopener">
               {{ 'expense.detail.download' | translate }}
             </a>

@@ -8,6 +8,9 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
  * square in the module accent color — for stat tiles, page headers, section
  * nav and empty states: chip="custodies|expenses|treasury|cases|hr|tasks|procurement|reports".
  */
+
+/** the eight module accent keys (T6-40) — shared by every accent input (T7-09) */
+export type ModuleAccent = 'custodies' | 'expenses' | 'treasury' | 'cases' | 'hr' | 'tasks' | 'procurement' | 'reports';
 @Component({
   selector: 'app-icon',
   standalone: true,
@@ -80,7 +83,7 @@ export class IconComponent {
   name = input.required<string>();
   size = input(18);
   /** domain accent chip: custodies|expenses|treasury|cases|hr|tasks|procurement|reports */
-  chip = input<'' | 'custodies' | 'expenses' | 'treasury' | 'cases' | 'hr' | 'tasks' | 'procurement' | 'reports'>('');
+  chip = input<ModuleAccent | ''>('');
 
   href = computed(() => `assets/icons/sprite.svg#tabler-${this.name()}`);
 

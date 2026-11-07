@@ -11,7 +11,7 @@ import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
@@ -19,6 +19,7 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ItemResponse, ListResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface TreasuryDetail {
   id: number;
@@ -45,17 +46,17 @@ interface TransactionRow {
   standalone: true,
   imports: [MenuModule, 
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent,
-    AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
-    EmptyStateComponent, PrintSheetComponent, ConfirmDeleteComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
+    AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
+    EmptyStateComponent, PrintSheetComponent, ConfirmDeleteComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent,
   ],
   template: `
     <app-print-sheet [title]="'treasury.detail.title' | translate">
-      <app-page-header [title]="headerTitle()" [subtitle]="safeValue()?.notes ?? ''">
+      <app-page-header [title]="headerTitle()" [subtitle]="safeValue()?.notes ?? ''" accent="treasury" iconName="building-bank">
         <div actions class="u-flex u-gap-2 u-flex-wrap">
           <!-- T6-10: max 3 visible buttons; back lives on the async-page backLink -->
-          <p-button [label]="'common.print' | translate" size="small" severity="secondary" [outlined]="true" (click)="print()" />
-          <p-button [label]="'common.edit' | translate" size="small" severity="secondary" [outlined]="true" [routerLink]="['/treasury', id(), 'edit']" />
-          <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="moreMenu.toggle($event)" />
+          <app-action-button kind="print" label="common.print" size="small" (action)="print()" />
+          <app-action-button kind="edit" label="common.edit" size="small" [route]="['/treasury', id(), 'edit']" />
+          <app-action-button kind="more" label="common.more" size="small" (action)="moreMenu.toggle($event)" />
           <p-menu #moreMenu appendTo="body" [model]="moreMenuItems()" popup="true" />
         </div>
       </app-page-header>
@@ -63,7 +64,7 @@ interface TransactionRow {
       <app-async-page [resource]="pageResource" variant="detail" [backLink]="['/treasury']">
         @if (safeValue(); as treasury) {
           <div class="kpi-grid">
-            <app-stat-tile [label]="'treasury.list.balance'" [value]="treasury.balance" [money]="true" />
+            <app-stat-tile [label]="'treasury.list.balance'" [value]="treasury.balance" [money]="true" accent="treasury" iconName="building-bank" />
             <app-stat-tile [label]="'treasury.detail.total_in'" [value]="treasury.stats.total_in" [money]="true" />
             <app-stat-tile [label]="'treasury.detail.total_out'" [value]="treasury.stats.total_out" [money]="true" />
             <app-stat-tile [label]="'treasury.list.transactions_count'" [value]="treasury.stats.total_transactions" />
@@ -88,35 +89,13 @@ interface TransactionRow {
                 size="small"
               />
             </div>
-            <ng-template appTableBody let-row>
-              <tr class="ledger-table__row">
-                <td appTableCol="date" class="u-bidi">{{ row.date | datetime }}</td>
-                <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-                <td appTableCol="description">{{ row.description }}</td>
-                <td appTableCol="amount" class="ledger-table__cell-num">{{ row.amount | money }}</td>
-                <td appTableCol="user">{{ row.user?.name ?? '—' }}</td>
-              </tr>
-              <tr class="ledger-table__stacked">
-                <div class="ledger-table__stacked-item">
-                  <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_date' | translate }}</span>
-                  <span class="u-bidi">{{ row.date | datetime }}</span>
-                </div>
-                <div class="ledger-table__stacked-item">
-                  <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_type' | translate }}</span>
-                  <span>{{ row.type | enumLabel: 'transaction_type' }}</span>
-                </div>
-                <div class="ledger-table__stacked-item">
-                  <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-                  <span class="u-bidi">{{ row.amount | money }}</span>
-                </div>
-                <div class="ledger-table__stacked-item">
-                  <span class="ledger-table__stacked-label">{{ 'treasury.detail.col_description' | translate }}</span>
-                  <span>{{ row.description }}</span>
-                </div>
-              </tr>
-            </ng-template>
+            <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
+            <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}</ng-template>
+            <ng-template appCell="description" let-row>{{ row.description }}</ng-template>
+            <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
+            <ng-template appCell="user" let-row>{{ row.user?.name ?? '—' }}</ng-template>
             <div empty>
-              <app-empty-state [title]="'treasury.detail.empty' | translate" [text]="'common.no_data' | translate" />
+              <app-empty-state [title]="'treasury.detail.empty' | translate" [text]="'common.no_data' | translate" accent="treasury" iconName="building-bank" />
             </div>
           </app-data-table>
 

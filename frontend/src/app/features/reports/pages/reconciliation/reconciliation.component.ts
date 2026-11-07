@@ -6,7 +6,7 @@ import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective, TableFooterCellDirective } from '@shared/ui/data-table/data-table.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -35,62 +35,53 @@ interface ReconciliationData {
   imports: [
     TranslatePipe, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, TableFooterCellDirective, 
     PrintSheetComponent, StatTileComponent, MoneyPipe,
   ],
   template: `
     <app-print-sheet [title]="'report.reconciliation.title' | translate">
-      <app-page-header [title]="'report.reconciliation.title' | translate">
+      <app-page-header [title]="'report.reconciliation.title' | translate" accent="reports" iconName="report-analytics">
         <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
       </app-page-header>
 
       <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
         @if (data.value(); as d) {
           <div class="kpi-grid">
-            <app-stat-tile [label]="'report.reconciliation.col_actual'" [value]="d.totals.actual_balance" [money]="true" />
+            <app-stat-tile [label]="'report.reconciliation.col_actual'" [value]="d.totals.actual_balance" [money]="true" accent="reports" iconName="report-analytics" />
             <app-stat-tile [label]="'report.reconciliation.col_expected'" [value]="d.totals.expected_balance" [money]="true" />
             <app-stat-tile [label]="'report.reconciliation.col_difference'" [value]="d.totals.difference" [money]="true" [inset]="true" />
             <app-stat-tile [label]="'common.status'" [value]="d.totals.is_reconciled ? ('report.reconciliation.reconciled' | translate) : ('report.reconciliation.not_reconciled' | translate)" />
           </div>
 
-          <app-data-table mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.treasuries" [emptyLabel]="'report.reconciliation.empty'">
-            <ng-template appTableBody let-row>
-              <tr class="ledger-table__row">
-                <td appTableCol="treasury">{{ row.treasury.name }}</td>
-                <td appTableCol="donations"><span class="u-bidi">{{ row.donations | money }}</span></td>
-                <td appTableCol="custodies_issued"><span class="u-bidi">{{ row.custodies_issued | money }}</span></td>
-                <td appTableCol="custodies_returned"><span class="u-bidi">{{ row.custodies_returned | money }}</span></td>
-                <td appTableCol="direct_expenses"><span class="u-bidi">{{ row.direct_expenses | money }}</span></td>
-                <td appTableCol="net_transfers"><span class="u-bidi">{{ netTransfers(row) | money }}</span></td>
-                <td appTableCol="expected_balance"><span class="u-bidi">{{ row.expected_balance | money }}</span></td>
-                <td appTableCol="actual_balance"><span class="u-bidi">{{ row.actual_balance | money }}</span></td>
-                <td appTableCol="difference">
-                  @if (row.is_reconciled) {
-                    <span class="stamp">{{ 'report.reconciliation.reconciled' | translate }}</span>
-                  } @else {
-                    <span class="u-bidi">{{ row.difference | money }}</span>
-                  }
-                </td>
-              </tr>
-            </ng-template>
-            <ng-template footer>
-              <tr class="ledger-table__row">
-                <th>{{ 'common.total' | translate }}</th>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ columnSum('donations') | money }}</span></td>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ columnSum('custodies_issued') | money }}</span></td>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ columnSum('custodies_returned') | money }}</span></td>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ columnSum('direct_expenses') | money }}</span></td>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ netTransfersSum() | money }}</span></td>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.totals.expected_balance | money }}</span></td>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.totals.actual_balance | money }}</span></td>
-                <td class="ledger-table__cell-num"><span class="u-bidi">{{ d.totals.difference | money }}</span></td>
-              </tr>
-            </ng-template>
+          <app-data-table listUrl="/reports/reconciliation" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.treasuries" [emptyLabel]="'report.reconciliation.empty'">
+            <ng-template appCell="treasury" let-row>{{ row.treasury.name }}</ng-template>
+            <ng-template appCell="donations" let-row><span class="u-bidi">{{ row.donations | money }}</span></ng-template>
+            <ng-template appCell="custodies_issued" let-row><span class="u-bidi">{{ row.custodies_issued | money }}</span></ng-template>
+            <ng-template appCell="custodies_returned" let-row><span class="u-bidi">{{ row.custodies_returned | money }}</span></ng-template>
+            <ng-template appCell="direct_expenses" let-row><span class="u-bidi">{{ row.direct_expenses | money }}</span></ng-template>
+            <ng-template appCell="net_transfers" let-row><span class="u-bidi">{{ netTransfers(row) | money }}</span></ng-template>
+            <ng-template appCell="expected_balance" let-row><span class="u-bidi">{{ row.expected_balance | money }}</span></ng-template>
+            <ng-template appCell="actual_balance" let-row><span class="u-bidi">{{ row.actual_balance | money }}</span></ng-template>
+            <ng-template appCell="difference" let-row>@if (row.is_reconciled) {
+  <span class="stamp">{{ 'report.reconciliation.reconciled' | translate }}</span>
+} @else {
+  <span class="u-bidi">{{ row.difference | money }}</span>
+}</ng-template>
+            <!-- T7-04: totals row follows the column order — per-column footer cells -->
+            <ng-template appFooterCell="treasury">{{ 'common.total' | translate }}</ng-template>
+            <ng-template appFooterCell="donations"><span class="u-bidi">{{ columnSum('donations') | money }}</span></ng-template>
+            <ng-template appFooterCell="custodies_issued"><span class="u-bidi">{{ columnSum('custodies_issued') | money }}</span></ng-template>
+            <ng-template appFooterCell="custodies_returned"><span class="u-bidi">{{ columnSum('custodies_returned') | money }}</span></ng-template>
+            <ng-template appFooterCell="direct_expenses"><span class="u-bidi">{{ columnSum('direct_expenses') | money }}</span></ng-template>
+            <ng-template appFooterCell="net_transfers"><span class="u-bidi">{{ netTransfersSum() | money }}</span></ng-template>
+            <ng-template appFooterCell="expected_balance"><span class="u-bidi">{{ d.totals.expected_balance | money }}</span></ng-template>
+            <ng-template appFooterCell="actual_balance"><span class="u-bidi">{{ d.totals.actual_balance | money }}</span></ng-template>
+            <ng-template appFooterCell="difference"><span class="u-bidi">{{ d.totals.difference | money }}</span></ng-template>
           </app-data-table>
           <p class="field__hint u-mt-2">{{ 'report.reconciliation.expected_formula' | translate }}</p>
         }
         <div empty>
-          <app-empty-state [title]="'report.reconciliation.empty'" [text]="'common.no_data'" />
+          <app-empty-state [title]="'report.reconciliation.empty'" [text]="'common.no_data'" accent="reports" iconName="report-analytics" />
         </div>
       </app-async-page>
     </app-print-sheet>

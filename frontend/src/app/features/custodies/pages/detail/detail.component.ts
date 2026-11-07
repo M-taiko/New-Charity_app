@@ -10,14 +10,14 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
-import { MenuModule } from 'primeng/menu';
-import type { MenuItem } from 'primeng/api';
+import { PageActionsComponent } from '@shared/ui/page-actions/page-actions.component';
+import type { PageAction } from '@shared/ui/page-actions/page-actions.component';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
@@ -34,6 +34,7 @@ import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface CustodyExpense {
   id: number; amount: string; type: string; description: string | null;
@@ -68,24 +69,15 @@ type DonationType = 'external_donation' | 'expense_refund';
 @Component({
   selector: 'app-custody-detail',
   standalone: true,
-  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, AppTabsComponent, MenuModule, FlowRibbonComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe],
+  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, AppTabsComponent, FlowRibbonComponent, PageActionsComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'custody.detail.title' | translate">
       @if (safeValue(); as c) {
-        <app-page-header [title]="'#' + c.id" [subtitle]="c.agent ?? ''">
-          <div actions class="u-flex u-gap-2 u-flex-wrap">
-            <!-- T6-10: max 3 visible buttons — print, edit and a More menu;
-                 status decisions live in the sticky action bar below -->
-            <p-button [label]="'common.print' | translate" size="small" severity="secondary" [outlined]="true" (click)="printPage()" />
-            @if (canManageTreasury()) {
-              <p-button [label]="'common.edit' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/custodies/{{ c.id }}/edit" />
-            }
-            @if (moreMenuItems(c).length > 0) {
-              <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="moreMenu.toggle($event)" />
-              <p-menu #moreMenu appendTo="body" [model]="moreMenuItems(c)" popup="true" />
-            }
-          </div>
+        <app-page-header [title]="'#' + c.id" [subtitle]="c.agent ?? ''" accent="custodies" iconName="wallet">
+          <!-- T7-10: the enforced action bar — print + edit visible, the rest
+               fold into its More menu; status decisions stay in the sticky bar -->
+          <app-page-actions actions [pageActions]="headerActions(c)" />
         </app-page-header>
       }
 
@@ -94,31 +86,31 @@ type DonationType = 'external_donation' | 'expense_refund';
           <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
           <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
             @if (showApproveRequest(c)) {
-              <p-button [label]="'custody.detail.approve_request' | translate" size="small" severity="success" (onClick)="acceptDlg.open(); openAccept()" />
+              <app-action-button kind="accept" label="custody.detail.approve_request" size="small" (action)="acceptDlg.open(); openAccept()" />
             }
             @if (showAgentAccept(c)) {
-              <p-button [label]="'custody.detail.agent_accept' | translate" size="small" severity="success" (onClick)="agentAcceptDlg.open()" />
+              <app-action-button kind="accept" label="custody.detail.agent_accept" size="small" (action)="agentAcceptDlg.open()" />
             }
             @if (showReceive(c)) {
-              <p-button [label]="'custody.detail.receive' | translate" size="small" (onClick)="receiveDlg.open()" />
+              <app-action-button kind="receive" label="custody.detail.receive" size="small" (action)="receiveDlg.open()" />
             }
             @if (showAgentReturn(c)) {
-              <p-button [label]="'custody.detail.return' | translate" size="small" severity="warn" [outlined]="true" (onClick)="returnOpen.set(!returnOpen())" />
+              <app-action-button kind="returnCustody" label="custody.detail.return" size="small" (action)="returnOpen.set(!returnOpen())" />
             }
             @if (showRequestReturn(c) && !hasPendingReturnRequest(c)) {
-              <p-button [label]="'custody.detail.request_return' | translate" size="small" severity="warn" [outlined]="true" (onClick)="reqReturnDlg.open(); openReqReturn()" />
+              <app-action-button kind="requestReturn" label="custody.detail.request_return" size="small" (action)="reqReturnDlg.open(); openReqReturn()" />
             }
             @if (showRequestReturn(c) && hasPendingReturnRequest(c)) {
               <span class="u-small u-muted">{{ 'custody.detail.pending_return_note' | translate }}</span>
             }
             @if (showAgentAccept(c)) {
-              <p-button [label]="'custody.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="agentRejectDlg.open()" />
+              <app-action-button kind="reject" label="custody.detail.reject" size="small" (action)="agentRejectDlg.open()" />
             }
             @if (showApproveRequest(c)) {
-              <p-button [label]="'custody.detail.reject_request' | translate" size="small" severity="danger" [outlined]="true" (onClick)="rejectDlg.open()" />
+              <app-action-button kind="reject" label="custody.detail.reject_request" size="small" (action)="rejectDlg.open()" />
             }
             @if (showCancel(c)) {
-              <p-button [label]="'custody.detail.cancel_custody' | translate" size="small" severity="danger" [outlined]="true" (onClick)="cancelDlg.open()" />
+              <app-action-button kind="cancel" label="custody.detail.cancel_custody" size="small" (action)="cancelDlg.open()" />
             }
           </div>
 
@@ -149,32 +141,22 @@ type DonationType = 'external_donation' | 'expense_refund';
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.returns' | translate }}</span></div>
             <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="returnRequestCols" [rows]="c.return_requests">
-              <ng-template appTableBody let-row>
-                <tr class="ledger-table__row">
-                  <td appTableCol="requested_at" class="u-bidi">{{ row.requested_at | datetime }}</td>
-                  <td appTableCol="amount">{{ row.amount | money }}</td>
-                  <td appTableCol="reason">
-                    {{ row.reason || '—' }}
-                    @if (row.rejection_reason) { <span class="u-small u-muted">{{ row.rejection_reason }}</span> }
-                  </td>
-                  <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="return_request" /></td>
-                  <td appTableCol="requested_by">{{ row.requested_by ?? '—' }}</td>
-                  <td appTableCol="decided">
-                    @if (row.approved_by) {
-                      <span class="u-bidi">{{ row.approved_by }} — {{ row.approved_at | datetime: false }}</span>
-                    } @else { <span class="u-muted">—</span> }
-                  </td>
-                  <td appTableCol="actions">
-                    @if (row.status === 'pending') {
-                      @if (canManageTreasury()) {
-                        <p-button [label]="'custody.detail.approve_rr' | translate" size="small" severity="success" [outlined]="true" (onClick)="rrDlg.open(); openRrApprove(row)" />
-                      } @else if (c.initiated_by === 'agent' && meId() === c.agent_id) {
-                        <p-button [label]="'custody.detail.approve_rr' | translate" size="small" severity="success" [outlined]="true" (onClick)="rrOwnerDlg.open(); openRrOwnerApprove(row)" />
-                      }
-                    }
-                  </td>
-                </tr>
-              </ng-template>
+              <ng-template appCell="requested_at" let-row><span class="u-bidi">{{ row.requested_at | datetime }}</span></ng-template>
+              <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
+              <ng-template appCell="reason" let-row>{{ row.reason || '—' }}
+@if (row.rejection_reason) { <span class="u-small u-muted">{{ row.rejection_reason }}</span> }</ng-template>
+              <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="return_request" /></ng-template>
+              <ng-template appCell="requested_by" let-row>{{ row.requested_by ?? '—' }}</ng-template>
+              <ng-template appCell="decided" let-row>@if (row.approved_by) {
+  <span class="u-bidi">{{ row.approved_by }} — {{ row.approved_at | datetime: false }}</span>
+} @else { <span class="u-muted">—</span> }</ng-template>
+              <ng-template appCell="actions" let-row>@if (row.status === 'pending') {
+  @if (canManageTreasury()) {
+    <app-action-button kind="approve" label="custody.detail.approve_rr" size="small" (action)="rrDlg.open(); openRrApprove(row)" />
+  } @else if (c.initiated_by === 'agent' && meId() === c.agent_id) {
+    <app-action-button kind="approve" label="custody.detail.approve_rr" size="small" (action)="rrOwnerDlg.open(); openRrOwnerApprove(row)" />
+  }
+}</ng-template>
             </app-data-table>
           </section>
 
@@ -184,14 +166,10 @@ type DonationType = 'external_donation' | 'expense_refund';
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.transactions' | translate }}</span></div>
             <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="transactionCols" [rows]="c.transactions">
-              <ng-template appTableBody let-row>
-                <tr class="ledger-table__row">
-                  <td appTableCol="date" class="u-bidi">{{ row.date | datetime }}</td>
-                  <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-                  <td appTableCol="description">{{ row.description }}</td>
-                  <td appTableCol="amount">{{ row.amount | money }}</td>
-                </tr>
-              </ng-template>
+              <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
+              <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}</ng-template>
+              <ng-template appCell="description" let-row>{{ row.description }}</ng-template>
+              <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
             </app-data-table>
           </section>
 
@@ -201,17 +179,11 @@ type DonationType = 'external_donation' | 'expense_refund';
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.expenses' | translate }}</span></div>
             <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="expenseCols" [rows]="c.expenses">
-              <ng-template appTableBody let-row>
-                <tr class="ledger-table__row">
-                  <td appTableCol="date" class="u-bidi">{{ row.date | datetime: false }}</td>
-                  <td appTableCol="description">
-                    <a [routerLink]="['/expenses', row.id]">{{ row.description || '—' }}</a>
-                    @if (row.split.length > 1) { <span class="stamp stamp--info">{{ 'expense.detail.custody_split_note' | translate }}</span> }
-                  </td>
-                  <td appTableCol="direction" class="u-small">{{ row.direction || ('expense.list.filter.no_direction' | translate) }}</td>
-                  <td appTableCol="amount">{{ row.amount | money }}</td>
-                </tr>
-              </ng-template>
+              <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime: false }}</span></ng-template>
+              <ng-template appCell="description" let-row><a [routerLink]="['/expenses', row.id]">{{ row.description || '—' }}</a>
+@if (row.split.length > 1) { <span class="stamp stamp--info">{{ 'expense.detail.custody_split_note' | translate }}</span> }</ng-template>
+              <ng-template appCell="direction" let-row><span class="u-small">{{ row.direction || ('expense.list.filter.no_direction' | translate) }}</span></ng-template>
+              <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
             </app-data-table>
           </section>
 
@@ -486,18 +458,15 @@ export class CustodyDetailPage {
   }
 
   /** secondary actions live in the header More menu (T6-10) */
-  moreMenuItems(c: CustodyDetail): MenuItem[] {
-    const items: MenuItem[] = [];
-    if (this.showTransferShortcut(c)) {
-      items.push({ label: this.translate.instant('custody.detail.transfer_to_agent'), routerLink: '/transfers/new' });
-    }
-    if (this.isAgent()) {
-      items.push({ label: this.translate.instant('custody.mine.request_new'), routerLink: '/custodies/new' });
-    }
-    if (this.showDonation(c)) {
-      items.push({ label: this.translate.instant('custody.detail.donation_add'), command: () => { this.donationDlg().open(); this.openDonation(); } });
-    }
-    return items;
+  /** T7-10: the header action list — the component enforces visibility + More */
+  headerActions(c: CustodyDetail): PageAction[] {
+    return [
+      { kind: 'print', label: 'common.print', run: () => { this.printPage(); } },
+      { kind: 'edit', label: 'common.edit', route: ['/custodies', c.id, 'edit'], visible: this.canManageTreasury() },
+      { kind: 'transfer', label: 'custody.detail.transfer_to_agent', route: ['/transfers/new'], visible: this.showTransferShortcut(c) },
+      { kind: 'create', label: 'custody.mine.request_new', route: ['/custodies/new'], visible: this.isAgent() },
+      { kind: 'donate', label: 'custody.detail.donation_add', run: () => { this.donationDlg().open(); this.openDonation(); }, visible: this.showDonation(c) },
+    ];
   }
 
   isAgent(): boolean {

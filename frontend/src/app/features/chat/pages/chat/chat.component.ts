@@ -24,6 +24,7 @@ import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.componen
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 /** One option row of a poll — counts only exist on rows fetched from /chat/poll. */
 interface PollOptionView {
@@ -103,7 +104,7 @@ interface PollFeedMsg {
   imports: [
     TranslatePipe, FormsModule, ButtonModule, InputTextModule, TextareaModule,
     PageHeaderComponent, IconComponent, ConfirmDeleteComponent, FormDialogComponent, DatetimePipe,
-    FieldComponent, RowActionsComponent,
+    FieldComponent, RowActionsComponent, ActionButtonComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -161,12 +162,11 @@ interface PollFeedMsg {
                   @if (poll.is_closed) {
                     <span class="stamp stamp--neutral">{{ 'chat.poll.closed' | translate }}</span>
                   } @else if (poll.can_close) {
-                    <p-button
-                      [label]="'chat.poll.close' | translate"
+                    <app-action-button
+                      kind="closePoll"
+                      label="chat.poll.close"
                       size="small"
-                      [text]="true"
-                      severity="danger"
-                      (onClick)="closePoll(poll.id)"
+                      (action)="closePoll(poll.id)"
                     />
                   }
                 </div>
@@ -233,15 +233,12 @@ interface PollFeedMsg {
                 />
               </app-field>
               @if (pollOptions().length > 2) {
-                <p-button
+                <app-action-button
+                  kind="remove"
                   size="small"
-                  [text]="true"
-                  severity="danger"
-                  (onClick)="removeOption($index)"
+                  (action)="removeOption($index)"
                   [ariaLabel]="'common.remove' | translate"
-                >
-                  <ng-template pTemplate="icon"><app-icon name="x" [size]="14" /></ng-template>
-                </p-button>
+                />
               }
             </div>
           }

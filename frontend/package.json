@@ -19,15 +19,15 @@
     "fonts": "node scripts/build-fonts.mjs",
     "test": "ng test --watch=false --browsers=ChromeHeadless",
     "e2e": "playwright test --config=e2e/playwright.config.ts",
-    "verify": "npm run lint && npm run lint:styles && npm run check:i18n && npm run check:overlays && npm run check:drag && npm run check:actions && npm run build && npm run check:size && npm run check:palette && npm run check:readmes",
+    "verify": "npm run lint && npm run lint:styles && npm run check:compat && npm run check:i18n && npm run check:overlays && npm run check:drag && npm run check:actions && npm run build && npm run check:size && npm run check:palette && npm run check:readmes",
     "pack": "node scripts/pack.mjs",
     "bootstrap": "node scripts/bootstrap.mjs",
     "check:overlays": "node scripts/check-overlays.mjs",
     "check:drag": "node scripts/check-drag.mjs",
-    "check:actions": "node scripts/check-actions.mjs"
+    "check:actions": "node scripts/check-actions.mjs",
+    "check:compat": "node scripts/check-compat.mjs"
   },
   "dependencies": {
-    "@angular/animations": "20.3.34",
     "@angular/common": "20.3.34",
     "@angular/compiler": "20.3.34",
     "@angular/core": "20.3.34",

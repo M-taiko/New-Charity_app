@@ -32,7 +32,7 @@ type EmployeeForm = Record<string, string | number | boolean | null | undefined 
   imports: [ButtonModule, DatePickerModule, FormsModule, InputNumberModule, InputTextModule, PageHeaderComponent, RouterLink, SelectModule, TranslatePipe, FieldComponent, FormSectionComponent, AsyncPageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="isEdit() ? ('common.edit' | translate) : ('hr.employees.add' | translate)">
+    <app-page-header [title]="isEdit() ? ('common.edit' | translate) : ('hr.employees.add' | translate)" accent="hr" iconName="briefcase">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/hr/employees" />
       </div>

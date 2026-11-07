@@ -18,6 +18,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import type { ActionResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 type TaskForm = Record<string, string | number | boolean | null | undefined | string[]>;
 
@@ -29,11 +30,11 @@ type TaskForm = Record<string, string | number | boolean | null | undefined | st
   standalone: true,
   imports: [
     ButtonModule, DatePickerModule, FormsModule, InputTextModule, PageHeaderComponent, RouterLink,
-    SelectModule, TextareaModule, TranslatePipe, FieldComponent, FormSectionComponent,
+    SelectModule, TextareaModule, TranslatePipe, FieldComponent, FormSectionComponent, ActionButtonComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'task.form.title' | translate">
+    <app-page-header [title]="'task.form.title' | translate" accent="tasks" iconName="list-check">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/tasks" />
       </div>
@@ -58,7 +59,7 @@ type TaskForm = Record<string, string | number | boolean | null | undefined | st
       </app-form-section>
       @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
       <div class="sticky-actions">
-        <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/tasks" />
+        <app-action-button kind="back" label="common.back" [route]="['/tasks']" />
         <p-button type="submit" [label]="'task.form.submit' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
       </div>
     </form>

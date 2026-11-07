@@ -2,24 +2,22 @@
 
 import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
-import { CheckboxModule } from 'primeng/checkbox';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import type { TableFilterDef, TableQuery } from '@shared/lib/table-filters';
+import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
-import { warnMissingTranslation } from '@core/i18n/missing-key';
-import type { ItemResponse, ListResponse, Lookups } from '@shared/models/api.models';
+import type { ListResponse } from '@shared/models/api.models';
 
 interface Row {
   id: number;
@@ -36,42 +34,25 @@ interface MovementsParams {
   per_page: number;
   q: string;
   sort?: string;
-  date_from: string;
-  date_to: string;
-  agent_id: number | null;
-  type: string;
-  custody_id: number | null;
-  show_closures: boolean;
 }
 
-const DEFAULT_FILTERS: Omit<MovementsParams, 'page' | 'per_page' | 'q' | 'sort'> = {
-  date_from: '',
-  date_to: '',
-  agent_id: null,
-  type: 'all',
-  custody_id: null,
-  show_closures: false,
-};
-
-/** the movement types movements.blade.php offers, in its order */
-const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'expense', 'recovery', 'custody_close'] as const;
-
 /**
- * Custody movements ledger (plan 20 + T3-16): the Blade filter set the API
- * accepts (date range, agent-as-party, type, custody number, zero-closure
- * toggle) with apply/reset, plus print through the shared print sheet.
+ * Custody movements ledger (plan 20 + T3-16): the filters the API declares
+ * (date range, agent-as-party, type, custody number) arrive through
+ * meta.filters (T7-07) — the table draws the controls, the page forwards
+ * them as filter[key] params. Print goes through the shared print sheet.
  */
 @Component({
   selector: 'app-custody-movements',
   standalone: true,
-  imports: [SectionNavComponent, 
-    TranslatePipe, RouterLink, ButtonModule, CheckboxModule, PageHeaderComponent, AsyncPageComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+  imports: [SectionNavComponent,
+    TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableCellDirective,
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet orientation="landscape" [title]="'custody.movements.title' | translate">
-      <app-page-header [title]="'custody.movements.title' | translate">
+      <app-page-header [title]="'custody.movements.title' | translate" accent="custodies" iconName="wallet">
         <div actions class="u-flex u-gap-2">
           <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
         </div>
@@ -82,14 +63,14 @@ const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'e
       <app-async-page [resource]="data" variant="list">
         @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'custody.movements.received'" [value]="summaryValue('received')" [money]="true" />
+          <app-stat-tile [label]="'custody.movements.received'" [value]="summaryValue('received')" [money]="true" accent="custodies" iconName="wallet" />
           <app-stat-tile [label]="'custody.movements.returned'" [value]="summaryValue('returned')" [money]="true" />
           <app-stat-tile [label]="'custody.movements.transferred'" [value]="summaryValue('transferred')" [money]="true" />
           <app-stat-tile [label]="'custody.movements.spent'" [value]="summaryValue('spent')" [money]="true" />
         </div>
 
-        <app-data-table
-          [filters]="filterDefs()"
+        <app-data-table listUrl="/custodies/movements"
+          [filters]="metaFilters()"
           (queryChange)="onQuery($event)"
           [tableKey]="tableKey"
           [columns]="columns"
@@ -100,54 +81,18 @@ const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'e
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="date"><span class="u-bidi">{{ row.date | datetime }}</span></td>
-              <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-              <td appTableCol="custody_id">
-                @if (row.custody_id) {
-                  <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
-                } @else {
-                  <span>—</span>
-                }
-              </td>
-              <td appTableCol="description">{{ row.description ?? '—' }}</td>
-              <td appTableCol="user">{{ row.user ?? '—' }}</td>
-              <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_date' | translate }}</span>
-                <span class="u-bidi">{{ row.date | datetime }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_type' | translate }}</span>
-                {{ row.type | enumLabel: 'transaction_type' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_custody' | translate }}</span>
-                @if (row.custody_id) {
-                  <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
-                } @else {
-                  <span>—</span>
-                }
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_description' | translate }}</span>
-                {{ row.description ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'custody.movements.col_by' | translate }}</span>
-                {{ row.user ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-                <span class="u-bidi">{{ row.amount | money }}</span>
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
+          <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}</ng-template>
+          <ng-template appCell="custody_id" let-row>@if (row.custody_id) {
+  <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
+} @else {
+  <span>—</span>
+}</ng-template>
+          <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
+          <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
+          <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
           <div empty>
-            <app-empty-state [title]="'custody.movements.empty' | translate" [text]="'common.no_data' | translate" />
+            <app-empty-state [title]="'custody.movements.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
           </div>
         </app-data-table>
         }
@@ -157,7 +102,6 @@ const TYPE_VALUES = ['custody_out', 'custody_return', 'custody_transfer_out', 'e
 })
 export class MovementsPage {
   private http = inject(HttpClient);
-  private translate = inject(TranslateService);
 
   readonly tableKey = 'movements.component';
 
@@ -167,114 +111,38 @@ export class MovementsPage {
     { field: 'custody_id', header: 'custody.movements.col_custody', sortable: true },
     { field: 'description', header: 'custody.movements.col_description', sortable: true },
     { field: 'user', searchField: 'user', header: 'custody.movements.col_by', sortable: true },
-    { field: 'amount', header: 'common.amount', sortable: true },
+    { field: 'amount', header: 'common.amount', sortable: true, numeric: true },
   ];
 
-  /** the filter draft — applied only when the user presses Apply, like the Blade page */
-  draft = signal<MovementsParams>({ page: 1, per_page: 25, q: '', ...DEFAULT_FILTERS });
-  draftDateRange = signal<Date[]>([]);
+  params = signal<MovementsParams>({ page: 1, per_page: 25, q: '', sort: '' });
 
-  /** object spread is not template syntax — the draft is patched through here */
-  patchDraft(key: keyof MovementsParams, value: unknown): void {
-    this.draft.update((d) => ({ ...d, [key]: value }));
-  }
+  /** the active filter[...] values — forwarded verbatim (T7-07 server contract) */
+  private filterBag: Record<string, unknown> = {};
 
-  params = signal<MovementsParams>({ page: 1, per_page: 25, q: '', ...DEFAULT_FILTERS });
+  /** T7-07: the endpoint's declared allowlist drives the table's Filters control */
+  readonly metaFilters = computed(() => apiFilterDefs(this.data.value()?.meta));
 
-  /** T6-30: JSON filter defs — the table draws the controls, no page markup */
-  readonly filterDefs = computed<TableFilterDef[]>(() => [
-    { key: 'date', label: 'custody.movements.date_range', type: 'date-range', order: 1 },
-    {
-      key: 'agent_id', label: 'custody.movements.agent', type: 'select', order: 2,
-      options: this.agentOptions().filter((o) => o.value !== null),
-    },
-    {
-      key: 'type', label: 'custody.movements.type', type: 'select', order: 3,
-      options: this.typeOptions().filter((o) => o.value !== 'all'),
-    },
-    { key: 'custody_id', label: 'custody.movements.custody_number', type: 'text', order: 4 },
-    { key: 'show_closures', label: 'custody.movements.show_closures', type: 'boolean', order: 5 },
-  ]);
-
-  /** the table emits the full query — filters reach the server (T6-30) */
+  /** the table emits the full query — filters reach the server (T7-07) */
   onQuery(query: TableQuery): void {
-    const f = query.filters;
-    const date = (f.date ?? {}) as { from?: string; to?: string };
+    this.filterBag = query.filters;
     this.params.update((p) => ({
       ...p,
       page: query.page,
       per_page: query.perPage,
       sort: query.sort !== '' ? query.sort : p.sort,
       q: query.q,
-      date_from: date.from ?? '',
-      date_to: date.to ?? '',
-      agent_id: (f.agent_id as number) ?? null,
-      type: (f.type as string) ?? 'all',
-      custody_id: f.custody_id !== undefined && f.custody_id !== '' ? Number(f.custody_id) : null,
-      show_closures: f.show_closures === true,
     }));
     this.data.reload();
   }
 
   data = resource<ListResponse<Row>, unknown>({
     loader: () =>
-      firstValueFrom(this.http.get<ListResponse<Row>>('/custodies/movements', { params: cleanParams(this.params()) })),
+      firstValueFrom(this.http.get<ListResponse<Row>>('/custodies/movements', { params: { ...cleanParams(this.params()), ...filterParams(this.filterBag) } })),
   });
-
-  /** agents for the party filter — the Blade view uses role مندوب users */
-  lookups = resource<Lookups, unknown>({
-    loader: () => firstValueFrom(this.http.get<ItemResponse<Lookups>>('/lookups')).then((r) => r.data),
-  });
-
-  private label(key: string): string {
-    const text = this.translate.instant(key);
-    if (text === key) {
-      warnMissingTranslation(key); // dev only — the raw key in the UI means a key was lost (T5-01)
-    }
-    return text !== key ? text : key;
-  }
-
-  agentOptions = computed(() => [
-    { label: this.label('custody.tracking.all_agents'), value: null },
-    ...(this.lookups.value()?.agents ?? []).map((a) => ({ label: a.name, value: a.id })),
-  ]);
-
-  typeOptions = computed(() => [
-    { label: this.label('custody.list.tab_all'), value: 'all' },
-    ...TYPE_VALUES.map((t) => ({ label: this.label(`enums.transaction_type.${t}`), value: t })),
-  ]);
 
   summaryValue(key: string): string {
     const value = this.data.value()?.meta.summary?.[key];
     return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
-  }
-
-  /** apply the picked range once both ends are chosen (or when cleared) */
-  onDateRange(value: Date[] | undefined): void {
-    const range = value ?? [];
-    this.draftDateRange.set(range);
-    if (range.length === 2) {
-      this.draft.set({ ...this.draft(), date_from: toIsoDate(range[0]), date_to: toIsoDate(range[1]) });
-    } else if (range.length === 0) {
-      this.draft.set({ ...this.draft(), date_from: '', date_to: '' });
-    }
-  }
-
-  applyFilters(): void {
-    this.params.set({ ...this.draft(), page: 1 });
-    this.data.reload();
-  }
-
-  resetFilters(): void {
-    this.draftDateRange.set([]);
-    this.draft.set({ page: 1, per_page: this.params().per_page, q: '', ...DEFAULT_FILTERS });
-    this.params.set({ ...this.draft() });
-    this.data.reload();
-  }
-
-  onSearch(term: string): void {
-    this.params.update((p) => ({ ...p, q: term, page: 1 }));
-    this.data.reload();
   }
 
   onPage(event: { page: number; per_page: number; sort?: string }): void {
@@ -284,7 +152,6 @@ export class MovementsPage {
       return;
     }
     this.params.update((p) => ({ ...p, page: event.page, per_page: event.per_page, sort }));
-    this.draft.set({ ...this.draft(), per_page: event.per_page });
     this.data.reload();
   }
 
@@ -301,11 +168,4 @@ function cleanParams(params: object): Record<string, string> {
     }
   }
   return result;
-}
-
-/** local calendar day as yyyy-mm-dd — the picker's chosen day is the day sent to the API */
-function toIsoDate(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${date.getFullYear()}-${month}-${day}`;
 }

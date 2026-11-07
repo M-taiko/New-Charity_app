@@ -7,7 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { RowActionsComponent, type RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
@@ -31,12 +31,12 @@ interface Row {
   standalone: true,
   imports: [
     TranslatePipe, PageHeaderComponent, AsyncPageComponent, StatTileComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, 
     EmptyStateComponent, RowActionsComponent, DatetimePipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'task.list.title' | translate">
+    <app-page-header [title]="'task.list.title' | translate" accent="tasks" iconName="list-check">
       <div actions class="u-flex u-gap-2">
 
       </div>
@@ -45,12 +45,12 @@ interface Row {
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'task.list.pending'" [value]="summaryValue('pending')" />
+          <app-stat-tile [label]="'task.list.pending'" [value]="summaryValue('pending')" accent="tasks" iconName="list-check" />
           <app-stat-tile [label]="'task.list.in_progress'" [value]="summaryValue('in_progress')" />
           <app-stat-tile [label]="'task.list.completed'" [value]="summaryValue('completed')" />
         </div>
 
-        <app-data-table
+        <app-data-table listUrl="/tasks"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -60,45 +60,16 @@ interface Row {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="title">{{ row.title ?? '—' }}</td>
-              <td appTableCol="assigned_to">{{ row.assigned_to ?? '—' }}</td>
-              <td appTableCol="status"><app-status-stamp [status]="row.status ?? ''" namespace="task" /></td>
-              <td appTableCol="priority">{{ row.priority ?? '—' }}</td>
-              <td appTableCol="due_date"><span class="u-bidi">{{ row.due_date | datetime }}</span></td>
-              <td appTableCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'task.list.col_title' | translate }}</span>
-                {{ row.title ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'task.list.col_assignee' | translate }}</span>
-                {{ row.assigned_to ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.status' | translate }}</span>
-                {{ row.status ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'task.list.col_priority' | translate }}</span>
-                {{ row.priority ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'task.list.col_due' | translate }}</span>
-                <span class="u-bidi">{{ row.due_date | datetime }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="title" let-row>{{ row.title ?? '—' }}</ng-template>
+          <ng-template appCell="assigned_to" let-row>{{ row.assigned_to ?? '—' }}</ng-template>
+          <ng-template appCell="status" let-row><app-status-stamp [status]="row.status ?? ''" namespace="task" /></ng-template>
+          <ng-template appCell="priority" let-row>{{ row.priority ?? '—' }}</ng-template>
+          <ng-template appCell="due_date" let-row><span class="u-bidi">{{ row.due_date | datetime }}</span></ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         </app-data-table>
       }
       <div empty>
-        <app-empty-state [title]="'task.list.empty' | translate" [text]="'common.no_data' | translate" />
+        <app-empty-state [title]="'task.list.empty' | translate" [text]="'common.no_data' | translate" accent="tasks" iconName="list-check" />
       </div>
     </app-async-page>
   `,

@@ -13,7 +13,8 @@ import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.componen
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import type { TableColumn } from '@shared/ui/data-table/data-table.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
+import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
@@ -71,14 +72,14 @@ interface QuickDetail {
   imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective, 
+    DataTableComponent, TableCellDirective, 
     EmptyStateComponent, FormDialogComponent, ConfirmDeleteComponent,
     RowActionsComponent, KeyValueListComponent, StatusStampComponent, DatetimePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'case.mine.title' | translate">
+    <app-page-header [title]="'case.mine.title' | translate" accent="cases" iconName="heart-handshake">
       <div actions class="u-flex u-gap-2">
         <p-button [label]="'case.mine.create' | translate" size="small" routerLink="/cases/new" />
       </div>
@@ -89,76 +90,46 @@ interface QuickDetail {
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'case.list.total'" [value]="summaryValue('total')" />
+          <app-stat-tile [label]="'case.list.total'" [value]="summaryValue('total')" accent="cases" iconName="heart-handshake" />
           <app-stat-tile [label]="'case.list.pending'" [value]="summaryValue('pending')" />
           <app-stat-tile [label]="'case.list.approved'" [value]="summaryValue('approved')" />
           <app-stat-tile [label]="'case.list.rejected'" [value]="summaryValue('rejected')" />
         </div>
 
-        <app-data-table
+        <app-data-table listUrl="/my-cases"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
           [total]="page.meta.total"
           [perPage]="params().per_page"
           [loading]="data.isLoading()"
+          [filters]="metaFilters()"
+          (queryChange)="onQuery($event)"
+
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="name"><a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a></td>
-              <td appTableCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
-              <td appTableCol="assistance_type">{{ label('case.enums.assistance.' + row.assistance_type) }}</td>
-              <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="social_case" /></td>
-              <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-              <td appTableCol="actions"><app-row-actions [actions]="actionsFor(row)" /></td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.mine.col_name' | translate }}</span>
-                <a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.mine.col_phone' | translate }}</span>
-                <span class="u-bidi">{{ row.phone ?? '—' }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.mine.col_assistance' | translate }}</span>
-                {{ label('case.enums.assistance.' + row.assistance_type) }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.mine.col_status' | translate }}</span>
-                <app-status-stamp [status]="row.status" namespace="social_case" />
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'case.mine.col_date' | translate }}</span>
-                <span class="u-bidi">{{ row.created_at | datetime }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="name" let-row><a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a></ng-template>
+          <ng-template appCell="phone" let-row><span class="u-bidi">{{ row.phone ?? '—' }}</span></ng-template>
+          <ng-template appCell="assistance_type" let-row>{{ label('case.enums.assistance.' + row.assistance_type) }}</ng-template>
+          <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="social_case" /></ng-template>
+          <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         </app-data-table>
       }
       <div empty>
-        <app-empty-state [title]="'case.mine.empty' | translate" [text]="'common.no_data' | translate" />
+        <app-empty-state [title]="'case.mine.empty' | translate" [text]="'common.no_data' | translate" accent="cases" iconName="heart-handshake" />
       </div>
     </app-async-page>
 
     <app-form-dialog [header]="familyHeader()" [submitLabel]="'case.modal.close'" [(visible)]="familyOpen" [sending]="familyLoading()">
       <app-data-table mode="static" [autoFilters]="true" [columns]="familyCols" [rows]="familyMembers()" [emptyLabel]="'case.modal.empty_family'">
-        <ng-template appTableBody let-row let-index="index">
-          <tr class="ledger-table__row">
-            <td appTableCol="index" class="u-bidi">{{ index + 1 }}</td>
-            <td appTableCol="name">{{ row.name }}</td>
-            <td appTableCol="relation">{{ label('case.enums.relation.' + row.relationship) }}</td>
-            <td appTableCol="gender">{{ label('case.enums.gender.' + row.gender) }}</td>
-            <td appTableCol="status">{{ label('case.enums.member_status.' + row.status) }}</td>
-            <td appTableCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
-          </tr>
-        </ng-template>
+        <ng-template appCell="index" let-row let-index="index"><span class="u-bidi">{{ index + 1 }}</span></ng-template>
+        <ng-template appCell="name" let-row let-index="index">{{ row.name }}</ng-template>
+        <ng-template appCell="relation" let-row let-index="index">{{ label('case.enums.relation.' + row.relationship) }}</ng-template>
+        <ng-template appCell="gender" let-row let-index="index">{{ label('case.enums.gender.' + row.gender) }}</ng-template>
+        <ng-template appCell="status" let-row let-index="index">{{ label('case.enums.member_status.' + row.status) }}</ng-template>
+        <ng-template appCell="phone" let-row let-index="index"><span class="u-bidi">{{ row.phone ?? '—' }}</span></ng-template>
       </app-data-table>
     </app-form-dialog>
 
@@ -201,11 +172,30 @@ export class MyCasesPage {
     { field: 'phone', header: 'case.form.member_phone' },
   ];
 
-  params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
+  params = signal<{ page: number; per_page: number; q: string; sort?: string; status: string }>({ page: 1, per_page: 25, q: '', sort: '', status: 'all' });
+
+  /** the active filter[...] values — forwarded verbatim (T7-07 server contract) */
+  filterBag: Record<string, unknown> = {};
+
+  /** T7-07: the endpoint's declared allowlist drives the table's Filters control */
+  readonly metaFilters = computed(() => apiFilterDefs(this.data.value()?.meta));
+
+  /** the table emits the full query — filters reach the server (T7-07) */
+  onQuery(query: TableQuery): void {
+    this.filterBag = query.filters;
+    this.params.update((p) => ({
+      ...p,
+      page: query.page,
+      per_page: query.perPage,
+      sort: query.sort !== '' ? query.sort : p.sort,
+      q: query.q,
+    }));
+    this.data.reload();
+  }
 
   data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string }>({
     loader: () =>
-      firstValueFrom(this.http.get<ListResponse<Row>>('/my-cases', { params: cleanParams(this.params()) })),
+      firstValueFrom(this.http.get<ListResponse<Row>>('/my-cases', { params: { ...cleanParams(this.params()), ...filterParams(this.filterBag) } })),
   });
 
   /** T4-20: a non-throwing resource view — raw ResourceRef.value() throws on a failed load */

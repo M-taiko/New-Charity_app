@@ -16,7 +16,7 @@ import { ToastService } from '@core/errors/toast.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
@@ -54,7 +54,7 @@ interface SelectOption<T> {
   standalone: true,
   imports: [
     TranslatePipe, FormsModule, ButtonModule, InputTextModule, SelectModule, TextareaModule,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, DatetimePipe, StatusStampComponent,
     RowActionsComponent, ConfirmDialogComponent, FormDialogComponent, FieldComponent,
   ],
@@ -66,7 +66,7 @@ interface SelectOption<T> {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table
+        <app-data-table listUrl="/broadcasts"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -76,54 +76,14 @@ interface SelectOption<T> {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="title">
-                <strong class="u-small">{{ row.title ?? '—' }}</strong>
-                <div class="u-muted u-small">{{ row.message ?? '—' }}</div>
-              </td>
-              <td appTableCol="level">{{ levelLabel(row.level) }}</td>
-              <td appTableCol="sender">{{ row.sender ?? '—' }}</td>
-              <td appTableCol="status">
-                <app-status-stamp [status]="liveStatus(row)" namespace="broadcast" />
-              </td>
-              <td appTableCol="expires_at"><span class="u-bidi">{{ row.expires_at | datetime }}</span></td>
-              <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-              <td appTableCol="actions">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'broadcast.col_title' | translate }}</span>
-                {{ row.title ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'broadcast.col_level' | translate }}</span>
-                {{ levelLabel(row.level) }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'broadcast.col_sender' | translate }}</span>
-                {{ row.sender ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'broadcast.col_status' | translate }}</span>
-                <app-status-stamp [status]="liveStatus(row)" namespace="broadcast" />
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'broadcast.expires' | translate }}</span>
-                <span class="u-bidi">{{ row.expires_at | datetime }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'broadcast.col_date' | translate }}</span>
-                <span class="u-bidi">{{ row.created_at | datetime }}</span>
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.actions' | translate }}</span>
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="title" let-row><strong class="u-small">{{ row.title ?? '—' }}</strong>
+<div class="u-muted u-small">{{ row.message ?? '—' }}</div></ng-template>
+          <ng-template appCell="level" let-row>{{ levelLabel(row.level) }}</ng-template>
+          <ng-template appCell="sender" let-row>{{ row.sender ?? '—' }}</ng-template>
+          <ng-template appCell="status" let-row><app-status-stamp [status]="liveStatus(row)" namespace="broadcast" /></ng-template>
+          <ng-template appCell="expires_at" let-row><span class="u-bidi">{{ row.expires_at | datetime }}</span></ng-template>
+          <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
             <app-empty-state [title]="'broadcast.empty' | translate" [text]="'common.no_data' | translate" />
           </div>

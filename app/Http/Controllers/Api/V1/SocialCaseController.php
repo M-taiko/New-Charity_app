@@ -8,8 +8,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\SocialCase;
 use App\Support\Api\ApiList;
+use App\Support\Api\ListExport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class SocialCaseController extends Controller
 {
@@ -23,39 +25,10 @@ final class SocialCaseController extends Controller
         $paginator = ApiList::paginate(
             SocialCase::with(['researcher']),
             $request,
-            sortable: ['date' => 'created_at', 'created_at' => 'created_at', 'name' => 'name', 'amount' => 'assistance_amount', 'phone' => 'phone', 'governorate' => 'city', 'researcher' => 'researcher_id', 'status' => 'status'],
-            filterable: [
-                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
-                    ['value' => 'pending', 'label' => 'قيد الدراسة'],
-                    ['value' => 'approved', 'label' => 'مقبولة'],
-                    ['value' => 'rejected', 'label' => 'مرفوضة'],
-                ]],
-                'governorate' => ['type' => 'select', 'column' => 'city', 'options' => fn () => \App\Models\SocialCase::distinct()->whereNotNull('city')->pluck('city')->map(fn ($c) => ['value' => $c, 'label' => $c])->values()->all()],
-                'researcher' => ['type' => 'lookup', 'column' => 'researcher_id'],
-            ],
-            search: fn ($q, $term) => $q->where(fn ($w) => $w
-                ->where('name', 'like', "%{$term}%")
-                ->orWhere('phone', 'like', "%{$term}%")
-                ->orWhere('national_id', 'like', "%{$term}%")),
-            filters: [
-                'status' => fn ($q, $v) => $q->where('status', $v),
-                'researcher_id' => fn ($q, $v) => $q->where('researcher_id', (int) $v),
-                // T34: فلترة بالمحافظة (تسوية الإملاء عبر المساعد)
-                'governorate' => function ($q, $v) {
-                    if ($v === 'unknown') {
-                        $q->where(fn ($w) => $w->whereNull('city')->orWhere('city', ''));
-
-                        return;
-                    }
-                    $canonical = \App\Support\EgyptianGovernorates::match((string) $v) ?? (string) $v;
-                    $variants = SocialCase::whereNotNull('city')->where('city', '!=', '')->distinct()
-                        ->pluck('city')
-                        ->filter(fn ($city) => \App\Support\EgyptianGovernorates::match($city) === $canonical)
-                        ->push($canonical)
-                        ->unique()->values();
-                    $q->whereIn('city', $variants);
-                },
-            ],
+            sortable: $this->casesSortable(),
+            filterable: $this->casesFilterable(),
+            search: $this->casesSearch(),
+            filters: $this->casesFilters(),
         );
 
         return response()->json(ApiList::envelope($paginator, fn () => [
@@ -64,6 +37,110 @@ final class SocialCaseController extends Controller
             'approved' => SocialCase::where('status', 'approved')->count(),
             'rejected' => SocialCase::where('status', 'rejected')->count(),
         ]));
+    }
+
+    // ── social cases declarations — shared by the list and its export (T7-06) ──
+
+    /** @return array<string, string> */
+    private function casesSortable(): array
+    {
+        return ['date' => 'created_at', 'created_at' => 'created_at', 'name' => 'name', 'amount' => 'assistance_amount', 'phone' => 'phone', 'governorate' => 'city', 'researcher' => 'researcher_id', 'status' => 'status'];
+    }
+
+    /** @return array<string, array{type:string, column?:string, options?:callable}> */
+    private function casesFilterable(): array
+    {
+        return [
+            'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                ['value' => 'pending', 'label' => 'قيد الدراسة'],
+                ['value' => 'approved', 'label' => 'مقبولة'],
+                ['value' => 'rejected', 'label' => 'مرفوضة'],
+            ]],
+            'governorate' => ['type' => 'select', 'column' => 'city', 'options' => fn () => \App\Models\SocialCase::distinct()->whereNotNull('city')->pluck('city')->map(fn ($c) => ['value' => $c, 'label' => $c])->values()->all()],
+            'researcher' => ['type' => 'lookup', 'column' => 'researcher_id'],
+        ];
+    }
+
+    /** @return callable */
+    private function casesSearch(): callable
+    {
+        return fn ($q, $term) => $q->where(fn ($w) => $w
+            ->where('name', 'like', "%{$term}%")
+            ->orWhere('phone', 'like', "%{$term}%")
+            ->orWhere('national_id', 'like', "%{$term}%"));
+    }
+
+    /** @return array<string, callable> */
+    private function casesFilters(): array
+    {
+        return [
+            'status' => fn ($q, $v) => $q->where('status', $v),
+            'researcher_id' => fn ($q, $v) => $q->where('researcher_id', (int) $v),
+            // T34: فلترة بالمحافظة (تسوية الإملاء عبر المساعد)
+            'governorate' => function ($q, $v) {
+                if ($v === 'unknown') {
+                    $q->where(fn ($w) => $w->whereNull('city')->orWhere('city', ''));
+
+                    return;
+                }
+                $canonical = \App\Support\EgyptianGovernorates::match((string) $v) ?? (string) $v;
+                $variants = SocialCase::whereNotNull('city')->where('city', '!=', '')->distinct()
+                    ->pluck('city')
+                    ->filter(fn ($city) => \App\Support\EgyptianGovernorates::match($city) === $canonical)
+                    ->push($canonical)
+                    ->unique()->values();
+                $q->whereIn('city', $variants);
+            },
+        ];
+    }
+
+    /**
+     * GET /api/v1/social-cases/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME query/filters/sort as index().
+     */
+    public function export(Request $request): StreamedResponse
+    {
+        $rows = ListExport::rows(
+            $request,
+            SocialCase::with(['researcher']),
+            $this->casesSortable(),
+            $this->casesFilterable(),
+            $this->casesFilters(),
+            $this->casesSearch(),
+            row: fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'phone' => $c->phone,
+                'governorate' => $c->city,
+                'researcher' => $c->researcher?->name,
+                'assistance_type' => $c->assistance_type,
+                'status' => $this->caseStatusLabel((string) $c->status),
+                'created_at' => $c->created_at?->format('Y-m-d'),
+            ],
+        );
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'id', 'label' => '#'],
+            ['key' => 'name', 'label' => 'الاسم'],
+            ['key' => 'phone', 'label' => 'الهاتف'],
+            ['key' => 'governorate', 'label' => 'المحافظة'],
+            ['key' => 'researcher', 'label' => 'الباحث'],
+            ['key' => 'assistance_type', 'label' => 'نوع المساعدة'],
+            ['key' => 'status', 'label' => 'الحالة'],
+            ['key' => 'created_at', 'label' => 'التاريخ'],
+        ], 'social-cases');
+    }
+
+    /** Arabic label for a social case status (export rows) */
+    private function caseStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'new' => 'جديدة',
+            'pending' => 'قيد الانتظار',
+            'approved' => 'موافق عليها',
+            'rejected' => 'مرفوضة',
+            default => $status,
+        };
     }
 
     public function mine(Request $request): JsonResponse
@@ -75,6 +152,8 @@ final class SocialCaseController extends Controller
             search: fn ($q, $term) => $q->where(fn ($w) => $w
                 ->where('name', 'like', "%{$term}%")->orWhere('phone', 'like', "%{$term}%")),
             filters: ['status' => fn ($q, $v) => $q->where('status', $v)],
+            // T7-07: declared allowlist — meta.filters drives the table UI
+            filterable: $this->mineFilterable(),
         );
 
         $base = SocialCase::where('researcher_id', $request->user()->id);
@@ -85,6 +164,56 @@ final class SocialCaseController extends Controller
             'approved' => (clone $base)->where('status', 'approved')->count(),
             'rejected' => (clone $base)->where('status', 'rejected')->count(),
         ]));
+    }
+
+    /** @return array<string, array{type:string, column?:string, options?:callable}> */
+    private function mineFilterable(): array
+    {
+        return [
+            'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                ['value' => 'new', 'label' => 'جديدة'],
+                ['value' => 'pending', 'label' => 'قيد الانتظار'],
+                ['value' => 'approved', 'label' => 'موافق عليها'],
+                ['value' => 'rejected', 'label' => 'مرفوضة'],
+            ]],
+            'date' => ['type' => 'date-range', 'column' => 'created_at'],
+        ];
+    }
+
+    /**
+     * GET /api/v1/my-cases/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME query/filters/sort as mine(), own cases only.
+     */
+    public function mineExport(Request $request): StreamedResponse
+    {
+        $rows = ListExport::rows(
+            $request,
+            SocialCase::where('researcher_id', $request->user()->id),
+            ['date' => 'created_at', 'created_at' => 'created_at', 'name' => 'name', 'phone' => 'phone', 'assistance_type' => 'assistance_type', 'status' => 'status'],
+            $this->mineFilterable(),
+            filters: ['status' => fn ($q, $v) => $q->where('status', $v)],
+            search: fn ($q, $term) => $q->where(fn ($w) => $w
+                ->where('name', 'like', "%{$term}%")->orWhere('phone', 'like', "%{$term}%")),
+            row: fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'phone' => $c->phone,
+                'governorate' => $c->city,
+                'assistance_type' => $c->assistance_type,
+                'status' => $this->caseStatusLabel((string) $c->status),
+                'created_at' => $c->created_at?->format('Y-m-d'),
+            ],
+        );
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'id', 'label' => '#'],
+            ['key' => 'name', 'label' => 'الاسم'],
+            ['key' => 'phone', 'label' => 'الهاتف'],
+            ['key' => 'governorate', 'label' => 'المحافظة'],
+            ['key' => 'assistance_type', 'label' => 'نوع المساعدة'],
+            ['key' => 'status', 'label' => 'الحالة'],
+            ['key' => 'created_at', 'label' => 'التاريخ'],
+        ], 'my-cases');
     }
 
     public function show(Request $request, SocialCase $socialCase): JsonResponse

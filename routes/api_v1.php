@@ -147,6 +147,9 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             // ── Reports ────────────────────────────────────────
             Route::get('dashboard', [ApiDashboard::class, 'show']);
             Route::get('dashboard/money-flow', [ApiDashboard::class, 'moneyFlow']);
+            // T7-08: heavy widget data + activity feed, loaded lazily by the widgets
+            Route::get('dashboard/performance', [ApiDashboard::class, 'performance']);
+            Route::get('dashboard/activity', [ApiDashboard::class, 'activity']);
             Route::get('dashboard/layout', [ApiDashboard::class, 'layout']);
             Route::post('dashboard/layout', [ApiDashboard::class, 'layout']);
             Route::get('directional-stats', [ApiDashboard::class, 'directionalStats']);
@@ -189,6 +192,38 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             // T6-71: shared export endpoints — same query/filters as the table
             Route::get('expenses/export', [ApiExpense::class, 'export'])->withoutMiddleware(ApiV1Response::class);
             Route::get('custodies/export', [ApiCustody::class, 'export'])->withoutMiddleware(ApiV1Response::class);
+            // T7-06: export is part of the list contract — every list and every
+            // report exports the SAME query (filters/sort/search), capped + audited
+            Route::get('custodies/movements/export', [ApiCustody::class, 'movementsExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('custodies/return-requests/export', [ApiCustody::class, 'returnRequestsExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('agent/transactions/export', [ApiCustody::class, 'agentTransactionsExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('custody-transfers/export', [ApiTransfer::class, 'export'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('my-expenses/export', [ApiExpense::class, 'mineExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('expenses/edit-requests/export', [ApiExpense::class, 'editRequestsExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('treasury/export', [ApiTreasury::class, 'export'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('social-cases/export', [ApiCases::class, 'export'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('my-cases/export', [ApiCases::class, 'mineExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('hr/employees/export', [ApiHr::class, 'employeesExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('hr/attendance/export', [ApiHr::class, 'attendanceExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('hr/kpi/export', [ApiHr::class, 'kpiExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('hr/salaries/export', [ApiHr::class, 'salariesExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('hr/employees/{employee}/salary-history/export', [ApiHr::class, 'salaryHistoryExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('purchase-requests/export', [ApiProcurement::class, 'purchaseExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('maintenance-requests/export', [ApiProcurement::class, 'maintenanceExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('suppliers/export', [ApiProcurement::class, 'suppliersExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('tasks/export', [ApiSystem::class, 'tasksExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('notifications/export', [ApiSystem::class, 'notificationsExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('broadcasts/export', [ApiSystem::class, 'broadcastsExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('activity-logs/export', [ApiSystem::class, 'activityLogsExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('users/export', [ApiSystem::class, 'usersExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('reports/export', [ApiReport::class, 'dashboardExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('reports/governorates/export', [ApiReport::class, 'governoratesExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('analytics/researchers/export', [ApiReport::class, 'researchersExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('reports/social-case-expenses/export', [ApiReport::class, 'socialCaseExpensesExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('reports/agents-balance/export', [ApiReport::class, 'agentsBalanceExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('reports/expense-items/export', [ApiReport::class, 'expenseItemsExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('reports/categories-analytics/export', [ApiReport::class, 'categoriesAnalyticsExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('reports/reconciliation/export', [ApiReport::class, 'reconciliationExport'])->withoutMiddleware(ApiV1Response::class);
             Route::get('hr/employees/{employee}/salary-history', [ApiHr::class, 'salaryHistory']);
             Route::get('hr/salaries/{salary}', [ApiHr::class, 'salaryShow']);
             Route::get('hr/salaries/{salaryId}/payslip', [SalaryController::class, 'payslip'])->withoutMiddleware(ApiV1Response::class);

@@ -77,7 +77,11 @@
     "print_omit_header": "إخفاء ترويسة الجهة",
     "print_include_header": "إظهار ترويسة الجهة",
     "print_omit_totals": "إخفاء صف الإجماليات",
-    "print_include_totals": "إظهار صف الإجماليات"
+    "print_include_totals": "إظهار صف الإجماليات",
+    "hint_max_amount": "أقصى مبلغ مسموح هو الرصيد المتاح من المصدر المختار",
+    "hint_choose_custody": "اختر العهدة أولاً",
+    "hint_direction_full": "التوجيه مطلوب حتى آخر مستوى من شجرة الاتجاهات",
+    "hint_treasury_balance": "رصيد الخزينة المختارة يظهر بجانب اسمها في القائمة"
   },
   "nav": {
     "main_aria": "القائمة الرئيسية",
@@ -300,7 +304,14 @@
       "remaining": "رصيدي الحالي",
       "returned": "إجمالي المبالغ المردودة",
       "spent": "إجمالي المصروفات",
-      "quick_expense": "مصروف جديد"
+      "quick_expense": "مصروف جديد",
+      "balance_ring": "توزيع رصيدي",
+      "pending_transfers": "تحويلات معلقة",
+      "accept_transfer": "استلام",
+      "cancel_transfer": "إلغاء",
+      "accept_confirm": "هل تريد استلام هذا التحويل؟",
+      "cancel_confirm": "هل تريد إلغاء هذا التحويل؟",
+      "no_pending_transfers": "لا توجد تحويلات معلقة"
     },
     "title": "الرئيسية",
     "bento": {
@@ -311,7 +322,8 @@
       "performance": "الأداء",
       "activity": "النشاط الأخير",
       "customize": "تخصيص اللوحة",
-      "view_all": "عرض الكل"
+      "view_all": "عرض الكل",
+      "insights": "مؤشرات الأداء"
     },
     "range": {
       "today": "اليوم",
@@ -320,7 +332,18 @@
       "month": "هذا الشهر",
       "year": "هذا العام"
     },
-    "date_format": "EEEE، d MMMM y"
+    "date_format": "EEEE، d MMMM y",
+    "insights": {
+      "expenses": "المصروفات",
+      "income": "الدخل",
+      "custodies": "عهد جديدة",
+      "cases": "حالات جديدة",
+      "vs_prev": "مقارنة بالفترة السابقة",
+      "aging": "أعمار العهد المفتوحة (يوم)",
+      "funnel": "مسار الحالات",
+      "approval_rate": "نسبة الموافقة",
+      "spending": "الصرف حسب التوجيه"
+    }
   },
   "treasury": {
     "list": {
@@ -596,12 +619,7 @@
       "received": "المستلم من الخزينة",
       "returned": "المردود للخزينة",
       "transferred": "المحوّل بين المناديب",
-      "spent": "المصروف",
-      "agent": "المندوب (طرف)",
-      "type": "نوع الحركة",
-      "custody_number": "رقم العهدة",
-      "show_closures": "إظهار الإغلاقات الصفرية",
-      "date_range": "الفترة الزمنية"
+      "spent": "المصروف"
     },
     "my_movements": {
       "title": "حركاتي من الخزينة",
@@ -893,8 +911,6 @@
   "report": {
     "dashboard": {
       "title": "التقارير والإحصائيات",
-      "view_custodies": "عرض جميع العهد",
-      "view_cases": "عرض جميع الحالات",
       "governorates_card": "الحالات حسب المحافظة",
       "treasury_balance": "رصيد الخزينة",
       "total_expenses": "إجمالي المصروفات",
@@ -924,7 +940,8 @@
       "rejected": "الحالات المرفوضة",
       "social_case_expenses": "مصروفات الحالات الاجتماعية",
       "governorates_hint": "أعلى 5 محافظات بالمصروف — التفاصيل الكاملة في تقرير المحافظات",
-      "empty": "لا توجد بيانات للتقارير بعد"
+      "empty": "لا توجد بيانات للتقارير بعد",
+      "all_reports": "كل التقارير"
     },
     "researchers": {
       "title": "إحصائيات الباحثين الاجتماعيين",
@@ -1273,7 +1290,8 @@
       "approved_salaries": "مرتبات معتمدة",
       "recorded_salaries": "مرتبات مسجلة كمصروف",
       "today_attendance": "حضور اليوم",
-      "empty": "لا توجد بيانات للموارد البشرية بعد"
+      "empty": "لا توجد بيانات للموارد البشرية بعد",
+      "kpi_achievement": "متوسط تحقيق مؤشرات الأداء"
     },
     "employees": {
       "title": "إدارة الموظفين",
@@ -1660,5 +1678,17 @@
     "cancel_confirm": "هل تريد إلغاء هذا التحويل المعلق؟ سيتم تحرير المبلغ المجمد فوراً وإخطار المستقبل.",
     "cancel_success": "تم إلغاء التحويل وتحرير المبلغ المجمد",
     "cancelled_by": "ألغاه"
+  },
+  "filter": {
+    "status": "الحالة",
+    "type": "النوع",
+    "agent": "المندوب",
+    "date": "التاريخ",
+    "amount": "المبلغ",
+    "month": "الشهر",
+    "year": "السنة",
+    "active": "نشط",
+    "balance": "الرصيد",
+    "custody": "رقم العهدة"
   }
 }

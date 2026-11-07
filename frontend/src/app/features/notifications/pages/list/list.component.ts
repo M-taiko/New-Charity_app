@@ -10,7 +10,7 @@ import { ToastService } from '@core/errors/toast.service';
 import { PollingService } from '@core/polling/polling.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ActionResponse, ListResponse } from '@shared/models/api.models';
@@ -31,7 +31,7 @@ interface Row {
   standalone: true,
   imports: [
     TranslatePipe, RouterLink, ButtonModule,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, DatetimePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,7 +50,7 @@ interface Row {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table
+        <app-data-table listUrl="/notifications"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -60,41 +60,13 @@ interface Row {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr
-              class="ledger-table__row"
-              [class.ledger-table__row--link]="row.link"
-              (click)="openNotification(row)"
-            >
-              <td appTableCol="title">
-                @if (row.link) {
-                  <a [routerLink]="row.link" (click)="$event.stopPropagation()">{{ row.title ?? '—' }}</a>
-                } @else {
-                  {{ row.title ?? '—' }}
-                }
-              </td>
-              <td appTableCol="message">{{ row.message ?? '—' }}</td>
-              <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.name' | translate }}</span>
-                @if (row.link) {
-                  <a [routerLink]="row.link">{{ row.title ?? '—' }}</a>
-                } @else {
-                  {{ row.title ?? '—' }}
-                }
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.description' | translate }}</span>
-                {{ row.message ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.date' | translate }}</span>
-                <span class="u-bidi">{{ row.created_at | datetime }}</span>
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="title" let-row>@if (row.link) {
+  <a [routerLink]="row.link" (click)="$event.stopPropagation()">{{ row.title ?? '—' }}</a>
+} @else {
+  {{ row.title ?? '—' }}
+}</ng-template>
+          <ng-template appCell="message" let-row>{{ row.message ?? '—' }}</ng-template>
+          <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
           <div empty>
             <app-empty-state [title]="'notification.empty' | translate" [text]="'common.no_data' | translate" />
           </div>

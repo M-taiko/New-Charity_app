@@ -37,9 +37,12 @@ final class ApiList
      * @param array<string, string> $sortable Allowed sort columns (map request name => column or "raw:" expression)
      * @param callable|null $search Applies the free-text `q` filter
      * @param array<string, callable(TBuilder, mixed): void> $filters quick params (legacy)
-     * @param array<string, array{type:string, column?:string, options?:callable, lookup?:string}> $filterable
+     * @param array<string, array{type:string, column?:string, options?:callable, lookup?:string, apply?:callable}> $filterable
      *        T6-30 allowlist: the ONLY filter[name] keys accepted. Types:
-     *        select | multiselect | text | boolean | number-range | date-range | lookup
+     *        select | multiselect | text | boolean | number-range | date-range | lookup.
+     *        T7-07: an optional `apply` callable replaces the generic column
+     *        engine for relationship filters (agent-as-party, whereHas…) —
+     *        it receives the query and the value and is never serialized.
      */
     public static function paginate(
         EloquentBuilder|QueryBuilder $query,
@@ -58,27 +61,27 @@ final class ApiList
             }
         }
 
+        self::applyDeclaredFilters($query, $request, $filterable);
+
         $filterBag = $request->query('filter', []);
         if (is_array($filterBag)) {
             foreach ($filterBag as $name => $value) {
                 if ($value === null || $value === '' || $value === 'all') {
                     continue;
                 }
-                // T6-30: an allowlist replaces the generic filter[column]=value —
-                // unknown keys fail with 422 filter.invalid, never leak columns
-                if ($filterable !== []) {
-                    if (! isset($filterable[(string) $name])) {
-                        abort(response()->json([
-                            'message' => 'عامل تصفية غير مدعوم: ' . $name,
-                            'code' => 'filter.invalid',
-                            'errors' => ['filter' => ['allowed' => array_keys($filterable)]],
-                            'timestamp' => now()->toIso8601ZuluString(),
-                        ], 422));
-                    }
-                    self::applyDeclaredFilter($query, (string) $name, $filterable[(string) $name], $value);
-                } else {
-                    $query->where((string) $name, $value);
+                // T6-30/T7-07: only declared filter keys are accepted — an unknown
+                // key is a client bug and fails with 422 filter.invalid; the old
+                // generic where(any_column) fallback is gone, so no filter can
+                // ever reach an arbitrary (or sensitive) column
+                if (! isset($filterable[(string) $name])) {
+                    abort(response()->json([
+                        'message' => 'عامل تصفية غير مدعوم: ' . $name,
+                        'code' => 'filter.invalid',
+                        'errors' => ['filter' => ['allowed' => array_keys($filterable)]],
+                        'timestamp' => now()->toIso8601ZuluString(),
+                    ], 422));
                 }
+                self::applyDeclaredFilter($query, (string) $name, $filterable[(string) $name], $value);
             }
         }
 
@@ -86,32 +89,74 @@ final class ApiList
             $search($query, (string) $request->query('q'));
         }
 
-        $sort = (string) $request->query('sort', '');
-        if ($sort !== '') {
-            $dir = str_starts_with($sort, '-') ? 'desc' : 'asc';
-            $field = ltrim($sort, '-');
-            // T6-21: a sort key the endpoint does not declare is a client bug —
-            // fail loudly with the accepted keys instead of ignoring it
-            if (! isset($sortable[$field])) {
-                abort(response()->json([
-                    'message' => 'مفتاح ترتيب غير مدعوم: ' . $field,
-                    'code' => 'sort.invalid',
-                    'errors' => ['sort' => ['sortable' => array_keys($sortable)]],
-                    'timestamp' => now()->toIso8601ZuluString(),
-                ], 422));
-            }
-            $column = $sortable[$field];
-            if (is_string($column) && str_starts_with($column, 'raw:')) {
-                $query->orderByRaw(substr($column, 4) . " {$dir}");
-            } else {
-                $query->orderBy($column, $dir);
-            }
-        }
+        self::applySort($query, $request, $sortable);
 
         self::$lastSortable = array_keys($sortable);
         self::$lastFilterable = $filterable;
 
         return $query->paginate($perPage)->withQueryString();
+    }
+
+    /**
+     * Apply the declared filter[key] allowlist (T6-30/T7-07) — shared by
+     * paginate() and the list exports so both replay the exact same query.
+     *
+     * @param EloquentBuilder|QueryBuilder $query
+     * @param array<string, array{type:string, column?:string, options?:callable, lookup?:string, apply?:callable}> $filterable
+     */
+    public static function applyDeclaredFilters(EloquentBuilder|QueryBuilder $query, Request $request, array $filterable): void
+    {
+        $filterBag = $request->query('filter', []);
+        if (! is_array($filterBag)) {
+            return;
+        }
+        foreach ($filterBag as $name => $value) {
+            if ($value === null || $value === '' || $value === 'all') {
+                continue;
+            }
+            if (! isset($filterable[(string) $name])) {
+                abort(response()->json([
+                    'message' => 'عامل تصفية غير مدعوم: ' . $name,
+                    'code' => 'filter.invalid',
+                    'errors' => ['filter' => ['allowed' => array_keys($filterable)]],
+                    'timestamp' => now()->toIso8601ZuluString(),
+                ], 422));
+            }
+            self::applyDeclaredFilter($query, (string) $name, $filterable[(string) $name], $value);
+        }
+    }
+
+    /**
+     * Apply the whitelisted `sort` param (T6-21) — shared by paginate() and
+     * the list exports so an export honors the table's current sort.
+     *
+     * @param EloquentBuilder|QueryBuilder $query
+     * @param array<string, string> $sortable
+     */
+    public static function applySort(EloquentBuilder|QueryBuilder $query, Request $request, array $sortable): void
+    {
+        $sort = (string) $request->query('sort', '');
+        if ($sort === '') {
+            return;
+        }
+        $dir = str_starts_with($sort, '-') ? 'desc' : 'asc';
+        $field = ltrim($sort, '-');
+        // T6-21: a sort key the endpoint does not declare is a client bug —
+        // fail loudly with the accepted keys instead of ignoring it
+        if (! isset($sortable[$field])) {
+            abort(response()->json([
+                'message' => 'مفتاح ترتيب غير مدعوم: ' . $field,
+                'code' => 'sort.invalid',
+                'errors' => ['sort' => ['sortable' => array_keys($sortable)]],
+                'timestamp' => now()->toIso8601ZuluString(),
+            ], 422));
+        }
+        $column = $sortable[$field];
+        if (is_string($column) && str_starts_with($column, 'raw:')) {
+            $query->orderByRaw(substr($column, 4) . " {$dir}");
+        } else {
+            $query->orderBy($column, $dir);
+        }
     }
 
     /** @var array<string, array{type:string, column?:string, options?:callable, lookup?:string}> */
@@ -124,6 +169,13 @@ final class ApiList
      */
     private static function applyDeclaredFilter(EloquentBuilder|QueryBuilder $query, string $name, array $decl, mixed $value): void
     {
+        // T7-07: relationship filters bring their own applier (whereHas, party
+        // semantics…) — the generic column engine cannot express them
+        if (isset($decl['apply']) && is_callable($decl['apply'])) {
+            ($decl['apply'])($query, $value);
+            return;
+        }
+
         $column = $decl['column'] ?? $name;
         $type = $decl['type'] ?? 'select';
 

@@ -61,7 +61,7 @@ const SECTION_NAVS: Record<string, SectionNavItem[]> = {
   standalone: true,
   imports: [RouterLink, RouterLinkActive, TranslatePipe],
   template: `
-    <nav class="section-nav" [attr.aria-label]="module() | translate">
+    <nav class="section-nav" [class]="'section-nav--' + module()" [attr.aria-label]="module() | translate">
       @for (item of items(); track item.route) {
         <a
           class="section-nav__link"

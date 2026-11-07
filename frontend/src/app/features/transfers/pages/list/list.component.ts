@@ -13,7 +13,8 @@ import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
 import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
+import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
@@ -61,12 +62,12 @@ interface TransferListParams {
   standalone: true,
   imports: [AppTabsComponent, ConfirmDialogComponent, 
     TranslatePipe, RouterLink, ButtonModule,
-    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, RowActionsComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'transfer.list.title' | translate">
+    <app-page-header [title]="'transfer.list.title' | translate" accent="custodies" iconName="arrows-exchange">
       <div actions class="u-flex u-gap-2">
 <p-button [label]="'transfer.list.create' | translate" size="small" routerLink="/transfers/new" />
       </div>
@@ -79,7 +80,7 @@ interface TransferListParams {
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-        <app-stat-tile [label]="'transfer.list.pending_count'" [value]="summaryValue('pending_count')" />
+        <app-stat-tile [label]="'transfer.list.pending_count'" [value]="summaryValue('pending_count')" accent="custodies" iconName="arrows-exchange" />
         <app-stat-tile [label]="'transfer.list.approved_count'" [value]="summaryValue('approved_count')" />
         <app-stat-tile [label]="'transfer.list.rejected_count'" [value]="summaryValue('rejected_count')" />
         </div>
@@ -93,91 +94,37 @@ interface TransferListParams {
         </div>
       }
 
-      <app-data-table
+      <app-data-table listUrl="/custody-transfers"
         [tableKey]="tableKey"
         [columns]="columns"
         [rows]="page.data"
         [total]="page.meta.total"
         [perPage]="params().per_page"
         [loading]="data.isLoading()"
+        [filters]="metaFilters()"
+        (queryChange)="onQuery($event)"
+
         (pageChange)="onPage($event)"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="sender">
-              <a [routerLink]="['/transfers', row.id]">{{ row.sender ?? '—' }}</a>
-            </td>
-            <td appTableCol="receiver">{{ row.receiver ?? '—' }}</td>
-            <td appTableCol="custody_id">
-              @if (row.custody_id) {
-                <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
-              } @else {
-                <span>—</span>
-              }
-            </td>
-            <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
-            <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="transfer_status" /></td>
-            <td appTableCol="requested_at"><span class="u-bidi">{{ row.requested_at | datetime }}</span></td>
-            <td appTableCol="decided_at"><span class="u-bidi">{{ row.decided_at | datetime }}</span></td>
-            <td appTableCol="decided_by">{{ row.decided_by ?? '—' }}</td>
-            <td appTableCol="rejection_reason">{{ row.rejection_reason ?? '—' }}</td>
-            <td appTableCol="actions">
-              <app-row-actions [actions]="actionsFor(row)" />
-            </td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'glossary.sender' | translate }}</span>
-              {{ row.sender ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'glossary.receiver' | translate }}</span>
-              {{ row.receiver ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'transfer.list.col_custody' | translate }}</span>
-              @if (row.custody_id) {
-                <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
-              } @else {
-                <span>—</span>
-              }
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-              <span class="u-bidi">{{ row.amount | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'transfer.list.col_status' | translate }}</span>
-              <app-status-stamp [status]="row.status" namespace="transfer_status" />
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'transfer.list.col_requested_at' | translate }}</span>
-              <span class="u-bidi">{{ row.requested_at | datetime }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'transfer.list.col_decided_at' | translate }}</span>
-              <span class="u-bidi">{{ row.decided_at | datetime }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'transfer.list.col_decided_by' | translate }}</span>
-              {{ row.decided_by ?? '—' }}
-            </div>
-            @if (row.rejection_reason) {
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'transfer.list.col_rejection' | translate }}</span>
-                {{ row.rejection_reason }}
-              </div>
-            }
-            <div class="ledger-table__stacked-item">
-              <app-row-actions [actions]="actionsFor(row)" />
-            </div>
-          </tr>
-        </ng-template>
+        <ng-template appCell="sender" let-row><a [routerLink]="['/transfers', row.id]">{{ row.sender ?? '—' }}</a></ng-template>
+        <ng-template appCell="receiver" let-row>{{ row.receiver ?? '—' }}</ng-template>
+        <ng-template appCell="custody_id" let-row>@if (row.custody_id) {
+  <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
+} @else {
+  <span>—</span>
+}</ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="transfer_status" /></ng-template>
+        <ng-template appCell="requested_at" let-row><span class="u-bidi">{{ row.requested_at | datetime }}</span></ng-template>
+        <ng-template appCell="decided_at" let-row><span class="u-bidi">{{ row.decided_at | datetime }}</span></ng-template>
+        <ng-template appCell="decided_by" let-row>{{ row.decided_by ?? '—' }}</ng-template>
+        <ng-template appCell="rejection_reason" let-row>{{ row.rejection_reason ?? '—' }}</ng-template>
+        <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
       </app-data-table>
       }
       <div empty>
-        <app-empty-state [title]="'transfer.list.empty' | translate" [text]="'transfer.list.empty_text' | translate" />
+        <app-empty-state [title]="'transfer.list.empty' | translate" [text]="'transfer.list.empty_text' | translate" accent="custodies" iconName="arrows-exchange" />
       </div>
     </app-async-page>
 
@@ -201,7 +148,7 @@ export class TransferListPage {
     { field: 'sender', searchField: 'sender', header: 'glossary.sender', sortable: true },
     { field: 'receiver', searchField: 'receiver', header: 'glossary.receiver', sortable: true },
     { field: 'custody_id', header: 'transfer.list.col_custody', sortable: true },
-    { field: 'amount', header: 'common.amount', sortable: true },
+    { field: 'amount', header: 'common.amount', sortable: true, numeric: true },
     { field: 'status', header: 'transfer.list.col_status', sortable: true },
     { field: 'requested_at', header: 'transfer.list.col_requested_at', sortable: true },
     { field: 'decided_at', header: 'transfer.list.col_decided_at', sortable: true },
@@ -225,6 +172,25 @@ export class TransferListPage {
 
   params = signal<TransferListParams>({ page: 1, per_page: 25, q: '', scope: 'sent' });
 
+  /** the active filter[...] values — forwarded verbatim (T7-07 server contract) */
+  filterBag: Record<string, unknown> = {};
+
+  /** T7-07: the endpoint's declared allowlist drives the table's Filters control */
+  readonly metaFilters = computed(() => apiFilterDefs(this.data.value()?.meta));
+
+  /** the table emits the full query — filters reach the server (T7-07) */
+  onQuery(query: TableQuery): void {
+    this.filterBag = query.filters;
+    this.params.update((p) => ({
+      ...p,
+      page: query.page,
+      per_page: query.perPage,
+      sort: query.sort !== '' ? query.sort : p.sort,
+      q: query.q,
+    }));
+    this.data.reload();
+  }
+
   /** T6-11: sent/received/all tabs drive the same `scope` query param */
   scopeTab = signal<string>('sent');
   readonly scopeTabDefs = computed<AppTab[]>(() =>
@@ -233,7 +199,7 @@ export class TransferListPage {
 
   data = resource<ListResponse<Row>, unknown>({
     loader: () =>
-      firstValueFrom(this.http.get<ListResponse<Row>>('/custody-transfers', { params: cleanParams(this.params()) })),
+      firstValueFrom(this.http.get<ListResponse<Row>>('/custody-transfers', { params: { ...cleanParams(this.params()), ...filterParams(this.filterBag) } })),
   });
 
   /** transfers awaiting MY decision — the summary counts the received scope only */

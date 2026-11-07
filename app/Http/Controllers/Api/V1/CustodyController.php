@@ -8,9 +8,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Custody;
 use App\Models\CustodyReturnRequest;
 use App\Models\TreasuryTransaction;
+use App\Models\User;
 use App\Services\TreasuryService;
 use App\Services\ExportService;
 use App\Support\Api\ApiList;
+use App\Support\Api\ListExport;
 use Illuminate\Http\JsonResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\Http\Request;
@@ -272,45 +274,13 @@ final class CustodyController extends Controller
         $user = $request->user();
         abort_unless($user->can('approve_custody') || $user->can('view_all_records'), 403);
 
-        $base = function () use ($request) {
-            $query = TreasuryTransaction::with([
-                'custody.agent', 'custody.treasury', 'custodyTransfer.fromAgent',
-                'custodyTransfer.toAgent', 'user', 'expense',
-            ])
-                ->where(fn ($q) => $q->whereNotNull('custody_id')->orWhereNotNull('custody_transfer_id'))
-                ->where('type', '!=', 'custody_transfer_in');
-
-            if (! $request->boolean('show_closures')) {
-                $query->where(fn ($q) => $q->where('type', '!=', 'custody_close')->orWhere('amount', '>', 0));
-            }
-            if ($request->filled('date_from')) {
-                $query->whereDate('transaction_date', '>=', $request->date_from);
-            }
-            if ($request->filled('date_to')) {
-                $query->whereDate('transaction_date', '<=', $request->date_to);
-            }
-            if ($request->filled('type')) {
-                $query->where('type', $request->type);
-            }
-            if ($request->filled('custody_id')) {
-                $query->where('custody_id', $request->custody_id);
-            }
-            if ($request->filled('agent_id')) {
-                $agentId = (int) $request->agent_id;
-                $query->where(function ($q) use ($agentId) {
-                    $q->whereHas('custody', fn ($c) => $c->where('agent_id', $agentId))
-                        ->orWhereHas('custodyTransfer', fn ($t) => $t->where('from_agent_id', $agentId)->orWhere('to_agent_id', $agentId));
-                });
-            }
-
-            return $query;
-        };
-
-        $summaryQuery = $base();
+        $summaryQuery = $this->movementsQuery($request);
         $paginator = ApiList::paginate(
-            $base()->orderByDesc('transaction_date')->orderByDesc('id'),
+            $this->movementsQuery($request)->orderByDesc('transaction_date')->orderByDesc('id'),
             $request,
-            sortable: ['date' => 'transaction_date', 'amount' => 'amount', 'type' => 'type', 'description' => 'description', 'user' => 'user_id', 'custody_id' => 'custody_id'],
+            sortable: $this->movementsSortable(),
+            // T7-07: the movements allowlist — the filters the Blade ledger had
+            filterable: $this->movementsFilterable(),
         );
         $paginator->getCollection()->transform(fn ($t) => $this->transactionRow($t));
 
@@ -320,6 +290,122 @@ final class CustodyController extends Controller
             'transferred' => number_format((float) (clone $summaryQuery)->where('type', 'custody_transfer_out')->sum('amount'), 2, '.', ''),
             'spent' => number_format((float) (clone $summaryQuery)->where('type', 'expense')->sum('amount'), 2, '.', ''),
         ]));
+    }
+
+    /** the movements list query — shared by the list and its export (T7-06) */
+    private function movementsQuery(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = TreasuryTransaction::with([
+            'custody.agent', 'custody.treasury', 'custodyTransfer.fromAgent',
+            'custodyTransfer.toAgent', 'user', 'expense',
+        ])
+            ->where(fn ($q) => $q->whereNotNull('custody_id')->orWhereNotNull('custody_transfer_id'))
+            ->where('type', '!=', 'custody_transfer_in');
+
+        if (! $request->boolean('show_closures')) {
+            $query->where(fn ($q) => $q->where('type', '!=', 'custody_close')->orWhere('amount', '>', 0));
+        }
+        if ($request->filled('date_from')) {
+            $query->whereDate('transaction_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('transaction_date', '<=', $request->date_to);
+        }
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+        if ($request->filled('custody_id')) {
+            $query->where('custody_id', $request->custody_id);
+        }
+        if ($request->filled('agent_id')) {
+            $agentId = (int) $request->agent_id;
+            $query->where(function ($q) use ($agentId) {
+                $q->whereHas('custody', fn ($c) => $c->where('agent_id', $agentId))
+                    ->orWhereHas('custodyTransfer', fn ($t) => $t->where('from_agent_id', $agentId)->orWhere('to_agent_id', $agentId));
+            });
+        }
+
+        return $query;
+    }
+
+    /** @return array<string, string> */
+    private function movementsSortable(): array
+    {
+        return ['date' => 'transaction_date', 'amount' => 'amount', 'type' => 'type', 'description' => 'description', 'user' => 'user_id', 'custody_id' => 'custody_id'];
+    }
+
+    /** @return array<string, array{type:string, column?:string, options?:callable, apply?:callable}> */
+    private function movementsFilterable(): array
+    {
+        return [
+            'date' => ['type' => 'date-range', 'column' => 'transaction_date'],
+            'amount' => ['type' => 'number-range', 'column' => 'amount'],
+            'type' => ['type' => 'select', 'column' => 'type', 'options' => fn () => [
+                ['value' => 'custody_out', 'label' => 'صرف عهدة'],
+                ['value' => 'custody_return', 'label' => 'رد عهدة'],
+                ['value' => 'custody_transfer_out', 'label' => 'تحويل عهدة'],
+                ['value' => 'expense', 'label' => 'مصروف'],
+                ['value' => 'recovery', 'label' => 'استرداد'],
+                ['value' => 'custody_close', 'label' => 'إغلاق عهدة'],
+            ]],
+            'agent' => ['type' => 'lookup', 'options' => fn () => User::role('مندوب')->orderBy('name')->get(['id', 'name'])->map(fn ($u) => ['value' => $u->id, 'label' => $u->name])->values()->all(), 'apply' => function ($q, $v): void {
+                $agentId = (int) $v;
+                $q->where(function ($q) use ($agentId): void {
+                    $q->whereHas('custody', fn ($c) => $c->where('agent_id', $agentId))
+                        ->orWhereHas('custodyTransfer', fn ($t) => $t->where('from_agent_id', $agentId)->orWhere('to_agent_id', $agentId));
+                });
+            }],
+            'custody' => ['type' => 'text', 'column' => 'custody_id'],
+        ];
+    }
+
+    /**
+     * GET /api/v1/custodies/movements/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME query/filters/sort as movements(), same authorization.
+     */
+    public function movementsExport(Request $request): StreamedResponse
+    {
+        $user = $request->user();
+        abort_unless($user->can('approve_custody') || $user->can('view_all_records'), 403);
+
+        $rows = ListExport::rows(
+            $request,
+            $this->movementsQuery($request)->orderByDesc('transaction_date')->orderByDesc('id'),
+            $this->movementsSortable(),
+            $this->movementsFilterable(),
+            row: fn ($t) => $this->transactionRow($t),
+        )->map(fn (array $t) => [
+            'date' => ($t['date'] ?? '') !== '' ? substr((string) $t['date'], 0, 10) : '',
+            'type' => $this->transactionTypeLabel((string) $t['type']),
+            'custody_id' => $t['custody_id'] !== null ? '#' . $t['custody_id'] : '',
+            'description' => $t['description'],
+            'user' => $t['user'],
+            'amount' => (float) $t['amount'],
+        ]);
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'date', 'label' => 'التاريخ'],
+            ['key' => 'type', 'label' => 'النوع'],
+            ['key' => 'custody_id', 'label' => 'العهدة'],
+            ['key' => 'description', 'label' => 'البيان'],
+            ['key' => 'user', 'label' => 'بواسطة'],
+            ['key' => 'amount', 'label' => 'المبلغ', 'numeric' => true, 'total' => true],
+        ], 'custody-movements');
+    }
+
+    /** Arabic label for a treasury transaction type (export rows) */
+    private function transactionTypeLabel(string $type): string
+    {
+        return match ($type) {
+            'custody_out' => 'صرف عهدة',
+            'custody_return' => 'رد عهدة',
+            'custody_transfer_out' => 'تحويل عهدة',
+            'custody_transfer_in' => 'استلام تحويل',
+            'expense' => 'مصروف',
+            'recovery' => 'استرداد',
+            'custody_close' => 'إغلاق عهدة',
+            default => $type,
+        };
     }
 
     /** GET /api/v1/custody-return-requests */
@@ -333,6 +419,16 @@ final class CustodyController extends Controller
                 ->where('reason', 'like', "%{$term}%")
                 ->orWhereHas('custody.agent', fn ($a) => $a->where('name', 'like', "%{$term}%"))),
             filters: ['status' => fn ($q, $v) => $q->where('status', $v)],
+            // T7-07: declared allowlist — meta.filters drives the table UI
+            filterable: [
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'pending', 'label' => 'معلق'],
+                    ['value' => 'approved', 'label' => 'موافق عليه'],
+                    ['value' => 'rejected', 'label' => 'مرفوض'],
+                ]],
+                'date' => ['type' => 'date-range', 'column' => 'created_at'],
+                'amount' => ['type' => 'number-range', 'column' => 'amount'],
+            ],
         );
 
         $paginator->getCollection()->transform(fn ($r) => [
@@ -352,6 +448,49 @@ final class CustodyController extends Controller
         return response()->json(ApiList::envelope($paginator));
     }
 
+    /**
+     * GET /api/v1/custodies/return-requests/export?format=xlsx|pdf|csv (T7-06)
+     * — the SAME query/filters as returnRequests(), open to the same roles.
+     */
+    public function returnRequestsExport(Request $request): StreamedResponse
+    {
+        $rows = ListExport::rows(
+            $request,
+            CustodyReturnRequest::with(['custody.agent', 'requester', 'approver']),
+            ['date' => 'created_at', 'amount' => 'amount'],
+            [
+                'status' => ['type' => 'select', 'column' => 'status', 'options' => fn () => [
+                    ['value' => 'pending', 'label' => 'معلق'],
+                    ['value' => 'approved', 'label' => 'موافق عليه'],
+                    ['value' => 'rejected', 'label' => 'مرفوض'],
+                ]],
+                'date' => ['type' => 'date-range', 'column' => 'created_at'],
+                'amount' => ['type' => 'number-range', 'column' => 'amount'],
+            ],
+            row: fn ($r) => [
+                'id' => $r->id,
+                'custody_id' => '#' . $r->custody_id,
+                'agent' => $r->custody?->agent?->name,
+                'requested_by' => $r->requester?->name,
+                'amount' => (float) $r->amount,
+                'reason' => $r->reason,
+                'status' => $r->status === 'approved' ? 'موافق عليه' : ($r->status === 'rejected' ? 'مرفوض' : 'معلق'),
+                'created_at' => optional($r->created_at)->format('Y-m-d'),
+            ],
+        );
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'id', 'label' => '#'],
+            ['key' => 'custody_id', 'label' => 'العهدة'],
+            ['key' => 'agent', 'label' => 'المندوب'],
+            ['key' => 'requested_by', 'label' => 'الطالب'],
+            ['key' => 'amount', 'label' => 'المبلغ', 'numeric' => true, 'total' => true],
+            ['key' => 'reason', 'label' => 'السبب'],
+            ['key' => 'status', 'label' => 'الحالة'],
+            ['key' => 'created_at', 'label' => 'التاريخ'],
+        ], 'custody-return-requests');
+    }
+
     /** GET /api/v1/agent/transactions — my treasury movements (agent + custody owners) */
     public function agentTransactions(Request $request): JsonResponse
     {
@@ -365,6 +504,19 @@ final class CustodyController extends Controller
             $request,
             sortable: ['date' => 'transaction_date', 'amount' => 'amount', 'type' => 'type', 'description' => 'description', 'user' => 'user_id', 'custody_id' => 'custody_id'],
             filters: ['type' => fn ($q, $v) => $q->where('type', $v)],
+            // T7-07: declared allowlist — meta.filters drives the table UI
+            filterable: [
+                'type' => ['type' => 'select', 'column' => 'type', 'options' => fn () => [
+                    ['value' => 'custody_out', 'label' => 'صرف عهدة'],
+                    ['value' => 'custody_return', 'label' => 'رد عهدة'],
+                    ['value' => 'custody_transfer_out', 'label' => 'تحويل عهدة'],
+                    ['value' => 'expense', 'label' => 'مصروف'],
+                    ['value' => 'recovery', 'label' => 'استرداد'],
+                ]],
+                'date' => ['type' => 'date-range', 'column' => 'transaction_date'],
+                'amount' => ['type' => 'number-range', 'column' => 'amount'],
+                'custody' => ['type' => 'text', 'column' => 'custody_id'],
+            ],
         );
         $paginator->getCollection()->transform(fn ($t) => $this->transactionRow($t));
 
@@ -377,6 +529,52 @@ final class CustodyController extends Controller
             'transferred_out' => number_format((float) $active->sum('transferred_out'), 2, '.', ''),
             'remaining' => number_format((float) $active->sum(fn ($c) => $c->getRemainingBalance()), 2, '.', ''),
         ]));
+    }
+
+    /**
+     * GET /api/v1/agent/transactions/export?format=xlsx|pdf|csv (T7-06) —
+     * the SAME query/filters as agentTransactions(), own rows only.
+     */
+    public function agentTransactionsExport(Request $request): StreamedResponse
+    {
+        $user = $request->user();
+        $ids = Custody::where('agent_id', $user->id)->pluck('id');
+
+        $rows = ListExport::rows(
+            $request,
+            TreasuryTransaction::whereIn('custody_id', $ids)->orderByDesc('transaction_date')->orderByDesc('id'),
+            ['date' => 'transaction_date', 'amount' => 'amount', 'type' => 'type', 'description' => 'description', 'user' => 'user_id', 'custody_id' => 'custody_id'],
+            [
+                'type' => ['type' => 'select', 'column' => 'type', 'options' => fn () => [
+                    ['value' => 'custody_out', 'label' => 'صرف عهدة'],
+                    ['value' => 'custody_return', 'label' => 'رد عهدة'],
+                    ['value' => 'custody_transfer_out', 'label' => 'تحويل عهدة'],
+                    ['value' => 'expense', 'label' => 'مصروف'],
+                    ['value' => 'recovery', 'label' => 'استرداد'],
+                ]],
+                'date' => ['type' => 'date-range', 'column' => 'transaction_date'],
+                'amount' => ['type' => 'number-range', 'column' => 'amount'],
+                'custody' => ['type' => 'text', 'column' => 'custody_id'],
+            ],
+            filters: ['type' => fn ($q, $v) => $q->where('type', $v)],
+            row: fn ($t) => $this->transactionRow($t),
+        )->map(fn (array $t) => [
+            'date' => ($t['date'] ?? '') !== '' ? substr((string) $t['date'], 0, 10) : '',
+            'type' => $this->transactionTypeLabel((string) $t['type']),
+            'custody_id' => $t['custody_id'] !== null ? '#' . $t['custody_id'] : '',
+            'description' => $t['description'],
+            'user' => $t['user'],
+            'amount' => (float) $t['amount'],
+        ]);
+
+        return ListExport::stream($request, $rows, [
+            ['key' => 'date', 'label' => 'التاريخ'],
+            ['key' => 'type', 'label' => 'النوع'],
+            ['key' => 'custody_id', 'label' => 'العهدة'],
+            ['key' => 'description', 'label' => 'البيان'],
+            ['key' => 'user', 'label' => 'بواسطة'],
+            ['key' => 'amount', 'label' => 'المبلغ', 'numeric' => true, 'total' => true],
+        ], 'my-movements');
     }
 
     /** GET /api/v1/user-custodies — custodies with balance for the expense form (T27) */

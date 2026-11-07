@@ -96,6 +96,19 @@
   font-weight: 600;
 }
 
+/* T7-09: the ACTIVE link carries its module accent — indicator, background
+   tint and icon — so each module is recognizable in the sidebar too */
+@each $module in (custodies, expenses, treasury, cases, hr, tasks, procurement, reports) {
+  .sidebar__link[data-accent='#{$module}'] {
+    background: var(--accent-#{$module}-soft);
+    border-inline-end-color: var(--accent-#{$module});
+
+    .sidebar__link-icon {
+      color: var(--accent-#{$module});
+    }
+  }
+}
+
 .sidebar__link-icon {
   width: 22px;
   height: 22px;

@@ -28,7 +28,7 @@ import { FormSectionComponent } from '@shared/ui/form-section/form-section.compo
   standalone: true,
   imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, SelectModule, PageHeaderComponent, FieldComponent, FormSectionComponent, AsyncPageComponent],
   template: `
-    <app-page-header [title]="'hr.salaries.edit_title' | translate">
+    <app-page-header [title]="'hr.salaries.edit_title' | translate" accent="hr" iconName="briefcase">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/hr/salaries" />
       </div>

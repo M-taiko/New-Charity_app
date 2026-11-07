@@ -9,10 +9,13 @@ import { SelectModule } from 'primeng/select';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
+import { PageActionsComponent } from '@shared/ui/page-actions/page-actions.component';
+import type { PageAction } from '@shared/ui/page-actions/page-actions.component';
+import { IconComponent } from '@shared/ui/icon/icon.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { ApiClient } from '@core/http/api-client';
 import type { DirectionNode, ItemResponse, Lookups } from '@shared/models/api.models';
@@ -64,15 +67,15 @@ interface ReportsData {
   imports: [
     FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    DataTableComponent, TableBodyDirective, TableColDirective,
+    DataTableComponent, TableCellDirective,
     StatTileComponent, ChartCardComponent, PrintSheetComponent, MoneyPipe,
+    PageActionsComponent, IconComponent,
   ],
   template: `
     <app-print-sheet [title]="'report.dashboard.title' | translate">
-      <app-page-header [title]="'report.dashboard.title' | translate">
-        <div actions>
-          <p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" />
-        </div>
+      <app-page-header [title]="'report.dashboard.title' | translate" accent="reports" iconName="report-analytics">
+        <!-- T7-10: the enforced action bar — one print action, nothing else in the header -->
+        <app-page-actions actions [pageActions]="headerActions" />
       </app-page-header>
 
       <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/dashboard']">
@@ -92,7 +95,7 @@ interface ReportsData {
 
           <div class="kpi-grid">
             <a class="tile-link" routerLink="/treasury" [title]="'common.open_page' | translate">
-              <app-stat-tile [label]="'report.dashboard.treasury_balance'" [value]="d.treasury_balance" [money]="true" />
+              <app-stat-tile [label]="'report.dashboard.treasury_balance'" [value]="d.treasury_balance" [money]="true" accent="reports" iconName="report-analytics" />
             </a>
             <a class="tile-link" routerLink="/expenses" [title]="'common.open_page' | translate">
               <app-stat-tile [label]="'report.dashboard.total_expenses'" [value]="d.total_spent" [money]="true" />
@@ -175,31 +178,29 @@ interface ReportsData {
               <span class="chart-card__spacer"></span>
               <p-button [label]="'report.governorates.title' | translate" size="small" [text]="true" routerLink="/reports/governorates" />
             </div>
-            <app-data-table mode="static" [autoFilters]="true" [columns]="govCols" [rows]="governoratesTop()" [emptyLabel]="'report.governorates.empty'">
-              <ng-template appTableBody let-row>
-                <tr class="ledger-table__row">
-                  <td appTableCol="label">
-                    {{ row.label }}
-                    @if (!row.standard) {
-                      <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
-                    }
-                  </td>
-                  <td appTableCol="total" class="u-bidi">{{ row.total }}</td>
-                  <td appTableCol="expenses_total"><span class="u-bidi">{{ row.expenses_total | money }}</span></td>
-                </tr>
-              </ng-template>
+            <app-data-table listUrl="/reports" mode="static" [autoFilters]="true" [columns]="govCols" [rows]="governoratesTop()" [emptyLabel]="'report.governorates.empty'">
+              <ng-template appCell="label" let-row>{{ row.label }}
+@if (!row.standard) {
+  <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
+}</ng-template>
+              <ng-template appCell="total" let-row><span class="u-bidi">{{ row.total }}</span></ng-template>
+              <ng-template appCell="expenses_total" let-row><span class="u-bidi">{{ row.expenses_total | money }}</span></ng-template>
             </app-data-table>
             <p class="u-muted u-small u-mt-2">{{ 'report.dashboard.governorates_hint' | translate }}</p>
           </section>
 
-          <div class="u-flex u-gap-2 u-mt-4 u-flex-wrap">
-            <p-button [label]="'report.dashboard.governorates_card' | translate" size="small" [outlined]="true" routerLink="/reports/governorates" />
-            <p-button [label]="'report.dashboard.view_custodies' | translate" size="small" [outlined]="true" routerLink="/custodies/tracking" />
-            <p-button [label]="'report.dashboard.view_cases' | translate" size="small" [outlined]="true" routerLink="/cases" />
-          </div>
+          <!-- T7-10: report navigation is a cards grid, never header buttons -->
+          <nav class="report-cards u-mt-4" [attr.aria-label]="'report.dashboard.all_reports' | translate">
+            @for (card of reportCards; track card.route) {
+              <a class="report-cards__item" [routerLink]="card.route">
+                <app-icon [name]="card.icon" chip="reports" [size]="18" />
+                <span class="report-cards__label">{{ card.label | translate }}</span>
+              </a>
+            }
+          </nav>
         }
         <div empty>
-          <app-empty-state [title]="'report.dashboard.empty'" [text]="'common.no_data'" />
+          <app-empty-state [title]="'report.dashboard.empty'" [text]="'common.no_data'" accent="reports" iconName="report-analytics" />
         </div>
       </app-async-page>
     </app-print-sheet>
@@ -210,6 +211,22 @@ export class ReportsDashboardPage {
   private http = inject(HttpClient);
   private api = inject(ApiClient);
   private translate = inject(TranslateService);
+
+  /** T7-10: the header keeps exactly one action — print */
+  readonly headerActions: PageAction[] = [
+    { kind: 'print', label: 'common.print', run: () => { this.printPage(); } },
+  ];
+
+  /** T7-10: report navigation as cards — the sibling report pages of the module */
+  readonly reportCards: readonly { label: string; route: string; icon: string }[] = [
+    { label: 'report.governorates.title', route: '/reports/governorates', icon: 'map-pin' },
+    { label: 'report.researchers.title', route: '/reports/researchers', icon: 'users-group' },
+    { label: 'report.case_expenses.title', route: '/reports/case-expenses', icon: 'heart-handshake' },
+    { label: 'report.agents_balance.title', route: '/reports/agents-balance', icon: 'wallet' },
+    { label: 'report.items.title', route: '/reports/items', icon: 'receipt' },
+    { label: 'report.directions.title', route: '/reports/directions', icon: 'sitemap' },
+    { label: 'report.reconciliation.title', route: '/reports/reconciliation', icon: 'building-bank' },
+  ];
 
   data = resource<ReportsData, unknown>({
     loader: () =>

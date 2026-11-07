@@ -17,6 +17,7 @@ import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ActionResponse} from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface TreasuryOption {
   id: number;
@@ -30,10 +31,10 @@ interface TreasuryOption {
   standalone: true,
   imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule,
-    TextareaModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe,
+    TextareaModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe, ActionButtonComponent,
   ],
   template: `
-    <app-page-header [title]="'treasury.transfer.title' | translate">
+    <app-page-header [title]="'treasury.transfer.title' | translate" accent="treasury" iconName="building-bank">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/treasury" />
       </div>
@@ -42,7 +43,7 @@ interface TreasuryOption {
     <app-section-nav module="treasury" />
     <form (ngSubmit)="submit()" #f="ngForm">
       <app-form-section>
-        <app-field label="treasury.transfer.from" controlId="transfer-from" [required]="true" [error]="serverFieldError(error(), 'from_treasury_id')">
+        <app-field label="treasury.transfer.from" controlId="transfer-from" [required]="true" hint="common.hint_treasury_balance" [error]="serverFieldError(error(), 'from_treasury_id')">
           <p-select appendTo="body"
             inputId="transfer-from"
             [options]="treasuryOptions()"
@@ -51,8 +52,15 @@ interface TreasuryOption {
             [(ngModel)]="fromId"
             name="from"
             required
-            styleClass="u-full"
-          />
+            styleClass="u-full"          >
+            <!-- T7-11: the available balance rides every option's text -->
+            <ng-template let-option #item>
+              <div class="u-flex-between">
+                <span>{{ option.name }}</span>
+                <span class="u-bidi u-small">{{ option.balance | money }}</span>
+              </div>
+            </ng-template>
+          </p-select>
           @if (fromBalance() !== null) {
             <span class="field__hint u-bidi">{{ fromBalance() | money }}</span>
           }
@@ -66,10 +74,17 @@ interface TreasuryOption {
             [(ngModel)]="toId"
             name="to"
             required
-            styleClass="u-full"
-          />
+            styleClass="u-full"          >
+            <!-- T7-11: the available balance rides every option's text -->
+            <ng-template let-option #item>
+              <div class="u-flex-between">
+                <span>{{ option.name }}</span>
+                <span class="u-bidi u-small">{{ option.balance | money }}</span>
+              </div>
+            </ng-template>
+          </p-select>
         </app-field>
-        <app-field label="treasury.transfer.amount" controlId="transfer-amount" [required]="true" [error]="overBalance() ? ('treasury.transfer.over_balance' | translate) : serverFieldError(error(), 'amount')">
+        <app-field label="treasury.transfer.amount" controlId="transfer-amount" [required]="true" hint="common.hint_max_amount" [error]="overBalance() ? ('treasury.transfer.over_balance' | translate) : serverFieldError(error(), 'amount')">
           <p-inputnumber inputId="transfer-amount" name="amount" [(ngModel)]="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" required styleClass="u-full" />
         </app-field>
         <app-field label="treasury.transfer.notes" controlId="transfer-desc" [required]="true" [error]="serverFieldError(error(), 'description')">
@@ -80,7 +95,7 @@ interface TreasuryOption {
         <div class="dialog__alert" role="alert">{{ msg }}</div>
       }
       <div class="sticky-actions">
-        <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/treasury" />
+        <app-action-button kind="back" label="common.back" [route]="['/treasury']" />
         <p-button
           type="submit"
           [label]="'treasury.transfer.submit' | translate"

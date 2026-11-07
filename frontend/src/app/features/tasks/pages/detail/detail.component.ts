@@ -29,6 +29,7 @@ import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { FieldComponent } from '@shared/ui/field/field.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface TaskComment {
   id: number;
@@ -55,14 +56,14 @@ interface TaskDetail {
 @Component({
   selector: 'app-task-detail',
   standalone: true,
-  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, ConfirmDialogComponent, ConfirmDeleteComponent, FormDialogComponent, UserChipComponent, RelativeTimePipe, EnumLabelPipe],
+  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, ConfirmDialogComponent, ConfirmDeleteComponent, FormDialogComponent, UserChipComponent, RelativeTimePipe, EnumLabelPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'task.detail.title' | translate">
-      <app-page-header [title]="headerTitle()">
+      <app-page-header [title]="headerTitle()" accent="tasks" iconName="list-check">
         <div actions class="u-flex u-gap-2 u-flex-wrap">
           <!-- T6-10: max 3 visible buttons; status decisions live in the sticky bar -->
-          <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/tasks" />
+          <app-action-button kind="back" label="common.back_to_list" size="small" [route]="['/tasks']" />
         </div>
       </app-page-header>
 
@@ -74,19 +75,19 @@ interface TaskDetail {
               <p-button [label]="'task.detail.start' | translate" size="small" (onClick)="setStatus('in_progress')" [loading]="sending()" />
             }
             @if (isManager() && isOpen(item)) {
-              <p-button [label]="'task.detail.complete' | translate" size="small" severity="success" (onClick)="setStatus('completed')" [loading]="sending()" />
+              <app-action-button kind="complete" label="task.detail.complete" size="small" (action)="setStatus('completed')" [loading]="sending()" />
             }
             @if (canDelegate(item)) {
-              <p-button [label]="'task.detail.delegate' | translate" size="small" severity="warn" [outlined]="true" (onClick)="openDelegate()" />
+              <app-action-button kind="delegate" label="task.detail.delegate" size="small" (action)="openDelegate()" />
             }
             @if (isManager() && isOpen(item)) {
-              <p-button [label]="'common.cancel' | translate" size="small" severity="danger" [outlined]="true" (onClick)="setStatus('cancelled')" [loading]="sending()" />
+              <app-action-button kind="close" label="common.cancel" size="small" (action)="setStatus('cancelled')" [loading]="sending()" />
             }
             @if (isManager() && isClosed(item)) {
-              <p-button [label]="'task.detail.reopen' | translate" size="small" severity="warn" [outlined]="true" (onClick)="setStatus('pending')" [loading]="sending()" />
+              <app-action-button kind="reopen" label="task.detail.reopen" size="small" (action)="setStatus('pending')" [loading]="sending()" />
             }
             @if (isManager()) {
-              <p-button [label]="'common.delete' | translate" size="small" severity="danger" [text]="true" (onClick)="deleteDlg()?.open()" />
+              <app-action-button kind="delete" label="common.delete" size="small" (action)="deleteDlg()?.open()" />
             }
           </div>
           <div class="u-flex u-gap-2 u-flex-wrap u-mb-4">

@@ -1,8 +1,7 @@
-import { ChangeDetectionStrategy, Component, computed, inject, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, resource, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -17,7 +16,12 @@ import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { CountUpDirective } from '@core/motion/motion-directives';
 import { AutoRefreshComponent } from '@shared/ui/auto-refresh/auto-refresh.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { LocalStorageService } from '@core/storage/local-storage.service';
+import { ApiClient } from '@core/http/api-client';
+import { ToastService } from '@core/errors/toast.service';
+import { BalanceRingComponent } from '@shared/ui/balance-ring/balance-ring.component';
+import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
 import type { ItemResponse } from '@shared/models/api.models';
 
 interface AgentStats {
@@ -81,10 +85,44 @@ interface WidgetDef {
   titleKey: string;
 }
 
+/** GET /dashboard/performance (T7-08) — the heavy widget data, lazy endpoint */
+interface PerformanceData {
+  kpis: Record<'expenses' | 'income' | 'custodies' | 'cases', { value: string; prev: string; delta: number; spark: { d: string; v: string }[] }>;
+  aging: { bucket: string; count: number; total: string }[];
+  case_funnel: { stage: string; count: number }[];
+  approval_rate: number;
+  spending_by_direction: { label: string; value: string }[];
+  hr: { attendance_today: Record<string, number>; pending_salaries: { count: number; total: string }; kpi_achievement: number };
+}
+
+/** a pending custody transfer row from /custodies/mine (agent view, T7-08) */
+interface MineTransfer {
+  id: number;
+  amount: string;
+  status: string;
+  notes: string | null;
+  created_at: string | null;
+}
+
+interface MineTransfers {
+  sent_transfers: MineTransfer[];
+  received_transfers: MineTransfer[];
+}
+
+/** GET /dashboard/activity (T7-08) — the lazy activity feed */
+interface ActivityFeedItem {
+  id: number;
+  event: string;
+  description: string;
+  user: string | null;
+  created_at: string | null;
+}
+
 const DEFAULT_WIDGETS: WidgetDef[] = [
   { id: 'kpi', titleKey: 'dashboard.bento.kpi' },
   { id: 'quick-actions', titleKey: 'dashboard.bento.quick_actions' },
   { id: 'attention', titleKey: 'dashboard.bento.attention' },
+  { id: 'insights', titleKey: 'dashboard.bento.insights' },
   { id: 'money-flow', titleKey: 'dashboard.bento.money_flow' },
   { id: 'performance', titleKey: 'dashboard.bento.performance' },
   { id: 'activity', titleKey: 'dashboard.bento.activity' },
@@ -107,7 +145,7 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
     DecimalPipe,
     DatePipe,
     RouterLink,
-    ButtonModule,
+    ActionButtonComponent,
     SelectModule,
     FormsModule,
     AsyncPageComponent,
@@ -118,6 +156,8 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
     MoneyPipe,
     CountUpDirective,
     AutoRefreshComponent,
+    BalanceRingComponent,
+    ConfirmDialogComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -130,7 +170,7 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
         <p-select appendTo="body" inputId="dash-range" [options]="rangeOptions" optionLabel="label" optionValue="value"
                   [ngModel]="range()" (ngModelChange)="setRange($event)" name="range" styleClass="dash-topbar__select" />
         <app-auto-refresh key="dashboard" (refresh)="data.reload()" />
-        <p-button [label]="'dashboard.bento.customize' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="customizeOpen.set(!customizeOpen())" />
+        <app-action-button kind="customize" label="dashboard.bento.customize" size="small" (action)="customizeOpen.set(!customizeOpen())" />
       </div>
     </div>
 
@@ -210,12 +250,68 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
                     </div>
                   }
                 </div>
+
+                <!-- T7-08: agent variant widgets — balance ring, pending
+                     transfers with accept/cancel, quick add expense -->
+                <div class="dash-insight-cols u-mt-3">
+                  <div>
+                    <h3 class="dash-rank__title">{{ 'dashboard.agent.balance_ring' | translate }}</h3>
+                    <app-balance-ring [segments]="agentRing(a)" [total]="a.remaining" />
+                  </div>
+                  <div>
+                    <div class="u-flex u-gap-2 u-flex-wrap u-center-y">
+                      <h3 class="dash-rank__title u-flex-1">{{ 'dashboard.agent.pending_transfers' | translate }}</h3>
+                      <app-action-button kind="quickAdd" label="dashboard.agent.quick_expense" size="small" [route]="['/expenses/new']" />
+                    </div>
+                    @if (mine.value(); as m) {
+                      <ul class="dash-bars">
+                        @for (t of pendingTransfers(m, 'received'); track t.id) {
+                          <li>
+                            <span class="dash-bars__label u-bidi">{{ t.amount | money: false }}</span>
+                            <span class="u-small u-muted dash-bars__notes">{{ t.notes ?? '—' }}</span>
+                            <app-action-button kind="accept" label="dashboard.agent.accept_transfer" size="small" [loading]="transferBusy() === t.id" (action)="askAccept(t)" />
+                          </li>
+                        }
+                        @for (t of pendingTransfers(m, 'sent'); track t.id) {
+                          <li>
+                            <span class="dash-bars__label u-bidi">{{ t.amount | money: false }}</span>
+                            <span class="u-small u-muted dash-bars__notes">{{ t.notes ?? '—' }}</span>
+                            <app-action-button kind="cancel" label="dashboard.agent.cancel_transfer" size="small" [loading]="transferBusy() === t.id" (action)="askCancel(t)" />
+                          </li>
+                        } @empty {
+                          @if (pendingTransfers(m, 'received').length === 0) {
+                            <li><span class="u-muted u-small">{{ 'dashboard.agent.no_pending_transfers' | translate }}</span></li>
+                          }
+                        }
+                      </ul>
+                    }
+                  </div>
+                </div>
               } @else if (d.view === 'researcher' && d.researcher_stats; as r) {
                 <div class="dash-kpis">
                   <div class="dash-kpi"><span class="dash-kpi__label">{{ 'dashboard.researcher.total_cases' | translate }}</span><span class="dash-kpi__value u-bidi" [appCountUp]="r.total_cases">{{ r.total_cases }}</span></div>
                   <div class="dash-kpi"><span class="dash-kpi__label">{{ 'dashboard.researcher.approved' | translate }}</span><span class="dash-kpi__value u-bidi" [appCountUp]="r.approved_cases">{{ r.approved_cases }}</span></div>
                   <div class="dash-kpi"><span class="dash-kpi__label">{{ 'dashboard.researcher.pending' | translate }}</span><span class="dash-kpi__value u-bidi" [appCountUp]="r.pending_cases">{{ r.pending_cases }}</span></div>
                   <div class="dash-kpi"><span class="dash-kpi__label">{{ 'dashboard.researcher.approval_rate' | translate }}</span><span class="dash-kpi__value u-bidi">{{ r.approval_rate }}%</span></div>
+                </div>
+
+                <!-- T7-08: researcher variant widgets — my-cases funnel + gauge -->
+                <div class="u-mt-3">
+                  <h3 class="dash-rank__title">{{ 'dashboard.insights.funnel' | translate }}</h3>
+                  <ul class="dash-bars">
+                    @for (stage of researcherFunnel(r); track stage.stage) {
+                      <li>
+                        <span class="dash-bars__label">{{ stage.label | translate }}</span>
+                        <span class="dash-rank__bar"><span class="dash-rank__fill dash-rank__fill--alt" [style.width.%]="stage.percent"></span></span>
+                        <span class="dash-bars__value u-bidi">{{ stage.count }}</span>
+                      </li>
+                    }
+                  </ul>
+                  <p class="dash-gauge">
+                    {{ 'dashboard.insights.approval_rate' | translate }}:
+                    <strong class="u-bidi">{{ r.approval_rate }}%</strong>
+                    <span class="dash-rank__bar"><span class="dash-rank__fill" [style.width.%]="r.approval_rate"></span></span>
+                  </p>
                 </div>
               }
             </section>
@@ -247,6 +343,64 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
                   <a routerLink="/custodies/tracking">{{ 'nav.custody_tracking' | translate }}</a>
                 </li>
               </ul>
+            </section>
+          }
+
+          <!-- Insights (T7-08): KPI sparklines + deltas, aging buckets, case funnel
+               with approval gauge, spending-by-direction donut — lazy endpoint -->
+          @if (visible('insights') && d.view === 'finance' && perf.value(); as p) {
+            <section class="bento__widget bento__widget--wide">
+              <div class="chart-card__head"><span class="chart-card__title">{{ 'dashboard.bento.insights' | translate }}</span></div>
+              <div class="dash-insights">
+                @for (card of insightCards; track card.key) {
+                  <div class="dash-insight">
+                    <span class="dash-insight__label">{{ card.label | translate }}</span>
+                    <span class="dash-insight__value u-bidi">{{ p.kpis[card.key].value | money: false }}</span>
+                    <span class="dash-insight__delta" [class.is-up]="p.kpis[card.key].delta >= 0" [class.is-down]="p.kpis[card.key].delta < 0">
+                      {{ p.kpis[card.key].delta >= 0 ? '▲' : '▼' }} {{ abs(p.kpis[card.key].delta) }}% · {{ 'dashboard.insights.vs_prev' | translate }}
+                    </span>
+                    <svg class="dash-spark" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+                      <polyline [attr.points]="sparkPoints(p.kpis[card.key].spark)" />
+                    </svg>
+                  </div>
+                }
+              </div>
+
+              <div class="dash-insight-cols">
+                <div>
+                  <h3 class="dash-rank__title">{{ 'dashboard.insights.aging' | translate }}</h3>
+                  <ul class="dash-bars">
+                    @for (bucket of p.aging; track bucket.bucket) {
+                      <li>
+                        <span class="dash-bars__label u-bidi">{{ bucket.bucket }}</span>
+                        <span class="dash-rank__bar"><span class="dash-rank__fill" [style.width.%]="(bucket.count / agingMax()) * 100"></span></span>
+                        <span class="dash-bars__value u-bidi">{{ bucket.count }} · {{ bucket.total | money: false }}</span>
+                      </li>
+                    }
+                  </ul>
+                </div>
+                <div>
+                  <h3 class="dash-rank__title">{{ 'dashboard.insights.funnel' | translate }}</h3>
+                  <ul class="dash-bars">
+                    @for (stage of p.case_funnel; track stage.stage) {
+                      <li>
+                        <span class="dash-bars__label">{{ 'enums.social_case.' + stage.stage | translate }}</span>
+                        <span class="dash-rank__bar"><span class="dash-rank__fill dash-rank__fill--alt" [style.width.%]="(stage.count / funnelMax()) * 100"></span></span>
+                        <span class="dash-bars__value u-bidi">{{ stage.count }}</span>
+                      </li>
+                    }
+                  </ul>
+                  <p class="dash-gauge">
+                    {{ 'dashboard.insights.approval_rate' | translate }}:
+                    <strong class="u-bidi">{{ p.approval_rate }}%</strong>
+                    <span class="dash-rank__bar"><span class="dash-rank__fill" [style.width.%]="p.approval_rate"></span></span>
+                  </p>
+                </div>
+              </div>
+
+              @if (spendingSeries().length > 0) {
+                <app-chart-card [title]="'dashboard.insights.spending'" [series]="spendingSeries()" [height]="180" />
+              }
             </section>
           }
 
@@ -318,6 +472,18 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
                     </li>
                   }
                 </ul>
+              } @else if (activityFeed.value(); as feed) {
+                <!-- T7-08: the real activity feed from the lazy endpoint -->
+                <ul class="dash-activity">
+                  @for (item of feed.slice(0, 8); track item.id) {
+                    <li>
+                      <span class="dash-activity__text">{{ item.description }}</span>
+                      <span class="u-small u-muted u-bidi">{{ item.created_at | datetime: false }}</span>
+                    </li>
+                  } @empty {
+                    <li><span class="u-muted">{{ 'common.no_data' | translate }}</span></li>
+                  }
+                </ul>
               } @else {
                 <ul class="dash-activity">
                   <li><a routerLink="/expenses">{{ 'dashboard.finance.today_expenses' | translate }}: <span class="u-bidi">{{ d.today_expenses | money }}</span></a></li>
@@ -330,10 +496,16 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
         </div>
       }
     </app-async-page>
+
+          <!-- T7-08: agent transfer decisions — the same endpoints custodies/mine uses -->
+      <app-confirm-dialog #acceptDlg header="dashboard.agent.accept_transfer" message="dashboard.agent.accept_confirm" confirmLabel="dashboard.agent.accept_transfer" confirmKind="accept" (confirmed)="submitAccept()" />
+      <app-confirm-dialog #cancelDlg header="dashboard.agent.cancel_transfer" message="dashboard.agent.cancel_confirm" confirmLabel="dashboard.agent.cancel_transfer" confirmKind="cancel" (confirmed)="submitCancel()" />
   `,
 })
 export class DashboardPage {
   private http = inject(HttpClient);
+  private api = inject(ApiClient);
+  private toast = inject(ToastService);
   private auth = inject(AuthService);
   private storage = inject(LocalStorageService);
   private translate = inject(TranslateService);
@@ -380,6 +552,147 @@ export class DashboardPage {
       ).then((res) => res.data),
   });
 
+  /** T7-08: the heavy widgets ride their own lazy endpoint, not the main payload */
+  perf = resource<PerformanceData, { range: string }>({
+    params: () => ({ range: this.range() }),
+    loader: ({ params }) =>
+      firstValueFrom(
+        this.http.get<ItemResponse<PerformanceData>>('/dashboard/performance', { params: { range: params.range } }),
+      ).then((res) => res.data),
+  });
+
+  /** T7-08: lazy activity feed (own events for non-managers) */
+  activityFeed = resource<ActivityFeedItem[], unknown>({
+    loader: () => firstValueFrom(this.http.get<ItemResponse<ActivityFeedItem[]>>('/dashboard/activity')).then((r) => r.data),
+  });
+
+  /** T7-08: the agent view's pending transfers — loaded only for agents */
+  mine = resource<MineTransfers | null, { want: boolean }>({
+    params: () => ({ want: this.data.value()?.view === 'agent' }),
+    loader: ({ params }) =>
+      params.want
+        ? firstValueFrom(this.http.get<ItemResponse<MineTransfers>>('/custodies/mine')).then((r) => r.data)
+        : Promise.resolve(null),
+  });
+
+  /** one in-flight transfer action at a time (accept/cancel) */
+  readonly transferBusy = signal<number | null>(null);
+  private readonly transferTarget = signal<MineTransfer | null>(null);
+  private readonly acceptDlg = viewChild.required<ConfirmDialogComponent>('acceptDlg');
+  private readonly cancelDlg = viewChild.required<ConfirmDialogComponent>('cancelDlg');
+
+  /** the agent's balance ring: remaining vs spent vs returned (T7-08) */
+  agentRing(a: AgentStats): { label: string; amount: string }[] {
+    return [
+      { label: 'dashboard.agent.remaining', amount: a.remaining },
+      { label: 'dashboard.agent.spent', amount: a.spent },
+      { label: 'dashboard.agent.returned', amount: a.returned },
+    ];
+  }
+
+  pendingTransfers(m: MineTransfers | null, side: 'received' | 'sent'): MineTransfer[] {
+    return ((m?.[side === 'received' ? 'received_transfers' : 'sent_transfers'] ?? [])).filter((t) => t.status === 'pending');
+  }
+
+  /** the researcher's own funnel (T7-08): pending → approved/rejected out of the total */
+  researcherFunnel(r: ResearcherStats): { stage: string; label: string; count: number; percent: number }[] {
+    const max = Math.max(1, r.total_cases);
+    const stages: { stage: string; label: string; count: number }[] = [
+      { stage: 'total', label: 'dashboard.researcher.total_cases', count: r.total_cases },
+      { stage: 'pending', label: 'dashboard.researcher.pending', count: r.pending_cases },
+      { stage: 'approved', label: 'dashboard.researcher.approved', count: r.approved_cases },
+      { stage: 'rejected', label: 'case.list.rejected', count: r.rejected_cases },
+    ];
+    return stages.map((s) => ({ ...s, percent: (s.count / max) * 100 }));
+  }
+
+  askAccept(t: MineTransfer): void {
+    this.transferTarget.set(t);
+    this.acceptDlg().open();
+  }
+
+  askCancel(t: MineTransfer): void {
+    this.transferTarget.set(t);
+    this.cancelDlg().open();
+  }
+
+  /** POST /custody-transfers/{id}/approve — the same call custodies/mine makes */
+  submitAccept(): void {
+    const t = this.transferTarget();
+    if (t === null) {
+      return;
+    }
+    this.transferBusy.set(t.id);
+    void firstValueFrom(this.api.action(`/custody-transfers/${t.id}/approve`))
+      .then((res) => {
+        this.transferBusy.set(null);
+        this.toast.success(res.message);
+        this.mine.reload();
+      })
+      .catch((err: unknown) => {
+        this.transferBusy.set(null);
+        this.toast.apiError((err as { error?: { message?: string } })?.error?.message ?? 'errors.generic');
+      });
+  }
+
+  /** POST /custody-transfers/{id}/cancel — the sender's cancel (T6-80 flow) */
+  submitCancel(): void {
+    const t = this.transferTarget();
+    if (t === null) {
+      return;
+    }
+    this.transferBusy.set(t.id);
+    void firstValueFrom(this.api.action(`/custody-transfers/${t.id}/cancel`))
+      .then((res) => {
+        this.transferBusy.set(null);
+        this.toast.success(res.message);
+        this.mine.reload();
+      })
+      .catch((err: unknown) => {
+        this.transferBusy.set(null);
+        this.toast.apiError((err as { error?: { message?: string } })?.error?.message ?? 'errors.generic');
+      });
+  }
+
+  /** the four insight KPI cards (T7-08), in display order — literal i18n keys */
+  readonly insightCards: readonly { key: 'expenses' | 'income' | 'custodies' | 'cases'; label: string }[] = [
+    { key: 'expenses', label: 'dashboard.insights.expenses' },
+    { key: 'income', label: 'dashboard.insights.income' },
+    { key: 'custodies', label: 'dashboard.insights.custodies' },
+    { key: 'cases', label: 'dashboard.insights.cases' },
+  ];
+
+  /** sparkline polyline points for a 100x24 viewBox */
+  sparkPoints(spark: { v: string }[] | undefined): string {
+    const values = (spark ?? []).map((p) => Number.parseFloat(p.v) || 0);
+    if (values.length < 2) {
+      return '';
+    }
+    const max = Math.max(...values);
+    const min = Math.min(...values);
+    const span = max - min || 1;
+    return values
+      .map((v, i) => `${(i / (values.length - 1)) * 100},${20 - ((v - min) / span) * 18}`)
+      .join(' ');
+  }
+
+  /** the biggest funnel stage scales the bars */
+  funnelMax(): number {
+    return Math.max(1, ...(this.perf.value()?.case_funnel ?? []).map((s) => s.count));
+  }
+
+  agingMax(): number {
+    return Math.max(1, ...(this.perf.value()?.aging ?? []).map((b) => b.count));
+  }
+
+  spendingSeries = computed<ChartSeries[]>(() =>
+    (this.perf.value()?.spending_by_direction ?? []).map((row) => ({ label: row.label, value: this.toNum(row.value) })),
+  );
+
+  abs(n: number): number {
+    return Math.abs(n);
+  }
+
   readonly allWidgets = signal<WidgetDef[]>(DEFAULT_WIDGETS);
 
   isWidgetVisible(id: string): boolean {
@@ -404,6 +717,7 @@ export class DashboardPage {
   setRange(range: string): void {
     this.range.set(range);
     this.data.reload();
+    this.perf.reload();
   }
 
   toNum(v: string | number): number {

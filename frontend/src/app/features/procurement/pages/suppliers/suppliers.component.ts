@@ -1,7 +1,7 @@
 // Suppliers (plan 20, T3-72: deactivate/delete row action).
 // T4-20: async-page states; T4-23: app-field in the create dialog;
 // T4-24: shared row-actions component.
-import { ChangeDetectionStrategy, Component, inject, resource, signal, viewChild } from '@angular/core';
+import { computed, ChangeDetectionStrategy, Component, inject, resource, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
@@ -14,7 +14,8 @@ import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
+import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
@@ -38,12 +39,12 @@ interface Row {
   standalone: true,
   imports: [SectionNavComponent, FormsModule, 
     TranslatePipe, ButtonModule, InputTextModule, TextareaModule,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, ConfirmDeleteComponent, FormDialogComponent, FieldComponent, RowActionsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'procurement.suppliers.title' | translate">
+    <app-page-header [title]="'procurement.suppliers.title' | translate" accent="procurement" iconName="shopping-cart">
       <div actions class="u-flex u-gap-2">
         <p-button [label]="'procurement.suppliers.add' | translate" size="small" (onClick)="dialogOpen.set(true)" />
       </div>
@@ -53,51 +54,26 @@ interface Row {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table
+        <app-data-table listUrl="/suppliers"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
           [total]="page.meta.total"
           [perPage]="params().per_page"
           [loading]="data.isLoading()"
+          [filters]="metaFilters()"
+          (queryChange)="onQuery($event)"
+
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="name">{{ row.name ?? '—' }}</td>
-              <td appTableCol="phone">{{ row.phone ?? '—' }}</td>
-              <td appTableCol="email">{{ row.email ?? '—' }}</td>
-              <td appTableCol="purchase_requests_count">{{ row.purchase_requests_count ?? '—' }}</td>
-              <td appTableCol="actions">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'procurement.suppliers.col_name' | translate }}</span>
-                {{ row.name ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'procurement.suppliers.col_phone' | translate }}</span>
-                {{ row.phone ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'procurement.suppliers.col_email' | translate }}</span>
-                {{ row.email ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'procurement.suppliers.col_requests' | translate }}</span>
-                {{ row.purchase_requests_count ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.actions' | translate }}</span>
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="name" let-row>{{ row.name ?? '—' }}</ng-template>
+          <ng-template appCell="phone" let-row>{{ row.phone ?? '—' }}</ng-template>
+          <ng-template appCell="email" let-row>{{ row.email ?? '—' }}</ng-template>
+          <ng-template appCell="purchase_requests_count" let-row>{{ row.purchase_requests_count ?? '—' }}</ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
-            <app-empty-state [title]="'procurement.suppliers.empty' | translate" [text]="'common.no_data' | translate" />
+            <app-empty-state [title]="'procurement.suppliers.empty' | translate" [text]="'common.no_data' | translate" accent="procurement" iconName="shopping-cart" />
           </div>
         </app-data-table>
       }
@@ -139,14 +115,33 @@ export class SuppliersPage {
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
 
-  params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
+  params = signal<{ page: number; per_page: number; q: string; sort?: string; status: string }>({ page: 1, per_page: 25, q: '', sort: '', status: 'all' });
+
+  /** the active filter[...] values — forwarded verbatim (T7-07 server contract) */
+  filterBag: Record<string, unknown> = {};
+
+  /** T7-07: the endpoint's declared allowlist drives the table's Filters control */
+  readonly metaFilters = computed(() => apiFilterDefs(this.data.value()?.meta));
+
+  /** the table emits the full query — filters reach the server (T7-07) */
+  onQuery(query: TableQuery): void {
+    this.filterBag = query.filters;
+    this.params.update((p) => ({
+      ...p,
+      page: query.page,
+      per_page: query.perPage,
+      sort: query.sort !== '' ? query.sort : p.sort,
+      q: query.q,
+    }));
+    this.data.reload();
+  }
 
   deletePath = signal('');
   deleteEntity = signal('');
 
   data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string }>({
     loader: () =>
-      firstValueFrom(this.http.get<ListResponse<Row>>('/suppliers', { params: cleanParams(this.params()) })),
+      firstValueFrom(this.http.get<ListResponse<Row>>('/suppliers', { params: { ...cleanParams(this.params()), ...filterParams(this.filterBag) } })),
   });
 
   /**

@@ -9,7 +9,8 @@ import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
 import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
+import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
@@ -51,12 +52,12 @@ const TYPE_VALUES = [
   selector: 'app-my-movements',
   standalone: true,
   imports: [AppTabsComponent, 
-    TranslatePipe, PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    TranslatePipe, PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'custody.my_movements.title' | translate">
+    <app-page-header [title]="'custody.my_movements.title' | translate" accent="custodies" iconName="wallet">
       <div actions class="u-flex u-gap-2">
 
       </div>
@@ -65,7 +66,7 @@ const TYPE_VALUES = [
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'custody.my_movements.custodies_count'" [value]="summaryValue('custodies_count')" />
+          <app-stat-tile [label]="'custody.my_movements.custodies_count'" [value]="summaryValue('custodies_count')" accent="custodies" iconName="wallet" />
           <app-stat-tile [label]="'custody.my_movements.total_received'" [value]="summaryValue('total_received')" [money]="true" />
           <app-stat-tile [label]="'custody.my_movements.total_spent'" [value]="summaryValue('total_spent')" [money]="true" />
           <app-stat-tile [label]="'custody.my_movements.total_returned'" [value]="summaryValue('total_returned')" [money]="true" />
@@ -75,52 +76,28 @@ const TYPE_VALUES = [
       <!-- T6-11/T6-30: the type chips become tabs — no page-level filter markup -->
       <app-tabs id="my-movements" [tabs]="typeTabs()" [(active)]="typeTab" (tabChange)="setParam('type', $event)" />
 
-      <app-data-table
+      <app-data-table listUrl="/agent/transactions"
         [tableKey]="tableKey"
         [columns]="columns"
         [rows]="page.data"
         [total]="page.meta.total"
         [perPage]="params().per_page"
         [loading]="data.isLoading()"
+        [filters]="metaFilters()"
+        (queryChange)="onQuery($event)"
+
         (pageChange)="onPage($event)"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="date"><span class="u-bidi">{{ row.date | datetime }}</span></td>
-            <td appTableCol="type">
-              {{ row.type | enumLabel: 'transaction_type' }}
-              @if (row.type === 'custody_close') {
-                <app-status-stamp [status]="'closed'" namespace="custody_status" />
-              }
-            </td>
-            <td appTableCol="description">{{ row.description ?? '—' }}</td>
-            <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.date' | translate }}</span>
-              <span class="u-bidi">{{ row.date | datetime }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.type' | translate }}</span>
-              {{ row.type | enumLabel: 'transaction_type' }}
-              @if (row.type === 'custody_close') {
-                <app-status-stamp [status]="'closed'" namespace="custody_status" />
-              }
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.description' | translate }}</span>
-              {{ row.description ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-              <span class="u-bidi">{{ row.amount | money }}</span>
-            </div>
-          </tr>
-        </ng-template>
+        <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
+        <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}
+@if (row.type === 'custody_close') {
+  <app-status-stamp [status]="'closed'" namespace="custody_status" />
+}</ng-template>
+        <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
         <div empty>
-          <app-empty-state [title]="'custody.my_movements.empty' | translate" [text]="'common.no_data' | translate" />
+          <app-empty-state [title]="'custody.my_movements.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
         </div>
       </app-data-table>
       }
@@ -137,7 +114,7 @@ export class MyMovementsPage {
     { field: 'date', header: 'common.date', sortable: true },
     { field: 'type', header: 'common.type', sortable: true },
     { field: 'description', header: 'common.description', sortable: true },
-    { field: 'amount', header: 'common.amount', sortable: true },
+    { field: 'amount', header: 'common.amount', sortable: true, numeric: true },
   ];
 
   /** transfer-direction tabs — shortcuts over the API's single `type` filter */
@@ -149,6 +126,25 @@ export class MyMovementsPage {
 
   params = signal<MyMovementsParams>({ page: 1, per_page: 25, q: '', type: 'all' });
 
+  /** the active filter[...] values — forwarded verbatim (T7-07 server contract) */
+  filterBag: Record<string, unknown> = {};
+
+  /** T7-07: the endpoint's declared allowlist drives the table's Filters control */
+  readonly metaFilters = computed(() => apiFilterDefs(this.data.value()?.meta));
+
+  /** the table emits the full query — filters reach the server (T7-07) */
+  onQuery(query: TableQuery): void {
+    this.filterBag = query.filters;
+    this.params.update((p) => ({
+      ...p,
+      page: query.page,
+      per_page: query.perPage,
+      sort: query.sort !== '' ? query.sort : p.sort,
+      q: query.q,
+    }));
+    this.data.reload();
+  }
+
   /** T6-11: type tabs drive the same `type` query param */
   typeTab = signal<string>('all');
   readonly typeTabs = computed<AppTab[]>(() => [
@@ -158,7 +154,7 @@ export class MyMovementsPage {
 
   data = resource<ListResponse<Row>, unknown>({
     loader: () =>
-      firstValueFrom(this.http.get<ListResponse<Row>>('/agent/transactions', { params: cleanParams(this.params()) })),
+      firstValueFrom(this.http.get<ListResponse<Row>>('/agent/transactions', { params: { ...cleanParams(this.params()), ...filterParams(this.filterBag) } })),
   });
 
   private label(key: string): string {

@@ -18,6 +18,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 type UserForm = Record<string, string | number | boolean | null | undefined | string[]>;
 
@@ -27,7 +28,7 @@ type UserForm = Record<string, string | number | boolean | null | undefined | st
   standalone: true,
   imports: [
     ButtonModule, CheckboxModule, FormsModule, InputTextModule, PageHeaderComponent, RouterLink,
-    SelectModule, TranslatePipe, FieldComponent, FormSectionComponent, AsyncPageComponent,
+    SelectModule, TranslatePipe, FieldComponent, FormSectionComponent, AsyncPageComponent, ActionButtonComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -62,7 +63,7 @@ type UserForm = Record<string, string | number | boolean | null | undefined | st
         </app-form-section>
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
-          <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/users" />
+          <app-action-button kind="back" label="common.back" [route]="['/users']" />
           <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
         </div>
       </form>

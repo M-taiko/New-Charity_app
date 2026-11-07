@@ -19,20 +19,34 @@
   --dark-5: #4a4845;
 
   // Semantic action colors (T6-13) — same values as the PrimeNG preset scales.
+  // The *-rgb channel triplets feed the *-soft tints via rgb(<channels> / N%),
+  // which Chrome 109 supports; color-mix() is forbidden by the Chrome 109 gate (T7-01).
   --semantic-success: #1e7a46;
+  --semantic-success-rgb: 30 122 70;
   --semantic-danger: #b3261e;
+  --semantic-danger-rgb: 179 38 30;
   --semantic-warning: #96650a;
+  --semantic-warning-rgb: 150 101 10;
   --semantic-info: #0e6e77;
+  --semantic-info-rgb: 14 110 119;
 
   // Module accent set (T6-40) — light-theme foregrounds (pass 4.5:1 on white).
   --accent-custodies: #0e7168; // teal
+  --accent-custodies-rgb: 14 113 104;
   --accent-expenses: #8f5700; // amber
+  --accent-expenses-rgb: 143 87 0;
   --accent-treasury: #66701a; // gold-green
+  --accent-treasury-rgb: 102 112 26;
   --accent-cases: #b03b4b; // rose
+  --accent-cases-rgb: 176 59 75;
   --accent-hr: #2f5fa3; // blue
+  --accent-hr-rgb: 47 95 163;
   --accent-tasks: #6d4fc1; // violet
+  --accent-tasks-rgb: 109 79 193;
   --accent-procurement: #9c4a1f; // orange-brown
+  --accent-procurement-rgb: 156 74 31;
   --accent-reports: #4848a0; // indigo
+  --accent-reports-rgb: 72 72 160;
 
   // Shape (10.2)
   --radius-s: 3px;
@@ -103,25 +117,26 @@
   --color-accent: var(--palette-light);
   --color-focus: var(--palette-brand);
 
-  // Semantic pairs — solid foreground + ~12% tinted background (T6-13/T6-40)
+  // Semantic pairs — solid foreground + ~12% tinted background (T6-13/T6-40).
+  // Tints are channel-alpha rgb() — supported since Chrome 65 (T7-01).
   --color-success: var(--semantic-success);
-  --color-success-soft: color-mix(in srgb, var(--semantic-success) 12%, transparent);
+  --color-success-soft: rgb(var(--semantic-success-rgb) / 12%);
   --color-danger: var(--semantic-danger);
-  --color-danger-soft: color-mix(in srgb, var(--semantic-danger) 10%, transparent);
+  --color-danger-soft: rgb(var(--semantic-danger-rgb) / 10%);
   --color-warning: var(--semantic-warning);
-  --color-warning-soft: color-mix(in srgb, var(--semantic-warning) 12%, transparent);
+  --color-warning-soft: rgb(var(--semantic-warning-rgb) / 12%);
   --color-info: var(--semantic-info);
-  --color-info-soft: color-mix(in srgb, var(--semantic-info) 10%, transparent);
+  --color-info-soft: rgb(var(--semantic-info-rgb) / 10%);
 
   // Accent soft chips (T6-40) — tinted backgrounds for the module icon chips
-  --accent-custodies-soft: color-mix(in srgb, var(--accent-custodies) 12%, transparent);
-  --accent-expenses-soft: color-mix(in srgb, var(--accent-expenses) 12%, transparent);
-  --accent-treasury-soft: color-mix(in srgb, var(--accent-treasury) 12%, transparent);
-  --accent-cases-soft: color-mix(in srgb, var(--accent-cases) 10%, transparent);
-  --accent-hr-soft: color-mix(in srgb, var(--accent-hr) 10%, transparent);
-  --accent-tasks-soft: color-mix(in srgb, var(--accent-tasks) 12%, transparent);
-  --accent-procurement-soft: color-mix(in srgb, var(--accent-procurement) 12%, transparent);
-  --accent-reports-soft: color-mix(in srgb, var(--accent-reports) 10%, transparent);
+  --accent-custodies-soft: rgb(var(--accent-custodies-rgb) / 12%);
+  --accent-expenses-soft: rgb(var(--accent-expenses-rgb) / 12%);
+  --accent-treasury-soft: rgb(var(--accent-treasury-rgb) / 12%);
+  --accent-cases-soft: rgb(var(--accent-cases-rgb) / 10%);
+  --accent-hr-soft: rgb(var(--accent-hr-rgb) / 10%);
+  --accent-tasks-soft: rgb(var(--accent-tasks-rgb) / 12%);
+  --accent-procurement-soft: rgb(var(--accent-procurement-rgb) / 12%);
+  --accent-reports-soft: rgb(var(--accent-reports-rgb) / 10%);
 }
 
 // ── Dark theme — dark neutral bases + brand accents ──
@@ -145,32 +160,44 @@
 
   // Dark theme: lighter accent foregrounds (pass 4.5:1 on the dark surfaces)
   --accent-custodies: #5ec6ba;
+  --accent-custodies-rgb: 94 198 186;
   --accent-expenses: #e0a43c;
+  --accent-expenses-rgb: 224 164 60;
   --accent-treasury: #b6c051;
+  --accent-treasury-rgb: 182 192 81;
   --accent-cases: #e2798a;
+  --accent-cases-rgb: 226 121 138;
   --accent-hr: #7aa5e8;
+  --accent-hr-rgb: 122 165 232;
   --accent-tasks: #a68fec;
+  --accent-tasks-rgb: 166 143 236;
   --accent-procurement: #d98e5f;
+  --accent-procurement-rgb: 217 142 95;
   --accent-reports: #9090e8;
+  --accent-reports-rgb: 144 144 232;
 
-  // Semantic pairs stay solid; soft tints sit on dark surfaces
+  // Semantic pairs stay solid; soft tints sit on dark surfaces (T7-01: channel alpha, not color-mix)
+  --semantic-success-rgb: 79 191 130;
+  --semantic-danger-rgb: 239 131 115;
+  --semantic-warning-rgb: 224 180 92;
+  --semantic-info-rgb: 99 191 201;
   --color-success: #4fbf82;
-  --color-success-soft: color-mix(in srgb, #4fbf82 16%, transparent);
+  --color-success-soft: rgb(var(--semantic-success-rgb) / 16%);
   --color-danger: #ef8377;
-  --color-danger-soft: color-mix(in srgb, #ef8377 14%, transparent);
+  --color-danger-soft: rgb(var(--semantic-danger-rgb) / 14%);
   --color-warning: #e0b45c;
-  --color-warning-soft: color-mix(in srgb, #e0b45c 16%, transparent);
+  --color-warning-soft: rgb(var(--semantic-warning-rgb) / 16%);
   --color-info: #63bfc9;
-  --color-info-soft: color-mix(in srgb, #63bfc9 14%, transparent);
+  --color-info-soft: rgb(var(--semantic-info-rgb) / 14%);
 
-  --accent-custodies-soft: color-mix(in srgb, var(--accent-custodies) 16%, transparent);
-  --accent-expenses-soft: color-mix(in srgb, var(--accent-expenses) 16%, transparent);
-  --accent-treasury-soft: color-mix(in srgb, var(--accent-treasury) 16%, transparent);
-  --accent-cases-soft: color-mix(in srgb, var(--accent-cases) 14%, transparent);
-  --accent-hr-soft: color-mix(in srgb, var(--accent-hr) 14%, transparent);
-  --accent-tasks-soft: color-mix(in srgb, var(--accent-tasks) 16%, transparent);
-  --accent-procurement-soft: color-mix(in srgb, var(--accent-procurement) 16%, transparent);
-  --accent-reports-soft: color-mix(in srgb, var(--accent-reports) 14%, transparent);
+  --accent-custodies-soft: rgb(var(--accent-custodies-rgb) / 16%);
+  --accent-expenses-soft: rgb(var(--accent-expenses-rgb) / 16%);
+  --accent-treasury-soft: rgb(var(--accent-treasury-rgb) / 16%);
+  --accent-cases-soft: rgb(var(--accent-cases-rgb) / 14%);
+  --accent-hr-soft: rgb(var(--accent-hr-rgb) / 14%);
+  --accent-tasks-soft: rgb(var(--accent-tasks-rgb) / 16%);
+  --accent-procurement-soft: rgb(var(--accent-procurement-rgb) / 16%);
+  --accent-reports-soft: rgb(var(--accent-reports-rgb) / 14%);
 
   color-scheme: dark;
 }

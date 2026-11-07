@@ -11,7 +11,7 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
@@ -35,12 +35,12 @@ interface Row {
   standalone: true,
   imports: [SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
-    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, ConfirmDeleteComponent, RowActionsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'procurement.maintenance.list_title' | translate">
+    <app-page-header [title]="'procurement.maintenance.list_title' | translate" accent="procurement" iconName="shopping-cart">
       <div actions class="u-flex u-gap-2">
         <p-button [label]="'procurement.maintenance.create' | translate" size="small" routerLink="/procurement/maintenance/new" />
       </div>
@@ -51,12 +51,12 @@ interface Row {
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'procurement.maintenance.pending'" [value]="summaryValue('pending')" />
+          <app-stat-tile [label]="'procurement.maintenance.pending'" [value]="summaryValue('pending')" accent="procurement" iconName="shopping-cart" />
           <app-stat-tile [label]="'procurement.maintenance.in_progress'" [value]="summaryValue('in_progress')" />
           <app-stat-tile [label]="'procurement.maintenance.resolved'" [value]="summaryValue('resolved')" />
         </div>
 
-        <app-data-table
+        <app-data-table listUrl="/maintenance-requests"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -66,46 +66,14 @@ interface Row {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="title">{{ row.title ?? '—' }}</td>
-              <td appTableCol="location">{{ row.location ?? '—' }}</td>
-              <td appTableCol="priority">{{ row.priority ?? '—' }}</td>
-              <td appTableCol="status">{{ row.status ?? '—' }}</td>
-              <td appTableCol="reported_by">{{ row.reported_by ?? '—' }}</td>
-              <td appTableCol="actions">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </td>
-            </tr>
-            <tr class="ledger-table__stacked">
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'procurement.maintenance.col_title' | translate }}</span>
-                {{ row.title ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'procurement.maintenance.col_location' | translate }}</span>
-                {{ row.location ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'procurement.maintenance.col_priority' | translate }}</span>
-                {{ row.priority ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.status' | translate }}</span>
-                {{ row.status ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'procurement.maintenance.col_reporter' | translate }}</span>
-                {{ row.reported_by ?? '—' }}
-              </div>
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'common.actions' | translate }}</span>
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            </tr>
-          </ng-template>
+          <ng-template appCell="title" let-row>{{ row.title ?? '—' }}</ng-template>
+          <ng-template appCell="location" let-row>{{ row.location ?? '—' }}</ng-template>
+          <ng-template appCell="priority" let-row>{{ row.priority ?? '—' }}</ng-template>
+          <ng-template appCell="status" let-row>{{ row.status ?? '—' }}</ng-template>
+          <ng-template appCell="reported_by" let-row>{{ row.reported_by ?? '—' }}</ng-template>
+          <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
-            <app-empty-state [title]="'procurement.maintenance.empty' | translate" [text]="'common.no_data' | translate" />
+            <app-empty-state [title]="'procurement.maintenance.empty' | translate" [text]="'common.no_data' | translate" accent="procurement" iconName="shopping-cart" />
           </div>
         </app-data-table>
       }

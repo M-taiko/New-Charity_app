@@ -40,7 +40,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
   imports: [ButtonModule, DatePickerModule, FormsModule, InputNumberModule, InputTextModule, TextareaModule, AttachmentFieldComponent, PageHeaderComponent, RouterLink, SelectModule, TranslatePipe, FieldComponent, FormSectionComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'procurement.purchase.form.title' | translate">
+    <app-page-header [title]="'procurement.purchase.form.title' | translate" accent="procurement" iconName="shopping-cart">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/procurement/purchase" />
       </div>
@@ -59,7 +59,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
         <app-field label="procurement.purchase.form.supplier" [controlId]="fid('supplier')" [error]="serverFieldError(error(), 'supplier_id')">
           <p-select appendTo="body" [inputId]="fid('supplier')" [options]="suppliers()" optionLabel="name" optionValue="id" [ngModel]="model.supplier_id" (ngModelChange)="set('supplier_id', $event)" name="supplier_id" styleClass="u-full" [placeholder]="'common.choose' | translate" />
         </app-field>
-        <app-field label="procurement.purchase.form.estimated_cost" [controlId]="fid('estimated_cost')" [error]="serverFieldError(error(), 'estimated_cost')">
+        <app-field label="procurement.purchase.form.estimated_cost" [controlId]="fid('estimated_cost')" hint="common.hint_max_amount" [error]="serverFieldError(error(), 'estimated_cost')">
           <p-inputnumber [inputId]="fid('estimated_cost')" [ngModel]="model.estimated_cost" name="estimated_cost" (ngModelChange)="set('estimated_cost', $event)" mode="decimal" [minFractionDigits]="2" [min]="0" styleClass="u-full" />
         </app-field>
         <app-field label="procurement.purchase.form.needed_by" [controlId]="fid('needed_by')" [error]="serverFieldError(error(), 'needed_by')">

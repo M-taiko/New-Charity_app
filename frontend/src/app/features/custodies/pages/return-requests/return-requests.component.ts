@@ -19,7 +19,8 @@ import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
-import { TableColDirective, DataTableComponent, TableBodyDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
+import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
@@ -63,13 +64,13 @@ interface ReturnRequestParams {
   standalone: true,
   imports: [AppTabsComponent, SectionNavComponent, 
     TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
-    PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
     FormDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, FieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'custody.return_requests.title' | translate" [subtitle]="'custody.return_requests.subtitle' | translate">
+    <app-page-header [title]="'custody.return_requests.title' | translate" [subtitle]="'custody.return_requests.subtitle' | translate" accent="custodies" iconName="wallet">
       <div actions class="u-flex u-gap-2">
 
       </div>
@@ -81,7 +82,7 @@ interface ReturnRequestParams {
       @if (data.value(); as page) {
         @if (hasSummary()) {
           <div class="kpi-grid">
-            <app-stat-tile [label]="'custody.return_requests.tab_pending'" [value]="summaryValue('pending_count')" />
+            <app-stat-tile [label]="'custody.return_requests.tab_pending'" [value]="summaryValue('pending_count')" accent="custodies" iconName="wallet" />
             <app-stat-tile [label]="'custody.return_requests.tab_approved'" [value]="summaryValue('approved_count')" />
             <app-stat-tile [label]="'custody.return_requests.tab_rejected'" [value]="summaryValue('rejected_count')" />
             <app-stat-tile [label]="'custody.return_requests.total_amount'" [value]="summaryValue('total_pending_amount')" [money]="true" />
@@ -91,88 +92,36 @@ interface ReturnRequestParams {
       <!-- T6-11/T6-30: the status chips become tabs — no page-level filter markup -->
       <app-tabs id="return-requests" [tabs]="statusTabDefs" [(active)]="statusTab" (tabChange)="setParam('status', $event)" />
 
-      <app-data-table
+      <app-data-table listUrl="/custodies/return-requests"
         [tableKey]="tableKey"
         [columns]="columns()"
         [rows]="page.data"
         [total]="page.meta.total"
         [perPage]="params().per_page"
         [loading]="data.isLoading()"
+        [filters]="metaFilters()"
+        (queryChange)="onQuery($event)"
+
         (pageChange)="onPage($event)"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="custody_id">
-              <a routerLink="/custodies/{{ row.custody_id }}" class="u-bidi">#{{ row.custody_id }}</a>
-            </td>
-            <td appTableCol="agent">{{ row.agent ?? '—' }}</td>
-            <td appTableCol="requested_by">{{ row.requested_by ?? '—' }}</td>
-            <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
-            <td appTableCol="reason">{{ row.reason ?? '—' }}</td>
-            <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="return_request" /></td>
-            <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime }}</span></td>
-            <td appTableCol="approved_by">{{ row.approved_by ?? '—' }}</td>
-            <td appTableCol="approved_at"><span class="u-bidi">{{ row.approved_at | datetime }}</span></td>
-            <td appTableCol="rejection_reason">{{ row.rejection_reason ?? '—' }}</td>
-            @if (canDecide()) {
-              <td appTableCol="actions">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </td>
-            }
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.return_requests.col_number' | translate }}</span>
-              <a routerLink="/custodies/{{ row.custody_id }}" class="u-bidi">#{{ row.custody_id }}</a>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.return_requests.col_agent' | translate }}</span>
-              {{ row.agent ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.return_requests.col_requested_by' | translate }}</span>
-              {{ row.requested_by ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-              <span class="u-bidi">{{ row.amount | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.return_requests.col_reason' | translate }}</span>
-              {{ row.reason ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.status' | translate }}</span>
-              <app-status-stamp [status]="row.status" namespace="return_request" />
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.date' | translate }}</span>
-              <span class="u-bidi">{{ row.created_at | datetime }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.return_requests.col_approved_by' | translate }}</span>
-              {{ row.approved_by ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.return_requests.col_approved_at' | translate }}</span>
-              <span class="u-bidi">{{ row.approved_at | datetime }}</span>
-            </div>
-            @if (row.rejection_reason) {
-              <div class="ledger-table__stacked-item">
-                <span class="ledger-table__stacked-label">{{ 'custody.return_requests.col_rejection' | translate }}</span>
-                {{ row.rejection_reason }}
-              </div>
-            }
-            @if (canDecide() && row.status === 'pending') {
-              <div class="ledger-table__stacked-item">
-                <app-row-actions [actions]="actionsFor(row)" />
-              </div>
-            }
-          </tr>
+        <ng-template appCell="custody_id" let-row><a routerLink="/custodies/{{ row.custody_id }}" class="u-bidi">#{{ row.custody_id }}</a></ng-template>
+        <ng-template appCell="agent" let-row>{{ row.agent ?? '—' }}</ng-template>
+        <ng-template appCell="requested_by" let-row>{{ row.requested_by ?? '—' }}</ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="reason" let-row>{{ row.reason ?? '—' }}</ng-template>
+        <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="return_request" /></ng-template>
+        <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+        <ng-template appCell="approved_by" let-row>{{ row.approved_by ?? '—' }}</ng-template>
+        <ng-template appCell="approved_at" let-row><span class="u-bidi">{{ row.approved_at | datetime }}</span></ng-template>
+        <ng-template appCell="rejection_reason" let-row>{{ row.rejection_reason ?? '—' }}</ng-template>
+        <ng-template appCell="actions" let-row>
+          @if (canDecide()) {
+            <app-row-actions [actions]="actionsFor(row)" />
+          }
         </ng-template>
         <div empty>
-          <app-empty-state [title]="'custody.return_requests.empty' | translate" [text]="'common.no_data' | translate" />
+          <app-empty-state [title]="'custody.return_requests.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
         </div>
       </app-data-table>
       }
@@ -228,7 +177,7 @@ export class ReturnRequestsPage {
     { field: 'custody_id', header: 'custody.return_requests.col_number', sortable: true },
     { field: 'agent', header: 'custody.return_requests.col_agent', sortable: true },
     { field: 'requested_by', header: 'custody.return_requests.col_requested_by', sortable: true },
-    { field: 'amount', header: 'common.amount', sortable: true },
+    { field: 'amount', header: 'common.amount', sortable: true, numeric: true },
     { field: 'reason', header: 'custody.return_requests.col_reason', sortable: true },
     { field: 'status', header: 'common.status', sortable: true },
     { field: 'created_at', header: 'common.date', sortable: true },
@@ -252,6 +201,25 @@ export class ReturnRequestsPage {
 
   params = signal<ReturnRequestParams>({ page: 1, per_page: 25, q: '', status: 'all' });
 
+  /** the active filter[...] values — forwarded verbatim (T7-07 server contract) */
+  filterBag: Record<string, unknown> = {};
+
+  /** T7-07: the endpoint's declared allowlist drives the table's Filters control */
+  readonly metaFilters = computed(() => apiFilterDefs(this.data.value()?.meta));
+
+  /** the table emits the full query — filters reach the server (T7-07) */
+  onQuery(query: TableQuery): void {
+    this.filterBag = query.filters;
+    this.params.update((p) => ({
+      ...p,
+      page: query.page,
+      per_page: query.perPage,
+      sort: query.sort !== '' ? query.sort : p.sort,
+      q: query.q,
+    }));
+    this.data.reload();
+  }
+
   /** T6-11: status tabs drive the same `status` query param */
   statusTab = signal<string>('all');
   readonly statusTabDefs: AppTab[] = [
@@ -263,7 +231,7 @@ export class ReturnRequestsPage {
 
   data = resource<ListResponse<Row>, unknown>({
     loader: () =>
-      firstValueFrom(this.http.get<ListResponse<Row>>('/custodies/return-requests', { params: cleanParams(this.params()) })),
+      firstValueFrom(this.http.get<ListResponse<Row>>('/custodies/return-requests', { params: { ...cleanParams(this.params()), ...filterParams(this.filterBag) } })),
   });
 
   /** treasuries for the approve-with-treasury select */

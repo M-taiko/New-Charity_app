@@ -20,6 +20,7 @@ import { DirectionPickerComponent } from '@shared/ui/direction-picker/direction-
 import { LineItemsEditorComponent } from '@shared/ui/line-items-editor/line-items-editor.component';
 import { AttachmentFieldComponent } from '@shared/ui/attachment-field/attachment-field.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import type { ActionResponse, DirectionNode, ItemResponse, ListResponse } from '@shared/models/api.models';
 
 interface ApprovedCase { id: number; name: string }
@@ -32,10 +33,10 @@ interface ApprovedCase { id: number; name: string }
 @Component({
   selector: 'app-edit-request-form',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, AsyncPageComponent, FormSectionComponent, FieldComponent, DirectionPickerComponent, LineItemsEditorComponent, AttachmentFieldComponent, KeyValueListComponent],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, AsyncPageComponent, FormSectionComponent, FieldComponent, DirectionPickerComponent, LineItemsEditorComponent, AttachmentFieldComponent, KeyValueListComponent, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'expense.form.request_title' | translate">
+    <app-page-header [title]="'expense.form.request_title' | translate" accent="expenses" iconName="receipt-2">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" [routerLink]="['/expenses', id()]" />
       </div>
@@ -64,14 +65,14 @@ interface ApprovedCase { id: number; name: string }
               <p-select appendTo="body" inputId="ercase" [options]="caseOptions()" optionLabel="name" optionValue="id" [(ngModel)]="socialCaseId" name="social_case_id" [filter]="true" required styleClass="u-full" [placeholder]="'expense.form.case_placeholder' | translate" />
             </app-field>
           }
-          <app-field label="expense.form.amount" controlId="amount" [required]="true" [error]="serverFieldError(error(), 'amount')">
+          <app-field label="expense.form.amount" controlId="amount" [required]="true" hint="common.hint_max_amount" [error]="serverFieldError(error(), 'amount')">
             <p-inputnumber inputId="amount" name="amount" [(ngModel)]="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" required styleClass="u-full" />
           </app-field>
           <app-field label="expense.form.date" controlId="date" [error]="serverFieldError(error(), 'expense_date')">
             <p-datepicker appendTo="body" inputId="date" name="date" [(ngModel)]="expenseDate" dateFormat="yy-mm-dd" [showIcon]="true" styleClass="u-full" />
           </app-field>
           <app-field
-            label="expense.form.direction" [required]="true"
+            label="expense.form.direction" [required]="true" hint="common.hint_direction_full"
             [error]="directionError() ? ('direction.picker.incomplete' | translate) : null"
           >
             @if (tree().length) { <app-direction-picker #picker [tree]="tree()" (selectionChange)="onDirection($event)" idBase="editreq" /> }
@@ -100,7 +101,7 @@ interface ApprovedCase { id: number; name: string }
         </app-form-section>
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
-          <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" [routerLink]="['/expenses', id()]" />
+          <app-action-button kind="back" label="common.back" [route]="['/expenses', id()]" />
           <p-button type="submit" [label]="'expense.form.submit_request' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
         </div>
       </form>

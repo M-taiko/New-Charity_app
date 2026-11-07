@@ -48,6 +48,29 @@
   }
 }
 
+/* T7-09: the active indicator carries the module accent — each module is
+   recognizable in navigation as in headers and tiles, light and dark */
+$section-nav-accent: (
+  custodies: var(--accent-custodies),
+  expenses: var(--accent-expenses),
+  treasury: var(--accent-treasury),
+  cases: var(--accent-cases),
+  hr: var(--accent-hr),
+  tasks: var(--accent-tasks),
+  procurement: var(--accent-procurement),
+  reports: var(--accent-reports),
+);
+
+@each $module, $accent in $section-nav-accent {
+  .section-nav--#{$module} .section-nav__link--active {
+    color: $accent;
+
+    &::after {
+      border-block-end-color: $accent;
+    }
+  }
+}
+
 @media print {
   .section-nav {
     display: none;

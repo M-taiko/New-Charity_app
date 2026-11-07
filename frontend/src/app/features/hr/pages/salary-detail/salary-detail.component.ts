@@ -28,6 +28,7 @@ import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.componen
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface SalaryAllowance {
   id: number;
@@ -64,7 +65,7 @@ interface SalaryDetail {
 @Component({
   selector: 'app-salary-detail',
   standalone: true,
-  imports: [MenuModule, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, InputNumberModule, InputTextModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, MoneyPipe],
+  imports: [MenuModule, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, InputNumberModule, InputTextModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .allowance-list {
@@ -79,22 +80,22 @@ interface SalaryDetail {
           <!-- T6-10: one sticky action bar — primary decision first -->
           <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
             @if (item.status === 'calculated') {
-              <p-button [label]="'hr.salaries.detail.approve' | translate" size="small" severity="success" (onClick)="act('approve')" [loading]="sending()" />
+              <app-action-button kind="approve" label="hr.salaries.detail.approve" size="small" (action)="act('approve')" [loading]="sending()" />
             }
             @if (item.status === 'approved') {
-              <p-button [label]="'hr.salaries.detail.record_expense' | translate" size="small" severity="success" (onClick)="act('record-expense')" [loading]="sending()" />
+              <app-action-button kind="recordExpense" label="hr.salaries.detail.record_expense" size="small" (action)="act('record-expense')" [loading]="sending()" />
             }
           </div>
         <app-print-sheet [title]="'hr.salaries.detail.title' | translate">
-          <app-page-header [title]="itemTitle(item)">
+          <app-page-header [title]="itemTitle(item)" accent="hr" iconName="briefcase">
             <div actions class="u-flex u-gap-2 u-flex-wrap">
               <!-- T6-10: max 3 visible buttons; edit/allowance in the More menu -->
               @if (item.status !== 'paid') {
-                <p-button [label]="'common.more' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="salaryMoreMenu.toggle($event)" />
+                <app-action-button kind="more" label="common.more" size="small" (action)="salaryMoreMenu.toggle($event)" />
                 <p-menu #salaryMoreMenu appendTo="body" [model]="moreMenuItems()" popup="true" />
               }
-              <p-button [label]="'hr.salaries.detail.payslip' | translate" size="small" severity="secondary" [outlined]="true" (onClick)="downloadPayslip()" />
-              <p-button [label]="'common.back_to_list' | translate" size="small" severity="secondary" [outlined]="true" routerLink="/hr/salaries" />
+              <app-action-button kind="download" label="hr.salaries.detail.payslip" size="small" (action)="downloadPayslip()" />
+              <app-action-button kind="back" label="common.back_to_list" size="small" [route]="['/hr/salaries']" />
             </div>
           </app-page-header>
           <div class="u-mb-4"><app-status-stamp [status]="item.status" namespace="salary" [large]="true" /></div>

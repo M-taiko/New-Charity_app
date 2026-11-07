@@ -45,6 +45,7 @@ const PROTECTED = [
   /^case\.enums\./, // social-case pages: label('case.enums.' + group + '.' + value)
   /^transfer\.list\.tabs\./, // transfers list: 'transfer.list.tabs.' + tab.value
   /^errors\.codes\./, // toasts keyed by backend error code
+  /^filter\./, // meta.filters labels built server-side (ApiList::filterDefs, T7-07)
   /\.(one|other|zero|two|few|many)$/, // plural.ts variants
 ];
 

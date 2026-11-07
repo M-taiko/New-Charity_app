@@ -25,7 +25,8 @@ import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse } from '@shared/models/api.models';
 import type { TableColumn } from '@shared/ui/data-table/data-table.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface CaseExpense { id: number; user: string | null; amount: string; description: string | null; date: string | null }
 interface CaseFamilyMember { id: number; name: string; relation: string | null; gender: string | null; phone: string | null; status: string | null }
@@ -77,21 +78,21 @@ interface CaseDetail {
   standalone: true,
   imports: [AppTabsComponent, 
     TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent,
-    AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    AsyncPageComponent, DataTableComponent, TableCellDirective, 
     KeyValueListComponent, StatusStampComponent, StatTileComponent, PrintSheetComponent,
-    ReasonDialogComponent, ConfirmDeleteComponent, RowActionsComponent, MoneyPipe, DatetimePipe,
+    ReasonDialogComponent, ConfirmDeleteComponent, RowActionsComponent, MoneyPipe, DatetimePipe, ActionButtonComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'case.detail.title' | translate">
-      <app-page-header [title]="headerTitle()">
+      <app-page-header [title]="headerTitle()" accent="cases" iconName="heart-handshake">
         <div actions class="u-flex u-gap-2 u-flex-wrap">
           <!-- T6-10: max 3 visible buttons; decisions live in the sticky bar -->
           @if (canManage()) {
-            <p-button [label]="'common.edit' | translate" size="small" severity="secondary" [outlined]="true" [routerLink]="['/cases', id(), 'edit']" />
+            <app-action-button kind="edit" label="common.edit" size="small" [route]="['/cases', id(), 'edit']" />
           }
           @if (canManage()) {
-            <p-button [label]="'common.delete' | translate" size="small" severity="danger" [outlined]="true" (onClick)="openCaseDelete()" />
+            <app-action-button kind="delete" label="common.delete" size="small" (action)="openCaseDelete()" />
           }
           <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/cases" />
         </div>
@@ -102,20 +103,21 @@ interface CaseDetail {
           <!-- T6-10: one sticky action bar — primary decision first, destructive-free ordering -->
           <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
             @if (canReview() && item.status === 'pending') {
-              <p-button [label]="'case.detail.approve' | translate" size="small" severity="success" (onClick)="act('approve')" [loading]="sending()" />
+              <app-action-button kind="approve" label="case.detail.approve" size="small" (action)="act('approve')" [loading]="sending()" />
             }
             @if (canReview() && item.status === 'pending') {
-              <p-button [label]="'case.detail.reject' | translate" size="small" severity="danger" [outlined]="true" (onClick)="openReject()" [loading]="sending()" />
+              <app-action-button kind="reject" label="case.detail.reject" size="small" (action)="openReject()" [loading]="sending()" />
             }
             @if (canManage()) {
-              <p-button [label]="item.is_active ? ('case.actions.deactivate' | translate) : ('case.actions.activate' | translate)"
-                        size="small" severity="warn" [outlined]="true" (onClick)="act('toggle-active')" [loading]="sending()" />
+              <app-action-button [kind]="item.is_active ? 'deactivate' : 'activate'"
+                        [label]="item.is_active ? 'case.actions.deactivate' : 'case.actions.activate'"
+                        size="small" (action)="act('toggle-active')" [loading]="sending()" />
             }
           </div>
           <div class="u-mb-4"><app-status-stamp [status]="item.status" namespace="social_case" [large]="true" /></div>
 
           <div class="kpi-grid">
-            <app-stat-tile [label]="'case.form.monthly_income'" [value]="item.monthly_income" [money]="true" />
+            <app-stat-tile [label]="'case.form.monthly_income'" [value]="item.monthly_income" [money]="true" accent="cases" iconName="heart-handshake" />
             <app-stat-tile [label]="'case.form.monthly_expenses'" [value]="item.monthly_expenses" [money]="true" />
             <app-stat-tile [label]="'case.detail.total_spent'" [value]="item.total_spent" [money]="true" />
             <app-stat-tile [label]="'case.form.family_members_count'" [value]="item.family_members_count" />
@@ -172,15 +174,11 @@ interface CaseDetail {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'case.detail.expenses' | translate }}</span></div>
             <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="expenseCols" [rows]="item.expenses" [emptyLabel]="'case.detail.empty_expenses'">
-              <ng-template appTableBody let-row>
-                <tr class="ledger-table__row">
-                  <td appTableCol="id"><a [routerLink]="['/expenses', row.id]" class="u-bidi">#{{ row.id }}</a></td>
-                  <td appTableCol="user">{{ row.user ?? '—' }}</td>
-                  <td appTableCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
-                  <td appTableCol="date"><span class="u-bidi">{{ row.date | datetime: false }}</span></td>
-                  <td appTableCol="description">{{ row.description ?? '—' }}</td>
-                </tr>
-              </ng-template>
+              <ng-template appCell="id" let-row><a [routerLink]="['/expenses', row.id]" class="u-bidi">#{{ row.id }}</a></ng-template>
+              <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
+              <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+              <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime: false }}</span></ng-template>
+              <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
             </app-data-table>
           </section>
 
@@ -190,15 +188,11 @@ interface CaseDetail {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'case.detail.family_members' | translate }} ({{ item.family_members.length }})</span></div>
             <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="familyCols" [rows]="item.family_members" [emptyLabel]="'case.modal.empty_family'">
-              <ng-template appTableBody let-row let-index="index">
-                <tr class="ledger-table__row">
-                  <td appTableCol="index" class="u-bidi">{{ index + 1 }}</td>
-                  <td appTableCol="name">{{ row.name }}</td>
-                  <td appTableCol="relation">{{ label('case.enums.relation.' + row.relation) }}</td>
-                  <td appTableCol="gender">{{ label('case.enums.gender.' + row.gender) }}</td>
-                  <td appTableCol="phone"><span class="u-bidi">{{ row.phone ?? '—' }}</span></td>
-                </tr>
-              </ng-template>
+              <ng-template appCell="index" let-row let-index="index"><span class="u-bidi">{{ index + 1 }}</span></ng-template>
+              <ng-template appCell="name" let-row let-index="index">{{ row.name }}</ng-template>
+              <ng-template appCell="relation" let-row let-index="index">{{ label('case.enums.relation.' + row.relation) }}</ng-template>
+              <ng-template appCell="gender" let-row let-index="index">{{ label('case.enums.gender.' + row.gender) }}</ng-template>
+              <ng-template appCell="phone" let-row let-index="index"><span class="u-bidi">{{ row.phone ?? '—' }}</span></ng-template>
             </app-data-table>
           </section>
 

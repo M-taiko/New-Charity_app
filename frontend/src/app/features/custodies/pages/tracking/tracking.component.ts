@@ -13,7 +13,7 @@ import { AutoRefreshComponent } from '@shared/ui/auto-refresh/auto-refresh.compo
 import type { TableFilterDef } from '@shared/lib/table-filters';
 import type { AppTab } from '@shared/ui/tabs/tabs.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { DataTableComponent, TableBodyDirective, TableColDirective } from '@shared/ui/data-table/data-table.component';
+import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
@@ -83,12 +83,12 @@ interface CustodyMovements {
   selector: 'app-custody-tracking',
   standalone: true,
   imports: [SectionNavComponent, 
-    ContentDialogComponent, AppTabsComponent, AutoRefreshComponent, TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableBodyDirective, TableColDirective, RowActionsComponent, StatTileComponent, DataTableComponent, TableBodyDirective, TableColDirective,
+    ContentDialogComponent, AppTabsComponent, AutoRefreshComponent, TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, RowActionsComponent, StatTileComponent, DataTableComponent, 
     EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'custody.tracking.title' | translate">
+    <app-page-header [title]="'custody.tracking.title' | translate" accent="custodies" iconName="wallet">
       <div actions class="u-flex u-gap-2">
         <p-button [label]="'custody.list.create' | translate" size="small" routerLink="/custodies/new" />
       </div>
@@ -99,7 +99,7 @@ interface CustodyMovements {
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'custody.tracking.total'" [value]="summaryValue('total_custodies')" />
+          <app-stat-tile [label]="'custody.tracking.total'" [value]="summaryValue('total_custodies')" accent="custodies" iconName="wallet" />
           <app-stat-tile [label]="'custody.tracking.active'" [value]="summaryValue('active')" />
           <app-stat-tile [label]="'custody.tracking.pending'" [value]="summaryValue('pending')" />
           <app-stat-tile [label]="'custody.tracking.rejected'" [value]="summaryValue('rejected')" />
@@ -118,49 +118,15 @@ interface CustodyMovements {
         [perPage]="perPage"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="agent">{{ row.agent?.name ?? '—' }}</td>
-            <td appTableCol="count" class="ledger-table__cell-num"><span class="u-bidi">{{ row.count }}</span></td>
-            <td appTableCol="total_amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.total_amount | money }}</span></td>
-            <td appTableCol="transferred_in" class="ledger-table__cell-num"><span class="u-bidi">{{ row.transferred_in | money }}</span></td>
-            <td appTableCol="spent" class="ledger-table__cell-num"><span class="u-bidi">{{ row.spent | money }}</span></td>
-            <td appTableCol="returned" class="ledger-table__cell-num"><span class="u-bidi">{{ row.returned | money }}</span></td>
-            <td appTableCol="remaining" class="ledger-table__cell-num"><span class="u-bidi">{{ row.remaining | money }}</span></td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.tracking.col_agent' | translate }}</span>
-              {{ row.agent?.name ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.tracking.count' | translate }}</span>
-              <span class="u-bidi">{{ row.count }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-              <span class="u-bidi">{{ row.total_amount | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_transferred_in' | translate }}</span>
-              <span class="u-bidi">{{ row.transferred_in | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.tracking.spent' | translate }}</span>
-              <span class="u-bidi">{{ row.spent | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.tracking.returned' | translate }}</span>
-              <span class="u-bidi">{{ row.returned | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.tracking.remaining' | translate }}</span>
-              <span class="u-bidi">{{ row.remaining | money }}</span>
-            </div>
-          </tr>
-        </ng-template>
+        <ng-template appCell="agent" let-row>{{ row.agent?.name ?? '—' }}</ng-template>
+        <ng-template appCell="count" let-row><span class="u-bidi">{{ row.count }}</span></ng-template>
+        <ng-template appCell="total_amount" let-row><span class="u-bidi">{{ row.total_amount | money }}</span></ng-template>
+        <ng-template appCell="transferred_in" let-row><span class="u-bidi">{{ row.transferred_in | money }}</span></ng-template>
+        <ng-template appCell="spent" let-row><span class="u-bidi">{{ row.spent | money }}</span></ng-template>
+        <ng-template appCell="returned" let-row><span class="u-bidi">{{ row.returned | money }}</span></ng-template>
+        <ng-template appCell="remaining" let-row><span class="u-bidi">{{ row.remaining | money }}</span></ng-template>
         <div empty>
-          <app-empty-state [title]="'custody.tracking.empty' | translate" [text]="'common.no_data' | translate" />
+          <app-empty-state [title]="'custody.tracking.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
         </div>
       </app-data-table>
 
@@ -177,68 +143,17 @@ interface CustodyMovements {
         [perPage]="perPage"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap u-justify-end"><app-auto-refresh key="tracking" (refresh)="data.reload()" /></div>
-        <ng-template appTableBody let-row>
-          <tr class="ledger-table__row">
-            <td appTableCol="id" class="ledger-table__cell-num"><span class="u-bidi">#{{ row.id }}</span></td>
-            <td appTableCol="agent">{{ row.agent ?? '—' }}</td>
-            <td appTableCol="created_at"><span class="u-bidi">{{ row.created_at | datetime: false }}</span></td>
-            <td appTableCol="amount" class="ledger-table__cell-num"><span class="u-bidi">{{ row.amount | money }}</span></td>
-            <td appTableCol="transferred_in" class="ledger-table__cell-num"><span class="u-bidi">{{ row.transferred_in | money }}</span></td>
-            <td appTableCol="transferred_out" class="ledger-table__cell-num"><span class="u-bidi">{{ row.transferred_out | money }}</span></td>
-            <td appTableCol="spent" class="ledger-table__cell-num"><span class="u-bidi">{{ row.spent | money }}</span></td>
-            <td appTableCol="returned" class="ledger-table__cell-num"><span class="u-bidi">{{ row.returned | money }}</span></td>
-            <td appTableCol="remaining" class="ledger-table__cell-num"><span class="u-bidi">{{ row.remaining | money }}</span></td>
-            <td appTableCol="status"><app-status-stamp [status]="row.status" namespace="custody_status" /></td>
-            <td appTableCol="actions">
-              <app-row-actions [actions]="custodyActions(row)" />
-            </td>
-          </tr>
-          <tr class="ledger-table__stacked">
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.return_requests.col_number' | translate }}</span>
-              <span class="u-bidi">#{{ row.id }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.tracking.col_agent' | translate }}</span>
-              {{ row.agent ?? '—' }}
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.date' | translate }}</span>
-              <span class="u-bidi">{{ row.created_at | datetime: false }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.amount' | translate }}</span>
-              <span class="u-bidi">{{ row.amount | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_transferred_in' | translate }}</span>
-              <span class="u-bidi">{{ row.transferred_in | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.list.col_transferred_out' | translate }}</span>
-              <span class="u-bidi">{{ row.transferred_out | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.tracking.spent' | translate }}</span>
-              <span class="u-bidi">{{ row.spent | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.tracking.returned' | translate }}</span>
-              <span class="u-bidi">{{ row.returned | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'custody.tracking.remaining' | translate }}</span>
-              <span class="u-bidi">{{ row.remaining | money }}</span>
-            </div>
-            <div class="ledger-table__stacked-item">
-              <span class="ledger-table__stacked-label">{{ 'common.status' | translate }}</span>
-              <app-status-stamp [status]="row.status" namespace="custody_status" />
-            </div>
-            <div class="ledger-table__stacked-item">
-              <app-row-actions [actions]="custodyActions(row)" />
-            </div>
-          </tr>
-        </ng-template>
+        <ng-template appCell="id" let-row><span class="u-bidi">#{{ row.id }}</span></ng-template>
+        <ng-template appCell="agent" let-row>{{ row.agent ?? '—' }}</ng-template>
+        <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime: false }}</span></ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="transferred_in" let-row><span class="u-bidi">{{ row.transferred_in | money }}</span></ng-template>
+        <ng-template appCell="transferred_out" let-row><span class="u-bidi">{{ row.transferred_out | money }}</span></ng-template>
+        <ng-template appCell="spent" let-row><span class="u-bidi">{{ row.spent | money }}</span></ng-template>
+        <ng-template appCell="returned" let-row><span class="u-bidi">{{ row.returned | money }}</span></ng-template>
+        <ng-template appCell="remaining" let-row><span class="u-bidi">{{ row.remaining | money }}</span></ng-template>
+        <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="custody_status" /></ng-template>
+        <ng-template appCell="actions" let-row><app-row-actions [actions]="custodyActions(row)" /></ng-template>
         <div empty>
           <app-empty-state [title]="'custody.tracking.empty' | translate" [text]="'common.no_data' | translate" />
         </div>
@@ -264,15 +179,11 @@ interface CustodyMovements {
           <app-stat-tile [label]="'custody.tracking.remaining'" [value]="m.remaining" [money]="true" />
         </div>
         <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" class="u-mt-4" [columns]="movementCols" [rows]="m.transactions">
-          <ng-template appTableBody let-row>
-            <tr class="ledger-table__row">
-              <td appTableCol="date" class="u-bidi">{{ row.date | datetime: false }}</td>
-              <td appTableCol="type">{{ row.type | enumLabel: 'transaction_type' }}</td>
-              <td appTableCol="description">{{ row.description ?? '—' }}</td>
-              <td appTableCol="user">{{ row.user ?? '—' }}</td>
-              <td appTableCol="amount"><span class="u-bidi">{{ row.amount | money }}</span></td>
-            </tr>
-          </ng-template>
+          <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime: false }}</span></ng-template>
+          <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}</ng-template>
+          <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
+          <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
+          <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
         </app-data-table>
       }
     </app-content-dialog>
@@ -292,24 +203,24 @@ export class TrackingPage {
 
   readonly agentColumns = [
     { field: 'agent', searchField: 'agent.name', header: 'custody.tracking.col_agent', sortable: false },
-    { field: 'count', header: 'custody.tracking.count', sortable: false },
-    { field: 'total_amount', header: 'common.amount', sortable: false },
-    { field: 'transferred_in', header: 'custody.list.col_transferred_in', sortable: false },
-    { field: 'spent', header: 'custody.tracking.spent', sortable: false },
-    { field: 'returned', header: 'custody.tracking.returned', sortable: false },
-    { field: 'remaining', header: 'custody.tracking.remaining', sortable: false },
+    { field: 'count', header: 'custody.tracking.count', sortable: false, numeric: true },
+    { field: 'total_amount', header: 'common.amount', sortable: false, numeric: true },
+    { field: 'transferred_in', header: 'custody.list.col_transferred_in', sortable: false, numeric: true },
+    { field: 'spent', header: 'custody.tracking.spent', sortable: false, numeric: true },
+    { field: 'returned', header: 'custody.tracking.returned', sortable: false, numeric: true },
+    { field: 'remaining', header: 'custody.tracking.remaining', sortable: false, numeric: true },
   ];
 
   readonly custodyColumns = [
-    { field: 'id', header: 'custody.return_requests.col_number', sortable: false },
+    { field: 'id', header: 'custody.return_requests.col_number', sortable: false, numeric: true },
     { field: 'agent', header: 'custody.tracking.col_agent', sortable: false },
     { field: 'created_at', header: 'common.date', sortable: false },
-    { field: 'amount', header: 'common.amount', sortable: false },
-    { field: 'transferred_in', header: 'custody.list.col_transferred_in', sortable: false },
-    { field: 'transferred_out', header: 'custody.list.col_transferred_out', sortable: false },
-    { field: 'spent', header: 'custody.tracking.spent', sortable: false },
-    { field: 'returned', header: 'custody.tracking.returned', sortable: false },
-    { field: 'remaining', header: 'custody.tracking.remaining', sortable: false },
+    { field: 'amount', header: 'common.amount', sortable: false, numeric: true },
+    { field: 'transferred_in', header: 'custody.list.col_transferred_in', sortable: false, numeric: true },
+    { field: 'transferred_out', header: 'custody.list.col_transferred_out', sortable: false, numeric: true },
+    { field: 'spent', header: 'custody.tracking.spent', sortable: false, numeric: true },
+    { field: 'returned', header: 'custody.tracking.returned', sortable: false, numeric: true },
+    { field: 'remaining', header: 'custody.tracking.remaining', sortable: false, numeric: true },
     { field: 'status', header: 'common.status', sortable: false },
     { field: 'actions', header: 'common.actions', sortable: false },
   ];

@@ -24,6 +24,7 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ActionResponse, DirectionNode, ItemResponse} from '@shared/models/api.models';
 import type { ListResponse } from '@shared/models/api.models';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface UserCustody { id: number; reason: string; remaining: string; total_available: string }
 interface ApprovedCase { id: number; name: string }
@@ -38,7 +39,7 @@ interface ApprovedCase { id: number; name: string }
 @Component({
   selector: 'app-expense-form',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, AsyncPageComponent, FormSectionComponent, FieldComponent, DirectionPickerComponent, LineItemsEditorComponent, AttachmentFieldComponent, MoneyPipe, DatetimePipe],
+  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, AsyncPageComponent, FormSectionComponent, FieldComponent, DirectionPickerComponent, LineItemsEditorComponent, AttachmentFieldComponent, MoneyPipe, DatetimePipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (isEdit() && safeExisting(); as e) {
@@ -51,8 +52,7 @@ interface ApprovedCase { id: number; name: string }
     }
     <app-page-header
       [title]="isEdit() ? ('expense.form.edit_title' | translate) : ('expense.form.create_title' | translate)"
-      [subtitle]="isEdit() && safeExisting() ? '#' + safeExisting()!.id : ''"
-    >
+      [subtitle]="isEdit() && safeExisting() ? '#' + safeExisting()!.id : ''" accent="expenses" iconName="receipt-2">
       <div actions>
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/expenses" />
       </div>
@@ -65,7 +65,7 @@ interface ApprovedCase { id: number; name: string }
               <p-select appendTo="body" inputId="source" [options]="sourceOptions" optionLabel="label" optionValue="value" [(ngModel)]="source" name="source" styleClass="u-full" (ngModelChange)="onSource()" />
             </app-field>
             @if (source() === 'custody') {
-              <app-field label="expense.form.custody" controlId="custody" [required]="true" [error]="serverFieldError(error(), 'custody_id')">
+              <app-field label="expense.form.custody" controlId="custody" [required]="true" hint="common.hint_choose_custody" [error]="serverFieldError(error(), 'custody_id')">
                 <p-select appendTo="body" inputId="custody" [options]="custodyOptions()" optionLabel="reason" optionValue="id" [(ngModel)]="custodyId" name="custody" required styleClass="u-full" />
                 @if (selectedCustody(); as c) {
                   <span class="field__hint u-bidi">
@@ -76,8 +76,16 @@ interface ApprovedCase { id: number; name: string }
                 }
               </app-field>
             } @else {
-              <app-field label="expense.form.treasury" controlId="treasury" [required]="true" [error]="serverFieldError(error(), 'treasury_id')">
-                <p-select appendTo="body" inputId="treasury" [options]="treasuryOptions()" optionLabel="name" optionValue="id" [(ngModel)]="treasuryId" name="treasury" [required]="source() === 'treasury'" styleClass="u-full" />
+              <app-field label="expense.form.treasury" controlId="treasury" [required]="true" hint="common.hint_treasury_balance" [error]="serverFieldError(error(), 'treasury_id')">
+                <p-select appendTo="body" inputId="treasury" [options]="treasuryOptions()" optionLabel="name" optionValue="id" [(ngModel)]="treasuryId" name="treasury" [required]="source() === 'treasury'" styleClass="u-full">
+                <!-- T7-11: the available balance rides every option's text -->
+                <ng-template let-option #item>
+                  <div class="u-flex-between">
+                    <span>{{ option.name }}</span>
+                    <span class="u-bidi u-small">{{ option.balance | money }}</span>
+                  </div>
+                </ng-template>
+              </p-select>
               </app-field>
             }
           }
@@ -95,14 +103,14 @@ interface ApprovedCase { id: number; name: string }
           <app-field label="expense.form.date" controlId="date" [required]="true" [error]="serverFieldError(error(), 'expense_date')">
             <p-datepicker appendTo="body" inputId="date" name="date" [(ngModel)]="expenseDate" dateFormat="yy-mm-dd" [showIcon]="true" required styleClass="u-full" />
           </app-field>
-          <app-field label="expense.form.amount" controlId="amount" [required]="true" [error]="serverFieldError(error(), 'amount')">
+          <app-field label="expense.form.amount" controlId="amount" [required]="true" hint="common.hint_max_amount" [error]="serverFieldError(error(), 'amount')">
             <p-inputnumber inputId="amount" name="amount" [(ngModel)]="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" required styleClass="u-full" />
           </app-field>
         </app-form-section>
 
         <app-form-section title="expense.form.section_direction" class="u-mt-4">
           <app-field
-            label="expense.form.direction" [required]="true"
+            label="expense.form.direction" [required]="true" hint="common.hint_direction_full"
             [error]="directionError() ? ('direction.picker.incomplete' | translate) : null"
           >
             @if (directionTree().length) {
@@ -136,7 +144,7 @@ interface ApprovedCase { id: number; name: string }
 
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
-          <p-button [label]="'common.back' | translate" severity="secondary" [text]="true" routerLink="/expenses" />
+          <app-action-button kind="back" label="common.back" [route]="['/expenses']" />
           <p-button type="submit" [label]="'expense.form.submit' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
         </div>
       </form>
@@ -180,8 +188,8 @@ export class ExpenseFormPage {
     { label: this.translate.instant('enums.expense_type.social_case'), value: 'social_case' },
   ];
 
-  lookups = resource<{ direction_tree: DirectionNode[]; treasuries: { id: number; name: string }[] }, unknown>({
-    loader: () => firstValueFrom(this.http.get<ItemResponse<{ direction_tree: DirectionNode[]; treasuries: { id: number; name: string }[] }>>('/lookups')).then((r) => r.data),
+  lookups = resource<{ direction_tree: DirectionNode[]; treasuries: { id: number; name: string; balance: string }[] }, unknown>({
+    loader: () => firstValueFrom(this.http.get<ItemResponse<{ direction_tree: DirectionNode[]; treasuries: { id: number; name: string; balance: string }[] }>>('/lookups')).then((r) => r.data),
   });
 
   custodies = resource<UserCustody[], unknown>({
@@ -266,7 +274,7 @@ export class ExpenseFormPage {
     return this.custodies.value() ?? [];
   }
 
-  treasuryOptions(): { id: number; name: string }[] {
+  treasuryOptions(): { id: number; name: string; balance: string }[] {
     return this.lookups.value()?.treasuries ?? [];
   }
 

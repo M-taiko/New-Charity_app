@@ -22,10 +22,25 @@ export interface ChartSeries {
   value: number;
 }
 
+/** One rendered legend row — chip color follows the series index (T7-03). */
+export interface ChartLegendItem {
+  index: number;
+  label: string;
+  value: number;
+  percent: number;
+  color: string;
+  hidden: boolean;
+}
+
 /**
  * Titled chart card (plan 16.2). Chart.js loads lazily on the routes that
  * use it. The chart reacts to series() changes — when async data arrives,
  * the chart is created or updated. "View as table" is the a11y version.
+ *
+ * T7-03: the Chart.js canvas legend is always off; the legend is an HTML
+ * list under the chart (chip + label + value/percent) that wraps on narrow
+ * cards, truncates long labels with a title tooltip, and toggles series
+ * visibility on click. The same data drives the table view and print.
  */
 @Component({
   selector: 'app-chart-card',
@@ -47,7 +62,7 @@ export interface ChartSeries {
       </div>
 
       <div class="chart-card__body">
-        @if (series().length === 0) {
+        @if (visibleItems().length === 0) {
           <p class="u-muted">{{ 'common.no_data' | translate }}</p>
         } @else if (asTable()) {
           <table class="chart-card__table">
@@ -59,7 +74,7 @@ export interface ChartSeries {
               </tr>
             </thead>
             <tbody>
-              @for (row of tableRows(); track row.label) {
+              @for (row of visibleItems(); track row.index) {
                 <tr>
                   <td>{{ row.label }}</td>
                   <td class="u-bidi">{{ row.value | money: false }}</td>
@@ -69,8 +84,32 @@ export interface ChartSeries {
             </tbody>
           </table>
         } @else {
-          <div #host class="u-full" [style.height.px]="height()" style="position: relative;"></div>
+          <div class="chart-card__plot">
+            <div #host class="u-full" [style.height.px]="height()" style="position: relative;"></div>
+            @if (chartType() === 'doughnut') {
+              <span class="chart-card__total u-bidi" aria-hidden="true">{{ visibleTotal() | money: false }}</span>
+            }
+          </div>
           <app-chart-print-helper [canvas]="printCanvas()" />
+          <ul class="chart-legend">
+            @for (item of legendItems(); track item.index) {
+              <li>
+                <button
+                  type="button"
+                  class="chart-legend__item"
+                  [class.is-hidden]="item.hidden"
+                  [title]="item.label"
+                  [attr.aria-pressed]="!item.hidden"
+                  [attr.aria-label]="item.label + ' — ' + (item.value | money: false)"
+                  (click)="toggleSeries(item.index, $event)"
+                >
+                  <span class="chart-legend__chip" [style.background]="item.color"></span>
+                  <span class="chart-legend__label">{{ item.label }}</span>
+                  <span class="chart-legend__value u-bidi">{{ item.value | money: false }} · {{ item.percent }}%</span>
+                </button>
+              </li>
+            }
+          </ul>
         }
       </div>
     </div>
@@ -81,11 +120,14 @@ export class ChartCardComponent implements OnDestroy {
   title = input.required<string>();
   series = input.required<ChartSeries[]>();
   height = input(220);
-  chartType = input<'doughnut' | 'bar'>('doughnut');
+  chartType = input<'doughnut' | 'bar' | 'line'>('doughnut');
 
   private motion = inject(MotionService);
   private host = viewChild<ElementRef<HTMLDivElement>>('host');
   readonly asTable = signal(false);
+  /** indexes of series hidden via the legend toggle (T7-03) */
+  private readonly hidden = signal<ReadonlySet<number>>(new Set());
+  private prevSeries: readonly ChartSeries[] | null = null;
 
   // multi-hue, color-blind-safe series palette (T6-40) — 8 colors, ordered so
   // adjacent slices stay distinguishable in both themes
@@ -104,19 +146,36 @@ export class ChartCardComponent implements OnDestroy {
     this.asTable.set(!this.asTable());
   }
 
-  tableRows = computed(() => {
-    const total = this.series().reduce((sum, s) => sum + s.value, 0);
-    return this.series().map((s) => ({
+  /** legend rows for every series; percents are computed over the visible total */
+  legendItems = computed<ChartLegendItem[]>(() => {
+    const items = this.series();
+    const hidden = this.hidden();
+    const visible = items.filter((_, i) => !hidden.has(i));
+    const total = visible.reduce((sum, s) => sum + s.value, 0);
+    return items.map((s, i) => ({
+      index: i,
       label: s.label,
       value: s.value,
-      percent: total > 0 ? Math.round((s.value / total) * 100) : 0,
+      percent: total > 0 && !hidden.has(i) ? Math.round((s.value / total) * 100) : 0,
+      color: this.palette[i % this.palette.length],
+      hidden: hidden.has(i),
     }));
   });
 
+  visibleItems = computed(() => this.legendItems().filter((item) => !item.hidden));
+
+  visibleTotal = computed(() => this.visibleItems().reduce((sum, item) => sum + item.value, 0));
+
   constructor() {
-    // React to series changes: create or update chart when data arrives
+    // React to series/legend changes: create or update chart when data arrives.
     effect(async () => {
       const series = this.series();
+      // a fresh series payload resets the toggles — indexes may point at other rows
+      if (series !== this.prevSeries) {
+        this.hidden.set(new Set());
+        this.prevSeries = series;
+      }
+      const hidden = this.hidden();
       const showTable = this.asTable();
 
       if (series.length === 0 || showTable) {
@@ -130,11 +189,23 @@ export class ChartCardComponent implements OnDestroy {
       const el = this.host()?.nativeElement;
       if (!el) return;
 
-      await this.renderChart(el, series);
+      await this.renderChart(el, this.visibleItems());
     });
   }
 
-  private async renderChart(el: HTMLDivElement, series: ChartSeries[]): Promise<void> {
+  toggleSeries(index: number, event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+    const next = new Set(this.hidden());
+    if (next.has(index)) {
+      next.delete(index);
+    } else {
+      next.add(index);
+    }
+    this.hidden.set(next);
+  }
+
+  private async renderChart(el: HTMLDivElement, items: ChartLegendItem[]): Promise<void> {
     // Load Chart.js once — use /auto which registers all scales and controllers
     if (!this.chartLib) {
       const mod = (await import('chart.js/auto')) as unknown as {
@@ -157,26 +228,40 @@ export class ChartCardComponent implements OnDestroy {
     el.appendChild(canvas);
     this.printCanvas.set(canvas);
 
-    const labels = series.map((s) => s.label);
-    const values = series.map((s) => s.value);
-    const colors = series.map((_, i) => this.palette[i % this.palette.length]);
+    const labels = items.map((s) => s.label);
+    const values = items.map((s) => s.value);
+    const colors = items.map((s) => s.color);
     const styles = getComputedStyle(document.documentElement);
     const surfaceColor = styles.getPropertyValue('--color-surface').trim() || '#fff';
-    // legend/label text follows the theme text color (T6-60 rule: never the
-    // surface color, which made legend text invisible)
+    // axis/tooltip text follows the theme text color (T6-60 rule: never the
+    // surface color, which made text invisible)
     const textColor = styles.getPropertyValue('--color-text').trim() || '#4F2F1D';
+    const type = this.chartType();
 
     this.chart = new this.chartLib(canvas, {
-      type: this.chartType(),
+      type,
       data: {
         labels,
         datasets: [
-          {
-            data: values,
-            backgroundColor: colors,
-            borderColor: surfaceColor,
-            borderWidth: 2,
-          },
+          type === 'line'
+            ? {
+                data: values,
+                label: this.title(),
+                borderColor: colors[0],
+                backgroundColor: colors[0],
+                borderWidth: this.isNarrow() ? 1.5 : 2.5,
+                pointRadius: 0,
+                pointHoverRadius: 5,
+                pointHitRadius: 12,
+                fill: false,
+                tension: 0,
+              }
+            : {
+                data: values,
+                backgroundColor: colors,
+                borderColor: surfaceColor,
+                borderWidth: 2,
+              },
         ],
       },
       options: {
@@ -189,22 +274,25 @@ export class ChartCardComponent implements OnDestroy {
             ? { duration: 800, easing: 'easeOutQuart', delay: (ctx: { type?: string; dataIndex?: number }) => (ctx.type === 'data' ? (ctx.dataIndex ?? 0) * 90 : 0) }
             : { duration: 350 },
         plugins: {
-          legend: {
-            display: series.length <= 6,
-            position: 'bottom',
-            labels: { boxWidth: 10, font: { size: 11 }, color: textColor },
-          },
+          // the legend is the HTML list under the canvas — never canvas dots (T7-03)
+          legend: { display: false },
+          tooltip: { titleColor: textColor, bodyColor: textColor },
         },
-        ...(this.chartType() === 'bar'
+        ...(type !== 'doughnut'
           ? {
               scales: {
-                y: { beginAtZero: true, ticks: { color: textColor }, grid: { color: surfaceColor } },
+                y: { beginAtZero: true, ticks: { color: textColor, precision: 0 }, grid: { color: surfaceColor } },
                 x: { ticks: { color: textColor } },
               },
             }
           : {}),
       },
     }) as typeof this.chart;
+  }
+
+  /** phone-width flag for thinner line strokes (T7-03) */
+  private isNarrow(): boolean {
+    return typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches;
   }
 
   private destroyChart(): void {
