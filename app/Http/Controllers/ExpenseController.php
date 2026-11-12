@@ -895,7 +895,10 @@ class ExpenseController extends Controller
         try {
             $expenseId = $expense->id;
             $expenseAmount = $expense->amount;
-            $expense->delete();
+
+            // عكس الأثر المالي للمصروف (العهدة/الخزينة + الإشعارات) قبل الحذف — بدونه يضيع المبلغ من العهدة
+            $this->service->deleteExpense($expense, (int) $user->id);
+
             ActivityLogService::deleted($expense, 'تم حذف المصروف #' . $expenseId . ' (المبلغ: ' . number_format($expenseAmount, 2) . ' ج.م)');
             return redirect()->route('expenses.index')
                 ->with('success', 'تم حذف المصروف بنجاح');

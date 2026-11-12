@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Treasury;
 use App\Models\Custody;
 use App\Models\Expense;
+use App\Models\ExpenseEditRequest;
 use App\Models\TreasuryTransaction;
 use App\Models\Notification;
 use App\Models\User;
@@ -1080,6 +1081,115 @@ class TreasuryService
 
             return $expense;
         });
+    }
+
+    /**
+     * حذف مصروف مع عكس أثره المالي بالكامل (عكس ما يفعله recordExpenseWithItems /
+     * recordDirectExpenseFromTreasury): بدون ذلك يضيع مبلغ المصروف من العهدة/الخزينة إلى الأبد.
+     *
+     * - صرف من عهدة(s): إرجاع نصيب كل عهدة إلى spent، وإعادة فتح العهدة إن كانت أُغلقت
+     *   لاستنزاف رصيدها وعاد لها رصيد
+     * - صرف مباشر من الخزينة: إعادة المبلغ إلى رصيد الخزينة
+     * - حذف حركات الخزينة المرتبطة بالمصروف وإشعاراته وطلبات تعديله المعلقة
+     *
+     * @throws \Exception عند محاولة حذف مصروف على عهدة تمت تسويتها بإرجاع نقدي
+     */
+    public function deleteExpense(Expense $expense, int $userId): void
+    {
+        DB::transaction(function () use ($expense, $userId) {
+            if ((string) $expense->source === 'treasury' && $expense->treasury_id) {
+                $treasury = Treasury::where('id', $expense->treasury_id)->lockForUpdate()->first();
+                if ($treasury) {
+                    $treasury->increment('balance', round((float) $expense->amount, 2));
+                }
+            } else {
+                // T27: نصيب كل عهدة من المصروف (القفل بترتيب id المتسق يمنع التزاحم)
+                $allocations = DB::table('expense_custody')
+                    ->where('expense_id', $expense->id)
+                    ->orderBy('custody_id')
+                    ->get();
+
+                // مصروفات ما قبل نظام التوزيع T27: العهدة المباشرة تتحمل كامل المبلغ
+                if ($allocations->isEmpty() && $expense->custody_id) {
+                    $allocations = collect([
+                        (object) ['custody_id' => $expense->custody_id, 'amount' => $expense->amount],
+                    ]);
+                }
+
+                $custodies = Custody::whereIn('id', $allocations->pluck('custody_id'))
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                foreach ($allocations as $allocation) {
+                    $custody = $custodies->get($allocation->custody_id);
+                    if (!$custody) {
+                        continue;
+                    }
+
+                    // عهدة سُوِّت بإرجاع نقدي: حذف مصروفها يعبث بتسوية تمت فعلاً
+                    if ((float) $custody->returned > 0) {
+                        throw new \Exception(
+                            'لا يمكن حذف مصروف مرتبط بعهدة #' . $custody->id . ' تمت تسويتها بإرجاع نقدي جزئي أو كامل'
+                        );
+                    }
+
+                    $share = round((float) $allocation->amount, 2);
+                    if ($share > 0) {
+                        $custody->decrement('spent', $share);
+                        $this->reopenDrainedCustody($custody->fresh(), $userId, "بعد حذف المصروف #{$expense->id}");
+                    }
+                }
+
+                $expense->custodies()->detach();
+            }
+
+            // الحركات لم تعد تعبر عن حقيقة (الأثر يبقى محفوظاً في سجل النشاط والمصروف نفسه soft-delete)
+            TreasuryTransaction::where('expense_id', $expense->id)
+                ->where('type', 'expense')
+                ->delete();
+
+            // إشعارات تشير إلى مصروف محذوف = صفحة 404 عند الضغط عليها
+            Notification::where('related_id', $expense->id)
+                ->whereIn('related_type', ['expense', 'Expense'])
+                ->delete();
+
+            // طلبات التعديل المعلقة تفقد موضوعها بعد حذف المصروف
+            ExpenseEditRequest::where('expense_id', $expense->id)
+                ->where('status', 'pending')
+                ->delete();
+
+            $expense->delete();
+        });
+    }
+
+    /**
+     * إعادة فتح عهدة أُغلقت لاستنزاف رصيدها عندما يعود لها رصيد (حذف مصروف).
+     * لا تمس عهدة سُوِّت بإرجاع نقدي أو لم تكن مغلقة أصلاً.
+     */
+    private function reopenDrainedCustody(Custody $custody, int $userId, string $reason): void
+    {
+        if ($custody->status !== 'closed' || (float) $custody->returned > 0) {
+            return;
+        }
+
+        $remaining = round((float) $custody->getRemainingBalance(), 2);
+        if ($remaining <= 0) {
+            return;
+        }
+
+        $custody->update(['status' => $custody->received_at ? 'active' : 'accepted']);
+
+        TreasuryTransaction::create([
+            'treasury_id' => $custody->treasury_id,
+            'type' => 'custody_reopen',
+            'amount' => 0,
+            'description' => "إعادة فتح عهدة #{$custody->id} للمندوب {$custody->agent->name} {$reason} (رصيد متبقٍ: " . number_format($remaining, 2) . ' ج.م)',
+            'user_id' => $userId,
+            'custody_id' => $custody->id,
+            'transaction_date' => now(),
+        ]);
     }
 
     /**
