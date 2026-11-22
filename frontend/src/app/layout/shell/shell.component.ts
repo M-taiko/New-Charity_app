@@ -8,6 +8,7 @@ import { LocalStorageService } from '@core/storage/local-storage.service';
 import type { NavItem } from './nav-items';
 import { NAV_GROUPS } from './nav-items';
 import { TopbarComponent } from '../topbar/topbar.component';
+import { ToastHostComponent } from '@shared/ui/toast-host/toast-host.component';
 
 /**
  * App shell (plan 19): right-side sidebar in RTL, 56px top bar, content on a
@@ -16,16 +17,17 @@ import { TopbarComponent } from '../topbar/topbar.component';
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, TranslatePipe, TopbarComponent],
+  imports: [RouterOutlet, RouterLink, TranslatePipe, TopbarComponent, ToastHostComponent],
   template: `
     <div class="app-shell">
       <a class="skip-link" href="#main-content">{{ 'a11y.skip_to_content' | translate }}</a>
       <aside class="sidebar" [class.sidebar--collapsed]="collapsed()" [class.sidebar--open]="menuOpen()">
         <div class="sidebar__brand">
-          <svg class="sidebar__brand-logo" aria-hidden="true">
-            <use href="assets/brand/monogram.svg#ns" />
-          </svg>
-          <span class="sidebar__brand-name">{{ orgName() }}</span>
+          <span class="sidebar__brand-mark" aria-hidden="true">NS</span>
+          <div class="sidebar__brand-text">
+            <span class="sidebar__brand-name">{{ orgName() }}</span>
+            <span class="sidebar__brand-subtitle">{{ 'nav.brand_tagline' | translate }}</span>
+          </div>
         </div>
         <nav [attr.aria-label]="'nav.main_aria' | translate">
           @for (group of visibleGroups(); track group.label) {
@@ -35,12 +37,15 @@ import { TopbarComponent } from '../topbar/topbar.component';
                 class="sidebar__link"
                 [class.sidebar__link--active]="isActive(item)"
                 [attr.data-accent]="isActive(item) ? accentFor(item) : null"
+                [attr.aria-current]="isActive(item) ? 'page' : null"
                 [routerLink]="item.route"
                 [attr.title]="collapsed() ? (item.label | translate) : null"
               >
-                <svg class="sidebar__link-icon" aria-hidden="true">
-                  <use [attr.href]="'assets/icons/sprite.svg#tabler-' + item.icon" />
-                </svg>
+                <span class="sidebar__link-tile">
+                  <svg class="sidebar__link-icon" aria-hidden="true">
+                    <use [attr.href]="iconHref(item.icon)" />
+                  </svg>
+                </span>
                 <span class="sidebar__link-label">{{ item.label | translate }}</span>
               </a>
             }
@@ -54,9 +59,11 @@ import { TopbarComponent } from '../topbar/topbar.component';
           [attr.title]="collapsed() ? ('nav.expand' | translate) : null"
         >
           <!-- right-side RTL sidebar: expanded collapses toward the right edge, collapsed expands into content -->
-          <svg class="sidebar__link-icon" aria-hidden="true">
-            <use [attr.href]="'assets/icons/sprite.svg#tabler-chevron-' + (collapsed() ? 'left' : 'right')" />
-          </svg>
+          <span class="sidebar__link-tile">
+            <svg class="sidebar__link-icon" aria-hidden="true">
+              <use [attr.href]="iconHref(collapsed() ? 'chevron-left' : 'chevron-right')" />
+            </svg>
+          </span>
           <span class="sidebar__link-label">{{ (collapsed() ? 'nav.expand' : 'nav.collapse') | translate }}</span>
         </button>
       </aside>
@@ -83,6 +90,9 @@ import { TopbarComponent } from '../topbar/topbar.component';
       <p class="orientation-lock__title">{{ 'a11y.portrait_only' | translate }}</p>
       <p class="orientation-lock__text">{{ 'a11y.rotate_device' | translate }}</p>
     </div>
+
+    <!-- the one toast host for the whole app (was never mounted — toasts vanished) -->
+    <app-toast-host />
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -169,5 +179,11 @@ export class ShellComponent {
   toggle(): void {
     this.collapsed.update((value) => !value);
     this.storage.set('sidebar.collapsed', this.collapsed());
+  }
+
+  /** sprite href for a Tabler icon name (kept simple — inline concatenation
+   *  in the template trips an esbuild incremental-cache quirk, NG8002) */
+  iconHref(icon: string): string {
+    return `assets/icons/sprite.svg#tabler-${icon}`;
   }
 }

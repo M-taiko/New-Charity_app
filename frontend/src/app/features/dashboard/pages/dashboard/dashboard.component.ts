@@ -7,10 +7,13 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
+import { ThemeService } from '@core/theme/theme.service';
+import { chartPalette } from '@shared/lib/chart-colors';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import type { ChartSeries } from '@shared/ui/chart-card/chart-card.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
+import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
@@ -150,6 +153,7 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
     FormsModule,
     AsyncPageComponent,
     ChartCardComponent,
+    StatTileComponent,
     StatusStampComponent,
     IconComponent,
     DatetimePipe,
@@ -171,6 +175,9 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
                   [ngModel]="range()" (ngModelChange)="setRange($event)" name="range" styleClass="dash-topbar__select" />
         <app-auto-refresh key="dashboard" (refresh)="data.reload()" />
         <app-action-button kind="customize" label="dashboard.bento.customize" size="small" (action)="customizeOpen.set(!customizeOpen())" />
+        @if (canCreateCustody()) {
+          <app-action-button kind="create" label="custody.list.create" [route]="['/custodies', 'new']" />
+        }
       </div>
     </div>
 
@@ -191,39 +198,49 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as d) {
         <div class="bento">
-          <!-- KPI strip (T6-60.1): animated count-up, every number links to its page -->
+          <!-- KPI strip (RD-4.1): the Stitch 4-card row — icon, headline value, caption -->
           @if (visible('kpi')) {
-            <section class="bento__widget bento__widget--wide" [attr.aria-label]="'dashboard.bento.kpi' | translate">
+            <section class="bento__widget bento__widget--full" [attr.aria-label]="'dashboard.bento.kpi' | translate">
               @if (d.view === 'finance') {
-                <div class="dash-kpis">
-                  <a class="dash-kpi" routerLink="/treasury">
-                    <span class="dash-kpi__label">{{ 'dashboard.finance.treasury_balance' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="toNum(d.treasury_balance)">{{ d.treasury_balance | money: false }}</span>
-                  </a>
-                  <a class="dash-kpi" routerLink="/custodies">
-                    <span class="dash-kpi__label">{{ 'dashboard.finance.total_custodies' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="toNum(d.total_custodies_amount)">{{ d.total_custodies_amount | money: false }}</span>
-                  </a>
-                  <a class="dash-kpi" routerLink="/expenses">
-                    <span class="dash-kpi__label">{{ 'dashboard.finance.total_spent' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="toNum(d.total_spent)">{{ d.total_spent | money: false }}</span>
-                  </a>
-                  <a class="dash-kpi" routerLink="/expenses">
-                    <span class="dash-kpi__label">{{ 'dashboard.finance.today_expenses' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="toNum(d.today_expenses)">{{ d.today_expenses | money: false }}</span>
-                  </a>
-                  <a class="dash-kpi" routerLink="/custodies">
-                    <span class="dash-kpi__label">{{ 'dashboard.finance.active_custodies' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="d.active_custodies">{{ d.active_custodies }}</span>
-                  </a>
-                  <a class="dash-kpi" routerLink="/cases">
-                    <span class="dash-kpi__label">{{ 'dashboard.finance.pending_cases' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="d.pending_cases">{{ d.pending_cases }}</span>
-                  </a>
-                  <a class="dash-kpi" routerLink="/users">
-                    <span class="dash-kpi__label">{{ 'dashboard.finance.agents_count' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="d.agents_evaluation.length">{{ d.agents_evaluation.length }}</span>
-                  </a>
+                <div class="kpi-grid kpi-grid--4">
+                  <app-stat-tile
+                    class="tile-link"
+                    label="dashboard.finance.treasury_balance"
+                    [value]="d.treasury_balance"
+                    [money]="true"
+                    iconName="custody"
+                    accent="treasury"
+                    caption="dashboard.finance.available_now"
+                  />
+                  <app-stat-tile
+                    class="tile-link"
+                    label="dashboard.finance.total_custodies"
+                    [value]="d.total_custodies_amount"
+                    [money]="true"
+                    iconName="myExpense"
+                    accent="custodies"
+                    caption="dashboard.finance.n_active_custodies"
+                    [captionParams]="{ n: d.active_custodies }"
+                  />
+                  <app-stat-tile
+                    class="tile-link"
+                    label="dashboard.finance.total_spent"
+                    [value]="d.total_spent"
+                    [money]="true"
+                    iconName="myExpense"
+                    accent="expenses"
+                    caption="dashboard.finance.today_expenses_hint"
+                    [captionParams]="{ n: d.today_expenses | money: false }"
+                  />
+                  <app-stat-tile
+                    class="tile-link"
+                    label="dashboard.finance.agents_count"
+                    [value]="d.agents_evaluation.length"
+                    iconName="users"
+                    accent="hr"
+                    caption="dashboard.finance.pending_cases_hint"
+                    [captionParams]="{ n: d.pending_cases }"
+                  />
                 </div>
               } @else if (d.view === 'agent' && d.agent_stats; as a) {
                 <div class="dash-kpis">
@@ -317,14 +334,14 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
             </section>
           }
 
-          <!-- Quick actions (T6-60.2): compact icon chips per role — no big cards -->
+          <!-- Quick actions (RD-4.1): the 2/3-width tile grid, hover primary border -->
           @if (visible('quick-actions')) {
-            <section class="bento__widget">
+            <section class="bento__widget bento__widget--wide">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'dashboard.bento.quick_actions' | translate }}</span></div>
               <div class="dash-chips">
                 @for (chip of quickActions(d.view); track chip.route) {
                   <a class="dash-chip" [routerLink]="chip.route">
-                    <app-icon [name]="chip.icon" [size]="16" [chip]="chip.accent" />
+                    <app-icon [name]="chip.icon" [chip]="chip.accent" [size]="18" />
                     <span>{{ chip.label | translate }}</span>
                   </a>
                 }
@@ -332,15 +349,28 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
             </section>
           }
 
-          <!-- Needs attention (T6-60.3): counters linking into the filtered pages -->
+          <!-- Needs attention (RD-4.1): rows with circular count badges -->
           @if (visible('attention')) {
             <section class="bento__widget">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'dashboard.bento.attention' | translate }}</span></div>
               <ul class="dash-attention">
                 <li>
-                  <a routerLink="/custodies">{{ 'dashboard.finance.pending_custodies' | translate }}</a>
-                  <a routerLink="/cases">{{ 'dashboard.finance.pending_cases' | translate }} — <span class="u-bidi">{{ d.pending_cases }}</span></a>
-                  <a routerLink="/custodies/tracking">{{ 'nav.custody_tracking' | translate }}</a>
+                  <a routerLink="/custodies">
+                    {{ 'dashboard.finance.active_custodies' | translate }}
+                    <span class="dash-attention__count u-bidi">{{ d.active_custodies }}</span>
+                  </a>
+                </li>
+                <li>
+                  <a routerLink="/cases">
+                    {{ 'dashboard.finance.pending_cases' | translate }}
+                    <span class="dash-attention__count dash-attention__count--neutral u-bidi">{{ d.pending_cases }}</span>
+                  </a>
+                </li>
+                <li>
+                  <a routerLink="/custodies/tracking">
+                    {{ 'nav.custody_tracking' | translate }}
+                    <span class="dash-attention__count dash-attention__count--primary u-bidi">{{ d.active_custodies }}</span>
+                  </a>
                 </li>
               </ul>
             </section>
@@ -349,7 +379,7 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
           <!-- Insights (T7-08): KPI sparklines + deltas, aging buckets, case funnel
                with approval gauge, spending-by-direction donut — lazy endpoint -->
           @if (visible('insights') && d.view === 'finance' && perf.value(); as p) {
-            <section class="bento__widget bento__widget--wide">
+            <section class="bento__widget bento__widget--full">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'dashboard.bento.insights' | translate }}</span></div>
               <div class="dash-insights">
                 @for (card of insightCards; track card.key) {
@@ -406,7 +436,7 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
 
           <!-- Money flow (T6-60.4): bar chart + HTML legend list, never canvas legends -->
           @if (visible('money-flow')) {
-            <section class="bento__widget bento__widget--wide">
+            <section class="bento__widget bento__widget--full">
               <div class="chart-card__head">
                 <span class="chart-card__title">{{ 'dashboard.bento.money_flow' | translate }}</span>
                 <a routerLink="/reports" class="dash-viewall">{{ 'dashboard.bento.view_all' | translate }}</a>
@@ -509,6 +539,10 @@ export class DashboardPage {
   private auth = inject(AuthService);
   private storage = inject(LocalStorageService);
   private translate = inject(TranslateService);
+  private themeSvc = inject(ThemeService);
+
+  /** RD-4.1: the header CTA only for users who may create custodies */
+  canCreateCustody = computed(() => this.auth.can('may_create_custody'));
 
   readonly today = new Date();
   readonly dateFormat = this.translate.instant('dashboard.date_format');
@@ -733,8 +767,8 @@ export class DashboardPage {
     (this.data.value()?.direction_figures?.by_day ?? []).map((day) => ({ label: day.label, value: day.amount })),
   );
 
-  /** color-blind-safe legend palette (T6-40) — HTML chips, not canvas dots */
-  readonly legendPalette = ['#0F766E', '#B8860B', '#7A4F9E', '#2F6CB3', '#B3555E', '#4F8F3A'];
+  /** legend palette from the --chart-* tokens (RD-1.6) — HTML chips, not canvas dots */
+  readonly legendPalette = computed(() => chartPalette(this.themeSvc));
 
   topAgents = computed(() =>
     [...(this.data.value()?.agents_evaluation ?? [])].sort((a, b) => b.rating - a.rating).slice(0, 6),
@@ -745,9 +779,10 @@ export class DashboardPage {
   );
 
   directionTop(): { label: string; value: number; color: string }[] {
+    const palette = this.legendPalette();
     return this.byDaySeries()
       .slice(0, 6)
-      .map((s, i) => ({ label: s.label, value: s.value, color: this.legendPalette[i % this.legendPalette.length] }));
+      .map((s, i) => ({ label: s.label, value: s.value, color: palette[i % palette.length] }));
   }
 
   /** the compact quick-action chips per role (T6-60.2) */

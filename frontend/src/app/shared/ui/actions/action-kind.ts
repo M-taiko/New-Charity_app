@@ -15,7 +15,7 @@
  */
 
 export type ActionSeverity = 'success' | 'danger' | 'warn' | 'info' | 'secondary';
-export type ActionVariant = 'filled' | 'outlined' | 'text';
+export type ActionVariant = 'filled' | 'outlined' | 'text' | 'soft';
 
 export interface ActionStyle {
   readonly severity?: ActionSeverity;
@@ -55,13 +55,23 @@ export const ACTION_KINDS = {
   reopen: { severity: 'warn', variant: 'outlined', icon: 'arrow-back-up' }, // T7-05: task reopen
   freeze: { severity: 'warn', variant: 'outlined', icon: 'lock' },
   sendReview: { severity: 'warn', variant: 'outlined', icon: 'eye' },
-  unreview: { severity: 'warn', variant: 'outlined', icon: 'eye' },
+  unreview: { severity: 'warn', variant: 'soft', icon: 'eye' },
 
   // informational / navigation-like — blue-teal, outlined/text
   viewMovements: { severity: 'info', variant: 'text', icon: 'arrows-exchange' },
   openLinked: { severity: 'info', variant: 'text', icon: 'external-link' },
   transfer: { severity: 'info', variant: 'outlined', icon: 'arrows-exchange' },
   delegate: { severity: 'info', variant: 'outlined', icon: 'arrows-exchange' }, // T7-05: task delegate
+
+  // soft tinted (RD-3.1) — the Stitch "soft button": tint background + semantic
+  // foreground; used heavily on the custodies/expenses screens
+  viewSoft: { severity: 'info', variant: 'soft', icon: 'eye' }, // in-table "view"
+  requestCustody: { severity: 'success', variant: 'soft', icon: 'plus' }, // personal custody request
+  myCustodies: { severity: 'info', variant: 'soft', icon: 'wallet' }, // my custodies
+  transferCustody: { severity: 'warn', variant: 'soft', icon: 'arrows-exchange' }, // transfer custody
+  quickExpense: { severity: 'success', variant: 'soft', icon: 'plus' }, // quick expense
+  editRequests: { severity: 'warn', variant: 'soft', icon: 'pencil' }, // expense edit requests
+  allCustodies: { severity: 'secondary', variant: 'outlined', icon: 'list-check' }, // tracking overview link
 
   // primary — brand brown, filled, one per header/dialog
   save: { variant: 'filled', icon: 'check' },
@@ -74,7 +84,7 @@ export const ACTION_KINDS = {
   back: { severity: 'secondary', variant: 'outlined', icon: 'chevron-right' },
   close: { severity: 'secondary', variant: 'text', icon: 'x' },
   export: { severity: 'secondary', variant: 'outlined', icon: 'download' },
-  print: { severity: 'secondary', variant: 'outlined', icon: 'printer' },
+  print: { variant: 'filled', icon: 'printer' }, // RD-4.8: primary print button
   download: { severity: 'secondary', variant: 'outlined', icon: 'download' }, // T7-05: payslip/attachment
   quickAdd: { severity: 'secondary', variant: 'outlined', icon: 'plus' }, // T7-05: quick expense
   customize: { severity: 'secondary', variant: 'outlined', icon: 'dots' }, // T7-05: dashboard customize

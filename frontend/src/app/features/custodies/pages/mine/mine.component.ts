@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, resource, signal, viewChild } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
@@ -34,6 +34,7 @@ import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ApiErrorBody, ItemResponse } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { SplitButtonModule } from 'primeng/splitbutton';
 
 interface MineCustody {
   id: number; agent: string | null; treasury: string | null; amount: string;
@@ -77,7 +78,7 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
 @Component({
   selector: 'app-my-custodies',
   standalone: true,
-  imports: [SectionNavComponent, FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, StatTileComponent, EmptyStateComponent, FormDialogComponent, ContentDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, AppTabsComponent, MenuModule, StatusStampComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent],
+  imports: [SectionNavComponent, FieldComponent, TranslatePipe, RouterLink, SplitButtonModule, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, StatTileComponent, EmptyStateComponent, FormDialogComponent, ContentDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, AppTabsComponent, MenuModule, StatusStampComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'custody.mine.title' | translate" accent="custodies" iconName="wallet">
@@ -127,14 +128,18 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
     <span class="u-small u-muted">{{ 'custody.mine.awaiting_approval' | translate }}</span>
   }
 }</ng-template>
-            <ng-template appCell="actions" let-row><div class="u-flex u-gap-1 u-flex-wrap">
-  <a [routerLink]="['/custodies', row.id]">{{ 'common.view' | translate }}</a>
-  <p-button [label]="'custody.mine.tx_button' | translate" size="small" [text]="true" (onClick)="openTransactions(row.id)" />
-  @if (row.status === 'accepted' || row.status === 'active') {
-    <p-button [label]="'custody.mine.quick_donation' | translate" size="small" [text]="true" (onClick)="donationDlg.open(); openDonation(row.id)" />
-    <p-button [label]="'custody.mine.return_to_treasury' | translate" size="small" [text]="true" (onClick)="refundDlg.open(); openRefund(row.id)" />
-  }
-</div></ng-template>
+            <ng-template appCell="actions" let-row>
+  <!-- one compact SplitButton: primary "view" + the rest in its menu, so the
+       actions column stays a single narrow control instead of stacked buttons -->
+  <p-splitbutton
+    size="small"
+    [label]="'common.view' | translate"
+    (onClick)="viewRow(row.id)"
+    [model]="rowMenu(row)"
+    appendTo="body"
+    [styleClass]="'row-split'"
+  />
+</ng-template>
           </app-data-table>
         } @else {
           <div class="kpi-grid u-mt-4">
@@ -321,6 +326,7 @@ export class MyCustodiesPage {
   private toast = inject(ToastService);
   private auth = inject(AuthService);
   private translate = inject(TranslateService);
+  private router = inject(Router);
 
   tab = signal<Tab>('active');
   sending = signal(false);
@@ -415,6 +421,23 @@ export class MyCustodiesPage {
     { id: 'transfers', label: 'custody.mine.tab_transfers', count: this.pendingTransferCount() },
     { id: 'closed', label: 'custody.mine.tab_closed', count: this.closedCount() },
   ]);
+
+  /** primary SplitButton action: open the custody detail */
+  viewRow(id: number): void {
+    void this.router.navigateByUrl(`/custodies/${id}`);
+  }
+
+  /** per-row action menu for the SplitButton (view rides the button itself) */
+  rowMenu(row: { id: number; status: string }): MenuItem[] {
+    const items: MenuItem[] = [
+      { label: this.translate.instant('custody.mine.tx_button'), command: () => { this.openTransactions(row.id); } },
+    ];
+    if (row.status === 'accepted' || row.status === 'active') {
+      items.push({ label: this.translate.instant('custody.mine.quick_donation'), command: () => { this.donationDlg().open(); this.openDonation(row.id); } });
+      items.push({ label: this.translate.instant('custody.mine.return_to_treasury'), command: () => { this.refundDlg().open(); this.openRefund(row.id); } });
+    }
+    return items;
+  }
 
   /** quick actions live in the header More menu (T6-10) */
   readonly menuItems = computed<MenuItem[]>(() => {

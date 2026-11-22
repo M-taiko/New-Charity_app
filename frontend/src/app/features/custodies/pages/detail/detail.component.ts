@@ -35,6 +35,8 @@ import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { IconComponent } from '@shared/ui/icon/icon.component';
+import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 
 interface CustodyExpense {
   id: number; amount: string; type: string; description: string | null;
@@ -69,7 +71,7 @@ type DonationType = 'external_donation' | 'expense_refund';
 @Component({
   selector: 'app-custody-detail',
   standalone: true,
-  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, AppTabsComponent, FlowRibbonComponent, PageActionsComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent],
+  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, AppTabsComponent, FlowRibbonComponent, PageActionsComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent, IconComponent, StatTileComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'custody.detail.title' | translate">
@@ -125,6 +127,75 @@ type DonationType = 'external_donation' | 'expense_refund';
 
           <app-flow-ribbon [steps]="flowSteps(c)" />
 
+          <!-- RD-4.10: the facts card (2/3) with a primary header band + the
+               status card (1/3) with the spending-ratio bar -->
+          <div class="detail-grid u-mt-4">
+            <section class="card-hero">
+              <header class="card-hero__band">
+                <span>{{ 'custody.detail.facts' | translate }}</span>
+                <app-icon name="info" [size]="18" />
+              </header>
+              <div class="card-hero__body">
+                <div class="key-value-list">
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'custody.detail.agent' | translate }}</span>
+                    <span class="key-value-list__value">{{ c.agent ?? '—' }}</span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'custody.detail.breakdown.amount' | translate }}</span>
+                    <span class="key-value-list__value money money--link u-bidi u-fw-bold">{{ c.amount | money }}</span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'glossary.treasury' | translate }}</span>
+                    <span class="key-value-list__value"><span class="stamp stamp--info">{{ c.treasury ?? '—' }}</span></span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'glossary.accountant' | translate }}</span>
+                    <span class="key-value-list__value">{{ c.accountant ?? '—' }}</span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'common.notes' | translate }}</span>
+                    <span class="key-value-list__value">{{ c.notes ?? '—' }}</span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'common.date' | translate }}</span>
+                    <span class="key-value-list__value u-bidi">{{ c.created_at | datetime: false }}</span>
+                  </div>
+                </div>
+                <div class="card-hero__foot u-flex u-gap-2 u-flex-wrap">
+                  <app-action-button kind="back" label="common.back" size="small" [route]="['/custodies']" />
+                  <app-action-button kind="approve" label="custody.detail.new_request" size="small" [route]="['/custodies', 'new']" />
+                </div>
+              </div>
+            </section>
+
+            <section class="chart-card">
+              <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.status_info' | translate }}</span></div>
+              <div class="u-flex u-flex-column u-gap-3">
+                <app-status-stamp [status]="c.status" namespace="custody_status" [large]="true" />
+                <p class="u-small u-muted">{{ c.status_detail }}</p>
+                <div>
+                  <div class="u-flex u-justify-between u-small u-mb-1">
+                    <span class="u-muted">{{ 'custody.list.col_spent_percent' | translate }}</span>
+                    <span class="u-bidi">{{ spentRatio(c) }}%</span>
+                  </div>
+                  <div class="progress-cell__bar">
+                    <div class="progress-cell__fill" [style.width.%]="spentRatio(c)"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <!-- RD-4.10: five tinted summary mini-cards -->
+          <div class="kpi-grid kpi-grid--5 u-mt-4">
+            <app-stat-tile [label]="'custody.detail.breakdown.received_transfer'" [value]="c.transferred_in" [money]="true" [tinted]="true" tone="info" />
+            <app-stat-tile [label]="'custody.detail.breakdown.sent_transfer'" [value]="c.transferred_out" [money]="true" [tinted]="true" tone="danger" />
+            <app-stat-tile [label]="'custody.detail.breakdown.remaining'" [value]="c.remaining" [money]="true" [tinted]="true" tone="success" />
+            <app-stat-tile [label]="'custody.detail.breakdown.spent'" [value]="c.spent" [money]="true" [tinted]="true" tone="primary" />
+            <app-stat-tile [label]="'custody.detail.breakdown.returned'" [value]="c.returned" [money]="true" [tinted]="true" tone="warning" />
+          </div>
+
           <div class="kpi-grid u-mt-4">
             <app-balance-ring [segments]="ringSegments(c)" [total]="c.remaining" />
             <div class="chart-card">
@@ -132,8 +203,6 @@ type DonationType = 'external_donation' | 'expense_refund';
               <app-key-value-list [items]="breakdown(c)" />
             </div>
           </div>
-
-          <app-key-value-list [items]="keyValues(c)" />
 
           <app-tabs class="u-mt-4" id="custody-detail" [tabs]="tabs()" [(active)]="detailTab" />
 
@@ -166,10 +235,10 @@ type DonationType = 'external_donation' | 'expense_refund';
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.transactions' | translate }}</span></div>
             <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="transactionCols" [rows]="c.transactions">
-              <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
-              <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}</ng-template>
+              <ng-template appCell="date" let-row><span class="u-bidi u-muted">{{ row.date | datetime }}</span></ng-template>
+              <ng-template appCell="type" let-row><span class="stamp" [class]="txStampClass(row.type)">{{ row.type | enumLabel: 'transaction_type' }}</span></ng-template>
               <ng-template appCell="description" let-row>{{ row.description }}</ng-template>
-              <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
+              <ng-template appCell="amount" let-row><span class="u-bidi" [class]="txMoneyClass(row.type)">{{ row.amount | money }}</span></ng-template>
             </app-data-table>
           </section>
 
@@ -578,6 +647,40 @@ export class CustodyDetailPage {
       { label: 'custody.detail.flow.transfer', state: transferred ? 'done' : 'todo' },
       { label: 'custody.detail.flow.return', state: c.status === 'closed' ? 'done' : returned ? 'current' : 'todo' },
     ];
+  }
+
+  /** RD-4.10 journal ledger: movement-type pill color per transaction type */
+  txStampClass(type: string): string {
+    if (type.includes('return')) {
+      return 'stamp--success';
+    }
+    if (type.includes('transfer_in') || type === 'custody_out') {
+      return 'stamp--info';
+    }
+    if (type.includes('transfer_out')) {
+      return 'stamp--danger';
+    }
+    return 'stamp--neutral';
+  }
+
+  /** RD-4.10 journal ledger: signed money color (in green / out rose) */
+  txMoneyClass(type: string): string {
+    if (type.includes('return') || type.includes('transfer_in') || type === 'custody_out') {
+      return 'money money--pos';
+    }
+    if (type.includes('transfer_out') || type.includes('expense')) {
+      return 'money money--neg';
+    }
+    return '';
+  }
+
+  /** RD-4.10: (spent + returned) / (amount + transfers-in), pinned to 0..100 */
+  spentRatio(c: CustodyDetail): number {
+    const base = this.parseFloat(c.amount) + this.parseFloat(c.transferred_in);
+    if (base <= 0) {
+      return 0;
+    }
+    return Math.max(0, Math.min(100, Math.round(((this.parseFloat(c.spent) + this.parseFloat(c.returned)) / base) * 100)));
   }
 
   ringSegments(c: CustodyDetail): RingSegment[] {

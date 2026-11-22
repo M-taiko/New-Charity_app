@@ -1,16 +1,23 @@
-// The brand palette — the light theme uses these exclusively (plan 10.1).
-// The dark theme uses dark neutral bases + brand accents (user decision).
+// Naguib Selim Foundation design system tokens (Stitch redesign, RD-1.1).
+// Light theme = the Stitch warm palette (brown primary, Cairo display).
+// Dark theme = warm dark neutrals (no pure black) + the cream primary strategy.
 :root {
-  --palette-ink: #4f2f1d;
-  --palette-brand: #5d3722;
-  --palette-mid: #7d5f4e;
-  --palette-light: #9e877a;
+  // Brand scale — light theme built on these exclusively (Stitch `1.md`).
+  --palette-ink: #3a261d; // on-primary-container
+  --palette-brand: #5c4033; // primary
+  --palette-mid: #6e655e; // on-surface-variant
+  --palette-light: #9a7b5c; // secondary
   --palette-taupe: #beafa7;
-  --palette-sand: #dfd7d3;
+  --palette-sand: #e2dcd4; // outline
   --palette-white: #ffffff;
-  --palette-cream: #f7f3ef;
+  --palette-cream: #f4f3f1; // surface
 
-  // Dark theme neutrals (not brand colors — proper dark greys with warm tint)
+  // Containers (Stitch primary/secondary containers)
+  --palette-primary-container: #efe8e1;
+  --palette-secondary-container: #f5efe8;
+  --palette-on-secondary-container: #4a3525;
+
+  // Dark theme neutrals (warm greys — never pure black, Stitch don't)
   --dark-0: #12100e;
   --dark-1: #1a1815;
   --dark-2: #201e1b;
@@ -18,29 +25,29 @@
   --dark-4: #3a3835;
   --dark-5: #4a4845;
 
-  // Semantic action colors (T6-13) — same values as the PrimeNG preset scales.
-  // The *-rgb channel triplets feed the *-soft tints via rgb(<channels> / N%),
-  // which Chrome 109 supports; color-mix() is forbidden by the Chrome 109 gate (T7-01).
-  --semantic-success: #1e7a46;
-  --semantic-success-rgb: 30 122 70;
-  --semantic-danger: #b3261e;
-  --semantic-danger-rgb: 179 38 30;
-  --semantic-warning: #96650a;
-  --semantic-warning-rgb: 150 101 10;
-  --semantic-info: #0e6e77;
-  --semantic-info-rgb: 14 110 119;
+  // Semantic action colors (Stitch error/success/warning + blue info).
+  // The *-rgb channel triplets feed the alpha tints via rgb(<channels> / N%),
+  // which Chrome 109 supports; color-mix() is forbidden by the Chrome 109 gate.
+  --semantic-success: #10b981;
+  --semantic-success-rgb: 16 185 129;
+  --semantic-danger: #e11d48;
+  --semantic-danger-rgb: 225 29 72;
+  --semantic-warning: #f59e0b;
+  --semantic-warning-rgb: 245 158 11;
+  --semantic-info: #3b82f6;
+  --semantic-info-rgb: 59 130 246;
 
-  // Module accent set (T6-40) — light-theme foregrounds (pass 4.5:1 on white).
+  // Module accent set — distinct hues per sidebar module, tuned per theme.
   --accent-custodies: #0e7168; // teal
   --accent-custodies-rgb: 14 113 104;
-  --accent-expenses: #8f5700; // amber
-  --accent-expenses-rgb: 143 87 0;
-  --accent-treasury: #66701a; // gold-green
-  --accent-treasury-rgb: 102 112 26;
-  --accent-cases: #b03b4b; // rose
-  --accent-cases-rgb: 176 59 75;
-  --accent-hr: #2f5fa3; // blue
-  --accent-hr-rgb: 47 95 163;
+  --accent-expenses: #b45309; // amber
+  --accent-expenses-rgb: 180 83 9;
+  --accent-treasury: #15803d; // green
+  --accent-treasury-rgb: 21 128 61;
+  --accent-cases: #be123c; // rose
+  --accent-cases-rgb: 190 18 60;
+  --accent-hr: #2563eb; // blue
+  --accent-hr-rgb: 37 99 235;
   --accent-tasks: #6d4fc1; // violet
   --accent-tasks-rgb: 109 79 193;
   --accent-procurement: #9c4a1f; // orange-brown
@@ -48,13 +55,14 @@
   --accent-reports: #4848a0; // indigo
   --accent-reports-rgb: 72 72 160;
 
-  // Shape (10.2)
-  --radius-s: 3px;
-  --radius-m: 6px;
-  --radius-l: 10px;
+  // Shape (Stitch rounded sm/md/lg/xl)
+  --radius-s: 6px;
+  --radius-m: 8px;
+  --radius-l: 12px;
+  --radius-xl: 16px;
   --radius-full: 999px;
 
-  // Spacing scale — 4px base (10.2)
+  // Spacing scale — 4px base (Stitch xs/sm/md/lg/xl = 4/8/16/24/32)
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -66,69 +74,104 @@
   --space-14: 56px;
   --space-18: 72px;
 
-  // Type scale (10.3)
+  // Type scale (Stitch roles: label-sm 11 … display-sm 30)
   --font-ui: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
-  --font-display: 'Amiri', 'Times New Roman', serif;
+  --font-display: 'Cairo', 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
   --text-2xs: 12px;
   --text-xs: 13px;
   --text-sm: 14px;
   --text-md: 16px;
   --text-lg: 18px;
-  --text-xl: 22px;
-  --text-2xl: 28px;
-  --text-hero: 40px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-hero: 30px;
 
-  // Motion (10.4)
-  --dur-fast: 120ms;
+  // Motion (Stitch fast = 150ms ease-out)
+  --dur-fast: 150ms;
   --dur-base: 200ms;
   --dur-slow: 320ms;
   --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
-  // Motion scale for JS hooks (T6-50): 0 = off, 1 = lite, 2 = full
+  // Motion scale for JS hooks: 0 = off, 1 = lite, 2 = full
   --motion-scale: 2;
 
-  // Layout (10.2)
-  --content-max: 1440px;
-  --sidebar-w: 300px;
+  // Layout (Stitch shell: 64px topbar, w-64 sidebar, max-w-7xl content)
+  --content-max: 1280px;
+  --sidebar-w: 256px;
   --sidebar-w-collapsed: 64px;
-  --topbar-h: 56px;
+  --topbar-h: 64px;
   --gutter: 24px;
 
   color-scheme: light;
 }
 
-// ── Light theme (brand palette, plan 10.1.2) ──────────────────────
+// ── Light theme (Stitch warm light palette) ──────────────────────
 :root,
 :root[data-theme='light'] {
   --color-bg: var(--palette-cream);
-  --color-surface: var(--palette-white);
-  --color-surface-inset: var(--palette-cream);
-  --color-surface-raised: var(--palette-sand);
-  --color-hairline: var(--palette-sand);
+  --color-surface: var(--palette-white); // surface-container-low — main cards
+  --color-surface-inset: #f8fafc; // surface-container — sub-cards/hover
+  --color-surface-raised: #e2e8f0; // surface-container-high
+  --color-hairline: var(--palette-sand); // outline
+  --color-hairline-soft: #f1f5f9; // outline-variant
   --color-margin-rule: var(--palette-taupe);
-  --color-control-border: var(--palette-light);
-  --color-text: var(--palette-ink);
-  --color-text-muted: var(--palette-mid);
+  --color-control-border: var(--palette-sand);
+  --color-text: #1f1b18; // on-surface
+  --color-text-muted: var(--palette-mid); // on-surface-variant
   --color-primary: var(--palette-brand);
   --color-on-primary: var(--palette-white);
-  --color-primary-hover: var(--palette-ink);
-  --color-primary-soft: var(--palette-sand);
+  --color-primary-hover: #4a3128;
+  --color-primary-soft: var(--palette-primary-container); // primary-container
+  --color-on-primary-soft: var(--palette-ink); // on-primary-container
+  --color-secondary: var(--palette-light);
+  --color-secondary-soft: var(--palette-secondary-container);
+  --color-on-secondary-soft: var(--palette-on-secondary-container);
   --color-accent: var(--palette-light);
   --color-focus: var(--palette-brand);
 
-  // Semantic pairs — solid foreground + ~12% tinted background (T6-13/T6-40).
-  // Tints are channel-alpha rgb() — supported since Chrome 65 (T7-01).
+  // Semantic pairs — Stitch solid foreground + solid tint background (RD-1.1)
   --color-success: var(--semantic-success);
-  --color-success-soft: rgb(var(--semantic-success-rgb) / 12%);
+  --color-success-soft: #ecfdf5;
   --color-danger: var(--semantic-danger);
-  --color-danger-soft: rgb(var(--semantic-danger-rgb) / 10%);
-  --color-warning: var(--semantic-warning);
-  --color-warning-soft: rgb(var(--semantic-warning-rgb) / 12%);
+  --color-danger-soft: #fff1f2;
+  --color-warning: #d97706; // amber-600 passes AA on the amber tint
+  --color-warning-soft: #fffbeb;
   --color-info: var(--semantic-info);
-  --color-info-soft: rgb(var(--semantic-info-rgb) / 10%);
+  --color-info-soft: #eff6ff;
 
-  // Accent soft chips (T6-40) — tinted backgrounds for the module icon chips
+  // Status tint set (RD-1.1) — solid hexes in light
+  --status-active-bg: #ecfdf5;
+  --status-active-fg: #10b981;
+  --status-info-bg: #eff6ff;
+  --status-info-fg: #3b82f6;
+  --status-warning-bg: #fffbeb;
+  --status-warning-fg: #d97706;
+  --status-danger-bg: #fff1f2;
+  --status-danger-fg: #f43f5e;
+  --status-neutral-bg: #e2e8f0;
+  --status-neutral-fg: #6e655e;
+  --notification-dot: #ef4444;
+
+  // Chart palette (RD-1.1) — fed to Chart.js
+  --chart-1: #5c4033;
+  --chart-2: #2563eb;
+  --chart-3: #15803d;
+  --chart-4: #dc2626;
+  --chart-5: #10b981;
+  --chart-6: #3b82f6;
+  --chart-7: #f59e0b;
+  --chart-8: #f43f5e;
+  --chart-muted: #cbd5e1; // previous-year bars
+  --chart-track: #eae4dc; // donut track
+
+  // Tinted summary-card borders (custody-detail mini cards)
+  --tint-blue-border: #bfdbfe;
+  --tint-rose-border: #fecdd3;
+  --tint-green-border: #a7f3d0;
+  --tint-amber-border: #fde68a;
+
+  // Accent soft chips — tinted backgrounds for the module icon chips
   --accent-custodies-soft: rgb(var(--accent-custodies-rgb) / 12%);
   --accent-expenses-soft: rgb(var(--accent-expenses-rgb) / 12%);
   --accent-treasury-soft: rgb(var(--accent-treasury-rgb) / 12%);
@@ -139,36 +182,40 @@
   --accent-reports-soft: rgb(var(--accent-reports-rgb) / 10%);
 }
 
-// ── Dark theme — dark neutral bases + brand accents ──
-// Near-black warm greys for depth; brand brown for buttons; cream for text.
+// ── Dark theme — warm dark neutrals + cream primary (RD-1.1 dark table) ──
 :root[data-theme='dark'] {
   --color-bg: var(--dark-0);
-  --color-surface: var(--dark-2);
-  --color-surface-inset: var(--dark-1);
-  --color-surface-raised: var(--dark-3);
+  --color-surface: var(--dark-2); // main cards
+  --color-surface-inset: var(--dark-1); // sub-cards
+  --color-surface-raised: var(--dark-3); // hover/raised
   --color-hairline: var(--dark-4);
+  --color-hairline-soft: var(--dark-3);
   --color-margin-rule: var(--dark-5);
   --color-control-border: var(--dark-5);
-  --color-text: var(--palette-cream);
+  --color-text: #f5efe8;
   --color-text-muted: var(--palette-taupe);
-  --color-primary: var(--palette-brand);
-  --color-on-primary: var(--palette-white);
-  --color-primary-hover: var(--palette-mid);
-  --color-primary-soft: var(--dark-3);
-  --color-accent: var(--palette-light);
-  --color-focus: var(--palette-taupe);
+  --color-primary: #f5efe8; // the proven cream primary strategy
+  --color-on-primary: #3a261d;
+  --color-primary-hover: #ffffff;
+  --color-primary-soft: var(--dark-3); // primary-container equivalent
+  --color-on-primary-soft: #f5efe8;
+  --color-secondary: #b99b7c; // lightened #9A7B5C for dark surfaces
+  --color-secondary-soft: rgb(185 155 124 / 16%);
+  --color-on-secondary-soft: #f5efe8;
+  --color-accent: var(--color-secondary);
+  --color-focus: #f5efe8;
 
   // Dark theme: lighter accent foregrounds (pass 4.5:1 on the dark surfaces)
   --accent-custodies: #5ec6ba;
   --accent-custodies-rgb: 94 198 186;
   --accent-expenses: #e0a43c;
   --accent-expenses-rgb: 224 164 60;
-  --accent-treasury: #b6c051;
-  --accent-treasury-rgb: 182 192 81;
-  --accent-cases: #e2798a;
-  --accent-cases-rgb: 226 121 138;
-  --accent-hr: #7aa5e8;
-  --accent-hr-rgb: 122 165 232;
+  --accent-treasury: #4ade80;
+  --accent-treasury-rgb: 74 222 128;
+  --accent-cases: #fb7185;
+  --accent-cases-rgb: 251 113 133;
+  --accent-hr: #93c5fd;
+  --accent-hr-rgb: 147 197 253;
   --accent-tasks: #a68fec;
   --accent-tasks-rgb: 166 143 236;
   --accent-procurement: #d98e5f;
@@ -176,19 +223,46 @@
   --accent-reports: #9090e8;
   --accent-reports-rgb: 144 144 232;
 
-  // Semantic pairs stay solid; soft tints sit on dark surfaces (T7-01: channel alpha, not color-mix)
-  --semantic-success-rgb: 79 191 130;
-  --semantic-danger-rgb: 239 131 115;
-  --semantic-warning-rgb: 224 180 92;
-  --semantic-info-rgb: 99 191 201;
-  --color-success: #4fbf82;
-  --color-success-soft: rgb(var(--semantic-success-rgb) / 16%);
-  --color-danger: #ef8377;
-  --color-danger-soft: rgb(var(--semantic-danger-rgb) / 14%);
-  --color-warning: #e0b45c;
-  --color-warning-soft: rgb(var(--semantic-warning-rgb) / 16%);
-  --color-info: #63bfc9;
-  --color-info-soft: rgb(var(--semantic-info-rgb) / 14%);
+  // Semantic pairs — 400-level hues on dark, channel-alpha soft tints
+  --color-success: #34d399;
+  --color-success-soft: rgb(52 211 153 / 16%);
+  --color-danger: #fb7185;
+  --color-danger-soft: rgb(251 113 133 / 16%);
+  --color-warning: #fbbf24;
+  --color-warning-soft: rgb(251 191 36 / 16%);
+  --color-info: #60a5fa;
+  --color-info-soft: rgb(96 165 250 / 16%);
+
+  // Status tint set — channel-alpha backgrounds + 400-level foregrounds
+  --status-active-bg: rgb(52 211 153 / 16%);
+  --status-active-fg: #34d399;
+  --status-info-bg: rgb(96 165 250 / 16%);
+  --status-info-fg: #60a5fa;
+  --status-warning-bg: rgb(251 191 36 / 16%);
+  --status-warning-fg: #fbbf24;
+  --status-danger-bg: rgb(251 113 133 / 16%);
+  --status-danger-fg: #fb7185;
+  --status-neutral-bg: #2a2825;
+  --status-neutral-fg: #beafa7;
+  --notification-dot: #ef4444;
+
+  // Chart palette — same hues at 400-level brightness (RD-1.1)
+  --chart-1: #a1886f;
+  --chart-2: #60a5fa;
+  --chart-3: #4ade80;
+  --chart-4: #f87171;
+  --chart-5: #34d399;
+  --chart-6: #93c5fd;
+  --chart-7: #fbbf24;
+  --chart-8: #fb7185;
+  --chart-muted: #6e655e;
+  --chart-track: #3a3835;
+
+  // Tinted borders — alpha tints with dark-4-friendly strength
+  --tint-blue-border: rgb(96 165 250 / 35%);
+  --tint-rose-border: rgb(251 113 133 / 35%);
+  --tint-green-border: rgb(52 211 153 / 35%);
+  --tint-amber-border: rgb(251 191 36 / 35%);
 
   --accent-custodies-soft: rgb(var(--accent-custodies-rgb) / 16%);
   --accent-expenses-soft: rgb(var(--accent-expenses-rgb) / 16%);
@@ -202,7 +276,5 @@
   color-scheme: dark;
 }
 
-// Adaptive motion levels (12.4 + T6-50): --motion-scale 0/1/2 for JS hooks;
+// Adaptive motion levels: --motion-scale 0/1/2 for JS hooks;
 // the CSS rules per level live in 01-base/motion.scss (Off disables everything)
-// (declared inside the main :root block above: --motion-scale)
-

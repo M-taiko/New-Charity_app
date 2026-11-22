@@ -2,6 +2,7 @@
   position: relative;
 }
 
+/* RD-2.2: the notification dot/badge — #EF4444 with a surface ring, both themes */
 .notification-bell__badge {
   position: absolute;
   top: 2px;
@@ -10,17 +11,13 @@
   height: 16px;
   padding-inline: 3px;
   border-radius: var(--radius-full);
-  background: var(--palette-ink);
+  background: var(--notification-dot);
   color: var(--palette-white);
+  border: 2px solid var(--color-surface);
   font-size: 10px;
-  line-height: 16px;
+  line-height: 12px;
   text-align: center;
   font-variant-numeric: tabular-nums;
-}
-
-:root[data-theme='dark'] .notification-bell__badge {
-  background: var(--palette-cream);
-  color: var(--palette-ink);
 }
 
 .notification-bell__list {

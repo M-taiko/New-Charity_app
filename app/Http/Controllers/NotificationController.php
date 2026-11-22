@@ -43,11 +43,17 @@ class NotificationController extends Controller
     /**
      * Mark all notifications as read
      */
-    public function markAllRead()
+    public function markAllRead(Request $request)
     {
         Notification::where('user_id', auth()->id())
             ->where('is_read', false)
             ->update(['is_read' => true, 'read_at' => now()]);
+
+        // the SPA's /api/v1 call expects a JSON envelope with the message;
+        // the Blade web form keeps the redirect + flash
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'تم تعليم جميع الإشعارات كمقروءة']);
+        }
 
         return back()->with('success', 'تم تعليم جميع الإشعارات كمقروءة');
     }

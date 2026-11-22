@@ -131,11 +131,11 @@ const AMOUNT_DEBOUNCE_MS = 500;
   template: `
     <app-page-header [title]="'expense.list.title' | translate" accent="expenses" iconName="receipt-2">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
+        <app-action-button kind="editRequests" label="expense.list.edit_requests" size="small" [route]="['/expenses', 'edit-requests']" />
         @if (canQuickExpense) {
-          <app-action-button kind="quickAdd" label="expense.list.quick" size="small" (action)="quickOpen.set(true)" />
+          <app-action-button kind="quickExpense" label="expense.list.quick" size="small" (action)="quickOpen.set(true)" />
         }
-<p-button [label]="'expense.list.create' | translate" size="small" routerLink="/expenses/new" />
-        <p-button [label]="'expense.list.edit_requests' | translate" size="small" [outlined]="true" routerLink="/expenses/edit-requests" />
+        <p-button [label]="'expense.list.create' | translate" size="small" routerLink="/expenses/new" />
       </div>
     </app-page-header>
 
@@ -147,21 +147,22 @@ const AMOUNT_DEBOUNCE_MS = 500;
              panels; purchases and salaries live on their own filtered pages -->
         <app-tabs id="expenses" [tabs]="expenseTabs" [(active)]="expenseTab" class="u-mb-2" />
 
-        <div class="kpi-grid">
-        <app-stat-tile [label]="'expense.list.filtered_total'" [value]="summaryValue('filtered_total')" [money]="true" accent="expenses" iconName="receipt-2" />
-        <app-stat-tile [label]="'common.count'" [value]="summaryValue('count')" />
+        <!-- RD-4.7: four top-accent KPI cards (rose/blue/green/amber) -->
+        <div class="kpi-grid kpi-grid--4">
+        <app-stat-tile [label]="'expense.list.filtered_total'" [value]="summaryValue('filtered_total')" [money]="true" tone="danger" accent="expenses" iconName="receipt-2" />
+        <app-stat-tile [label]="'common.count'" [value]="summaryValue('count')" tone="primary" />
         @if (summaryValue('purchases_total') !== '0') {
           <a class="tile-link" routerLink="/procurement/purchase" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'expense.list.purchases_total'" [value]="summaryValue('purchases_total')" [money]="true" />
+            <app-stat-tile [label]="'expense.list.purchases_total'" [value]="summaryValue('purchases_total')" [money]="true" tone="success" />
           </a>
         }
         @if (summaryValue('salaries_total') !== '0') {
           <a class="tile-link" routerLink="/hr/salaries" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'expense.list.salaries_total'" [value]="summaryValue('salaries_total')" [money]="true" />
+            <app-stat-tile [label]="'expense.list.salaries_total'" [value]="summaryValue('salaries_total')" [money]="true" tone="warning" />
           </a>
         }
         @if (summaryValue('grand_total') !== '0') {
-          <app-stat-tile [label]="'expense.list.grand_total'" [value]="summaryValue('grand_total')" [money]="true" [inset]="true" />
+          <app-stat-tile [label]="'expense.list.grand_total'" [value]="summaryValue('grand_total')" [money]="true" [inset]="true" tone="primary" />
         }
         </div>
 
@@ -185,12 +186,16 @@ const AMOUNT_DEBOUNCE_MS = 500;
                                 (selectionChange)="ctx.set(encodeDirection($event))" />
         </ng-template>
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
-        <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'expense_type' }}</ng-template>
+        <ng-template appCell="user" let-row><span class="u-fw-semibold">{{ row.user ?? '—' }}</span></ng-template>
+        <ng-template appCell="type" let-row><span class="u-muted">{{ row.type | enumLabel: 'expense_type' }}</span></ng-template>
         <ng-template appCell="direction" let-row>{{ row.direction ?? '—' }}</ng-template>
-        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="amount" let-row><span class="money money--neg u-bidi u-fw-semibold">{{ row.amount | money }}</span></ng-template>
         <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
-        <ng-template appCell="reviewed" let-row>{{ (row.reviewed ? 'reviewed' : 'not_reviewed') | enumLabel: 'review_state' }}</ng-template>
+        <ng-template appCell="reviewed" let-row>
+          <span class="stamp" [class.stamp--success]="row.reviewed" [class.stamp--pending]="!row.reviewed">
+            {{ (row.reviewed ? 'reviewed' : 'not_reviewed') | enumLabel: 'review_state' }}
+          </span>
+        </ng-template>
         <ng-template appCell="attachment" let-row>@if (row.has_attachment) {
   <app-row-actions [actions]="attachmentActions(row)" />
 } @else { <span aria-hidden="true">—</span> }</ng-template>
@@ -232,7 +237,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
           }
         </div>
       }
-      <p-footer>
+      <ng-template pTemplate="footer">
         @if (preview(); as p) {
           <div class="u-flex u-gap-2 u-justify-end">
             <app-action-button kind="close" label="common.cancel" (action)="preview.set(null)" />
@@ -241,7 +246,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
             </a>
           </div>
         }
-      </p-footer>
+      </ng-template>
     </app-content-dialog>
 
     <!-- plain review confirm (expense already has a direction) -->
@@ -535,7 +540,7 @@ export class ExpenseListPage {
       { icon: 'list-check', label: 'expense.list.review', visible: row.can_review, handler: () => { this.startReview(row); } },
       { icon: 'x', label: 'expense.list.unreview', visible: row.can_unreview, handler: () => { this.startUnreview(row); } },
       { icon: 'pencil', label: 'common.edit', visible: row.can_edit, route: ['/expenses', row.id, 'edit'] },
-      { icon: 'eye', label: 'common.view', route: ['/expenses', row.id] },
+      { icon: 'eye', label: 'common.view', severity: 'info', route: ['/expenses', row.id] },
     ];
   }
 

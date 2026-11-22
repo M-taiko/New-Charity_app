@@ -5,7 +5,6 @@
 //   - assignee (non-manager): start (in_progress) only, only while pending
 //   - delegate: creator, assignee, manager or accountant, while the task is open
 import { computed, ChangeDetectionStrategy, Component, inject, input, resource, signal, viewChild } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
@@ -30,6 +29,7 @@ import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { Router } from '@angular/router';
 
 interface TaskComment {
   id: number;
@@ -56,7 +56,7 @@ interface TaskDetail {
 @Component({
   selector: 'app-task-detail',
   standalone: true,
-  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, ConfirmDialogComponent, ConfirmDeleteComponent, FormDialogComponent, UserChipComponent, RelativeTimePipe, EnumLabelPipe, ActionButtonComponent],
+  imports: [FieldComponent, TranslatePipe, FormsModule, ButtonModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, ConfirmDialogComponent, ConfirmDeleteComponent, FormDialogComponent, UserChipComponent, RelativeTimePipe, EnumLabelPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'task.detail.title' | translate">

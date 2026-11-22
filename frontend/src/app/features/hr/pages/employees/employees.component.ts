@@ -14,6 +14,7 @@ import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.componen
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ListResponse } from '@shared/models/api.models';
+import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 
 interface Row {
   id: number;
@@ -29,7 +30,7 @@ interface Row {
 @Component({
   selector: 'app-employees-page',
   standalone: true,
-  imports: [SectionNavComponent, 
+  imports: [ StatusStampComponent,SectionNavComponent, 
     TranslatePipe,
     PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, MoneyPipe, RowActionsComponent,
@@ -56,7 +57,7 @@ interface Row {
           <ng-template appCell="department" let-row>{{ row.department ?? '—' }}</ng-template>
           <ng-template appCell="job_title" let-row>{{ row.job_title ?? '—' }}</ng-template>
           <ng-template appCell="salary" let-row><span class="u-bidi">{{ row.salary | money }}</span></ng-template>
-          <ng-template appCell="status" let-row>{{ row.status ?? '—' }}</ng-template>
+          <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="employee_status" /></ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
             <app-empty-state [title]="'hr.employees.empty' | translate" [text]="'common.no_data' | translate" accent="hr" iconName="briefcase" />

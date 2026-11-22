@@ -1,10 +1,10 @@
 import type { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, finalize, retry, throwError, timeout } from 'rxjs';
+import { catchError, finalize, retry, tap, throwError, timeout } from 'rxjs';
 import { APP_CONFIG } from '@core/config/app-config';
 import { ToastService } from '@core/errors/toast.service';
-import { offline } from '@core/http/progress-state';
+import { offline, trackRequestEnd, trackRequestStart } from '@core/http/progress-state';
 
 /** Prefixes every request with the /api/v1 base (absolute URLs untouched). */
 export const apiUrlInterceptor: HttpInterceptorFn = (req, next) => {
@@ -64,10 +64,27 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   );
 };
 
-/** Thin global progress line (plan 18). */
+/**
+ * Global progress line (UX-6.1): every API call bumps the pending count; the
+ * topbar renders a slim 2px primary bar while any request is in flight.
+ * A successful response also clears the offline flag (auto-dismiss on recovery).
+ */
 export const progressInterceptor: HttpInterceptorFn = (req, next) => {
-  if (req.method === 'GET') {
+  // only API calls move the bar — assets and translations load silently
+  if (!req.url.includes('/api/')) {
     return next(req);
   }
-  return next(req).pipe(finalize(() => void 0));
+  trackRequestStart();
+  return next(req).pipe(
+    tap({
+      next: () => {
+        if (offline()) {
+          offline.set(false);
+        }
+      },
+    }),
+    finalize(() => {
+      trackRequestEnd();
+    }),
+  );
 };

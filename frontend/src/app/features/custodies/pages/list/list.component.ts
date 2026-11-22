@@ -26,6 +26,8 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ActionResponse, ListResponse } from '@shared/models/api.models';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { ProgressCellComponent } from '@shared/ui/data-table/progress-cell.component';
 import type { TableFilterDef, TableQuery } from '@shared/lib/table-filters';
 
 interface Row {
@@ -63,16 +65,17 @@ interface CustodyListParams {
   standalone: true,
   imports: [
     TranslatePipe, RouterLink, ButtonModule,
-    PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
+    PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableCellDirective,
     EmptyStateComponent, MoneyPipe, StatusStampComponent,
-    ReasonDialogComponent, SectionNavComponent, SplitButtonModule,
+    ReasonDialogComponent, SectionNavComponent, SplitButtonModule, ActionButtonComponent, ProgressCellComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'custody.list.title' | translate" accent="custodies" iconName="wallet">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
-        <!-- T6-10: creation variants collapse into one split button; navigation
-             moved to the module section-nav below the header -->
+        <!-- RD-4.2: the Stitch button row — tracking link, personal request,
+             create (primary), my custodies, transfer custody -->
+        <app-action-button kind="allCustodies" label="nav.custody_tracking" size="small" [route]="['/custodies', 'tracking']" />
         @if (canCreate()) {
           @if (isOffice()) {
             <p-splitbutton appendTo="body" [label]="'custody.list.create_for_user' | translate" size="small"
@@ -82,8 +85,10 @@ interface CustodyListParams {
           }
         }
         @if (!canCreate() && isAgent()) {
-          <p-button [label]="'custody.list.agent_request' | translate" size="small" routerLink="/custodies/new" />
+          <app-action-button kind="requestCustody" label="custody.list.agent_request" size="small" [route]="['/custodies', 'new']" />
         }
+        <app-action-button kind="myCustodies" label="nav.my_custodies" size="small" [route]="['/custodies', 'mine']" />
+        <app-action-button kind="transferCustody" label="custody.list.transfer_custody" size="small" [route]="['/transfers', 'new']" />
       </div>
     </app-page-header>
 
@@ -91,12 +96,13 @@ interface CustodyListParams {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'custody.list.accepted'" [value]="summaryValue('accepted')" accent="custodies" iconName="wallet" />
-          <app-stat-tile [label]="'custody.list.pending'" [value]="summaryValue('pending')" />
-          <app-stat-tile [label]="'custody.list.rejected'" [value]="summaryValue('rejected')" />
-          <app-stat-tile [label]="'custody.list.closed_or_cancelled'" [value]="summaryValue('closed_or_cancelled')" />
-          <app-stat-tile [label]="'custody.list.total'" [value]="summaryValue('total')" />
+        <!-- RD-4.2: five top-accent status cards (accepted/pending/rejected/closed/total) -->
+        <div class="kpi-grid kpi-grid--5">
+          <app-stat-tile [label]="'custody.list.accepted'" [value]="summaryValue('accepted')" tone="success" accent="custodies" iconName="wallet" />
+          <app-stat-tile [label]="'custody.list.pending'" [value]="summaryValue('pending')" tone="warning" />
+          <app-stat-tile [label]="'custody.list.rejected'" [value]="summaryValue('rejected')" tone="danger" />
+          <app-stat-tile [label]="'custody.list.closed_or_cancelled'" [value]="summaryValue('closed_or_cancelled')" tone="info" />
+          <app-stat-tile [label]="'custody.list.total'" [value]="summaryValue('total')" tone="primary" />
         </div>
 
       <app-data-table
@@ -115,10 +121,17 @@ interface CustodyListParams {
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
         <ng-template appCell="agent" let-row>{{ row.agent ?? '—' }}</ng-template>
         <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
-        <ng-template appCell="transferred_in" let-row><span class="u-bidi">{{ row.transferred_in | money }}</span></ng-template>
-        <ng-template appCell="spent" let-row><span class="u-bidi">{{ row.spent | money }}</span></ng-template>
-        <ng-template appCell="remaining" let-row><span class="u-bidi">{{ row.remaining | money }}</span></ng-template>
-        <ng-template appCell="spent_percent" let-row>{{ row.spent_percent ?? '—' }}</ng-template>
+        <ng-template appCell="transferred_in" let-row><span class="money money--pos u-bidi">{{ row.transferred_in | money }}</span></ng-template>
+        <ng-template appCell="transferred_out" let-row><span class="money money--neg u-bidi">{{ row.transferred_out | money }}</span></ng-template>
+        <ng-template appCell="spent" let-row><span class="money money--neg u-bidi">{{ row.spent | money }}</span></ng-template>
+        <ng-template appCell="remaining" let-row><span class="money money--pos u-bidi">{{ row.remaining | money }}</span></ng-template>
+        <ng-template appCell="spent_percent" let-row>
+          @if (row.spent_percent === null || row.spent_percent === undefined) {
+            —
+          } @else {
+            <app-progress-cell [ratio]="row.spent_percent / 100" [label]="'custody.list.col_spent_percent' | translate" />
+          }
+        </ng-template>
         <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="custody_status" /></ng-template>
         <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         <div empty>
@@ -159,6 +172,7 @@ export class CustodyListPage {
     { field: 'agent', searchField: 'agent', header: 'custody.list.col_agent', sortable: true },
     { field: 'amount', header: 'custody.list.col_amount', sortable: true, numeric: true },
     { field: 'transferred_in', header: 'custody.list.col_transferred_in', sortable: true, numeric: true },
+    { field: 'transferred_out', header: 'custody.list.col_transferred_out', sortable: true, numeric: true },
     { field: 'spent', header: 'custody.list.col_spent', sortable: true, numeric: true },
     { field: 'remaining', header: 'custody.list.col_remaining', sortable: true, numeric: true },
     { field: 'spent_percent', header: 'custody.list.col_spent_percent', sortable: true, numeric: true },
@@ -263,7 +277,7 @@ export class CustodyListPage {
   /** row actions per status/role (actions.blade.php) — view/accept/return link to the detail, reject opens the reason dialog */
   actionsFor(row: Row): RowActionItem[] {
     return [
-      { icon: 'eye', label: 'common.view', route: ['/custodies', row.id] },
+      { icon: 'eye', label: 'common.view', severity: 'info', route: ['/custodies', row.id] },
       {
         icon: 'check',
         label: 'custody.detail.accept',

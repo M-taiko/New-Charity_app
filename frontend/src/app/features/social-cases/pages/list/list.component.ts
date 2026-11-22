@@ -89,11 +89,28 @@ interface QuickDetail {
 
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'case.list.total'" [value]="summaryValue('total')" accent="cases" iconName="heart-handshake" />
-          <app-stat-tile [label]="'case.list.pending'" [value]="summaryValue('pending')" />
-          <app-stat-tile [label]="'case.list.approved'" [value]="summaryValue('approved')" />
-          <app-stat-tile [label]="'case.list.rejected'" [value]="summaryValue('rejected')" />
+        <div class="kpi-grid kpi-grid--4">
+          <app-stat-tile [label]="'case.list.total'" [value]="summaryValue('total')" tone="primary" accent="cases" iconName="heart-handshake" />
+          <app-stat-tile [label]="'case.list.pending'" [value]="summaryValue('pending')" tone="warning" />
+          <app-stat-tile [label]="'case.list.approved'" [value]="summaryValue('approved')" tone="success" />
+          <app-stat-tile [label]="'case.list.rejected'" [value]="summaryValue('rejected')" tone="danger" />
+        </div>
+
+        <!-- RD-4.3: count chips — the Stitch card-header filter row, wired to
+             the status filter the API already supports -->
+        <div class="filter-chips" role="group" [attr.aria-label]="'common.filter' | translate">
+          <span class="filter-chips__title">{{ 'case.list.registered' | translate }}</span>
+          @for (chip of statusChips; track chip.value) {
+            <button
+              type="button"
+              class="filter-chips__chip"
+              [class.filter-chips__chip--active]="params().status === chip.value"
+              [attr.aria-pressed]="params().status === chip.value"
+              (click)="setStatusFilter(chip.value)"
+            >
+              {{ chip.label | translate }} <span class="u-bidi">({{ summaryValue(chip.countKey) }})</span>
+            </button>
+          }
         </div>
 
         <app-data-table listUrl="/social-cases"
@@ -106,7 +123,9 @@ interface QuickDetail {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
+          <ng-template appCell="code" let-row><a class="case-code u-bidi" [routerLink]="['/cases', row.id]">#{{ row.id }}</a></ng-template>
           <ng-template appCell="name" let-row><a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a></ng-template>
+          <ng-template appCell="assistance_type" let-row>{{ assistanceLabel(row.assistance_type) }}</ng-template>
           <ng-template appCell="phone" let-row><span class="u-bidi">{{ row.phone ?? '—' }}</span></ng-template>
           <ng-template appCell="governorate" let-row>{{ row.city ?? '—' }}</ng-template>
           <ng-template appCell="researcher" let-row>{{ row.researcher?.name ?? '—' }}</ng-template>
@@ -152,13 +171,23 @@ export class CaseListPage {
   readonly tableKey = 'list.component';
 
   readonly columns = [
+    { field: 'code', header: 'case.list.col_code', sortable: false },
     { field: 'name', header: 'case.list.col_name', sortable: true },
+    { field: 'assistance_type', header: 'case.list.col_category', sortable: true },
     { field: 'phone', header: 'case.list.col_phone', sortable: true },
     { field: 'governorate', header: 'case.form.governorate', sortable: true },
     { field: 'researcher', header: 'case.list.col_researcher', sortable: true },
     { field: 'status', header: 'case.list.col_status', sortable: true },
     { field: 'created_at', header: 'common.date', sortable: true },
     { field: 'actions', header: 'common.actions', sortable: false },
+  ];
+
+  /** RD-4.3: chip filters over the status values the API filters on */
+  readonly statusChips = [
+    { value: 'all', label: 'case.list.tab_all', countKey: 'total' },
+    { value: 'pending', label: 'case.list.pending', countKey: 'pending' },
+    { value: 'approved', label: 'case.list.approved', countKey: 'approved' },
+    { value: 'rejected', label: 'case.list.rejected', countKey: 'rejected' },
   ];
 
   /** the family-members modal table (T4-21) */
@@ -240,6 +269,23 @@ export class CaseListPage {
   summaryValue(key: string): string {
     const value = this.safeValue()?.meta?.summary?.[key];
     return typeof value === 'number' || typeof value === 'string' ? String(value) : '0';
+  }
+
+  /** RD-4.3: chip-driven status filter — the API's `status` param, 'all' cleared */
+  setStatusFilter(value: string): void {
+    if (this.params().status === value) {
+      return;
+    }
+    this.params.update((p) => ({ ...p, status: value, page: 1 }));
+    this.data.reload();
+  }
+
+  /** localized assistance-type label with the raw-code fallback */
+  assistanceLabel(value: string | null): string {
+    if (!value) {
+      return '—';
+    }
+    return this.label(`case.enums.assistance.${value}`);
   }
 
   onPage(event: { page: number; per_page: number; sort?: string }): void {

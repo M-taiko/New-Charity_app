@@ -122,7 +122,7 @@ export class UserListPage {
   /** T4-04.4: the old Blade view/edit links — edit stays behind manage_users */
   actionsFor(row: Row): RowActionItem[] {
     return [
-      { icon: 'eye', label: 'common.view', route: ['/users', row.id] },
+      { icon: 'eye', label: 'common.view', severity: 'info', route: ['/users', row.id] },
       { icon: 'pencil', label: 'common.edit', route: ['/users', row.id, 'edit'], visible: this.canManage },
     ];
   }

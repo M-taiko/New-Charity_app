@@ -16,6 +16,7 @@
   background: var(--color-surface-inset);
 }
 
+/* RD-2.4: surface-container hover rows, primary-container selection highlight */
 .command-palette__item {
   display: flex;
   align-items: center;
@@ -26,7 +27,11 @@
   font-size: var(--text-xs);
 }
 
-.command-palette__item:hover,
+.command-palette__item:hover {
+  background: var(--color-surface-inset);
+}
+
 .command-palette__item--active {
-  background: var(--color-surface-raised);
+  background: var(--color-primary-soft);
+  color: var(--color-on-primary-soft);
 }

@@ -2,6 +2,7 @@ import type { OnInit } from '@angular/core';
 import { ChangeDetectorRef, ChangeDetectionStrategy, Component, computed, inject, input, resource, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import type { NgForm } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -303,6 +304,14 @@ export class CaseFormPage implements OnInit {
   private toast = inject(ToastService);
   private translate = inject(TranslateService);
   private cdr = inject(ChangeDetectorRef);
+
+  /** UX-6.4: dirty template form → the unsaved-changes guard warns on leave */
+  private formRef = viewChild<NgForm>('f');
+  hasUnsavedChanges(): boolean {
+    const form = this.formRef();
+    return form?.dirty === true && !this.sending?.();
+  }
+
 
   id = input<number | undefined>(undefined);
   isEdit = computed(() => this.id() !== undefined);

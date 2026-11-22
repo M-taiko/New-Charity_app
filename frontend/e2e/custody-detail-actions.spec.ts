@@ -17,22 +17,24 @@ test('my-custodies shows lifecycle tabs and the new-request shortcut (agent)', a
   await page.goto('/app/custodies/mine');
   await expect(page.getByRole('button', { name: 'طلب عهدة جديدة' })).toBeVisible({ timeout: 15000 });
   for (const label of ['قيد الانتظار', 'التحويلات المعلقة', 'المغلقة والمنتهية']) {
-    await expect(page.getByRole('button', { name: new RegExp(label) })).toBeVisible();
+    await expect(page.getByRole('tab', { name: new RegExp(label) })).toBeVisible();
   }
 });
 
 test('custody detail shows print and edit for a treasury manager', async ({ page }) => {
   await login(page, 'donia.a5ra2019@gmail.com');
-  await page.goto('/app/custodies');
+  // filter to accepted custodies first — the edit action only exists on
+  // editable states, and unfiltered row order is data-dependent
+  await page.goto('/app/custodies?filter[status]=accepted');
   const firstRow = page.locator('.ledger-table tbody tr').first();
   await expect(firstRow).toBeVisible({ timeout: 15000 });
-  await firstRow.locator('a').first().click();
+  await firstRow.locator('.row-actions a').first().click();
   await expect(page.getByRole('button', { name: 'طباعة' })).toBeVisible({ timeout: 15000 });
   await expect(page.getByRole('button', { name: 'تعديل' })).toBeVisible();
 });
 
 test('refused external receipt shows the server message inside the dialog', async ({ page }) => {
-  await login(page, 'researcher-t@t.local');
+  await login(page, 'agent-t@t.local');
   await page.goto('/app/custodies/mine');
   const openBtn = page.getByRole('button', { name: 'استلام خارجي' });
   await expect(openBtn).toBeVisible({ timeout: 15000 });

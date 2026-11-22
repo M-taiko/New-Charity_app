@@ -6,6 +6,7 @@ export { StatTileComponent } from './stat-tile/stat-tile.component';
 export { StatusStampComponent } from './status-stamp/status-stamp.component';
 export { DataTableComponent, TableBodyDirective, TableCellDirective, TableFooterCellDirective } from './data-table/data-table.component';
 export type { TableColumn, TablePageEvent } from './data-table/data-table.component';
+export { ProgressCellComponent } from './data-table/progress-cell.component';
 export { TableFiltersComponent, FilterCustomDirective } from './table-filters/table-filters.component';
 export type { TableFilterDef, TableFilterOption, TableFilterType, TableFilterValue, TableQuery } from '@shared/lib/table-filters';
 export { EmptyStateComponent } from './empty-state/empty-state.component';

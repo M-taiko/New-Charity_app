@@ -28,7 +28,7 @@ export class ThemeService {
   private apply(theme: Theme): void {
     document.documentElement.setAttribute('data-theme', theme);
     const meta = document.querySelector('meta[name="theme-color"]');
-    meta?.setAttribute('content', theme === 'dark' ? '#4F2F1D' : '#F7F3EF');
+    meta?.setAttribute('content', theme === 'dark' ? '#12100E' : '#F4F3F1');
   }
 
   private initial(): Theme {

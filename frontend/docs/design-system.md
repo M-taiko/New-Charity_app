@@ -1,6 +1,66 @@
 # Design system — "مؤسسة نجيب سليم الخيرية"
 
-الثمانية ألوان فقط (10.1). الطوابع بالشكل/الأيقونة لا باللون (10.1.3). الخطوط المسطرة والهامش المزدوج، الأرقام بوجه Amiri، الرسم اللوني بترتيب ثابت brand/light/ink/taupe/mid/sand مع separator (10.1.4). BEM بخصائص منطقية فقط، الطبقات base<primeng<blocks<utilities.
+## The Stitch redesign (RD phases — light + dark)
+
+The app runs on the **Naguib Selim Foundation** Stitch design system in BOTH
+themes. Every color lives in `_tokens.scss` once per theme; components and
+blocks only reference `--color-*` / `--status-*` / `--chart-*` tokens —
+`npm run check:palette` rejects any hex outside the whitelist in built CSS.
+
+### Colors (RD-1.1)
+
+| Role | Light | Dark |
+|---|---|---|
+| primary / on-primary | `#5C4033` / white | `#F5EFE8` / `#3A261D` (cream primary) |
+| primary-container | `#EFE8E1` | `--dark-3` |
+| secondary | `#9A7B5C` | `#B99B7C` |
+| surface (cards) | `#FFFFFF` on `#F4F3F1` bg | `#201E1B` on `#12100E` bg |
+| hairline / outline | `#E2DCD4` | `#3A3835` / `#4A4845` |
+| text / muted | `#1F1B18` / `#6E655E` | `#F5EFE8` / `#BEAFA7` |
+| success / danger / warning / info | `#10B981` `#E11D48` `#D97706` `#3B82F6` | `#34D399` `#FB7185` `#FBBF24` `#60A5FA` |
+
+Status tints (`--status-active/info/warning/danger/neutral` bg+fg pairs) are
+solid hexes in light, channel-alpha rgb() in dark (Chrome 109-safe — never
+`color-mix()`). Chart palette `--chart-1..8` + `--chart-muted`/`--chart-track`
+per theme; tinted mini-card borders `--tint-blue/rose/green/amber-border`.
+
+### Typography & shape (RD-1.4/1.5)
+
+- **Cairo** 600/700 (self-hosted subset, preloaded) is the display face for
+  titles/KPI figures; **IBM Plex Sans Arabic** 400/600 is body/UI.
+- Type roles: page title = 24/32 w700 (`--text-2xl`), card title 18 w600,
+  labels 12 w500/600, body 14; `tabular-nums` everywhere numbers compare.
+- Radii: `--radius-s 6 / m 8 / l 12 / xl 16 / full`. Motion fast = 150ms
+  ease-out. Shell: 64px topbar, 256px sidebar (64 collapsed), 1280px content.
+
+### Key patterns added
+
+- **Soft buttons** (RD-3.1): action-kinds with `variant: 'soft'` render tint
+  bg + semantic fg (`.p-button-soft`); in-table "view" row action rests as
+  the soft blue pill (`severity: 'info'`).
+- **Stat tiles** (RD-3.2): `tone` adds the top-accent card (4px status bar +
+  colored value), `circle` the circular icon chip, `tinted` the tint-bg
+  mini-cards (custody detail); `kpi-grid--2/4/5/6` are the Stitch grids.
+- **Status pills** (RD-3.3): stamps are rounded-full tint+fg pills; money
+  color code `.money--pos/neg/link` (green/rose/blue).
+- **Spending ratio** (RD-3.3): `app-progress-cell` — slim bar + tabular %.
+- **Card-hero** (RD-4.10): detail facts card with the primary header band.
+- **Count chips** (RD-4.3): `.filter-chips` — status filter chips with live
+  counts (primary-container active chip).
+- **Journal ledger** (RD-4.10/5.3): `journalStampClass`/`journalMoneyClass`
+  map transaction types to pills + signed money colors.
+- **UX layer (Phase 6)**: 2px top progress line under the topbar while API
+  calls fly (`pendingRequests`), sticky table headers, bottom-sheet dialogs
+  on phones, money-formatted chart tooltips, offline auto-dismiss, and the
+  `unsavedChangesGuard` on form routes (components opt in via
+  `hasUnsavedChanges()`; the guard's single native `confirm` is the one
+  documented exception to the no-alert ban — it must block navigation
+  synchronously inside the router guard).
+- Print ALWAYS forces the light palette (`print.scss` `:root[data-theme]`
+  overrides win in both themes).
+
+---
+
 
 ## Shared page patterns (Task4 — T4-20…T4-26)
 

@@ -40,7 +40,7 @@ function otherMonth(current: number): string {
 test('users list shows view + edit row actions', async ({ page }) => {
   await login(page);
   await page.goto('/app/users');
-  await expect(page.locator('.ledger-table__row').first()).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.p-datatable-tbody tr').first()).toBeVisible({ timeout: 15000 });
   await expect(page.locator('.row-actions a[title="عرض"]').first()).toBeVisible();
   await expect(page.locator('.row-actions a[title="تعديل"]').first()).toBeVisible();
 });

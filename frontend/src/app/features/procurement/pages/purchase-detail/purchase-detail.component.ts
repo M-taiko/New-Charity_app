@@ -5,7 +5,6 @@
 // T4-20: async-page states; T4-23: app-field in the approve/purchase dialogs.
 import type { WritableSignal } from '@angular/core';
 import { computed, ChangeDetectionStrategy, Component, inject, input, resource, signal, viewChild } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
@@ -28,6 +27,7 @@ import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { DirectionNode } from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { Router } from '@angular/router';
 
 interface PurchaseDetail { id: number; [key: string]: string | number | boolean | null | undefined }
 
@@ -40,7 +40,7 @@ interface PurchaseDetail { id: number; [key: string]: string | number | boolean 
 @Component({
   selector: 'app-purchase-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, ReasonDialogComponent, ConfirmDeleteComponent, MoneyPipe, ActionButtonComponent],
+  imports: [TranslatePipe, FormsModule, ButtonModule, InputNumberModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, ReasonDialogComponent, ConfirmDeleteComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-async-page [resource]="data" variant="detail" [backLink]="['/procurement/purchase']">

@@ -1,6 +1,7 @@
-/* app-tabs (T6-11): one tabs pattern — underline tablist with count badges,
-   sliding ink indicator in Full motion mode. Replaces the per-page toggle
-   button groups. */
+/* app-tabs (T6-11 + RD-3.4): the ONE tabs pattern — a pure Stitch underline
+   tablist with count badges. Text-only tabs: no pill radius, no hover fill —
+   the active state is the primary text + the 2px primary underline riding the
+   bar's hairline; hover only shifts the text color. */
 .app-tabs {
   display: flex;
   align-items: stretch;
@@ -20,20 +21,19 @@
   background: transparent;
   color: var(--color-text-muted);
   font: inherit;
+  font-size: var(--text-sm);
   font-weight: 600;
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-s) var(--radius-s) 0 0;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
   position: relative;
   white-space: nowrap;
-  transition: color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  transition: color var(--dur-fast) var(--ease-out);
 
   &:hover:not(:disabled) {
     color: var(--color-text);
-    background: var(--color-surface-inset);
   }
 
   &:focus-visible {
@@ -50,13 +50,14 @@
 .app-tabs__tab--active {
   color: var(--color-primary);
 
+  /* RD-3.4: the Stitch underline tab — 2px primary bottom edge overlapping
+     the bar hairline, inset symmetrically (RTL-safe via inset-inline) */
   &::after {
     content: '';
     position: absolute;
     inset-inline: var(--space-2);
     inset-block-end: -1px;
-    border-block-end: 3px solid var(--color-primary);
-    border-radius: 2px 2px 0 0;
+    border-block-end: 2px solid var(--color-primary);
   }
 }
 
@@ -80,10 +81,9 @@
   color: var(--color-text-muted);
 }
 
-/* Full motion: active tab indicator slides via a press micro-transition */
+/* Full motion: press micro-transition on the tab */
 :root[data-motion='full'] .app-tabs__tab {
-  transition: color var(--dur-base) var(--ease-out), background-color var(--dur-base) var(--ease-out),
-    transform var(--dur-fast) var(--ease-out);
+  transition: color var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out);
 }
 
 :root[data-motion='full'] .app-tabs__tab:active:not(:disabled) {

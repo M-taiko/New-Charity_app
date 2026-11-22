@@ -163,14 +163,14 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
             <p class="u-small u-muted">{{ 'expense.detail.attachment_file_hint' | translate }}</p>
           }
         </div>
-        <p-footer>
+        <ng-template pTemplate="footer">
           <div class="u-flex u-gap-2 u-justify-end">
             <app-action-button kind="close" label="common.cancel" (action)="previewOpen.set(false)" />
             <a class="p-button p-button-sm p-button-outlined p-button-text-only" [href]="downloadUrl()" target="_blank" rel="noopener">
               {{ 'expense.detail.download' | translate }}
             </a>
           </div>
-        </p-footer>
+        </ng-template>
       </app-content-dialog>
 
       <app-confirm-delete

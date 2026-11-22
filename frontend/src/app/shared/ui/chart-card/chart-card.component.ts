@@ -11,10 +11,11 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { MotionService } from '@core/motion/motion.service';
+import { ThemeService } from '@core/theme/theme.service';
 import { ChartPrintHelperComponent } from '../print-sheet/print-sheet.component';
 
 export interface ChartSeries {
@@ -105,7 +106,8 @@ export interface ChartLegendItem {
                 >
                   <span class="chart-legend__chip" [style.background]="item.color"></span>
                   <span class="chart-legend__label">{{ item.label }}</span>
-                  <span class="chart-legend__value u-bidi">{{ item.value | money: false }} · {{ item.percent }}%</span>
+                  <span class="chart-legend__value u-bidi">{{ item.value | money: false }}</span>
+                  <span class="chart-legend__percent u-bidi">· {{ item.percent }}%</span>
                 </button>
               </li>
             }
@@ -123,15 +125,29 @@ export class ChartCardComponent implements OnDestroy {
   chartType = input<'doughnut' | 'bar' | 'line'>('doughnut');
 
   private motion = inject(MotionService);
+  private theme = inject(ThemeService);
+  private translate = inject(TranslateService);
   private host = viewChild<ElementRef<HTMLDivElement>>('host');
   readonly asTable = signal(false);
+
+  /** money-formatted tooltip line: tabular figures + the localized currency */
+  private tooltipMoney(value: number): string {
+    const currency = this.translate.instant('common.egp');
+    const formatted = value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return `${formatted} ${currency}`.trim();
+  }
   /** indexes of series hidden via the legend toggle (T7-03) */
   private readonly hidden = signal<ReadonlySet<number>>(new Set());
   private prevSeries: readonly ChartSeries[] | null = null;
 
-  // multi-hue, color-blind-safe series palette (T6-40) — 8 colors, ordered so
-  // adjacent slices stay distinguishable in both themes
-  private readonly palette = ['#0F766E', '#B8860B', '#7A4F9E', '#2F6CB3', '#B3555E', '#4F8F3A', '#8A6D3B', '#5E5E5E'];
+  /**
+   * The series palette comes from the --chart-* tokens (RD-1.1/RD-1.6) so both
+   * themes stay in sync — read at render time, never hardcoded hexes here.
+   */
+  private readPalette(): string[] {
+    const styles = getComputedStyle(document.documentElement);
+    return Array.from({ length: 8 }, (_, i) => styles.getPropertyValue(`--chart-${i + 1}`).trim()).filter(Boolean);
+  }
   private chart: { destroy: () => void; data: { labels: string[]; datasets: { data: number[] }[] } } | null = null;
   /** the live canvas — the print helper flattens it to an image on beforeprint (T6-70.5) */
   readonly printCanvas = signal<HTMLCanvasElement | null>(null);
@@ -150,6 +166,9 @@ export class ChartCardComponent implements OnDestroy {
   legendItems = computed<ChartLegendItem[]>(() => {
     const items = this.series();
     const hidden = this.hidden();
+    // touch the theme signal so legend chips re-read the --chart-* tokens on toggle
+    this.theme.theme();
+    const palette = this.readPalette();
     const visible = items.filter((_, i) => !hidden.has(i));
     const total = visible.reduce((sum, s) => sum + s.value, 0);
     return items.map((s, i) => ({
@@ -157,7 +176,7 @@ export class ChartCardComponent implements OnDestroy {
       label: s.label,
       value: s.value,
       percent: total > 0 && !hidden.has(i) ? Math.round((s.value / total) * 100) : 0,
-      color: this.palette[i % this.palette.length],
+      color: palette[i % palette.length],
       hidden: hidden.has(i),
     }));
   });
@@ -167,9 +186,12 @@ export class ChartCardComponent implements OnDestroy {
   visibleTotal = computed(() => this.visibleItems().reduce((sum, item) => sum + item.value, 0));
 
   constructor() {
-    // React to series/legend changes: create or update chart when data arrives.
+    // React to series/legend/theme changes: create or update chart when data
+    // arrives or the theme toggles (RD-1.6 — charts re-render per theme).
     effect(async () => {
       const series = this.series();
+      // tracked dependency — re-renders with the other palette on theme toggle (RD-1.6)
+      this.theme.theme();
       // a fresh series payload resets the toggles — indexes may point at other rows
       if (series !== this.prevSeries) {
         this.hidden.set(new Set());
@@ -232,37 +254,51 @@ export class ChartCardComponent implements OnDestroy {
     const values = items.map((s) => s.value);
     const colors = items.map((s) => s.color);
     const styles = getComputedStyle(document.documentElement);
-    const surfaceColor = styles.getPropertyValue('--color-surface').trim() || '#fff';
-    // axis/tooltip text follows the theme text color (T6-60 rule: never the
-    // surface color, which made text invisible)
-    const textColor = styles.getPropertyValue('--color-text').trim() || '#4F2F1D';
+    // RD-1.6: every chart color comes from tokens — hairline grids, the donut
+    // track, tabular body font and inverted tooltip surfaces (light tooltips on
+    // #1F1B18 / dark tooltips on #F5EFE8, i.e. text/bg swapped per theme).
+    const token = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback;
+    const textColor = token('--color-text', '#1f1b18');
+    const gridColor = token('--color-hairline', '#e2dcd4');
+    const trackColor = token('--chart-track', '#eae4dc');
+    const font = { family: token('--font-ui', "'IBM Plex Sans Arabic', Tahoma, sans-serif") };
+    const tooltipBg = textColor === '#1f1b18' ? '#1f1b18' : '#f5efe8';
+    const tooltipFg = textColor === '#1f1b18' ? '#f5efe8' : '#3a261d';
     const type = this.chartType();
+
+    const lineDataset = {
+      data: values,
+      label: this.title(),
+      borderColor: colors[0],
+      backgroundColor: colors[0],
+      borderWidth: this.isNarrow() ? 1.5 : 2.5,
+      pointRadius: values.length === 1 ? 4 : 0,
+      pointHoverRadius: 5,
+      pointHitRadius: 12,
+      fill: false,
+      tension: 0,
+    };
+    const barDataset = {
+      data: values,
+      backgroundColor: colors,
+      borderColor: gridColor,
+      borderWidth: 1,
+      borderRadius: 4,
+      maxBarThickness: 32,
+    };
 
     this.chart = new this.chartLib(canvas, {
       type,
       data: {
         labels,
-        datasets: [
-          type === 'line'
-            ? {
-                data: values,
-                label: this.title(),
-                borderColor: colors[0],
-                backgroundColor: colors[0],
-                borderWidth: this.isNarrow() ? 1.5 : 2.5,
-                pointRadius: 0,
-                pointHoverRadius: 5,
-                pointHitRadius: 12,
-                fill: false,
-                tension: 0,
-              }
-            : {
-                data: values,
-                backgroundColor: colors,
-                borderColor: surfaceColor,
-                borderWidth: 2,
-              },
-        ],
+        datasets:
+          type === 'doughnut'
+            ? [
+                // full-ring track under the slices — the Stitch donut spec (RD-3.6)
+                { data: [values.reduce((sum, v) => sum + v, 0)], backgroundColor: [trackColor], borderWidth: 0, weight: 1 },
+                { data: values, backgroundColor: colors, borderWidth: 0, weight: 1 },
+              ]
+            : [type === 'line' ? lineDataset : barDataset],
       },
       options: {
         responsive: true,
@@ -276,16 +312,29 @@ export class ChartCardComponent implements OnDestroy {
         plugins: {
           // the legend is the HTML list under the canvas — never canvas dots (T7-03)
           legend: { display: false },
-          tooltip: { titleColor: textColor, bodyColor: textColor },
+          tooltip: {
+            titleColor: tooltipFg,
+            bodyColor: tooltipFg,
+            backgroundColor: tooltipBg,
+            titleFont: font,
+            bodyFont: font,
+            padding: 8,
+            cornerRadius: 8,
+            // UX-6.7: money-formatted tooltips — tabular figures + the currency label
+            callbacks: {
+              label: (ctx: { parsed: number; label?: string }) =>
+                ` ${this.tooltipMoney(ctx.parsed ?? 0)}${ctx.label ? ` — ${ctx.label}` : ''}`,
+            },
+          },
         },
-        ...(type !== 'doughnut'
-          ? {
+        ...(type === 'doughnut'
+          ? { cutout: '75%' }
+          : {
               scales: {
-                y: { beginAtZero: true, ticks: { color: textColor, precision: 0 }, grid: { color: surfaceColor } },
-                x: { ticks: { color: textColor } },
+                y: { beginAtZero: true, ticks: { color: textColor, precision: 0, font }, grid: { color: gridColor } },
+                x: { ticks: { color: textColor, font }, grid: { display: false } },
               },
-            }
-          : {}),
+            }),
       },
     }) as typeof this.chart;
   }

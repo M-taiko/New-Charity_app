@@ -1,4 +1,5 @@
-// Typography (plan 10.3): numerals are heroes — display face, tabular figures.
+// Typography (plan 10.3 + RD-1.4): numerals are heroes — Cairo display face,
+// tabular figures. Line-heights follow the Stitch type roles (30/36 … 11/16).
 body {
   font-variant-numeric: tabular-nums;
 }
@@ -7,6 +8,7 @@ body {
   font-family: var(--font-display);
   font-weight: 700;
   letter-spacing: 0;
+  line-height: 1.2;
 }
 
 // Bidi isolation for numbers, codes and amounts inside Arabic sentences (23 RTL)
@@ -19,12 +21,28 @@ body {
 
 h1 {
   font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.4;
 }
 
 h2 {
-  font-size: var(--text-lg);
+  // headline-lg (24/32 w700) — page titles
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 h3 {
-  font-size: var(--text-md);
+  // title-lg (18/26 w600) — card titles
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+h4,
+h5,
+h6 {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.45;
 }

@@ -50,21 +50,27 @@ interface TreasuryRow {
     ConfirmDeleteComponent, RowActionsComponent, MoneyPipe, DatetimePipe,
   ],
   template: `
-    <app-page-header [title]="'treasury.list.title' | translate" accent="treasury" iconName="building-bank">
+    <app-page-header [title]="'treasury.list.title' | translate" subtitle="treasury.list.subtitle" accent="treasury" iconName="building-bank">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
         <p-button [label]="'treasury.list.transfer' | translate" [outlined]="true" size="small" routerLink="/treasury/transfer" />
         <p-button [label]="'treasury.list.receive_donation' | translate" size="small" (onClick)="openDonation(null)" />
         <p-button [label]="'treasury.list.add' | translate" size="small" routerLink="/treasury/new" />
+        <p-button [label]="'treasury.list.record_expense' | translate" size="small" routerLink="/expenses/new" />
       </div>
+      <!-- RD-4.4: the current-balance line under the header -->
+      <p class="u-muted u-small">
+        {{ 'treasury.list.total_balance' | translate }}:
+        <strong class="money money--pos u-bidi">{{ summaryBalance() | money }}</strong>
+      </p>
     </app-page-header>
 
     <app-section-nav module="treasury" />
 
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'treasury.list.count'" [value]="summaryCount()" accent="treasury" iconName="building-bank" />
-          <app-stat-tile [label]="'treasury.list.total_balance'" [value]="summaryBalance()" [money]="true" />
+        <div class="kpi-grid kpi-grid--2">
+          <app-stat-tile [label]="'treasury.list.count'" [value]="summaryCount()" tone="primary" accent="treasury" iconName="building-bank" />
+          <app-stat-tile [label]="'treasury.list.total_balance'" [value]="summaryBalance()" [money]="true" tone="success" iconName="custody" accent="treasury" />
         </div>
 
         <app-data-table listUrl="/treasury"
@@ -85,7 +91,7 @@ interface TreasuryRow {
 @if (row.notes) {
   <div class="u-muted u-small u-truncate">{{ row.notes }}</div>
 }</ng-template>
-          <ng-template appCell="balance" let-row>{{ row.balance | money }}</ng-template>
+          <ng-template appCell="balance" let-row><span class="money money--pos u-bidi">{{ row.balance | money }}</span></ng-template>
           <ng-template appCell="transactions_count" let-row>{{ row.transactions_count ?? '—' }}</ng-template>
           <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime: false }}</span></ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
@@ -256,7 +262,7 @@ export class TreasuryListPage {
   /** T4-24: view / donation / edit / transfer / delete (Blade actions) */
   actionsFor(row: TreasuryRow): RowActionItem[] {
     return [
-      { icon: 'eye', label: 'common.view', route: ['/treasury', row.id] },
+      { icon: 'eye', label: 'common.view', severity: 'info', route: ['/treasury', row.id] },
       { icon: 'wallet', label: 'treasury.list.receive_donation', handler: () => { this.openDonation(row); } },
       { icon: 'pencil', label: 'common.edit', route: ['/treasury', row.id, 'edit'] },
       { icon: 'arrows-exchange', label: 'treasury.list.transfer', route: ['/treasury', 'transfer'] },

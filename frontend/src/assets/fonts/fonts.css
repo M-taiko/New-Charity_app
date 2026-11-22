@@ -13,9 +13,16 @@
   src: url('ibm-plex-sans-arabic-600-arabic.woff2') format('woff2'), url('ibm-plex-sans-arabic-600-latin.woff2') format('woff2');
 }
 @font-face {
-  font-family: 'Amiri';
+  font-family: 'Cairo';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('cairo-600-arabic.woff2') format('woff2'), url('cairo-600-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Cairo';
   font-style: normal;
   font-display: swap;
   font-weight: 700;
-  src: url('amiri-700-arabic.woff2') format('woff2'), url('amiri-700-latin.woff2') format('woff2');
+  src: url('cairo-700-arabic.woff2') format('woff2'), url('cairo-700-latin.woff2') format('woff2');
 }

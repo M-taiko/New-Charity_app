@@ -49,6 +49,12 @@
   .bento__widget--wide {
     grid-column: span 8;
   }
+
+  /* full-width sections (KPI strip, insights, money flow) — spans 12 so no
+     dead column sits beside them in the 12-col grid */
+  .bento__widget--full {
+    grid-column: span 12;
+  }
 }
 
 .bento__widget {
@@ -108,31 +114,53 @@ a.dash-kpi:hover {
   text-align: start;
 }
 
-/* quick-action chips: 44px-high icon chips (T6-60.2) */
+/* quick actions (RD-3.7): surface-container tiles, outline border, primary
+   hover border — icon + label-lg, 2/3-column grid like the Stitch dashboard */
 .dash-chips {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: var(--space-2);
-  flex-wrap: wrap;
 }
 
 .dash-chip {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 44px;
-  padding: var(--space-2) var(--space-3);
+  min-height: 48px;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-m);
+  background: var(--color-surface-inset);
   color: var(--color-text);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
+  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
 }
 
 .dash-chip:hover {
-  border-color: var(--color-control-border);
-  background: var(--color-surface-inset);
+  border-color: var(--color-primary);
 }
 
+.dash-chip:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.dash-chip svg {
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.dash-chip--muted svg {
+  color: var(--color-secondary);
+}
+
+.dash-chip--soft svg {
+  color: var(--color-text-muted);
+}
+
+/* needs-attention list (RD-3.7): surface-container rows + outline border +
+   circular numeric badges tinted per status */
 .dash-attention {
   list-style: none;
   margin: 0;
@@ -143,17 +171,45 @@ a.dash-kpi:hover {
 }
 
 .dash-attention a {
-  display: block;
-  padding: var(--space-2);
-  border: 1px dashed var(--color-hairline);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-hairline);
   border-radius: var(--radius-m);
+  background: var(--color-surface-inset);
   color: var(--color-text);
   font-size: var(--text-sm);
 }
 
 .dash-attention a:hover {
   border-color: var(--color-warning);
-  background: var(--color-warning-soft);
+}
+
+.dash-attention__count {
+  min-width: 26px;
+  height: 26px;
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-secondary-soft);
+  color: var(--color-on-secondary-soft);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash-attention__count--primary {
+  background: var(--color-primary-soft);
+  color: var(--color-on-primary-soft);
+}
+
+.dash-attention__count--neutral {
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
 }
 
 /* the HTML legend under charts — color chip + label + value, never canvas dots */
@@ -373,6 +429,27 @@ a.dash-kpi:hover {
 
 .dash-insight__delta.is-down {
   color: var(--color-danger);
+}
+
+/* report-page insight value tones (semantic money colors, RD-3.3) */
+.dash-insight__value.is-warn {
+  color: var(--status-warning-fg);
+}
+
+.dash-insight__value.is-info {
+  color: var(--status-info-fg);
+}
+
+.dash-insight__value.is-danger {
+  color: var(--status-danger-fg);
+}
+
+.dash-insight__value.is-pos {
+  color: var(--status-active-fg);
+}
+
+.dash-insight__value.is-primary {
+  color: var(--color-primary);
 }
 
 .dash-spark {

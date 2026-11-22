@@ -88,6 +88,14 @@
   font-weight: 700;
 }
 
+.u-grid-span-all {
+  grid-column: 1 / -1;
+}
+
+.u-fw-semibold {
+  font-weight: 600;
+}
+
 .u-m-0 {
   margin: 0;
 }

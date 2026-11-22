@@ -11,6 +11,7 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ItemResponse } from '@shared/models/api.models';
 
@@ -30,36 +31,36 @@ interface AgentsData {
   imports: [
     TranslatePipe, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
-    DataTableComponent, TableCellDirective, 
-    StatTileComponent, PrintSheetComponent, MoneyPipe,
+    DataTableComponent, TableCellDirective,
+    StatTileComponent, PrintSheetComponent, MoneyPipe, ActionButtonComponent,
   ],
   template: `
     <app-print-sheet [title]="'report.agents_balance.title' | translate">
       <app-page-header [title]="'report.agents_balance.title' | translate" accent="reports" iconName="report-analytics">
-        <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (onClick)="printPage()" /></div>
+        <div actions><app-action-button kind="print" label="common.print" size="small" (action)="printPage()" /></div>
       </app-page-header>
 
       <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
         @if (data.value(); as d) {
-          <div class="kpi-grid">
-            <app-stat-tile [label]="'report.agents_balance.total_balance'" [value]="total('total_balance')" [money]="true" accent="reports" iconName="report-analytics" />
-            <app-stat-tile [label]="'report.agents_balance.total_agents'" [value]="total('total_agents')" />
-            <app-stat-tile [label]="'report.agents_balance.total_received'" [value]="total('total_received')" [money]="true" />
-            <app-stat-tile [label]="'report.agents_balance.total_spent'" [value]="total('total_spent')" [money]="true" />
-            <app-stat-tile [label]="'report.agents_balance.total_returned'" [value]="total('total_returned')" [money]="true" />
+          <!-- RD-4.8: KPI cards with circular icon chips -->
+          <div class="kpi-grid kpi-grid--4">
+            <app-stat-tile [label]="'report.agents_balance.total_agents'" [value]="total('total_agents')" tone="primary" accent="reports" iconName="users" />
+            <app-stat-tile [label]="'report.agents_balance.total_received'" [value]="total('total_received')" [money]="true" tone="info" accent="reports" iconName="custody" />
+            <app-stat-tile [label]="'report.agents_balance.total_spent'" [value]="total('total_spent')" [money]="true" tone="danger" accent="reports" iconName="myExpense" />
+            <app-stat-tile [label]="'report.agents_balance.total_balance'" [value]="total('total_balance')" [money]="true" tone="success" accent="reports" iconName="success" accent="reports" />
           </div>
 
           <app-data-table listUrl="/reports/agents-balance" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.agents" [emptyLabel]="'report.agents_balance.empty'">
-            <ng-template appCell="agent" let-row>{{ row.agent.name }}</ng-template>
+            <ng-template appCell="agent" let-row><span class="u-fw-semibold">{{ row.agent.name }}</span></ng-template>
             <ng-template appCell="total_custodies" let-row><span class="u-bidi">{{ row.total_custodies }}</span></ng-template>
-            <ng-template appCell="active_custodies" let-row><span class="u-bidi">{{ row.active_custodies }}</span></ng-template>
-            <ng-template appCell="closed_custodies" let-row><span class="u-bidi">{{ row.closed_custodies }}</span></ng-template>
-            <ng-template appCell="total_received" let-row><span class="u-bidi">{{ row.total_received | money }}</span></ng-template>
-            <ng-template appCell="transferred_in" let-row><span class="u-bidi">{{ row.transferred_in | money }}</span></ng-template>
-            <ng-template appCell="transferred_out" let-row><span class="u-bidi">{{ row.transferred_out | money }}</span></ng-template>
-            <ng-template appCell="total_spent" let-row><span class="u-bidi">{{ row.total_spent | money }}</span></ng-template>
-            <ng-template appCell="total_returned" let-row><span class="u-bidi">{{ row.total_returned | money }}</span></ng-template>
-            <ng-template appCell="current_balance" let-row><span class="u-bidi">{{ row.current_balance | money }}</span></ng-template>
+            <ng-template appCell="active_custodies" let-row><span class="stamp stamp--success u-bidi">{{ row.active_custodies }}</span></ng-template>
+            <ng-template appCell="closed_custodies" let-row><span class="stamp stamp--neutral u-bidi">{{ row.closed_custodies }}</span></ng-template>
+            <ng-template appCell="total_received" let-row><span class="money money--link u-bidi">{{ row.total_received | money }}</span></ng-template>
+            <ng-template appCell="transferred_in" let-row><span class="money money--pos u-bidi">{{ row.transferred_in | money }}</span></ng-template>
+            <ng-template appCell="transferred_out" let-row><span class="money money--neg u-bidi">{{ row.transferred_out | money }}</span></ng-template>
+            <ng-template appCell="total_spent" let-row><span class="money money--neg u-bidi">{{ row.total_spent | money }}</span></ng-template>
+            <ng-template appCell="total_returned" let-row><span class="money money--pos u-bidi">{{ row.total_returned | money }}</span></ng-template>
+            <ng-template appCell="current_balance" let-row><span class="balance-pill u-bidi">{{ row.current_balance | money }}</span></ng-template>
           </app-data-table>
         }
         <div empty>

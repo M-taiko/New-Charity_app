@@ -18,6 +18,8 @@ import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.componen
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ListResponse } from '@shared/models/api.models';
+import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 
 interface Row {
   id: number;
@@ -34,7 +36,7 @@ interface Row {
 @Component({
   selector: 'app-purchase-list-page',
   standalone: true,
-  imports: [SectionNavComponent, 
+  imports: [ StatusStampComponent, EnumLabelPipe,SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, ConfirmDeleteComponent, MoneyPipe, RowActionsComponent,
@@ -68,10 +70,10 @@ interface Row {
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
           <ng-template appCell="title" let-row>{{ row.title ?? '—' }}</ng-template>
-          <ng-template appCell="category" let-row>{{ row.category ?? '—' }}</ng-template>
-          <ng-template appCell="priority" let-row>{{ row.priority ?? '—' }}</ng-template>
+          <ng-template appCell="category" let-row>{{ row.category | enumLabel: 'purchase_category' }}</ng-template>
+          <ng-template appCell="priority" let-row><span class="stamp">{{ row.priority | enumLabel: 'priority' }}</span></ng-template>
           <ng-template appCell="estimated_cost" let-row><span class="u-bidi">{{ row.estimated_cost | money }}</span></ng-template>
-          <ng-template appCell="status" let-row>{{ row.status ?? '—' }}</ng-template>
+          <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="purchase_request" /></ng-template>
           <ng-template appCell="requested_by" let-row>{{ row.requested_by ?? '—' }}</ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
@@ -124,7 +126,7 @@ export class PurchaseListPage {
 
   actionsFor(row: Row): RowActionItem[] {
     return [
-      { icon: 'eye', label: 'common.view', route: ['/procurement/purchase', row.id] },
+      { icon: 'eye', label: 'common.view', severity: 'info', route: ['/procurement/purchase', row.id] },
       {
         icon: 'trash',
         label: 'common.delete',

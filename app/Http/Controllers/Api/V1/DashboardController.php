@@ -367,7 +367,7 @@ final class DashboardController extends BladeDashboardController
         ]]);
     }
 
-    private function mapAgentStats(array $stats): array
+    private function mapAgentStats(array $stats): ?array
     {
         if ($stats === []) {
             return null;

@@ -8,7 +8,7 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ThemeService } from '@core/theme/theme.service';
 import { PollingService } from '@core/polling/polling.service';
-import { offline } from '@core/http/progress-state';
+import { offline, pendingRequests } from '@core/http/progress-state';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { NotificationBellComponent } from '../notification-bell/notification-bell.component';
 import { UserMenuComponent } from '../user-menu/user-menu.component';
@@ -74,6 +74,14 @@ interface ActiveBroadcast {
       <app-user-menu />
     </header>
 
+    <!-- UX-6.1: slim global progress line while any API call is in flight -->
+    <div
+      class="topbar__progress"
+      role="progressbar"
+      [attr.aria-label]="'common.loading' | translate"
+      [class.topbar__progress--active]="pending() > 0"
+    ></div>
+
     @if (broadcast(); as b) {
       <div class="broadcast-banner" role="status">
         <div class="topbar__broadcast">
@@ -135,6 +143,7 @@ export class TopbarComponent {
   readonly menuToggle = output();
   readonly unread = this.polling.unreadCount;
   readonly offlineFlag = offline;
+  readonly pending = pendingRequests;
 
   /** active urgent broadcast for the current user (T3-101), null once dismissed */
   readonly broadcast = signal<ActiveBroadcast | null>(null);

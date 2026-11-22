@@ -1,6 +1,7 @@
-// check-palette (plan 10.1.6): the built CSS may only contain the eight brand
-// colors, the documented dark-theme scale, black-with-alpha (shadows/scrim),
-// transparent and currentColor. Catches accidental greys and blends.
+// check-palette (plan 10.1.6 / RD-1.2): the built CSS may only contain the
+// Stitch "Naguib Selim Foundation" palette (light + dark), black-with-alpha
+// (shadows/scrim), transparent and currentColor. Catches accidental greys and
+// blends. Any new color must land in _tokens.scss FIRST, then here.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,21 +10,30 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
 
 const PALETTE = new Set([
-  // brand scale (tokens.scss --palette-*)
-  '#4f2f1d', '#5d3722', '#7d5f4e', '#9e877a', '#beafa7', '#dfd7d3', '#ffffff', '#fff', '#f7f3ef',
-  '#d2c7c1', // sand-deep — selected+focused overlay options (T6-14)
-  // dark theme scale (tokens.scss --dark-*)
+  // ── Light palette (Stitch 1.md → _tokens.scss + Appendix B) ──
+  '#5c4033', '#efe8e1', '#3a261d', '#9a7b5c', '#f5efe8', '#4a3525',
+  '#f4f3f1', '#1f1b18', '#6e655e', '#f8fafc', '#e2e8f0', '#e2dcd4', '#f1f5f9', '#ffffff', '#fff',
+  '#e11d48', '#10b981', '#f59e0b', '#d97706', '#3b82f6',
+  '#ecfdf5', '#eff6ff', '#fffbeb', '#fff1f2',
+  '#f43f5e', '#ef4444',
+  // ── Chart palette (light) ──
+  '#2563eb', '#15803d', '#dc2626', '#cbd5e1', '#eae4dc',
+  // ── Tinted summary-card borders (light) ──
+  '#bfdbfe', '#fecdd3', '#a7f3d0', '#fde68a',
+  // ── Dark palette (RD-1.1 dark table) ──
   '#12100e', '#1a1815', '#201e1b', '#2a2825', '#3a3835', '#4a4845',
-  // semantic action scales (T6-13 — brand-preset.ts + _tokens.scss)
-  '#1e7a46', '#175f37', '#124a2c', '#0b3520', '#38955d', '#5cb383', '#a8d6be', '#d2ebdd', '#e7f5ec', '#4fbf82',
-  '#b3261e', '#991d15', '#7c170f', '#370604', '#c93b30', '#db7f79', '#e8a9a5', '#f5d2d0', '#fbeae9', '#ef8377',
-  '#96650a', '#7a5006', '#5f3e04', '#2e2000', '#c8920d', '#e5b653', '#f0d08a', '#f7e4b4', '#fbf0d5', '#e0b45c',
-  '#0e6e77', '#0a565e', '#084449', '#032a2e', '#2e93a0', '#57b3bd', '#8fcfd6', '#c3e5e9', '#e1f1f4', '#63bfc9',
-  // module accent set (T6-40 — _tokens.scss, light + dark variants)
-  '#0e7168', '#8f5700', '#66701a', '#b03b4b', '#2f5fa3', '#6d4fc1', '#9c4a1f', '#4848a0',
-  '#5ec6ba', '#e0a43c', '#b6c051', '#e2798a', '#7aa5e8', '#a68fec', '#d98e5f', '#9090e8',
-  // color-blind-safe chart palette (T6-40 — chart-theme)
-  '#0f766e', '#b8860b', '#7a4f9e', '#2f6cb3', '#b3555e', '#4f8f3a', '#8a6d3b', '#5e5e5e',
+  '#34d399', '#fb7185', '#fbbf24', '#60a5fa',
+  '#a1886f', '#4ade80', '#f87171', '#93c5fd',
+  '#b99b7c', '#beafa7',
+  '#4a3128', // light primary hover step
+  // ── PrimeNG preset semantic scale steps (brand-preset.ts) ──
+  '#d1fae5', '#6ee7b7', '#0b8a61', '#087a54', '#064e3b',
+  '#ffe4e6', '#fda4af', '#be123c', '#9f1239', '#4c0519',
+  '#fef3c7', '#fcd34d', '#b45309', '#92400e', '#451a03',
+  '#dbeafe', '#1d4ed8', '#172554',
+  // ── Module accent set (light + dark variants) ──
+  '#0e7168', '#6d4fc1', '#9c4a1f', '#4848a0',
+  '#5ec6ba', '#e0a43c', '#a68fec', '#d98e5f', '#9090e8',
 ]);
 
 /** black with an optional alpha channel — shadows and modal scrims only */

@@ -54,3 +54,144 @@
 .stat-tile__spark {
   margin-block-start: var(--space-2);
 }
+
+/* ── RD-3.2 pattern 2 — top-accent card: 4px status bar, value in status color ── */
+.stat-tile--accent-top {
+  border-block-start: 4px solid var(--status-neutral-fg);
+}
+
+.stat-tile--accent-success {
+  border-block-start-color: var(--status-active-fg);
+}
+
+.stat-tile--accent-success .stat-tile__value {
+  color: var(--status-active-fg);
+}
+
+.stat-tile--accent-warning {
+  border-block-start-color: var(--status-warning-fg);
+}
+
+.stat-tile--accent-warning .stat-tile__value {
+  color: var(--status-warning-fg);
+}
+
+.stat-tile--accent-danger {
+  border-block-start-color: var(--status-danger-fg);
+}
+
+.stat-tile--accent-danger .stat-tile__value {
+  color: var(--status-danger-fg);
+}
+
+.stat-tile--accent-info {
+  border-block-start-color: var(--status-info-fg);
+}
+
+.stat-tile--accent-info .stat-tile__value {
+  color: var(--status-info-fg);
+}
+
+.stat-tile--accent-primary {
+  border-block-start-color: var(--color-primary);
+}
+
+.stat-tile--accent-primary .stat-tile__value {
+  color: var(--color-primary);
+}
+
+/* ── RD-4.10: tinted mini-cards — tint background + tinted border, value in
+   the status color (the custody-detail summary row) ── */
+.stat-tile--tinted {
+  padding: var(--space-3) var(--space-4);
+}
+
+.stat-tile--tint-info {
+  background: var(--status-info-bg);
+  border-color: var(--tint-blue-border);
+}
+
+.stat-tile--tint-info .stat-tile__value {
+  color: var(--status-info-fg);
+}
+
+.stat-tile--tint-danger {
+  background: var(--status-danger-bg);
+  border-color: var(--tint-rose-border);
+}
+
+.stat-tile--tint-danger .stat-tile__value {
+  color: var(--status-danger-fg);
+}
+
+.stat-tile--tint-success {
+  background: var(--status-active-bg);
+  border-color: var(--tint-green-border);
+}
+
+.stat-tile--tint-success .stat-tile__value {
+  color: var(--status-active-fg);
+}
+
+.stat-tile--tint-warning {
+  background: var(--status-warning-bg);
+  border-color: var(--tint-amber-border);
+}
+
+.stat-tile--tint-warning .stat-tile__value {
+  color: var(--status-warning-fg);
+}
+
+.stat-tile--tint-primary {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+.stat-tile--tint-primary .stat-tile__value {
+  color: var(--color-on-primary-soft);
+}
+
+/* ── RD-3.2 pattern 3 — circular icon chip at the card's far corner ── */
+.stat-tile--icon-circle {
+  position: relative;
+  padding-inline-end: calc(var(--space-4) + 48px);
+}
+
+.stat-tile__circle {
+  position: absolute;
+  inset-block-start: var(--space-4);
+  inset-inline-end: var(--space-4);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--status-neutral-bg);
+  color: var(--status-neutral-fg);
+}
+
+.stat-tile__circle--success {
+  background: var(--status-active-bg);
+  color: var(--status-active-fg);
+}
+
+.stat-tile__circle--warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
+}
+
+.stat-tile__circle--danger {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-fg);
+}
+
+.stat-tile__circle--info {
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+
+.stat-tile__circle--primary {
+  background: var(--color-primary-soft);
+  color: var(--color-on-primary-soft);
+}

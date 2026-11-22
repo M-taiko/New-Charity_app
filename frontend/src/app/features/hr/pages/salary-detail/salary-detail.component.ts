@@ -5,7 +5,6 @@
 // amount, description. T4-20: async-page states; T4-23: app-field in the
 // allowance dialog.
 import { computed, ChangeDetectionStrategy, Component, inject, input, resource, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
@@ -65,7 +64,7 @@ interface SalaryDetail {
 @Component({
   selector: 'app-salary-detail',
   standalone: true,
-  imports: [MenuModule, TranslatePipe, RouterLink, FormsModule, ButtonModule, TextareaModule, SelectModule, InputNumberModule, InputTextModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, MoneyPipe, ActionButtonComponent],
+  imports: [MenuModule, TranslatePipe, FormsModule, ButtonModule, TextareaModule, SelectModule, InputNumberModule, InputTextModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .allowance-list {

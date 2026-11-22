@@ -1,5 +1,29 @@
+/* RD-3.8: dialogs at radius-xl (16px) on surface content */
 .dialog {
-  border-radius: var(--radius-l);
+  border-radius: var(--radius-xl);
+}
+
+/* UX-6.8: on phones dialogs dock to the bottom as sheets with a drag handle */
+@media (max-width: 640px) {
+  .p-dialog-mask {
+    align-items: flex-end !important;
+  }
+
+  .p-dialog {
+    margin: 0 !important;
+    inline-size: 100vw !important;
+    max-inline-size: 100vw !important;
+    max-block-size: 88vh;
+    border-start-start-radius: var(--radius-xl);
+    border-start-end-radius: var(--radius-xl);
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  .p-dialog-content {
+    max-block-size: calc(88vh - 120px);
+    overflow-y: auto;
+  }
 }
 
 .dialog__alert {

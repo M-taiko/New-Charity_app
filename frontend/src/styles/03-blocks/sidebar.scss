@@ -1,3 +1,6 @@
+/* Sidebar — the Stitch shell pattern (RD-2.1). 256px (token), icon tiles on
+   every nav item, primary-container active state with the module accent kept
+   (T7-09). Token-driven: one set of rules renders both themes. */
 .sidebar {
   width: var(--sidebar-w);
   background: var(--color-surface);
@@ -16,55 +19,184 @@
   width: var(--sidebar-w-collapsed);
 }
 
+/* ── Brand block: 64px tall, outline border, NS monogram tile ── */
 .sidebar__brand {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: var(--space-2);
+  padding-inline: var(--space-4);
   border-block-end: 1px solid var(--color-hairline);
   min-height: var(--topbar-h);
 }
 
-.sidebar__brand-logo {
+.sidebar__brand-mark {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
+  border-radius: var(--radius-m);
+  background: var(--color-primary-soft);
+  color: var(--color-on-primary-soft);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.sidebar__brand-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .sidebar__brand-name {
   font-family: var(--font-display);
-  font-size: var(--text-md);
+  font-size: var(--text-sm);
   font-weight: 700;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__brand-subtitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Nav groups: label-sm muted headers, 24px between groups ── */
+.sidebar nav {
+  flex: 1;
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
 .sidebar__group-label {
-  padding: var(--space-4) var(--space-4) var(--space-1);
-  font-size: var(--text-2xs);
+  padding: 0 var(--space-2) var(--space-1);
+  font-size: 11px;
+  font-weight: 500;
   color: var(--color-text-muted);
   white-space: nowrap;
 }
 
 .sidebar--collapsed .sidebar__group-label,
-.sidebar--collapsed .sidebar__brand-name,
+.sidebar--collapsed .sidebar__brand-text,
 .sidebar--collapsed .sidebar__link-label {
   display: none;
 }
 
-/* collapsed: center the icons — no horizontal padding so 22px icons fit 64px */
-.sidebar--collapsed .sidebar__link {
-  justify-content: center;
-  padding-inline: 0;
-  margin-inline: var(--space-1);
-  border-inline-end: 0;
+/* ── Nav items: icon in a 28px tile + body-md label ── */
+.sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  margin-block: 1px;
   border-radius: var(--radius-m);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
-.sidebar--collapsed .sidebar__link--active {
-  border-inline-end: 0;
+.sidebar__link:hover {
+  background: var(--color-surface-inset);
+  color: var(--color-text);
 }
 
-.sidebar--collapsed .sidebar__brand {
+.sidebar__link-tile {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--radius-m);
+  background: var(--color-surface-inset);
+  color: var(--color-text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.sidebar__link-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar__link-label {
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+/* ── Active: primary-container bg, on-primary-container label-lg w600, tile
+       flips to primary with a white glyph. T7-09: the module accent variants
+       swap the tint + tile color so each module stays recognizable. ── */
+.sidebar__link--active {
+  background: var(--color-primary-soft);
+  color: var(--color-on-primary-soft);
+
+  .sidebar__link-label {
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  .sidebar__link-tile {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+
+  .sidebar__link-icon {
+    stroke-width: 2.2;
+  }
+}
+
+@each $module in (custodies, expenses, treasury, cases, hr, tasks, procurement, reports) {
+  .sidebar__link[data-accent='#{$module}'] {
+    background: var(--accent-#{$module}-soft);
+    color: var(--color-text);
+
+    .sidebar__link-tile {
+      background: var(--accent-#{$module});
+      color: var(--color-on-primary);
+    }
+  }
+}
+
+/* ── Collapse toggle pinned at the foot ── */
+.sidebar__toggle {
+  margin-block-start: auto;
+  border-block-start: 1px solid var(--color-hairline);
+  border-radius: 0;
+  justify-content: flex-start;
+  /* strip the browser's default button chrome — theme colors apply cleanly */
+  appearance: none;
+  background: transparent;
+  border-inline: 0;
+  border-block-end: 0;
+  font: inherit;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.sidebar__toggle:hover {
+  background: var(--color-surface-inset);
+}
+
+.sidebar__toggle:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+/* ── Collapsed: center the 28px tiles inside the 64px rail ── */
+.sidebar--collapsed .sidebar__link {
   justify-content: center;
   padding-inline: 0;
 }
@@ -73,69 +205,13 @@
   transform: rotate(180deg);
 }
 
-.sidebar__link {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  margin: 1px var(--space-2);
-  border-radius: var(--radius-m);
-  color: var(--color-text);
-  text-decoration: none;
-  white-space: nowrap;
-  border-inline-end: 3px solid transparent;
-}
-
-.sidebar__link:hover {
-  background: var(--color-surface-raised);
-}
-
-.sidebar__link--active {
-  background: var(--color-primary-soft);
-  border-inline-end-color: var(--color-primary);
-  font-weight: 600;
-}
-
-/* T7-09: the ACTIVE link carries its module accent — indicator, background
-   tint and icon — so each module is recognizable in the sidebar too */
-@each $module in (custodies, expenses, treasury, cases, hr, tasks, procurement, reports) {
-  .sidebar__link[data-accent='#{$module}'] {
-    background: var(--accent-#{$module}-soft);
-    border-inline-end-color: var(--accent-#{$module});
-
-    .sidebar__link-icon {
-      color: var(--accent-#{$module});
-    }
-  }
-}
-
-.sidebar__link-icon {
-  width: 22px;
-  height: 22px;
-  flex-shrink: 0;
-}
-
-.sidebar__toggle {
-  margin-block-start: auto;
-  border-block-start: 1px solid var(--color-hairline);
-  border-radius: 0;
+.sidebar--collapsed .sidebar__brand {
   justify-content: center;
-  /* strip the browser's default button chrome — theme colors apply cleanly */
-  appearance: none;
-  background: transparent;
-  border-inline: 0;
-  border-block-end: 0;
-  font: inherit;
-  cursor: pointer;
+  padding-inline: 0;
 }
 
-.sidebar__toggle:hover {
-  background: var(--color-surface-raised);
-}
-
-.sidebar__toggle:focus-visible {
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
+.sidebar--collapsed nav {
+  padding-inline: var(--space-1);
 }
 
 /* Phones: the sidebar is an overlay drawer opened from the topbar */

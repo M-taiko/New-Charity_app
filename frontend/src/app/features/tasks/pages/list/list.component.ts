@@ -13,6 +13,7 @@ import { RowActionsComponent, type RowActionItem } from '@shared/ui/row-actions/
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ListResponse } from '@shared/models/api.models';
+import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 
 interface Row {
   id: number;
@@ -29,7 +30,7 @@ interface Row {
 @Component({
   selector: 'app-list-page',
   standalone: true,
-  imports: [
+  imports: [ EnumLabelPipe,
     TranslatePipe, PageHeaderComponent, AsyncPageComponent, StatTileComponent,
     DataTableComponent, TableCellDirective, 
     EmptyStateComponent, RowActionsComponent, DatetimePipe, StatusStampComponent,
@@ -63,7 +64,7 @@ interface Row {
           <ng-template appCell="title" let-row>{{ row.title ?? '—' }}</ng-template>
           <ng-template appCell="assigned_to" let-row>{{ row.assigned_to ?? '—' }}</ng-template>
           <ng-template appCell="status" let-row><app-status-stamp [status]="row.status ?? ''" namespace="task" /></ng-template>
-          <ng-template appCell="priority" let-row>{{ row.priority ?? '—' }}</ng-template>
+          <ng-template appCell="priority" let-row><span class="stamp" [class]="priorityStamp(row.priority)">{{ row.priority | enumLabel: 'priority' }}</span></ng-template>
           <ng-template appCell="due_date" let-row><span class="u-bidi">{{ row.due_date | datetime }}</span></ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         </app-data-table>
@@ -75,6 +76,14 @@ interface Row {
   `,
 })
 export class TaskListPage {
+
+  /** priority pill color: urgent/high → danger, medium → pending, else neutral */
+  priorityStamp(p: string | null): string {
+    if (p === 'urgent' || p === 'high') return 'stamp--danger';
+    if (p === 'medium') return 'stamp--pending';
+    return 'stamp--neutral';
+  }
+
   private http = inject(HttpClient);
 
   readonly tableKey = 'list.component';
@@ -124,7 +133,7 @@ export class TaskListPage {
   /** T4-04.4: view link — no /tasks/:id/edit route is registered, so no edit action here */
   actionsFor(row: Row): RowActionItem[] {
     return [
-      { icon: 'eye', label: 'common.view', route: ['/tasks', row.id] },
+      { icon: 'eye', label: 'common.view', severity: 'info', route: ['/tasks', row.id] },
     ];
   }
 

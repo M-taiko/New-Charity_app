@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DialogModule } from 'primeng/dialog';
+import { SharedModule } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { actionStyle } from '../actions/action-kind';
 import type { ActionKind } from '../actions/action-kind';
@@ -13,7 +14,7 @@ import type { ActionKind } from '../actions/action-kind';
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
-  imports: [TranslatePipe, DialogModule, ButtonModule],
+  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule],
   template: `
     <p-dialog appendTo="body"
       [visible]="visible()"
@@ -27,12 +28,12 @@ import type { ActionKind } from '../actions/action-kind';
       [style]="{ width: 'min(440px, 94vw)' }"
     >
       <p>{{ message() | translate: { name: context() } }}</p>
-      <p-footer>
+      <ng-template pTemplate="footer">
         <div class="u-flex u-justify-end">
           <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" (onClick)="visible.set(false)" />
           <p-button [label]="confirmLabel() | translate" [severity]="confirmSeverity()" (onClick)="confirmed.emit(); visible.set(false)" />
         </div>
-      </p-footer>
+      </ng-template>
     </p-dialog>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

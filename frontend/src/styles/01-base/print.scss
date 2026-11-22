@@ -9,7 +9,7 @@
     @bottom-center {
       content: counter(page) ' / ' counter(pages);
       font-size: 9px;
-      color: #7d5f4e;
+      color: #6e655e;
     }
   }
 
@@ -44,7 +44,10 @@
     page: landscape;
   }
 
-  :root {
+  // RD-3.11: print ALWAYS renders the light palette — the [data-theme]
+  // selector keeps these overrides winning over the dark theme block
+  :root,
+  :root[data-theme] {
     --color-bg: var(--palette-white);
     --color-surface: var(--palette-white);
     --color-surface-inset: var(--palette-cream);
@@ -55,6 +58,17 @@
     --color-text: var(--palette-ink);
     --color-text-muted: var(--palette-mid);
     --color-primary: var(--palette-brand);
+    --color-on-primary: var(--palette-white);
+    --color-primary-soft: var(--palette-primary-container);
+    --color-on-primary-soft: var(--palette-ink);
+    --color-success: #10b981;
+    --color-success-soft: #ecfdf5;
+    --color-danger: #e11d48;
+    --color-danger-soft: #fff1f2;
+    --color-warning: #d97706;
+    --color-warning-soft: #fffbeb;
+    --color-info: #3b82f6;
+    --color-info-soft: #eff6ff;
   }
 
   html,

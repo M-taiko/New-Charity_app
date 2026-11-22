@@ -18,6 +18,7 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ItemResponse } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
 interface AnalyticsRow {
   id: number;
@@ -64,11 +65,12 @@ interface DrillExpense {
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
     DataTableComponent, TableCellDirective, 
     PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe, DatetimePipe,
+    ActionButtonComponent,
   ],
   template: `
     <app-print-sheet [title]="'report.directions.title' | translate">
       <app-page-header [title]="'report.directions.title' | translate" accent="reports" iconName="report-analytics">
-        <div actions><p-button [label]="'common.print' | translate" size="small" [outlined]="true" (click)="printPage()" /></div>
+        <div actions><app-action-button kind="print" label="common.print" size="small" (action)="printPage()" /></div>
       </app-page-header>
 
       <app-async-page [resource]="data" variant="report" [empty]="isEmpty" [backLink]="['/reports']">
@@ -87,11 +89,12 @@ interface DrillExpense {
             </div>
           </div>
 
-          <div class="kpi-grid">
-            <app-stat-tile [label]="'common.total'" [value]="d.grand_total" [money]="true" accent="reports" iconName="report-analytics" />
-            <app-stat-tile [label]="'report.directions.rows_count'" [value]="d.rows.length" />
-            <app-stat-tile [label]="'report.directions.operations'" [value]="operationsCount()" />
-            <app-stat-tile [label]="'report.directions.col_average'" [value]="averageAmount()" [money]="true" />
+          <!-- RD-4.9: four KPI cards — rose / primary / blue / green -->
+          <div class="kpi-grid kpi-grid--4">
+            <app-stat-tile [label]="'common.total'" [value]="d.grand_total" [money]="true" tone="danger" accent="reports" iconName="report-analytics" />
+            <app-stat-tile [label]="'report.directions.rows_count'" [value]="d.rows.length" tone="primary" />
+            <app-stat-tile [label]="'report.directions.operations'" [value]="operationsCount()" tone="info" />
+            <app-stat-tile [label]="'report.directions.col_average'" [value]="averageAmount()" [money]="true" tone="success" />
           </div>
 
           <div class="kpi-grid u-mt-4">
@@ -101,14 +104,19 @@ interface DrillExpense {
           <div class="u-mt-4">
             <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/categories-analytics" mode="static" [autoFilters]="true" [title]="'report.directions.details'" [columns]="rowCols" [rows]="d.rows" [emptyLabel]="'report.directions.empty'">
               <ng-template appCell="level" let-row><span class="stamp">{{ levelKey(row.level) | translate }}</span></ng-template>
-              <ng-template appCell="name" let-row>{{ row.name }}</ng-template>
-              <ng-template appCell="code" let-row><span class="u-bidi">{{ row.code ?? '—' }}</span></ng-template>
+              <ng-template appCell="name" let-row>
+                {{ row.name }}
+                @if (row.parent_name) {
+                  <div class="u-muted u-small">{{ 'report.directions.under' | translate }}: {{ row.parent_name }}</div>
+                }
+              </ng-template>
+              <ng-template appCell="code" let-row><span class="money money--neg u-bidi u-fw-semibold">{{ row.code ?? '—' }}</span></ng-template>
               <ng-template appCell="parent_name" let-row>{{ row.parent_name ?? '—' }}</ng-template>
-              <ng-template appCell="total_amount" let-row><span class="u-bidi">{{ row.total_amount | money }}</span></ng-template>
+              <ng-template appCell="total_amount" let-row><span class="money money--pos u-bidi u-fw-semibold">{{ row.total_amount | money }}</span></ng-template>
               <ng-template appCell="expense_count" let-row><span class="u-bidi">{{ row.expense_count }}</span></ng-template>
               <ng-template appCell="average_amount" let-row><span class="u-bidi">{{ row.average_amount | money }}</span></ng-template>
               <ng-template appCell="reviewed_by" let-row>{{ row.reviewed_by ?? '—' }}</ng-template>
-              <ng-template appCell="percentage" let-row><span class="u-bidi">{{ row.percentage }}%</span></ng-template>
+              <ng-template appCell="percentage" let-row><span class="stamp stamp--info u-bidi">{{ row.percentage }}%</span></ng-template>
             </app-data-table>
           </div>
         }

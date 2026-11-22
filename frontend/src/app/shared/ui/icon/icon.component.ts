@@ -30,50 +30,33 @@ export type ModuleAccent = 'custodies' | 'expenses' | 'treasury' | 'cases' | 'hr
       stroke-linecap: round;
       stroke-linejoin: round;
     }
+    /* chip = the module accent as a PLAIN colored glyph — no box, no border,
+       no tinted square behind the icon (the icon itself is the visual) */
     :host(.chip-icon) {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-m);
-      background: var(--chip-bg, var(--color-primary-soft));
       color: var(--chip-fg, var(--color-primary));
     }
-    :host(.chip-icon--sm) {
-      width: 26px;
-      height: 26px;
-    }
     :host(.chip-icon--custodies) {
-      --chip-bg: var(--accent-custodies-soft);
       --chip-fg: var(--accent-custodies);
     }
     :host(.chip-icon--expenses) {
-      --chip-bg: var(--accent-expenses-soft);
       --chip-fg: var(--accent-expenses);
     }
     :host(.chip-icon--treasury) {
-      --chip-bg: var(--accent-treasury-soft);
       --chip-fg: var(--accent-treasury);
     }
     :host(.chip-icon--cases) {
-      --chip-bg: var(--accent-cases-soft);
       --chip-fg: var(--accent-cases);
     }
     :host(.chip-icon--hr) {
-      --chip-bg: var(--accent-hr-soft);
       --chip-fg: var(--accent-hr);
     }
     :host(.chip-icon--tasks) {
-      --chip-bg: var(--accent-tasks-soft);
       --chip-fg: var(--accent-tasks);
     }
     :host(.chip-icon--procurement) {
-      --chip-bg: var(--accent-procurement-soft);
       --chip-fg: var(--accent-procurement);
     }
     :host(.chip-icon--reports) {
-      --chip-bg: var(--accent-reports-soft);
       --chip-fg: var(--accent-reports);
     }
   `,

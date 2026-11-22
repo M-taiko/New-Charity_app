@@ -187,7 +187,7 @@ export class TableFooterCellDirective {
         [rows]="perPage()"
         [totalRecords]="mode() === 'static' ? staticSorted().length : total()"
         [paginator]="true"
-        [rowsPerPageOptions]="[10, 25, 50, 100]"
+        [rowsPerPageOptions]="pageSizeOptions()"
         [paginatorDropdownAppendTo]="'body'"
         [showCurrentPageReport]="true"
         [currentPageReportTemplate]="'common.table_report' | translate"
@@ -231,15 +231,21 @@ export class TableFooterCellDirective {
         <ng-template pTemplate="body" let-row let-index="rowIndex">
           @if (cellTemplates().size > 0) {
             <!-- T6-22: cells rendered from the ordered column list — reordering
-                 always carries header + data + totals together -->
-            @for (col of headerColumns(); track col.field) {
-              <td [class.ledger-table__cell-num]="col.numeric">
-                <ng-container
-                  [ngTemplateOutlet]="cellTemplates().get(col.field) ?? null"
-                  [ngTemplateOutletContext]="{ $implicit: row, index: index }"
-                />
-              </td>
-            }
+                 always carries header + data + totals together.
+                 The <tr> wrapper is REQUIRED: p-table projects this template
+                 verbatim, and without it the loose <td>s fall out of the table
+                 row structure and the browser stacks them into anonymous
+                 rows (the "empty broken table" bug). -->
+            <tr>
+              @for (col of headerColumns(); track col.field) {
+                <td [class.ledger-table__cell-num]="col.numeric">
+                  <ng-container
+                    [ngTemplateOutlet]="cellTemplates().get(col.field) ?? null"
+                    [ngTemplateOutletContext]="{ $implicit: row, index: index }"
+                  />
+                </td>
+              }
+            </tr>
           } @else {
             <ng-container
               [ngTemplateOutlet]="body()?.template ?? null"
@@ -480,6 +486,15 @@ export class DataTableComponent {
       }
       return String(av ?? '').localeCompare(String(bv ?? ''), 'ar', { numeric: true }) * dir;
     });
+  });
+
+  /** page-size choices: the standard steps plus the page's own perPage when
+      it sits outside them (e.g. tracking's show-all 1000) so the paginator
+      dropdown always shows the active value */
+  pageSizeOptions = computed<number[]>(() => {
+    const steps = [10, 25, 50, 100];
+    const current = Math.max(this.perPage(), 1);
+    return [...new Set(current > 100 ? [...steps, current] : steps)].sort((a, b) => a - b);
   });
 
   /** what p-table renders: the current static page, or the server-provided rows */

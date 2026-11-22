@@ -1,9 +1,9 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
+import { chartPalette } from '@shared/lib/chart-colors';
+import { ThemeService } from '@core/theme/theme.service';
 import type { RingSegment } from '@shared/ui/balance-ring/balance-ring.component';
-
-const SERIES_COLORS = ['#5D3722', '#9E877A', '#4F2F1D', '#BEAFA7', '#7D5F4E', '#DFD7D3'];
 
 /** Segmented bar sharing the ring's series order and colors (plan 10.1.4). */
 @Component({
@@ -31,19 +31,26 @@ const SERIES_COLORS = ['#5D3722', '#9E877A', '#4F2F1D', '#BEAFA7', '#7D5F4E', '#
 export class SegmentedBarComponent {
   segments = input.required<RingSegment[]>();
 
+  private theme = inject(ThemeService);
+
+  /** the --chart-* tokens of the active theme (RD-1.6) */
+  private palette = computed(() => chartPalette(this.theme));
+
   widths = computed(() => {
+    const palette = this.palette();
     const total = this.segments().reduce((sum, s) => sum + (parseFloat(s.amount) || 0), 0);
     if (total <= 0) {
       return [];
     }
     return this.segments().map((s, i) => ({
       width: ((parseFloat(s.amount) || 0) / total) * 100,
-      color: SERIES_COLORS[i % SERIES_COLORS.length],
+      color: palette[i % palette.length],
     }));
   });
 
   color(index: number): string {
-    return SERIES_COLORS[index % SERIES_COLORS.length];
+    const palette = this.palette();
+    return palette[index % palette.length];
   }
 
   aria(): string {

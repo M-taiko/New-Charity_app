@@ -25,6 +25,7 @@ import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.compo
 import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse } from '@shared/models/api.models';
 import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog.component';
+import { AuthService } from '@core/auth/auth.service';
 
 /** /custodies/tracking payload — one full dataset, no server pagination */
 interface TrackingAgent {
@@ -90,7 +91,9 @@ interface CustodyMovements {
   template: `
     <app-page-header [title]="'custody.tracking.title' | translate" accent="custodies" iconName="wallet">
       <div actions class="u-flex u-gap-2">
-        <p-button [label]="'custody.list.create' | translate" size="small" routerLink="/custodies/new" />
+        @if (canCreateCustody()) {
+          <p-button [label]="'custody.list.create' | translate" size="small" routerLink="/custodies/new" />
+        }
       </div>
     </app-page-header>
 
@@ -98,13 +101,23 @@ interface CustodyMovements {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <div class="kpi-grid">
-          <app-stat-tile [label]="'custody.tracking.total'" [value]="summaryValue('total_custodies')" accent="custodies" iconName="wallet" />
-          <app-stat-tile [label]="'custody.tracking.active'" [value]="summaryValue('active')" />
-          <app-stat-tile [label]="'custody.tracking.pending'" [value]="summaryValue('pending')" />
-          <app-stat-tile [label]="'custody.tracking.rejected'" [value]="summaryValue('rejected')" />
-          <app-stat-tile [label]="'custody.tracking.closed'" [value]="summaryValue('closed')" />
-          <app-stat-tile [label]="'custody.tracking.remaining'" [value]="summaryValue('total_remaining')" [money]="true" />
+        <!-- RD-4.6: row of numeric cards with circular icon chips (pattern 3) -->
+        <div class="kpi-grid kpi-grid--6">
+          <app-stat-tile [label]="'custody.tracking.total'" [value]="summaryValue('total_custodies')" tone="primary" iconName="custody" accent="custodies" />
+          <app-stat-tile [label]="'custody.tracking.active'" [value]="summaryValue('active')" tone="success" iconName="success" />
+          <app-stat-tile [label]="'custody.tracking.pending'" [value]="summaryValue('pending')" tone="warning" iconName="pending" />
+          <app-stat-tile [label]="'custody.tracking.rejected'" [value]="summaryValue('rejected')" tone="danger" iconName="rejected" />
+          <app-stat-tile [label]="'custody.tracking.closed'" [value]="summaryValue('closed')" tone="info" iconName="closed" />
+          <app-stat-tile [label]="'custody.tracking.remaining'" [value]="summaryValue('total_remaining')" [money]="true" tone="primary" iconName="money" />
+        </div>
+
+        <!-- RD-4.6: money cards row — totals in the Stitch money color code -->
+        <div class="kpi-grid kpi-grid--5">
+          <app-stat-tile [label]="'custody.tracking.total_amount'" [value]="summaryValue('total_amount')" [money]="true" tone="info" />
+          <app-stat-tile [label]="'custody.tracking.total_spent'" [value]="summaryValue('total_spent')" [money]="true" tone="danger" />
+          <app-stat-tile [label]="'custody.tracking.total_returned'" [value]="summaryValue('total_returned')" [money]="true" tone="success" />
+          <app-stat-tile [label]="'custody.tracking.remaining'" [value]="summaryValue('total_remaining')" [money]="true" tone="info" />
+          <app-stat-tile [label]="'custody.tracking.awaiting_reply'" [value]="summaryValue('pending_returns')" [money]="true" tone="warning" />
         </div>
 
       <app-tabs id="tracking" [tabs]="tabs" [(active)]="trackTab" />
@@ -121,10 +134,10 @@ interface CustodyMovements {
         <ng-template appCell="agent" let-row>{{ row.agent?.name ?? '—' }}</ng-template>
         <ng-template appCell="count" let-row><span class="u-bidi">{{ row.count }}</span></ng-template>
         <ng-template appCell="total_amount" let-row><span class="u-bidi">{{ row.total_amount | money }}</span></ng-template>
-        <ng-template appCell="transferred_in" let-row><span class="u-bidi">{{ row.transferred_in | money }}</span></ng-template>
-        <ng-template appCell="spent" let-row><span class="u-bidi">{{ row.spent | money }}</span></ng-template>
-        <ng-template appCell="returned" let-row><span class="u-bidi">{{ row.returned | money }}</span></ng-template>
-        <ng-template appCell="remaining" let-row><span class="u-bidi">{{ row.remaining | money }}</span></ng-template>
+        <ng-template appCell="transferred_in" let-row><span class="money money--pos u-bidi">{{ row.transferred_in | money }}</span></ng-template>
+        <ng-template appCell="spent" let-row><span class="money money--neg u-bidi">{{ row.spent | money }}</span></ng-template>
+        <ng-template appCell="returned" let-row><span class="money money--pos u-bidi">{{ row.returned | money }}</span></ng-template>
+        <ng-template appCell="remaining" let-row><span class="money money--link u-bidi">{{ row.remaining | money }}</span></ng-template>
         <div empty>
           <app-empty-state [title]="'custody.tracking.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
         </div>
@@ -143,15 +156,15 @@ interface CustodyMovements {
         [perPage]="perPage"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap u-justify-end"><app-auto-refresh key="tracking" (refresh)="data.reload()" /></div>
-        <ng-template appCell="id" let-row><span class="u-bidi">#{{ row.id }}</span></ng-template>
+        <ng-template appCell="id" let-row><span class="case-code u-bidi">#{{ row.id }}</span></ng-template>
         <ng-template appCell="agent" let-row>{{ row.agent ?? '—' }}</ng-template>
         <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime: false }}</span></ng-template>
         <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
-        <ng-template appCell="transferred_in" let-row><span class="u-bidi">{{ row.transferred_in | money }}</span></ng-template>
-        <ng-template appCell="transferred_out" let-row><span class="u-bidi">{{ row.transferred_out | money }}</span></ng-template>
-        <ng-template appCell="spent" let-row><span class="u-bidi">{{ row.spent | money }}</span></ng-template>
-        <ng-template appCell="returned" let-row><span class="u-bidi">{{ row.returned | money }}</span></ng-template>
-        <ng-template appCell="remaining" let-row><span class="u-bidi">{{ row.remaining | money }}</span></ng-template>
+        <ng-template appCell="transferred_in" let-row><span class="money money--pos u-bidi">{{ row.transferred_in | money }}</span></ng-template>
+        <ng-template appCell="transferred_out" let-row><span class="money money--neg u-bidi">{{ row.transferred_out | money }}</span></ng-template>
+        <ng-template appCell="spent" let-row><span class="money money--neg u-bidi">{{ row.spent | money }}</span></ng-template>
+        <ng-template appCell="returned" let-row><span class="money money--pos u-bidi">{{ row.returned | money }}</span></ng-template>
+        <ng-template appCell="remaining" let-row><strong class="money money--link u-bidi">{{ row.remaining | money }}</strong></ng-template>
         <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="custody_status" /></ng-template>
         <ng-template appCell="actions" let-row><app-row-actions [actions]="custodyActions(row)" /></ng-template>
         <div empty>
@@ -190,6 +203,10 @@ interface CustodyMovements {
   `,
 })
 export class TrackingPage {
+  private auth = inject(AuthService);
+
+  /** the header CTA only for users who may create custodies (supervisor is read-only) */
+  canCreateCustody = computed(() => this.auth.can('may_create_custody'));
   private http = inject(HttpClient);
 
   readonly tableKey = 'tracking.component';
@@ -297,7 +314,7 @@ export class TrackingPage {
   /** per-custody row actions: open the detail or the movements dialog (all-custodies.blade.php) */
   custodyActions(row: TrackingCustody): RowActionItem[] {
     return [
-      { icon: 'eye', label: 'common.view', route: ['/custodies', row.id] },
+      { icon: 'eye', label: 'common.view', severity: 'info', route: ['/custodies', row.id] },
       { icon: 'history', label: 'custody.tracking.view_movements', handler: () => { this.openMovements(row.id); } },
     ];
   }

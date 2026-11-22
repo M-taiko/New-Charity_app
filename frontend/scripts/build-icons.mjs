@@ -36,6 +36,9 @@ for (const name of iconNames) {
     .replace(/<!DOCTYPE[^>]*>/, '')
     .replace(/<\/?svg[^>]*>/g, '')
     .replace(/stroke="[^"]*"/g, '')
+    // the invisible 24×24 canvas rect must NEVER inherit the consumer's
+    // stroke: currentColor — otherwise it draws a square around every icon
+    .replace(/<path([^>]*M0 0h24v24H0z[^>]*)\/>/g, '<path$1 stroke="none"/>')
     .replace(/\s+>/g, '>')
     .trim();
   symbols.push(`<symbol id="tabler-${name}" viewBox="0 0 24 24">${inner}</symbol>`);

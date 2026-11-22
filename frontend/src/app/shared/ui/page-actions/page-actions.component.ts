@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
-import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { MenuModule } from 'primeng/menu';
 import type { MenuItem } from 'primeng/api';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import type { ActionKind } from '@shared/ui/actions/action-kind';
+import { TranslateService } from '@ngx-translate/core';
 
 /** One page-level action for the header action bar (T7-10). */
 export interface PageAction {
@@ -34,7 +34,7 @@ const PRIMARY_KINDS: readonly string[] = ['save', 'create', 'submit', 'apply', '
 @Component({
   selector: 'app-page-actions',
   standalone: true,
-  imports: [TranslatePipe, MenuModule, ActionButtonComponent],
+  imports: [MenuModule, ActionButtonComponent],
   template: `
     <div class="page-actions">
       @for (action of visibleActions(); track action.label) {        <app-action-button

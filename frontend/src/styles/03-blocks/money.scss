@@ -21,6 +21,22 @@
   font-weight: 700;
 }
 
+/* ── The unified money color code (RD-3.3): positive/remaining/received →
+   green; spent/negative → rose; balances & ID links → blue/primary ── */
+.money--pos .money__value {
+  color: var(--status-active-fg);
+  font-weight: 600;
+}
+
+.money--negative .money__value,
+.money--neg .money__value {
+  color: var(--status-danger-fg);
+}
+
+.money--link .money__value {
+  color: var(--status-info-fg);
+}
+
 .money--hero {
   font-family: var(--font-display);
   font-size: var(--text-2xl);

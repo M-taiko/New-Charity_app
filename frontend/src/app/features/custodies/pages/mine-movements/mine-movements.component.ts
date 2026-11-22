@@ -15,6 +15,7 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { journalMoneyClass, journalStampClass } from '@shared/lib/journal-style';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ListResponse } from '@shared/models/api.models';
@@ -89,13 +90,13 @@ const TYPE_VALUES = [
         (pageChange)="onPage($event)"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
-        <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}
+        <ng-template appCell="date" let-row><span class="u-bidi u-muted">{{ row.date | datetime }}</span></ng-template>
+        <ng-template appCell="type" let-row><span class="stamp" [class]="stampClass(row.type)">{{ row.type | enumLabel: 'transaction_type' }}</span>
 @if (row.type === 'custody_close') {
   <app-status-stamp [status]="'closed'" namespace="custody_status" />
 }</ng-template>
         <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
-        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi" [class]="moneyClass(row.type)">{{ row.amount | money }}</span></ng-template>
         <div empty>
           <app-empty-state [title]="'custody.my_movements.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
         </div>
@@ -109,6 +110,10 @@ export class MyMovementsPage {
   private translate = inject(TranslateService);
 
   readonly tableKey = 'mine-movements.component';
+
+  /** journal-ledger pill + signed money colors (RD-5.3) */
+  readonly stampClass = journalStampClass;
+  readonly moneyClass = journalMoneyClass;
 
   readonly columns = [
     { field: 'date', header: 'common.date', sortable: true },

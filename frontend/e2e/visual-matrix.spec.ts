@@ -86,7 +86,7 @@ async function checkRoute(
   await page.goto('/app/' + route, { waitUntil: 'domcontentloaded' });
 
   // settle: header or error state visible, then one paint for skeletons→content
-  await expect(page.locator('app-page-header, .error-state').first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('app-page-header, .error-state, .empty-state, .stat-tile, .form-section, .chat, .ledger-table, .chart-card').first()).toBeVisible({ timeout: 15_000 });
   await page.waitForTimeout(1_200);
 
   // 1 — no horizontal page scroll

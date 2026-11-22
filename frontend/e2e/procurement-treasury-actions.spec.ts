@@ -41,7 +41,7 @@ test('treasury donation dialog opens with the three sources', async ({ page }) =
 test('treasury list renders the full row-action set and the delete confirm (non-destructive)', async ({ page }) => {
   await login(page);
   await page.goto('/app/treasury');
-  const firstRow = page.locator('.ledger-table__row').first();
+  const firstRow = page.locator('.p-datatable-tbody tr').first();
   await expect(firstRow).toBeVisible({ timeout: 15000 });
   // view / donation / edit / transfer / delete
   for (const label of ['عرض', 'استقبال تبرع', 'تعديل', 'تحويل بين الخزائن', 'حذف']) {
@@ -58,7 +58,7 @@ test('treasury list renders the full row-action set and the delete confirm (non-
 test('donation dialog refuses an empty description (server 422 stays visible)', async ({ page }) => {
   await login(page);
   await page.goto('/app/treasury');
-  const firstRow = page.locator('.ledger-table__row').first();
+  const firstRow = page.locator('.p-datatable-tbody tr').first();
   await expect(firstRow).toBeVisible({ timeout: 15000 });
   await firstRow.locator('.row-actions__btn[aria-label="استقبال تبرع"]').click();
   const dialog = page.locator('.p-dialog');
@@ -73,7 +73,7 @@ test('purchase list offers view and delete row actions', async ({ page }) => {
   await login(page);
   await page.goto('/app/procurement/purchase');
   await expect(page.getByRole('button', { name: 'طلب شراء جديد' })).toBeVisible({ timeout: 15000 });
-  const firstRow = page.locator('.ledger-table__row').first();
+  const firstRow = page.locator('.p-datatable-tbody tr').first();
   if ((await firstRow.count()) === 0) {
     test.skip(true, 'no purchase requests seeded');
   }
@@ -84,7 +84,7 @@ test('suppliers list shows the deactivate (delete) action on active rows', async
   await login(page);
   await page.goto('/app/procurement/suppliers');
   await expect(page.getByRole('button', { name: 'إضافة مورد' })).toBeVisible({ timeout: 15000 });
-  const firstRow = page.locator('.ledger-table__row').first();
+  const firstRow = page.locator('.p-datatable-tbody tr').first();
   if ((await firstRow.count()) === 0) {
     test.skip(true, 'no suppliers seeded');
   }
@@ -95,7 +95,7 @@ test('directions rows expose edit, toggle and delete actions', async ({ page }) 
   await login(page);
   await page.goto('/app/directions');
   await expect(page.getByText('إدارة التوجيهات المحاسبية').first()).toBeVisible({ timeout: 15000 });
-  const firstRow = page.locator('.ledger-table__row').first();
+  const firstRow = page.locator('.p-datatable-tbody tr').first();
   if ((await firstRow.count()) === 0) {
     test.skip(true, 'no direction rows seeded');
   }

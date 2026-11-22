@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject, resource, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, resource, signal, viewChild } from '@angular/core';
 import type { OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import type { NgForm } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -109,6 +110,14 @@ export class CustodyFormPage implements OnInit {
   private router = inject(Router);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
+
+  /** UX-6.4: dirty template form → the unsaved-changes guard warns on leave */
+  private formRef = viewChild<NgForm>('f');
+  hasUnsavedChanges(): boolean {
+    const form = this.formRef();
+    return form?.dirty === true && !this.sending?.();
+  }
+
 
   variant = signal<Variant>('personal');
   agentId = signal<number | null>(null);

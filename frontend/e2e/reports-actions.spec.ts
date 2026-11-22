@@ -38,19 +38,19 @@ test('governorates report applies the direction and date filters', async ({ page
   await page.goto('/app/reports/governorates');
   await expect(page.locator('.filter-bar').first()).toBeVisible({ timeout: 15000 });
   // the reset button clears every filter back to the unfiltered report
-  await expect(page.getByRole('button', { name: 'إعادة تعيين' })).toBeVisible();
+  await expect(page.locator('.filter-bar').getByRole('button', { name: 'إعادة تعيين' })).toBeVisible();
 });
 
 test('directions report opens the item expenses drill-down dialog', async ({ page }) => {
   await login(page);
   await page.goto('/app/reports/directions');
   await expect(page.locator('.ledger-table').first()).toBeVisible({ timeout: 15000 });
-  const rows = page.locator('.ledger-table tbody tr.ledger-table__row');
+  const rows = page.locator('.ledger-table tbody tr');
   const count = await rows.count();
   test.skip(count === 0, 'no direction analytics rows in the test data');
   await rows.first().click();
-  await expect(page.locator('.p-dialog')).toBeVisible({ timeout: 15000 });
-  await expect(page.locator('.p-dialog').getByText('عدد المصروفات')).toBeVisible();
+  await expect(page.locator('.p-dialog:visible')).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.p-dialog:visible').getByText('عدد المصروفات')).toBeVisible();
 });
 
 test('reports dashboard offers the direction explorer filter', async ({ page }) => {
@@ -62,7 +62,7 @@ test('reports dashboard offers the direction explorer filter', async ({ page }) 
 
 test('manager dashboard shows the quick-action shortcut grid', async ({ page }) => {
   await login(page);
-  await expect(page.getByText('اختصارات سريعة').first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('إجراءات سريعة').first()).toBeVisible({ timeout: 15000 });
   // a shortcut card navigates to its page
   await page.getByRole('link', { name: /التقارير والإحصائيات/ }).first().click();
   await page.waitForURL(/reports/, { timeout: 15000 });
@@ -70,7 +70,7 @@ test('manager dashboard shows the quick-action shortcut grid', async ({ page }) 
 
 test('agent dashboard gets agent shortcuts, never treasury management', async ({ page }) => {
   await login(page, 'agent-t@t.local');
-  await expect(page.getByText('اختصارات سريعة').first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByText('إجراءات سريعة').first()).toBeVisible({ timeout: 15000 });
   await expect(page.getByText('عهداتي').first()).toBeVisible();
   const treasuryShortcut = await page.getByRole('link', { name: /إدارة الخزائن/ }).count();
   expect(treasuryShortcut).toBe(0);

@@ -27,9 +27,20 @@ import type { ModuleAccent } from '@shared/ui/icon/icon.component';
   standalone: true,
   imports: [TranslatePipe, MoneyPipe, IconComponent],
   template: `
-    <div class="stat-tile" [class.stat-tile--wide]="wide()" [class.stat-tile--inset]="inset()">
+    <div
+      class="stat-tile"
+      [class.stat-tile--wide]="wide()"
+      [class.stat-tile--inset]="inset()"
+      [class.stat-tile--icon-circle]="circle()"
+      [class]="toneClass()"
+    >
+      @if (accent() !== '' && iconName() !== '' && circle()) {
+        <span class="stat-tile__circle" [class]="'stat-tile__circle--' + circleTone()">
+          <app-icon [name]="iconName()" [size]="20" />
+        </span>
+      }
       <span class="stat-tile__label">
-        @if (accent() !== '' && iconName() !== '') {
+        @if (accent() !== '' && iconName() !== '' && !circle()) {
           <app-icon class="stat-tile__chip" [name]="iconName()" [chip]="accent()" [size]="16" />
         }
         @if (icon()) {
@@ -45,7 +56,7 @@ import type { ModuleAccent } from '@shared/ui/icon/icon.component';
         <span class="stat-tile__value" [class.stat-tile__value--hero]="hero()">{{ displayValue() }}</span>
       }
       @if (caption()) {
-        <span class="stat-tile__caption">{{ caption() | translate }}</span>
+        <span class="stat-tile__caption">{{ caption() | translate: captionParams() }}</span>
       }
       @if (hint()) {
         <span class="stat-tile__caption u-bidi">{{ hint() }}</span>
@@ -62,12 +73,33 @@ export class StatTileComponent implements AfterViewInit {
   wide = input(false);
   inset = input(false);
   caption = input('');
+  /** interpolation params for the caption key (e.g. { n: 17 }) */
+  captionParams = input<Record<string, unknown> | null>(null);
   hint = input('');
   icon = input(false);
   /** module key (T7-09) — renders the icon as a chip in the module accent */
   accent = input<ModuleAccent | ''>('');
   /** Tabler icon name shown as the accent chip (T7-09) */
   iconName = input('');
+  /** RD-3.2 pattern 2 — top-accent card: 4px status bar + value in status color */
+  tone = input<'' | 'success' | 'warning' | 'danger' | 'info' | 'primary'>('');
+  /** RD-3.2 pattern 3 — circular status icon chip at the card's far corner */
+  circle = input(false);
+  /** RD-4.10 — tinted mini-card: tint background + tinted border (custody detail) */
+  tinted = input(false);
+
+  /** the icon circle follows the tone when set, else the module accent */
+  circleTone(): 'success' | 'warning' | 'danger' | 'info' | 'primary' {
+    return this.tone() || 'primary';
+  }
+
+  /** tone → `stat-tile--accent-top stat-tile--accent-<tone>`; empty when untone'd */
+  toneClass = computed(() => {
+    if (this.tinted() && this.tone()) {
+      return `stat-tile--tinted stat-tile--tint-${this.tone()}`;
+    }
+    return this.tone() ? `stat-tile--accent-top stat-tile--accent-${this.tone()}` : '';
+  });
 
   private motion = inject(MotionService);
   private valueEl = viewChild<ElementRef<HTMLElement>>('value');

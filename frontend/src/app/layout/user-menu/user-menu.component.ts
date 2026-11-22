@@ -51,7 +51,10 @@ type UserMenuItem = MenuItem & { iconName?: string };
       } @else {
         <span class="user-chip__avatar">{{ initials() }}</span>
       }
-      <span class="user-chip__name">{{ name() }}</span>
+      <span class="user-chip__text">
+        <span class="user-chip__name">{{ name() }}</span>
+        <span class="user-chip__role">{{ roles() }}</span>
+      </span>
     </button>
   `,
   styles: `
@@ -69,6 +72,9 @@ export class UserMenuComponent {
   private translate = inject(TranslateService);
 
   readonly name = computed(() => this.auth.me()?.name ?? '');
+
+  /** role line under the name (RD-2.2 user chip) */
+  readonly roles = computed(() => (this.auth.me()?.roles ?? []).join(this.t('common.list_separator')));
 
   /** profile picture served from the public storage disk (T3-103); null → initials */
   readonly pictureUrl = computed(() => {

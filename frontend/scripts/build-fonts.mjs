@@ -1,7 +1,8 @@
-// Self-hosted WOFF2 subsets (plan 10.3): IBM Plex Sans Arabic 400/500/600 for
-// UI + Amiri 700 for display numerals. Subset again with pyftsubset (fonttools
-// + brotli, the plan's own toolchain) to stay inside the 220 KB budget.
-import { readdirSync, statSync, writeFileSync, mkdirSync, existsSync, copyFileSync, readFileSync } from 'node:fs';
+// Self-hosted WOFF2 subsets (plan 10.3 / RD-1.4): IBM Plex Sans Arabic 400/600
+// for UI + Cairo 600/700 for display roles (Cairo replaced Amiri in the Stitch
+// redesign). Subset again with pyftsubset (fonttools + brotli, the plan's own
+// toolchain) to stay inside the 280 KB budget.
+import { readdirSync, statSync, writeFileSync, mkdirSync, existsSync, copyFileSync, readFileSync, unlinkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { resolve, dirname, join } from 'node:path';
@@ -13,11 +14,17 @@ const outDir = resolve(root, 'src/assets/fonts');
 mkdirSync(outDir, { recursive: true });
 
 const FAMILIES = [
-  // 500 dropped to honor the 220KB budget (plan 10.3): 400 + 600 cover the UI;
+  // 500 dropped to honor the font budget (plan 10.3): 400 + 600 cover the UI;
   // recorded in docs/dependencies.md.
   { pkg: '@fontsource/ibm-plex-sans-arabic', prefix: 'ibm-plex-sans-arabic', family: 'IBM Plex Sans Arabic', weights: [400, 600], name: (w) => (w === 400 ? 'regular' : 'semibold') },
-  { pkg: '@fontsource/amiri', prefix: 'amiri', family: 'Amiri', weights: [700], name: () => 'bold' },
+  // Cairo (RD-1.4): the Stitch display face — weights 600/700 only.
+  { pkg: '@fontsource/cairo', prefix: 'cairo', family: 'Cairo', weights: [600, 700], name: (w) => (w === 600 ? 'semibold' : 'bold') },
 ];
+
+// Retired faces must not linger in src/assets/fonts (Amiri left the system).
+for (const stale of readdirSync(outDir)) {
+  if (stale.startsWith('amiri-')) unlinkSync(join(outDir, stale));
+}
 
 let total = 0;
 const css = [];
@@ -76,7 +83,7 @@ for (const family of FAMILIES) {
 
 writeFileSync(join(outDir, 'fonts.css'), css.join('\n') + '\n');
 
-const budget = 220 * 1024;
+const budget = 280 * 1024;
 console.log(`build-fonts: ${total} bytes total (${(total / 1024).toFixed(1)} KB)`);
 if (total > budget) {
   console.error(`build-fonts: exceeds the 220KB budget`);

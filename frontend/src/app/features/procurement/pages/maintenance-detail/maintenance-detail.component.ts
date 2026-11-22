@@ -4,7 +4,6 @@
 // assign dialog.
 import type { WritableSignal } from '@angular/core';
 import { computed, ChangeDetectionStrategy, Component, inject, input, resource, signal, viewChild } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
@@ -24,6 +23,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { Router } from '@angular/router';
 
 interface MaintenanceDetail { id: number; [key: string]: string | number | boolean | null | undefined }
 
@@ -35,7 +35,7 @@ interface MaintenanceDetail { id: number; [key: string]: string | number | boole
 @Component({
   selector: 'app-maintenance-detail',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, ReasonDialogComponent, ConfirmDeleteComponent, ActionButtonComponent],
+  imports: [TranslatePipe, FormsModule, ButtonModule, SelectModule, PageHeaderComponent, AsyncPageComponent, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, FieldComponent, ReasonDialogComponent, ConfirmDeleteComponent, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-async-page [resource]="data" variant="detail" [backLink]="['/procurement/maintenance']">

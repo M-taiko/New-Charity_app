@@ -1,7 +1,8 @@
 import type { OnInit } from '@angular/core';
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal, viewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import type { NgForm } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -63,6 +64,14 @@ export class TreasuryFormPage implements OnInit {
   private http = inject(HttpClient);
   private router = inject(Router);
   private toast = inject(ToastService);
+
+  /** UX-6.4: dirty template form → the unsaved-changes guard warns on leave */
+  private formRef = viewChild<NgForm>('f');
+  hasUnsavedChanges(): boolean {
+    const form = this.formRef();
+    return form?.dirty === true && !this.sending?.();
+  }
+
 
   /** bound from /treasury/:id/edit; absent on /treasury/new */
   id = input<number | undefined>(undefined);

@@ -9,9 +9,11 @@
   gap: var(--space-4);
 }
 
+/* RD-3.9: section cards with title-lg w700 headers */
 .form-section__title {
-  font-size: var(--text-md);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 700;
   padding-block-end: var(--space-2);
   border-block-end: 1px solid var(--color-hairline);
   display: flex;
@@ -21,8 +23,24 @@
 
 .form-section__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: var(--space-4);
+}
+
+/* fixed tracks: sibling fields ALWAYS share one row at any desktop width */
+.form-section__grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-section__grid--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 768px) {
+  .form-section__grid--2,
+  .form-section__grid--3 {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* grid children may not force tracks wider than their cell (RTL blowout) */

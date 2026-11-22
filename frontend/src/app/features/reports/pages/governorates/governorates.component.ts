@@ -90,7 +90,7 @@ interface GovData {
 @if (!row.standard) {
   <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
 }</ng-template>
-            <ng-template appCell="total" let-row><span class="u-bidi">{{ row.total }}</span></ng-template>
+            <ng-template appCell="total" let-row><span class="money u-bidi">{{ row.total | money }}</span></ng-template>
             <ng-template appCell="approved" let-row><span class="u-bidi">{{ row.approved }}</span></ng-template>
             <ng-template appCell="pending" let-row><span class="u-bidi">{{ row.pending }}</span></ng-template>
             <ng-template appCell="rejected" let-row><span class="u-bidi">{{ row.rejected }}</span></ng-template>

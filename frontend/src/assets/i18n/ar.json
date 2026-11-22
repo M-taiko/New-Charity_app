@@ -81,10 +81,14 @@
     "hint_max_amount": "أقصى مبلغ مسموح هو الرصيد المتاح من المصدر المختار",
     "hint_choose_custody": "اختر العهدة أولاً",
     "hint_direction_full": "التوجيه مطلوب حتى آخر مستوى من شجرة الاتجاهات",
-    "hint_treasury_balance": "رصيد الخزينة المختارة يظهر بجانب اسمها في القائمة"
+    "hint_treasury_balance": "رصيد الخزينة المختارة يظهر بجانب اسمها في القائمة",
+    "filter": "تصفية",
+    "unsaved_changes": "لديك تغييرات غير محفوظة. هل تريد بالتأكيد مغادرة الصفحة؟"
   },
   "nav": {
     "main_aria": "القائمة الرئيسية",
+    "brand_tagline": "للأعمال الخيرية",
+    "open_menu": "فتح القائمة",
     "collapse": "تصغير القائمة",
     "expand": "توسيع القائمة",
     "dashboard": "الرئيسية",
@@ -124,8 +128,7 @@
       "work": "العمل",
       "admin": "الإدارة"
     },
-    "transfers": "التحويلات",
-    "open_menu": "فتح القائمة"
+    "transfers": "التحويلات"
   },
   "auth": {
     "login": {
@@ -257,6 +260,18 @@
       "absent": "غائب",
       "late": "متأخر",
       "leave": "إجازة"
+    },
+    "employee_status": {
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "on_leave": "في إجازة"
+    },
+    "purchase_category": {
+      "office_supplies": "مستلزمات مكتبية",
+      "equipment": "أجهزة ومعدات",
+      "services": "خدمات",
+      "maintenance": "صيانة",
+      "other": "أخرى"
     }
   },
   "glossary": {
@@ -287,8 +302,11 @@
       "today_expenses": "مصروفات اليوم",
       "active_custodies": "العهد النشطة",
       "agents_count": "إجمالي المناديب",
-      "pending_custodies": "عهد معلقة",
-      "pending_cases": "حالات معلقة"
+      "pending_cases": "حالات معلقة",
+      "available_now": "متاح للصرف الفوري",
+      "n_active_custodies": "{{n}} عهدة نشطة حالياً",
+      "today_expenses_hint": "مصروفات اليوم: {{n}}",
+      "pending_cases_hint": "حالات معلقة: {{n}}"
     },
     "researcher": {
       "recent_cases": "أحدث الحالات",
@@ -348,6 +366,7 @@
   "treasury": {
     "list": {
       "title": "إدارة الخزينة",
+      "subtitle": "إدارة الخزائن والتحويلات وحركة الأموال",
       "add": "إضافة خزينة",
       "receive_donation": "استقبال تبرع",
       "transfer": "تحويل بين الخزائن",
@@ -358,7 +377,8 @@
       "count": "عدد الخزائن",
       "total_balance": "إجمالي الأرصدة",
       "transactions_count": "عدد الحركات",
-      "created_at": "تاريخ الإنشاء"
+      "created_at": "تاريخ الإنشاء",
+      "record_expense": "تسجيل مصروف"
     },
     "form": {
       "new_title": "إنشاء خزينة جديدة",
@@ -384,7 +404,8 @@
       "amount": "المبلغ المراد تحويله",
       "notes": "ملاحظات التحويل",
       "submit": "تحويل الأموال",
-      "over_balance": "المبلغ يتجاوز رصيد الخزينة المصدرة"
+      "over_balance": "المبلغ يتجاوز رصيد الخزينة المصدرة",
+      "details": "بيانات التحويل"
     },
     "detail": {
       "title": "تفاصيل الخزينة",
@@ -396,7 +417,9 @@
       "total_in": "إجمالي الوارد",
       "total_out": "إجمالي الصادر",
       "col_user": "المستخدم",
-      "type_all": "الكل"
+      "type_all": "الكل",
+      "facts": "بيانات الخزينة",
+      "stats": "الحركة والإحصائيات"
     }
   },
   "custody": {
@@ -528,7 +551,10 @@
       "donation_type_external": "تبرع خارجي (عهدة جديدة مستقلة)",
       "donation_type_refund": "استرداد مصروف (يضاف لهذه العهدة)",
       "donation_hint": "التبرع الخارجي ينشئ عهدة جديدة مستقلة، أما استرداد المصروف فيُعاد لرصيد هذه العهدة مباشرة",
-      "tab_overview": "نظرة عامة"
+      "tab_overview": "نظرة عامة",
+      "facts": "بيانات العهدة",
+      "status_info": "معلومات الحالة",
+      "new_request": "طلب عهدة جديدة"
     },
     "edit": {
       "title": "تعديل العهدة"
@@ -606,7 +632,11 @@
       "count": "عدد العهد",
       "custodies": "جميع العهدات",
       "all_agents": "جميع المندوبين",
-      "view_movements": "عرض الحركات"
+      "view_movements": "عرض الحركات",
+      "total_amount": "إجمالي المبالغ",
+      "total_spent": "إجمالي المنصرف",
+      "total_returned": "إجمالي المرتجع",
+      "awaiting_reply": "في انتظار الرد"
     },
     "movements": {
       "title": "حركات العهد",
@@ -656,7 +686,7 @@
       "total_amount": "إجمالي المبالغ المعلقة",
       "approve_confirm": "هل تؤكد الموافقة على هذا الطلب؟ سيتم تنفيذ الرد مباشرة بعد الموافقة.",
       "approve_executes_now": "سيتم تحويل المبلغ إلى الخزينة المختارة فوراً وتنفيذ الرد مباشرة.",
-      "request_line": "العهدة {custody} — المندوب: {agent} — المبلغ: {amount}",
+      "request_line": "العهدة {{custody}} — المندوب: {{agent}} — المبلغ: {{amount}}",
       "treasury_balance": "رصيد الخزينة",
       "balance_after": "الرصيد بعد الرد"
     }
@@ -676,7 +706,7 @@
       "col_decided_at": "تاريخ القرار",
       "col_decided_by": "المُقرر",
       "col_rejection": "سبب الرفض",
-      "pending_for_me": "لديك {count} تحويلات معلقة بانتظار قرارك",
+      "pending_for_me": "لديك {{count}} تحويلات معلقة بانتظار قرارك",
       "tabs": {
         "sent": "التحويلات المرسلة",
         "received": "التحويلات المستقبلة",
@@ -938,10 +968,14 @@
       "custody_total": "إجمالي العهد",
       "custody_closed": "العهد المغلقة",
       "rejected": "الحالات المرفوضة",
-      "social_case_expenses": "مصروفات الحالات الاجتماعية",
       "governorates_hint": "أعلى 5 محافظات بالمصروف — التفاصيل الكاملة في تقرير المحافظات",
       "empty": "لا توجد بيانات للتقارير بعد",
-      "all_reports": "كل التقارير"
+      "all_reports": "كل التقارير",
+      "quick_reports": "التقارير التفصيلية",
+      "treasury_caption": "الرصيد الحالي للخزائن",
+      "expenses_today_hint": "مصروفات اليوم: {{n}}",
+      "custody_total_hint": "من إجمالي {{n}} عهدة",
+      "pending_cases_hint": "حالات معلقة: {{n}}"
     },
     "researchers": {
       "title": "إحصائيات الباحثين الاجتماعيين",
@@ -991,7 +1025,6 @@
       "total_agents": "عدد المندوبين",
       "total_received": "إجمالي المستلم",
       "total_spent": "إجمالي المصروف",
-      "total_returned": "إجمالي المرتجع",
       "total_balance": "إجمالي الأرصدة"
     },
     "items": {
@@ -1031,7 +1064,8 @@
       "col_parent": "تحت",
       "col_user": "المسجل من",
       "empty_drill": "لا توجد مصروفات لهذا البند",
-      "drill_count": "عدد المصروفات"
+      "drill_count": "عدد المصروفات",
+      "under": "تحت"
     },
     "reconciliation": {
       "title": "تقرير مطابقة الخزينة",
@@ -1072,8 +1106,11 @@
   "case": {
     "list": {
       "title": "الحالات الاجتماعية",
+      "registered": "الحالات المسجلة",
       "create": "إضافة حالة اجتماعية جديدة",
       "col_name": "الاسم",
+      "col_code": "كود الحالة",
+      "col_category": "نوع المساعدة",
       "col_phone": "الهاتف",
       "col_researcher": "الباحث",
       "col_status": "الحالة",
@@ -1081,7 +1118,8 @@
       "total": "إجمالي الحالات",
       "pending": "حالات معلقة",
       "approved": "حالات موافق عليها",
-      "rejected": "حالات مرفوضة"
+      "rejected": "حالات مرفوضة",
+      "tab_all": "الكل"
     },
     "form": {
       "create_title": "إضافة حالة اجتماعية",
@@ -1243,11 +1281,10 @@
         "needs_research": "تحتاج لبحث"
       },
       "assistance": {
-        "financial": "مساعدة مالية",
-        "medical": "مساعدة طبية",
-        "food": "مساعدة غذائية",
-        "education": "مساعدة تعليمية",
-        "housing": "مساعدة سكنية",
+        "cash": "مساعدة مالية",
+        "monthly_salary": "راتب شهري",
+        "medicine": "أدوية وعلاج",
+        "treatment": "علاج طبي متخصص",
         "other": "أخرى"
       },
       "doc_type": {
@@ -1520,11 +1557,11 @@
       "closed": "استفتاء مغلق",
       "create": "إنشاء استفتاء",
       "question": "السؤال",
-      "option": "الخيار {index}",
+      "option": "الخيار {{index}}",
       "min_options": "أضف خيارين على الأقل",
       "close": "إغلاق التصويت",
       "created": "تم إنشاء الاستفتاء",
-      "total_votes": "إجمالي الأصوات: {count}"
+      "total_votes": "إجمالي الأصوات: {{count}}"
     },
     "empty": "لا توجد رسائل بعد. ابدأ المحادثة!"
   },
@@ -1556,8 +1593,8 @@
     "level_info": "معلومة",
     "level_warning": "تحذير",
     "level_danger": "خطر",
-    "confirm_deactivate": "هل تريد إيقاف الرسالة \"{name}\"؟",
-    "confirm_reactivate": "هل تريد إعادة تفعيل الرسالة \"{name}\" للجميع؟",
+    "confirm_deactivate": "هل تريد إيقاف الرسالة \"{{name}}\"؟",
+    "confirm_reactivate": "هل تريد إعادة تفعيل الرسالة \"{{name}}\" للجميع؟",
     "expires_hint": "اتركها فارغة للرسائل الدائمة حتى يتم إيقافها يدوياً",
     "deactivated": "تم إيقاف الرسالة",
     "reactivated": "تم إعادة تفعيل الرسالة العاجلة"
@@ -1654,7 +1691,7 @@
   "validation": {
     "file_type": "نوع الملف غير مدعوم. المسموح: صور (JPEG/PNG/WebP) أو PDF",
     "password_match": "password match",
-    "reason_min": "أدخل {min} أحرف على الأقل"
+    "reason_min": "أدخل {{min}} أحرف على الأقل"
   },
   "table": {
     "density": "density"

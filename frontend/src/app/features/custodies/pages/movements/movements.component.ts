@@ -17,6 +17,7 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { journalMoneyClass, journalStampClass } from '@shared/lib/journal-style';
 import type { ListResponse } from '@shared/models/api.models';
 
 interface Row {
@@ -81,16 +82,16 @@ interface MovementsParams {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
-          <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}</ng-template>
+          <ng-template appCell="date" let-row><span class="u-bidi u-muted">{{ row.date | datetime }}</span></ng-template>
+          <ng-template appCell="type" let-row><span class="stamp" [class]="stampClass(row.type)">{{ row.type | enumLabel: 'transaction_type' }}</span></ng-template>
           <ng-template appCell="custody_id" let-row>@if (row.custody_id) {
-  <a [routerLink]="['/custodies', row.custody_id]" class="u-bidi">#{{ row.custody_id }}</a>
+  <a [routerLink]="['/custodies', row.custody_id]" class="case-code u-bidi">#{{ row.custody_id }}</a>
 } @else {
   <span>—</span>
 }</ng-template>
           <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
           <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
-          <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+          <ng-template appCell="amount" let-row><span class="u-bidi" [class]="moneyClass(row.type)">{{ row.amount | money }}</span></ng-template>
           <div empty>
             <app-empty-state [title]="'custody.movements.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
           </div>
@@ -104,6 +105,10 @@ export class MovementsPage {
   private http = inject(HttpClient);
 
   readonly tableKey = 'movements.component';
+
+  /** journal-ledger pill + signed money colors (RD-5.3) */
+  readonly stampClass = journalStampClass;
+  readonly moneyClass = journalMoneyClass;
 
   readonly columns = [
     { field: 'date', header: 'custody.movements.col_date', sortable: true },

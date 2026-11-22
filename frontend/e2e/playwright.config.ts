@@ -12,5 +12,7 @@ export default defineConfig({
     headless: true,
     viewport: { width: 1366, height: 768 },
     locale: 'ar-EG',
+    // run on the system Edge browser — no Playwright browser download needed
+    channel: 'msedge',
   },
 });

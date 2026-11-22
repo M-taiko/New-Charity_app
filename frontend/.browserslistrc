@@ -1,6 +1,7 @@
 # The Chrome 109 gate (plan 3.4): Windows 7 users run Chrome 109, Edge 109, Firefox ESR 115.
-# Safari 15.4 covers iOS/macOS visitors. The build downlevels anything newer than these.
+# Safari floor raised to 16.4 — Angular 20's minimum supported Safari (15.4–15.6
+# fall outside its support matrix and only produced build warnings).
 chrome >= 109
 edge >= 109
 firefox >= 115
-safari >= 15.4
+safari >= 16.4

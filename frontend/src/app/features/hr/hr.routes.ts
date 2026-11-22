@@ -1,9 +1,10 @@
 import type { Routes } from '@angular/router';
+import { unsavedChangesGuard } from '@core/guards/unsaved-changes.guard';
 
 export const HR_ROUTES: Routes = [
   { path: '', loadComponent: () => import('./pages/dashboard/dashboard.component').then((m) => m.HrDashboardPage) },
   { path: 'employees', loadComponent: () => import('./pages/employees/employees.component').then((m) => m.EmployeesPage) },
-  { path: 'employees/new', loadComponent: () => import('./pages/employee-form/employee-form.component').then((m) => m.EmployeeFormPage) },
+  { canDeactivate: [unsavedChangesGuard], path: 'employees/new', loadComponent: () => import('./pages/employee-form/employee-form.component').then((m) => m.EmployeeFormPage) },
   { path: 'employees/:id/edit', loadComponent: () => import('./pages/employee-form/employee-form.component').then((m) => m.EmployeeFormPage) },
   { path: 'employees/:id/salaries', loadComponent: () => import('./pages/salary-history/salary-history.component').then((m) => m.SalaryHistoryPage) },
   { path: 'attendance', loadComponent: () => import('./pages/attendance/attendance.component').then((m) => m.AttendancePage) },

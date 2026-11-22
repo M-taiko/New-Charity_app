@@ -12,9 +12,16 @@
 }
 
 /* fixed layout: column widths are exact — saved/specified widths are honored
-   verbatim (auto layout would redistribute them), cells clip gracefully */
+   verbatim (auto layout would redistribute them), cells clip gracefully.
+   min-width 100%: p-table's expand-resize writes an inline px width equal to
+   the saved column sum — stale (narrower) sums shrank the whole table inside
+   the card. min-width beats inline width, so the header ALWAYS spans the
+   card, while legitimately widened tables (>100%) keep their horizontal
+   scroll and the resize feature stays intact. */
 .ledger-table .p-datatable-table {
   table-layout: fixed;
+  width: 100%;
+  min-width: 100%;
 }
 
 .ledger-table .p-datatable-table td,
@@ -56,40 +63,48 @@
   unicode-bidi: isolate;
 }
 
+/* numeric columns: the HEADER aligns with its data — the th's text-align:start
+   (specificity 0,1,1) would otherwise beat the class on th (0,1,0) and leave
+   titles start-aligned over end-aligned numbers */
+.ledger-table th.ledger-table__cell-num,
+.ledger-table td.ledger-table__cell-num {
+  text-align: end;
+}
+
 /* hairline horizontal rules — no vertical grid lines */
 .ledger-table table {
   border-collapse: collapse;
   width: 100%;
 }
 
+/* thead: surface-container band, label-md muted (RD-3.3 Stitch table spec).
+   UX-6.3: sticky headers — the band stays visible while the card scrolls. */
 .ledger-table th {
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--color-text-muted);
   text-align: start;
-  padding: var(--space-2) var(--space-3);
-  border-block-end: 1.5px solid var(--color-margin-rule);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface-inset);
+  border-block-end: 1px solid var(--color-hairline);
   white-space: nowrap;
 
   /* sortable / resizable / reorderable columns */
   cursor: pointer;
   user-select: none;
-  position: relative;
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
 }
 
 .ledger-table td {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
   border-block-end: 1px solid var(--color-hairline);
-  font-size: var(--text-sm);
-}
-
-/* the double margin rule on the reading-start side (right in RTL) */
-.ledger-table tbody tr td:first-child {
-  box-shadow: inset 3px 0 0 0 var(--color-hairline), inset 4px 0 0 0 var(--color-margin-rule);
+  font-size: var(--text-xs);
 }
 
 .ledger-table tbody tr:hover td {
-  background: var(--color-surface-raised);
+  background: var(--color-surface-inset);
 }
 
 .ledger-table--compact td {
@@ -169,9 +184,11 @@
   background: var(--color-warning-soft);
 }
 
+/* "view" keeps its info-colored glyph like every other row action — plain
+   icon buttons, no resting fill box (the square-around-the-icon look) */
 .row-actions__btn--info:hover {
-  color: var(--color-info);
-  background: var(--color-info-soft);
+  color: var(--status-info-fg);
+  background: var(--status-info-bg);
 }
 
 /* Phones: the SAME table as desktop — one layout everywhere — inside a
@@ -261,11 +278,40 @@
   color: var(--color-primary);
 }
 
-/* global filter input in header */
+/* ── Spending-ratio cell (RD-3.3): slim progress bar + tabular percent ── */
+.progress-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 96px;
+}
+
+.progress-cell__bar {
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-inset);
+  overflow: hidden;
+}
+
+.progress-cell__fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  transition: width var(--dur-base) var(--ease-out);
+}
+
+.progress-cell__label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* global filter input in header — surface-container bg, outline border,
+   radius-m, primary focus border with no ring (RD-3.3) */
 .ledger-table__filter {
   padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--color-control-border);
-  border-radius: var(--radius-s);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-m);
   font-size: var(--text-xs);
   background: var(--color-surface-inset);
   color: var(--color-text);

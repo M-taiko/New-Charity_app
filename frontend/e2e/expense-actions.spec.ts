@@ -69,7 +69,7 @@ test('edit-request review page keeps approve/reject pending-only (T3-23)', async
   await login(page);
   await page.goto('/app/expenses/edit-requests');
   await page.waitForTimeout(1500);
-  const firstRow = page.locator('.ledger-table tbody tr.ledger-table__row').first();
+  const firstRow = page.locator('.ledger-table tbody tr').first();
   if (await firstRow.isVisible({ timeout: 15000 }).catch(() => false)) {
     await firstRow.locator('a, button').first().click();
     await page.waitForTimeout(2000);

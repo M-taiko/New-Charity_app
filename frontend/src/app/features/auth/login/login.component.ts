@@ -42,7 +42,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
         <div class="login__side-content">
           <div class="login__monogram-wrap">
             <svg width="96" height="96" viewBox="0 0 64 64" aria-hidden="true" class="login__monogram">
-              <rect x="4" y="4" width="56" height="56" fill="none" stroke="#F7F3EF" stroke-width="2" />
+              <rect x="4" y="4" width="56" height="56" fill="none" stroke="#F5EFE8" stroke-width="2" />
               <rect x="8" y="8" width="48" height="48" fill="none" stroke="#BEAFA7" stroke-width="0.8" />
               <text
                 x="32"
@@ -51,7 +51,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
                 font-family="Georgia, serif"
                 font-size="26"
                 font-weight="700"
-                fill="#F7F3EF"
+                fill="#F5EFE8"
                 letter-spacing="1.5"
               >
                 NS
@@ -114,7 +114,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
           <!-- Small brand header (mobile: this is the only branding) -->
           <div class="login__form-brand">
             <svg width="36" height="36" viewBox="0 0 64 64" aria-hidden="true">
-              <rect x="4" y="4" width="56" height="56" rx="8" fill="#F7F3EF" stroke="#5D3722" stroke-width="3" />
+              <rect x="4" y="4" width="56" height="56" rx="8" fill="#EFE8E1" stroke="#5C4033" stroke-width="3" />
               <text
                 x="32"
                 y="42"
@@ -122,7 +122,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
                 font-family="Georgia, serif"
                 font-size="26"
                 font-weight="700"
-                fill="#5D3722"
+                fill="#5C4033"
               >
                 NS
               </text>

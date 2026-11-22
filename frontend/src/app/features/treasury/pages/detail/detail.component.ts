@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, resource, signal, viewChild } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
@@ -18,8 +17,11 @@ import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { IconComponent } from '@shared/ui/icon/icon.component';
+import { journalMoneyClass, journalStampClass } from '@shared/lib/journal-style';
 import type { ItemResponse, ListResponse } from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { Router } from '@angular/router';
 
 interface TreasuryDetail {
   id: number;
@@ -44,10 +46,11 @@ interface TransactionRow {
 @Component({
   selector: 'app-treasury-detail',
   standalone: true,
-  imports: [MenuModule, 
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, PageHeaderComponent,
-    AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
+  imports: [MenuModule,
+    TranslatePipe, FormsModule, ButtonModule, SelectModule, PageHeaderComponent,
+    AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective,
     EmptyStateComponent, PrintSheetComponent, ConfirmDeleteComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent,
+    IconComponent,
   ],
   template: `
     <app-print-sheet [title]="'treasury.detail.title' | translate">
@@ -63,11 +66,43 @@ interface TransactionRow {
 
       <app-async-page [resource]="pageResource" variant="detail" [backLink]="['/treasury']">
         @if (safeValue(); as treasury) {
-          <div class="kpi-grid">
-            <app-stat-tile [label]="'treasury.list.balance'" [value]="treasury.balance" [money]="true" accent="treasury" iconName="building-bank" />
-            <app-stat-tile [label]="'treasury.detail.total_in'" [value]="treasury.stats.total_in" [money]="true" />
-            <app-stat-tile [label]="'treasury.detail.total_out'" [value]="treasury.stats.total_out" [money]="true" />
-            <app-stat-tile [label]="'treasury.list.transactions_count'" [value]="treasury.stats.total_transactions" />
+          <!-- RD-5.2: the detail pattern — card-hero facts + tinted money cards -->
+          <div class="detail-grid u-mb-4">
+            <section class="card-hero">
+              <header class="card-hero__band">
+                <span>{{ 'treasury.detail.facts' | translate }}</span>
+                <app-icon name="info" [size]="18" />
+              </header>
+              <div class="card-hero__body">
+                <div class="key-value-list">
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'treasury.list.name' | translate }}</span>
+                    <span class="key-value-list__value">{{ treasury.name }}</span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'treasury.list.balance' | translate }}</span>
+                    <span class="key-value-list__value money money--link u-bidi u-fw-bold">{{ treasury.balance | money }}</span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'common.notes' | translate }}</span>
+                    <span class="key-value-list__value">{{ treasury.notes ?? '—' }}</span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'common.date' | translate }}</span>
+                    <span class="key-value-list__value u-bidi">{{ treasury.created_at | datetime: false }}</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="chart-card">
+              <div class="chart-card__head"><span class="chart-card__title">{{ 'treasury.detail.stats' | translate }}</span></div>
+              <div class="kpi-grid">
+                <app-stat-tile [label]="'treasury.detail.total_in'" [value]="treasury.stats.total_in" [money]="true" tone="success" />
+                <app-stat-tile [label]="'treasury.detail.total_out'" [value]="treasury.stats.total_out" [money]="true" tone="danger" />
+                <app-stat-tile [label]="'treasury.list.transactions_count'" [value]="treasury.stats.total_transactions" tone="primary" />
+              </div>
+            </section>
           </div>
 
           <app-data-table
@@ -89,10 +124,10 @@ interface TransactionRow {
                 size="small"
               />
             </div>
-            <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
-            <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}</ng-template>
+            <ng-template appCell="date" let-row><span class="u-bidi u-muted">{{ row.date | datetime }}</span></ng-template>
+            <ng-template appCell="type" let-row><span class="stamp" [class]="stampClass(row.type)">{{ row.type | enumLabel: 'transaction_type' }}</span></ng-template>
             <ng-template appCell="description" let-row>{{ row.description }}</ng-template>
-            <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
+            <ng-template appCell="amount" let-row><span class="u-bidi" [class]="moneyClass(row.type)">{{ row.amount | money }}</span></ng-template>
             <ng-template appCell="user" let-row>{{ row.user?.name ?? '—' }}</ng-template>
             <div empty>
               <app-empty-state [title]="'treasury.detail.empty' | translate" [text]="'common.no_data' | translate" accent="treasury" iconName="building-bank" />
@@ -118,6 +153,10 @@ export class TreasuryDetailPage {
     { label: this.translate.instant('treasury.list.transfer'), routerLink: '/treasury/transfer' },
     { label: this.translate.instant('common.delete'), command: () => this.deleteDlg()?.open() },
   ]);
+
+  /** RD-5.2: journal-ledger pill + signed money colors for the transactions table */
+  readonly stampClass = journalStampClass;
+  readonly moneyClass = journalMoneyClass;
 
   private http = inject(HttpClient);
   private router = inject(Router);

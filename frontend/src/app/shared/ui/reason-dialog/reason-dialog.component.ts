@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DialogModule } from 'primeng/dialog';
+import { SharedModule } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { TextareaModule } from 'primeng/textarea';
 import type { HttpErrorResponse } from '@angular/common/http';
@@ -16,7 +17,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
 @Component({
   selector: 'app-reason-dialog',
   standalone: true,
-  imports: [TranslatePipe, DialogModule, ButtonModule, FormsModule, TextareaModule],
+  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule, FormsModule, TextareaModule],
   template: `
     <p-dialog appendTo="body"
       [visible]="visible()"
@@ -56,12 +57,12 @@ import type { ApiErrorBody } from '@shared/models/api.models';
           <span>{{ alert() }}</span>
         </div>
       }
-      <p-footer>
+      <ng-template pTemplate="footer">
         <div class="u-flex u-gap-2 u-justify-end">
           <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" [disabled]="sending()" (onClick)="onVisibleChange(false)" />
           <p-button [label]="submitLabel() | translate" [loading]="sending()" [disabled]="sending()" (onClick)="confirm()" />
         </div>
-      </p-footer>
+      </ng-template>
     </p-dialog>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -72,23 +72,23 @@
     .p-select-empty-message { color: var(--palette-taupe); }
   }
 
-  // Buttons — brand brown bg + WHITE text (not ink, which is invisible on brown)
+  // Buttons — the cream primary strategy (RD-1.1 dark): #F5EFE8 bg + ink text
   .p-button {
-    background: var(--palette-brand);
-    border-color: var(--palette-brand);
-    color: var(--palette-white);
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-on-primary);
 
     &:hover:not(:disabled) {
-      background: var(--palette-mid);
-      border-color: var(--palette-mid);
-      color: var(--palette-white);
+      background: var(--color-primary-hover);
+      border-color: var(--color-primary-hover);
+      color: var(--color-on-primary);
     }
 
     &:active:not(:disabled) {
-      background: var(--palette-light);
-      color: var(--palette-white);
+      background: var(--color-primary-hover);
+      color: var(--color-on-primary);
     }
-    &:focus { box-shadow: 0 0 0 2px var(--palette-taupe); }
+    &:focus { box-shadow: 0 0 0 2px var(--color-focus); }
   }
 
   .p-button-outlined {
@@ -165,7 +165,7 @@
 
     tbody td {
       background: var(--dark-2);
-      border-color: var(--palette-brand);
+      border-color: var(--dark-4);
       color: var(--palette-cream);
     }
     tbody tr:nth-child(even) td { background: var(--dark-1); }
@@ -294,40 +294,11 @@
 
   // ── BEM block overrides ─────────────────────────────────────
 
-  // Sidebar
-  .sidebar {
-    background: var(--dark-1);
-    border-inline-start: 1px solid var(--dark-3);
+  // Sidebar — token-driven since the Stitch redesign (RD-2.1); sidebar.scss
+  // handles idle/hover/active through --color-* tokens in both themes.
 
-    .sidebar__brand { border-block-end: 1px solid var(--palette-mid); }
-    .sidebar__brand-name { color: var(--palette-cream); }
-    .sidebar__group-label { color: var(--palette-taupe); }
-
-    .sidebar__link {
-      color: var(--palette-taupe);
-      &:hover { background: var(--dark-2); }
-
-      &.sidebar__link--active {
-        background: var(--dark-2);
-        border-inline-start-color: var(--palette-cream);
-        color: var(--palette-cream);
-      }
-    }
-  }
-
-  // Topbar
-  .topbar {
-    background: var(--dark-1);
-    border-block-end: 1px solid var(--palette-mid);
-    .topbar__title { color: var(--palette-cream); }
-
-    .topbar__icon-btn {
-      background: transparent;
-      border: none;
-      color: var(--palette-cream);
-      &:hover { background: var(--dark-3); }
-    }
-  }
+  // Topbar — topbar.scss is token-driven since RD-2.2; only the title needs
+  // the explicit dark cream (same value as --color-text in dark).
 
   // Stat tiles
   .stat-tile {
@@ -355,7 +326,7 @@
     }
 
     td {
-      border-block-end-color: var(--palette-brand);
+      border-block-end-color: var(--dark-4);
       color: var(--palette-cream);
     }
     tbody tr:hover td { background: var(--dark-3); }
@@ -444,9 +415,9 @@
   }
 
   .login__submit {
-    background: var(--palette-brand);
-    color: var(--palette-white);
-    &:hover { background: var(--palette-taupe); }
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    &:hover { background: var(--color-primary-hover); }
 
     &:disabled {
       background: var(--dark-1);
@@ -496,7 +467,7 @@
   .flow-ribbon__link { border-block-start-color: var(--dark-3); }
 
   // Balance ring
-  .balance-ring__track { stroke: var(--palette-brand); }
+  .balance-ring__track { stroke: var(--chart-track); }
   .balance-ring__center-value { fill: var(--palette-cream); }
   .balance-ring__center-label { fill: var(--palette-taupe); }
 

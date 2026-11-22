@@ -20,7 +20,9 @@ test('case form renders every unified-form section and the researcher select', a
   await expect(page.getByText('المعلومات المالية')).toBeVisible();
   await expect(page.getByText('معلومات الأسرة')).toBeVisible();
   await expect(page.getByText('المعلومات الصحية')).toBeVisible();
-  await expect(page.getByText('نوع المساعدة المطلوبة')).toBeVisible();
+  // heading role — the field label repeats the section text, plain getByText
+  // resolves both and trips strict mode
+  await expect(page.getByRole('heading', { name: 'نوع المساعدة المطلوبة' })).toBeVisible();
   await expect(page.getByText('المستندات والصور')).toBeVisible();
   await expect(page.locator('#c-researcher')).toBeVisible();
   // T34: the governorate select loads from /lookups
@@ -56,7 +58,7 @@ test('case list exposes the row actions and both row modals', async ({ page }) =
 test('rejecting a case requires typed notes', async ({ page }) => {
   await login(page);
   await page.goto('/app/cases');
-  const firstRow = page.locator('.ledger-table__row a[href*="/cases/"]').first();
+  const firstRow = page.locator('.p-datatable-tbody a[href*="/cases/"]').first();
   await expect(firstRow).toBeVisible({ timeout: 15000 });
   await firstRow.click();
   await page.waitForURL(/\/cases\/\d+$/, { timeout: 15000 });

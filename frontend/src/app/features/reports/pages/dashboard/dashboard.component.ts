@@ -93,113 +93,156 @@ interface ReportsData {
             </div>
           </div>
 
-          <div class="kpi-grid">
-            <a class="tile-link" routerLink="/treasury" [title]="'common.open_page' | translate">
-              <app-stat-tile [label]="'report.dashboard.treasury_balance'" [value]="d.treasury_balance" [money]="true" accent="reports" iconName="report-analytics" />
-            </a>
-            <a class="tile-link" routerLink="/expenses" [title]="'common.open_page' | translate">
-              <app-stat-tile [label]="'report.dashboard.total_expenses'" [value]="d.total_spent" [money]="true" />
-            </a>
-            <a class="tile-link" routerLink="/custodies" [title]="'common.open_page' | translate">
-              <app-stat-tile [label]="'report.dashboard.active_custodies'" [value]="d.active_custodies" />
-            </a>
-          </div>
-          <div class="kpi-grid">
-            <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
-              <app-stat-tile [label]="'report.dashboard.social_cases'" [value]="d.total_social_cases" />
-            </a>
-            <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
-              <app-stat-tile [label]="'case.list.approved'" [value]="d.approved_cases" />
-            </a>
-            <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
-              <app-stat-tile [label]="'case.list.pending'" [value]="d.pending_cases" />
-            </a>
-          </div>
+          <!-- bento layout — the same rich grid language as the main dashboard -->
+          <div class="bento">
+            <!-- hero KPI strip: the four headline numbers -->
+            <section class="bento__widget bento__widget--full">
+              <div class="kpi-grid kpi-grid--4">
+                <a class="tile-link" routerLink="/treasury" [title]="'common.open_page' | translate">
+                  <app-stat-tile [label]="'report.dashboard.treasury_balance'" [value]="d.treasury_balance" [money]="true" tone="success" accent="treasury" iconName="custody" caption="report.dashboard.treasury_caption" [captionParams]="{ n: fig('today') | money: false }" />
+                </a>
+                <a class="tile-link" routerLink="/expenses" [title]="'common.open_page' | translate">
+                  <app-stat-tile [label]="'report.dashboard.total_expenses'" [value]="d.total_spent" [money]="true" tone="danger" accent="expenses" iconName="myExpense" caption="report.dashboard.expenses_today_hint" [captionParams]="{ n: fig('today') | money: false }" />
+                </a>
+                <a class="tile-link" routerLink="/custodies" [title]="'common.open_page' | translate">
+                  <app-stat-tile [label]="'report.dashboard.active_custodies'" [value]="d.active_custodies" tone="info" accent="custodies" iconName="custody" caption="report.dashboard.custody_total_hint" [captionParams]="{ n: d.total_custodies }" />
+                </a>
+                <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
+                  <app-stat-tile [label]="'report.dashboard.social_cases'" [value]="d.total_social_cases" tone="primary" accent="cases" iconName="case" caption="report.dashboard.pending_cases_hint" [captionParams]="{ n: d.pending_cases }" />
+                </a>
+              </div>
+            </section>
 
-          <!-- ملخص المصروفات (direction-aware: today / month / year / grand) -->
-          <section class="chart-card u-mt-4">
-            <div class="chart-card__head">
-              <span class="chart-card__title">{{ 'report.dashboard.expenses_summary' | translate }}</span>
-            </div>
-            <div class="kpi-grid u-mt-2">
-              <app-stat-tile [label]="'report.dashboard.expenses_today'" [value]="fig('today')" [money]="true" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.expenses_month'" [value]="fig('this_month')" [money]="true" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.expenses_year'" [value]="fig('this_year')" [money]="true" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.expenses_grand'" [value]="fig('grand_total')" [money]="true" [inset]="true" />
-            </div>
-          </section>
+            <!-- expenses summary (direction-aware): figures + trend chart -->
+            <section class="bento__widget bento__widget--wide">
+              <div class="chart-card__head">
+                <span class="chart-card__title"><app-icon name="chart-pie" chip="reports" [size]="16" /> {{ 'report.dashboard.expenses_summary' | translate }}</span>
+                <span class="chart-card__spacer"></span>
+                <a routerLink="/expenses" class="dash-viewall">{{ 'dashboard.bento.view_all' | translate }}</a>
+              </div>
+              <div class="dash-insights">
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.expenses_today' | translate }}</span>
+                  <span class="dash-insight__value u-bidi is-warn">{{ fig('today') | money: false }}</span>
+                </div>
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.expenses_month' | translate }}</span>
+                  <span class="dash-insight__value u-bidi is-info">{{ fig('this_month') | money: false }}</span>
+                </div>
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.expenses_year' | translate }}</span>
+                  <span class="dash-insight__value u-bidi is-danger">{{ fig('this_year') | money: false }}</span>
+                </div>
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.expenses_grand' | translate }}</span>
+                  <span class="dash-insight__value u-bidi is-primary">{{ fig('grand_total') | money: false }}</span>
+                </div>
+              </div>
+              <app-chart-card [title]="'report.dashboard.charts.expenses_by_day'" [series]="byDaySeries()" chartType="bar" [height]="220" />
+            </section>
 
-          <!-- تقرير العهد -->
-          <section class="chart-card u-mt-4">
-            <div class="chart-card__head">
-              <span class="chart-card__title">{{ 'report.dashboard.custody_report' | translate }}</span>
-            </div>
-            <div class="kpi-grid u-mt-2">
-              <app-stat-tile [label]="'report.dashboard.custody_amount'" [value]="d.custody_amount" [money]="true" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.custody_spent'" [value]="d.custody_spent" [money]="true" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.custody_returned'" [value]="d.custody_returned" [money]="true" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.custody_remaining'" [value]="custodyRemaining()" [money]="true" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.custody_total'" [value]="d.total_custodies" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.custody_closed'" [value]="d.closed_custodies" [inset]="true" />
-            </div>
-          </section>
+            <!-- quick links: the detailed reports as action chips -->
+            <nav class="bento__widget" [attr.aria-label]="'report.dashboard.all_reports' | translate">
+              <div class="chart-card__head"><span class="chart-card__title"><app-icon name="report-analytics" chip="reports" [size]="16" /> {{ 'report.dashboard.quick_reports' | translate }}</span></div>
+              <div class="dash-chips">
+                @for (card of reportCards; track card.route) {
+                  <a class="dash-chip" [routerLink]="card.route">
+                    <app-icon [name]="card.icon" chip="reports" [size]="18" />
+                    <span>{{ card.label | translate }}</span>
+                  </a>
+                }
+              </div>
+            </nav>
 
-          <!-- تقرير الحالات الاجتماعية -->
-          <section class="chart-card u-mt-4">
-            <div class="chart-card__head">
-              <span class="chart-card__title">{{ 'report.dashboard.case_report' | translate }}</span>
-            </div>
-            <div class="kpi-grid u-mt-2">
-              <app-stat-tile [label]="'report.dashboard.social_cases'" [value]="d.total_social_cases" [inset]="true" />
-              <app-stat-tile [label]="'case.list.approved'" [value]="d.approved_cases" [inset]="true" />
-              <app-stat-tile [label]="'case.list.pending'" [value]="d.pending_cases" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.rejected'" [value]="d.rejected_cases" [inset]="true" />
-              <app-stat-tile [label]="'report.dashboard.social_case_expenses'" [value]="d.social_case_expenses" [money]="true" [inset]="true" />
-            </div>
-          </section>
+            <!-- custody report: figures + agents chart -->
+            <section class="bento__widget bento__widget--wide">
+              <div class="chart-card__head">
+                <span class="chart-card__title"><app-icon name="wallet" chip="custodies" [size]="16" /> {{ 'report.dashboard.custody_report' | translate }}</span>
+                <span class="chart-card__spacer"></span>
+                <a routerLink="/reports/agents-balance" class="dash-viewall">{{ 'dashboard.bento.view_all' | translate }}</a>
+              </div>
+              <div class="dash-insights">
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.custody_amount' | translate }}</span>
+                  <span class="dash-insight__value u-bidi is-info">{{ d.custody_amount | money: false }}</span>
+                </div>
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.custody_spent' | translate }}</span>
+                  <span class="dash-insight__value u-bidi is-danger">{{ d.custody_spent | money: false }}</span>
+                </div>
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.custody_returned' | translate }}</span>
+                  <span class="dash-insight__value u-bidi is-pos">{{ d.custody_returned | money: false }}</span>
+                </div>
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.custody_remaining' | translate }}</span>
+                  <span class="dash-insight__value u-bidi is-pos">{{ custodyRemaining() | money: false }}</span>
+                </div>
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.custody_total' | translate }}</span>
+                  <span class="dash-insight__value u-bidi is-primary">{{ d.total_custodies }}</span>
+                </div>
+                <div class="dash-insight">
+                  <span class="dash-insight__label">{{ 'report.dashboard.custody_closed' | translate }}</span>
+                  <span class="dash-insight__value u-bidi">{{ d.closed_custodies }}</span>
+                </div>
+              </div>
+              <app-chart-card [title]="'report.dashboard.charts.custodies_by_agents'" [series]="agentsSeries()" chartType="bar" [height]="220" />
+            </section>
 
-          <div class="kpi-grid u-mt-4">
-            <app-chart-card [title]="'report.dashboard.charts.expenses_by_day'" [series]="byDaySeries()" chartType="bar" />
-            <app-chart-card [title]="'report.dashboard.charts.expenses_by_category'" [series]="categorySeries()" />
-          </div>
-          <div class="kpi-grid u-mt-4">
-            <a class="tile-link" routerLink="/custodies" [title]="'common.open_page' | translate">
-              <app-chart-card [title]="'report.dashboard.charts.custodies_by_agents'" [series]="agentsSeries()" chartType="bar" />
-            </a>
-            <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
-              <app-chart-card [title]="'report.dashboard.charts.cases_by_researchers'" [series]="researchersSeries()" chartType="bar" />
-            </a>
-          </div>
+            <!-- case report: status figures + researchers chart -->
+            <section class="bento__widget">
+              <div class="chart-card__head">
+                <span class="chart-card__title"><app-icon name="case" chip="cases" [size]="16" /> {{ 'report.dashboard.case_report' | translate }}</span>
+              </div>
+              <ul class="dash-attention">
+                <li>
+                  <a routerLink="/cases">
+                    {{ 'case.list.approved' | translate }}
+                    <span class="dash-attention__count u-bidi">{{ d.approved_cases }}</span>
+                  </a>
+                </li>
+                <li>
+                  <a routerLink="/cases">
+                    {{ 'case.list.pending' | translate }}
+                    <span class="dash-attention__count dash-attention__count--neutral u-bidi">{{ d.pending_cases }}</span>
+                  </a>
+                </li>
+                <li>
+                  <a routerLink="/cases">
+                    {{ 'report.dashboard.rejected' | translate }}
+                    <span class="dash-attention__count u-bidi">{{ d.rejected_cases }}</span>
+                  </a>
+                </li>
+              </ul>
+              <app-chart-card [title]="'report.dashboard.charts.cases_by_researchers'" [series]="researchersSeries()" chartType="bar" [height]="200" />
+            </section>
 
-          <!-- بطاقة الحالات حسب المحافظة (T34): أعلى 5 محافظات -->
-          <section class="chart-card u-mt-4">
-            <div class="chart-card__head">
-              <span class="chart-card__title">{{ 'report.dashboard.governorates_card' | translate }}</span>
-              <span class="chart-card__spacer"></span>
-              <p-button [label]="'report.governorates.title' | translate" size="small" [text]="true" routerLink="/reports/governorates" />
-            </div>
-            <app-data-table listUrl="/reports" mode="static" [autoFilters]="true" [columns]="govCols" [rows]="governoratesTop()" [emptyLabel]="'report.governorates.empty'">
-              <ng-template appCell="label" let-row>{{ row.label }}
+            <!-- category donut (direction-aware) -->
+            <section class="bento__widget bento__widget--wide">
+              <app-chart-card [title]="'report.dashboard.charts.expenses_by_category'" [series]="categorySeries()" [height]="240" />
+            </section>
+
+            <!-- governorates table (T34) -->
+            <section class="bento__widget bento__widget--full">
+              <div class="chart-card__head">
+                <span class="chart-card__title">{{ 'report.dashboard.governorates_card' | translate }}</span>
+                <span class="chart-card__spacer"></span>
+                <p-button [label]="'report.governorates.title' | translate" size="small" [text]="true" routerLink="/reports/governorates" />
+              </div>
+              <app-data-table listUrl="/reports" mode="static" [autoFilters]="true" [columns]="govCols" [rows]="governoratesTop()" [emptyLabel]="'report.governorates.empty'">
+                <ng-template appCell="label" let-row>{{ row.label }}
 @if (!row.standard) {
   <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
 }</ng-template>
-              <ng-template appCell="total" let-row><span class="u-bidi">{{ row.total }}</span></ng-template>
-              <ng-template appCell="expenses_total" let-row><span class="u-bidi">{{ row.expenses_total | money }}</span></ng-template>
-            </app-data-table>
-            <p class="u-muted u-small u-mt-2">{{ 'report.dashboard.governorates_hint' | translate }}</p>
-          </section>
-
-          <!-- T7-10: report navigation is a cards grid, never header buttons -->
-          <nav class="report-cards u-mt-4" [attr.aria-label]="'report.dashboard.all_reports' | translate">
-            @for (card of reportCards; track card.route) {
-              <a class="report-cards__item" [routerLink]="card.route">
-                <app-icon [name]="card.icon" chip="reports" [size]="18" />
-                <span class="report-cards__label">{{ card.label | translate }}</span>
-              </a>
-            }
-          </nav>
+                <ng-template appCell="total" let-row><span class="money u-bidi">{{ row.total | money }}</span></ng-template>
+                <ng-template appCell="expenses_total" let-row><span class="u-bidi">{{ row.expenses_total | money }}</span></ng-template>
+              </app-data-table>
+              <p class="u-muted u-small u-mt-2">{{ 'report.dashboard.governorates_hint' | translate }}</p>
+            </section>
+          </div>
         }
-        <div empty>
+<div empty>
           <app-empty-state [title]="'report.dashboard.empty'" [text]="'common.no_data'" accent="reports" iconName="report-analytics" />
         </div>
       </app-async-page>

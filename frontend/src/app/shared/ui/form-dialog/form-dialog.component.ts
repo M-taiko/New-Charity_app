@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, model, output } fr
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DialogModule } from 'primeng/dialog';
+import { SharedModule } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { ApiErrorBody } from '../../models/api.models';
@@ -14,7 +15,7 @@ import type { ApiErrorBody } from '../../models/api.models';
 @Component({
   selector: 'app-form-dialog',
   standalone: true,
-  imports: [TranslatePipe, DialogModule, ButtonModule, FormsModule],
+  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule, FormsModule],
   template: `
     <p-dialog appendTo="body"
       [visible]="visible()"
@@ -39,7 +40,7 @@ import type { ApiErrorBody } from '../../models/api.models';
           <span>{{ alert() }}</span>
         </div>
       }
-      <p-footer>
+      <ng-template pTemplate="footer">
         <div class="u-flex u-gap-2 u-justify-end">
           <p-button
             [label]="'common.cancel' | translate"
@@ -55,7 +56,7 @@ import type { ApiErrorBody } from '../../models/api.models';
             [disabled]="sending()"
           />
         </div>
-      </p-footer>
+      </ng-template>
     </p-dialog>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,

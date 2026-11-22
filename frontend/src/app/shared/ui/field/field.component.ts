@@ -2,10 +2,12 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
- * The one field wrapper (T4-23): label + required marker + hint + control +
+ * The one field wrapper (T4-23): label + required marker + control + hint +
  * error, with for/id wiring and aria-describedby on the error. Pages project
  * the control itself and pass the server 422 message via `error` (resolved
- * text, not a key).
+ * text, not a key). The hint renders BELOW the control so every input in a
+ * grid row aligns at the same height regardless of whether its field has
+ * a hint.
  */
 @Component({
   selector: 'app-field',
@@ -22,12 +24,12 @@ import { TranslatePipe } from '@ngx-translate/core';
           }
         </label>
       }
+      <ng-content />
       @if (hint() !== '') {
         <p class="field__hint" [attr.id]="describedId()">
           {{ hint() | translate }}
         </p>
       }
-      <ng-content />
       @if (error(); as message) {
         <p class="field__error" role="alert" [attr.id]="errorId()">
           <svg width="14" height="14" aria-hidden="true">

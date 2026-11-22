@@ -223,7 +223,7 @@ export class TransferListPage {
   /** the row actions (T4-24): approval flows live on the detail page (T32) */
   actionsFor(row: Row): RowActionItem[] {
     return [
-      { icon: 'eye', label: 'common.view', route: ['/transfers', row.id] },
+      { icon: 'eye', label: 'common.view', severity: 'info', route: ['/transfers', row.id] },
       // T6-80: the sender (or a manager) can cancel a pending transfer
       ...(row.can_cancel
         ? [{ icon: 'x', label: 'transfers.cancel', severity: 'danger' as const, handler: () => { this.openCancel(row); } }]

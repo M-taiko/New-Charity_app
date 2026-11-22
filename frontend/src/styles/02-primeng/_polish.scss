@@ -213,36 +213,8 @@
 
 /* ── Hover states ───────────────────────────────────────────────── */
 
-/* Sidebar links */
-:root[data-theme='light'] .sidebar__link {
-  color: var(--palette-ink);
-
-  &:hover {
-    background: var(--palette-sand);
-    color: var(--palette-ink);
-  }
-
-  &.sidebar__link--active {
-    background: var(--palette-sand);
-    border-inline-end-color: var(--palette-brand);
-    color: var(--palette-brand);
-  }
-}
-
-:root[data-theme='dark'] .sidebar__link {
-  color: var(--palette-taupe);
-
-  &:hover {
-    background: var(--dark-3);
-    color: var(--palette-cream);
-  }
-
-  &.sidebar__link--active {
-    background: var(--dark-3);
-    border-inline-end-color: var(--palette-cream);
-    color: var(--palette-cream);
-  }
-}
+/* Sidebar links — token-driven since the Stitch redesign (RD-2.1); the
+   sidebar.scss block handles idle/hover/active for both themes. */
 
 /* Table rows */
 :root[data-theme='light'] .ledger-table tbody tr:hover td {
@@ -262,28 +234,8 @@
   color: var(--palette-cream);
 }
 
-/* Topbar icon buttons — ghost: glyph only at rest (T6-41) */
-:root[data-theme='light'] .topbar__icon-btn {
-  background: transparent;
-  border: none;
-  color: var(--palette-mid);
-
-  &:hover {
-    background: var(--palette-sand);
-    color: var(--palette-ink);
-  }
-}
-
-:root[data-theme='dark'] .topbar__icon-btn {
-  background: var(--dark-2);
-  border: 1px solid var(--dark-4);
-  color: var(--palette-taupe);
-
-  &:hover {
-    background: var(--dark-3);
-    color: var(--palette-cream);
-  }
-}
+/* Topbar icon buttons — the boxed Stitch style lives in topbar.scss (RD-2.2)
+   and is fully token-driven for both themes. */
 
 /* ── SVG icons ──────────────────────────────────────────────────── */
 
@@ -337,5 +289,63 @@
       border-color: var(--palette-ink);
       color: var(--palette-ink);
     }
+  }
+}
+
+/* ── Soft tinted buttons (RD-3.1) — the Stitch "soft button" language ──
+   Tint background + semantic foreground from the RD-1.1 status table; the
+   tokens flip to alpha tints + 400-level foregrounds in dark automatically. */
+.p-button.p-button-soft {
+  &.p-button-success {
+    background: var(--status-active-bg);
+    border-color: transparent;
+    color: var(--status-active-fg);
+
+    &:hover:enabled {
+      background: var(--status-active-bg);
+      border-color: var(--status-active-fg);
+      color: var(--status-active-fg);
+    }
+  }
+
+  &.p-button-info {
+    background: var(--status-info-bg);
+    border-color: transparent;
+    color: var(--status-info-fg);
+
+    &:hover:enabled {
+      background: var(--status-info-bg);
+      border-color: var(--status-info-fg);
+      color: var(--status-info-fg);
+    }
+  }
+
+  &.p-button-warn {
+    background: var(--status-warning-bg);
+    border-color: transparent;
+    color: var(--status-warning-fg);
+
+    &:hover:enabled {
+      background: var(--status-warning-bg);
+      border-color: var(--status-warning-fg);
+      color: var(--status-warning-fg);
+    }
+  }
+
+  &.p-button-danger {
+    background: var(--status-danger-bg);
+    border-color: transparent;
+    color: var(--status-danger-fg);
+
+    &:hover:enabled {
+      background: var(--status-danger-bg);
+      border-color: var(--status-danger-fg);
+      color: var(--status-danger-fg);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
   }
 }

@@ -1,8 +1,9 @@
 // /custodies/:id/edit — edit custody (amount + notes) for management.
 import type { OnInit } from '@angular/core';
-import { ChangeDetectionStrategy, Component, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import type { NgForm } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
@@ -58,6 +59,14 @@ interface CustodyEditDto {
 export class CustodyEditPage implements OnInit {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+
+  /** UX-6.4: dirty template form → the unsaved-changes guard warns on leave */
+  private formRef = viewChild<NgForm>('f');
+  hasUnsavedChanges(): boolean {
+    const form = this.formRef();
+    return form?.dirty === true && !this.sending?.();
+  }
+
   id = input.required<number>();
   amount = signal<number | null>(null);
   notes = signal('');

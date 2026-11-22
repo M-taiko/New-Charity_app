@@ -31,7 +31,7 @@ test('chat: delete own message — confirm dialog, refusal cancel, then delete',
   const marker = `رسالة حذف ${Date.now()}`;
   await page.fill('.chat__composer textarea', marker);
   await page.getByRole('button', { name: 'إرسال' }).click();
-  await expect(page.getByText(marker)).toBeVisible({ timeout: 15000 });
+  await expect(page.locator('.chat__msg', { hasText: marker }).last()).toBeVisible({ timeout: 15000 });
 
   // refusal: cancel the confirm — the message must survive
   const row = page.locator('.chat__msg', { hasText: marker }).last();
@@ -39,7 +39,7 @@ test('chat: delete own message — confirm dialog, refusal cancel, then delete',
   const dialog = page.locator('.p-dialog');
   await expect(dialog).toBeVisible();
   await dialog.getByRole('button', { name: 'إلغاء' }).click();
-  await expect(page.getByText(marker)).toBeVisible();
+  await expect(page.locator('.chat__msg', { hasText: marker })).toHaveCount(1);
 
   // happy path: confirm — the message disappears
   await row.locator('button[aria-label="حذف"]').click();
@@ -57,7 +57,7 @@ test('chat: create poll → vote → close; empty question is refused locally', 
 
   // refusal: no question / no options → local validation, nothing is posted
   await dialog.getByRole('button', { name: 'إنشاء استفتاء' }).click();
-  await expect(dialog.getByText('هذا الحقل مطلوب')).toBeVisible();
+  await expect(dialog.locator('.field__error, .dialog__alert').filter({ hasText: 'مطلوب' }).first()).toBeVisible();
   await expect(dialog).toBeVisible();
 
   // happy path: question + two options
@@ -103,7 +103,7 @@ test('broadcasts: create form has expiry + targeting; user target without a user
   await dialog.locator('#br-title').fill(`عنوان ${Date.now()}`);
   await dialog.locator('#br-msg').fill('نص اختبار');
   await dialog.getByRole('button', { name: 'إرسال رسالة عاجلة' }).click();
-  await expect(dialog.getByText('هذا الحقل مطلوب')).toBeVisible();
+  await expect(dialog.locator('.field__error, .dialog__alert').filter({ hasText: 'مطلوب' }).first()).toBeVisible();
   await expect(dialog).toBeVisible(); // stays open, nothing sent
 });
 

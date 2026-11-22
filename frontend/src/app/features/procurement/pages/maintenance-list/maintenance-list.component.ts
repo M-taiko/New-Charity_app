@@ -17,6 +17,8 @@ import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import type { ListResponse } from '@shared/models/api.models';
+import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 
 interface Row {
   id: number;
@@ -33,7 +35,7 @@ interface Row {
 @Component({
   selector: 'app-maintenance-list-page',
   standalone: true,
-  imports: [SectionNavComponent, 
+  imports: [ StatusStampComponent, EnumLabelPipe,SectionNavComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, ConfirmDeleteComponent, RowActionsComponent,
@@ -68,8 +70,8 @@ interface Row {
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
           <ng-template appCell="title" let-row>{{ row.title ?? '—' }}</ng-template>
           <ng-template appCell="location" let-row>{{ row.location ?? '—' }}</ng-template>
-          <ng-template appCell="priority" let-row>{{ row.priority ?? '—' }}</ng-template>
-          <ng-template appCell="status" let-row>{{ row.status ?? '—' }}</ng-template>
+          <ng-template appCell="priority" let-row><span class="stamp">{{ row.priority | enumLabel: 'priority' }}</span></ng-template>
+          <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="maintenance_request" /></ng-template>
           <ng-template appCell="reported_by" let-row>{{ row.reported_by ?? '—' }}</ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
@@ -112,7 +114,7 @@ export class MaintenanceListPage {
   /** T3-71: view + managers-only remove (mirrors the sibling purchase rule) */
   actionsFor(row: Row): RowActionItem[] {
     return [
-      { icon: 'eye', label: 'common.view', route: ['/procurement/maintenance', row.id] },
+      { icon: 'eye', label: 'common.view', severity: 'info', route: ['/procurement/maintenance', row.id] },
       {
         icon: 'trash',
         label: 'common.delete',

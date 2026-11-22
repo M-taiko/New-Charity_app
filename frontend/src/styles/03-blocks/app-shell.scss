@@ -65,41 +65,67 @@
   }
 }
 
-/* ── User chip: avatar always, name beside it on large screens only ── */
-/* compound selector beats .topbar__icon-btn's fixed 36px width */
+/* ── User chip (RD-2.2): 36px round avatar, name + role, outline divider ── */
+/* compound selector beats .topbar__icon-btn's fixed 40px width */
 .topbar__icon-btn.user-chip {
   width: auto;
+  height: 40px;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
+  /* vertical outline divider separating the chip from the bell */
+  border-inline-start: 1px solid var(--color-hairline);
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-inline-end: 1px solid var(--color-hairline);
 }
 
 .user-chip__avatar {
-  width: 26px;
-  height: 26px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   border-radius: var(--radius-full);
-  background: var(--color-primary-soft);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-hairline);
   color: var(--color-primary);
-  font-size: 12px;
+  font-size: var(--text-2xs);
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.user-chip__name {
+.user-chip__text {
   display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.user-chip__name {
   max-width: 140px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--color-text);
 }
 
+.user-chip__role {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--color-text-muted);
+}
+
 @media (min-width: 1024px) {
-  .user-chip__name {
-    display: inline-block;
+  .user-chip__text {
+    display: flex;
   }
 }
 

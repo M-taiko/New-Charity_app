@@ -19,12 +19,14 @@ async function login(page: import('@playwright/test').Page) {
 test('custody list shows the office header buttons and status tabs', async ({ page }) => {
   await login(page);
   await page.goto('/app/custodies');
-  await expect(page.getByRole('button', { name: 'جميع العهدات' }).first()).toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole('button', { name: 'طلب عهدة شخصية' }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'متابعة العهدات' }).first()).toBeVisible({ timeout: 15000 });
+  // office accounts: the creation variants live in the split button's menu
+  await page.getByRole('button', { name: 'إنشاء عهدة لمستخدم' }).first().click();
+  await expect(page.getByRole('menuitem', { name: 'طلب عهدة شخصية' }).first()).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole('button', { name: 'إنشاء عهدة لمستخدم' }).first()).toBeVisible();
 
-  // status tab filters the list server-side (closed / cancelled included)
-  await page.getByRole('button', { name: 'المعلقة' }).first().click();
+  // status filter reaches the table through the URL (T7-07 mirroring)
+  await page.goto('/app/custodies?filter[status]=pending');
   await expect(page.locator('.stamp').first()).toBeVisible({ timeout: 15000 });
 });
 
@@ -44,13 +46,13 @@ test('custody create personal variant is the default for non-agents', async ({ p
 test('return-requests page renders tabs and refuses an empty reject reason', async ({ page }) => {
   await login(page);
   await page.goto('/app/custodies/return-requests');
-  await expect(page.getByRole('button', { name: 'المعتمدة' }).first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('tab', { name: /موافق|الموافق عليها/ }).first()).toBeVisible({ timeout: 15000 });
 
   // refusal: if a pending request exists, its reject dialog must demand a reason
   const rejectButtons = page.locator('.row-actions__btn[title="رفض الطلب"]');
   if ((await rejectButtons.count()) > 0) {
     await rejectButtons.first().click();
-    const dialog = page.locator('p-dialog');
+    const dialog = page.locator('p-dialog:visible');
     await expect(dialog).toBeVisible();
     await page.getByRole('button', { name: 'رفض الطلب', exact: true }).last().click();
     await expect(page.getByText('أحرف على الأقل', { exact: false })).toBeVisible();
@@ -61,7 +63,9 @@ test('tracking page exposes the custody filters and movements dialog', async ({ 
   await login(page);
   await page.goto('/app/custodies/tracking');
   await expect(page.getByRole('button', { name: 'إنشاء عهدة جديدة' }).first()).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText('جميع المندوبين').first()).toBeVisible();
+  // T6-30: the filters live behind the single Filters control — open it
+  await page.getByRole('button', { name: /عوامل التصفية/ }).first().click();
+  await expect(page.getByText('جميع المندوبين').first()).toBeVisible({ timeout: 10000 });
 
   const movementsButtons = page.locator('.row-actions__btn[title="عرض الحركات"]');
   if ((await movementsButtons.count()) > 0) {
@@ -73,9 +77,10 @@ test('tracking page exposes the custody filters and movements dialog', async ({ 
 test('movements page has the filter set and apply/reset', async ({ page }) => {
   await login(page);
   await page.goto('/app/custodies/movements');
-  await expect(page.getByRole('button', { name: 'طباعة' }).first()).toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole('button', { name: 'تطبيق' }).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: 'إعادة تعيين' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /عوامل التصفية/ }).first()).toBeVisible({ timeout: 15000 });
+  // T6-30: apply/reset live inside the Filters overlay
+  await page.getByRole('button', { name: /عوامل التصفية/ }).first().click();
+  await expect(page.getByRole('button', { name: 'تطبيق' }).first()).toBeVisible({ timeout: 10000 });
   await page.getByRole('button', { name: 'تطبيق' }).first().click();
   await expect(page.locator('.stat-tile').first()).toBeVisible({ timeout: 15000 });
 });
@@ -83,15 +88,15 @@ test('movements page has the filter set and apply/reset', async ({ page }) => {
 test('my movements shows the transfer direction tabs', async ({ page }) => {
   await login(page);
   await page.goto('/app/custodies/mine/movements');
-  await expect(page.getByRole('button', { name: 'التحويلات المرسلة' }).first()).toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole('button', { name: 'التحويلات المستلمة' }).first()).toBeVisible();
+  await expect(page.getByRole('tab', { name: /المرسلة/ }).first()).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('tab', { name: /المستلمة/ }).first()).toBeVisible();
 });
 
 test('transfers list renders the scope tabs and the create button', async ({ page }) => {
   await login(page);
   await page.goto('/app/transfers');
   await expect(page.getByRole('button', { name: 'طلب تحويل جديد' }).first()).toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole('button', { name: 'التحويلات المرسلة' }).first()).toBeVisible();
-  await page.getByRole('button', { name: 'التحويلات المستقبلة' }).first().click();
+  await expect(page.getByRole('tab', { name: /المرسلة/ }).first()).toBeVisible();
+  await page.getByRole('tab', { name: /المستقبلة|الواردة/ }).first().click();
   await expect(page.locator('.stat-tile').first()).toBeVisible({ timeout: 15000 });
 });

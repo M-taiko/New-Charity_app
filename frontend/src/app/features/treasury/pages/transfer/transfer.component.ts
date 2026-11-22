@@ -42,7 +42,7 @@ interface TreasuryOption {
 
     <app-section-nav module="treasury" />
     <form (ngSubmit)="submit()" #f="ngForm">
-      <app-form-section>
+      <app-form-section [title]="'treasury.transfer.details' | translate" columns="3">
         <app-field label="treasury.transfer.from" controlId="transfer-from" [required]="true" hint="common.hint_treasury_balance" [error]="serverFieldError(error(), 'from_treasury_id')">
           <p-select appendTo="body"
             inputId="transfer-from"
@@ -87,7 +87,7 @@ interface TreasuryOption {
         <app-field label="treasury.transfer.amount" controlId="transfer-amount" [required]="true" hint="common.hint_max_amount" [error]="overBalance() ? ('treasury.transfer.over_balance' | translate) : serverFieldError(error(), 'amount')">
           <p-inputnumber inputId="transfer-amount" name="amount" [(ngModel)]="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" required styleClass="u-full" />
         </app-field>
-        <app-field label="treasury.transfer.notes" controlId="transfer-desc" [required]="true" [error]="serverFieldError(error(), 'description')">
+        <app-field class="u-grid-span-all" label="treasury.transfer.notes" controlId="transfer-desc" [required]="true" [error]="serverFieldError(error(), 'description')">
           <textarea pTextarea id="transfer-desc" name="desc" rows="2" class="u-full" [(ngModel)]="description" required></textarea>
         </app-field>
       </app-form-section>

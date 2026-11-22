@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output, signal } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DialogModule } from 'primeng/dialog';
+import { SharedModule } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -16,7 +17,7 @@ import type { ActionResponse, ApiErrorBody } from '@shared/models/api.models';
 @Component({
   selector: 'app-confirm-delete',
   standalone: true,
-  imports: [TranslatePipe, DialogModule, ButtonModule],
+  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule],
   template: `
     <p-dialog appendTo="body"
       [visible]="visible()"
@@ -39,12 +40,12 @@ import type { ActionResponse, ApiErrorBody } from '@shared/models/api.models';
           <span>{{ alert() }}</span>
         </div>
       }
-      <p-footer>
+      <ng-template pTemplate="footer">
         <div class="u-flex u-justify-end">
           <p-button [label]="'common.cancel' | translate" severity="secondary" [text]="true" [disabled]="sending()" (onClick)="visible.set(false)" />
           <p-button [label]="'common.delete' | translate" severity="danger" [loading]="sending()" (onClick)="confirm()" />
         </div>
-      </p-footer>
+      </ng-template>
     </p-dialog>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
