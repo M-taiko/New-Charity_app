@@ -7,7 +7,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import type { HttpErrorResponse} from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import type { MenuItem } from 'primeng/api';
 import { SharedModule } from 'primeng/api';
@@ -39,7 +38,7 @@ import { paramsFiltered, reloadList } from '@shared/lib/list-state';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
-import { ActionButtonComponent, ActionIconComponent } from '@shared/ui/actions/action-button.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 import type { DirectionNode, ListResponse, Lookups } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
@@ -153,9 +152,9 @@ const AMOUNT_DEBOUNCE_MS = 500;
   standalone: true,
   imports: [DatetimeCellComponent, FilterCustomDirective, MenuModule,
     QuickViewComponent, KeyValueListComponent, 
-    FieldComponent, TranslatePipe, SharedModule, ContentDialogComponent, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, DatePickerModule, SelectModule,
+    FieldComponent, TranslatePipe, SharedModule, ContentDialogComponent, RouterLink, FormsModule, InputNumberModule, TextareaModule, DatePickerModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
-    EmptyStateComponent, RowActionsComponent, ConfirmDialogComponent, FormDialogComponent, DirectionPickerComponent, MoneyPipe, EnumLabelPipe, ActionButtonComponent, ActionIconComponent, ],
+    EmptyStateComponent, RowActionsComponent, ConfirmDialogComponent, FormDialogComponent, DirectionPickerComponent, MoneyPipe, EnumLabelPipe, ActionButtonComponent, ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'expense.list.title' | translate">
@@ -171,9 +170,7 @@ const AMOUNT_DEBOUNCE_MS = 500;
         @if (canCreate()) {
           <app-action-button kind="create" label="expense.list.create" [route]="['/expenses', 'new']" />
         }
-        <p-button [text]="true" [rounded]="true" severity="secondary" [ariaLabel]="'common.more_actions' | translate" (onClick)="moreMenu.toggle($event)">
-          <app-action-icon name="dots-vertical" />
-        </p-button>
+        <app-action-button kind="more" [ariaLabel]="'common.more_actions' | translate" (action)="moreMenu.toggle($event)" />
         <p-menu #moreMenu [model]="moreMenuItems" popup="true" appendTo="body" />
       </div>
     </app-page-header>

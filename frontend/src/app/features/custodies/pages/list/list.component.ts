@@ -5,7 +5,6 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
 import { MenuModule } from 'primeng/menu';
 import type { MenuItem } from 'primeng/api';
 import { Router } from '@angular/router';
@@ -24,7 +23,7 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { KeyValueListComponent, type KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ActionResponse, ItemResponse, ListResponse } from '@shared/models/api.models';
-import { ActionButtonComponent, ActionIconComponent } from '@shared/ui/actions/action-button.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { SplitActionButtonComponent } from '@shared/ui/actions/split-action-button.component';
 import { ProgressCellComponent } from '@shared/ui/data-table/progress-cell.component';
 import type { TableFilterDef, TableQuery } from '@shared/lib/table-filters';
@@ -82,10 +81,10 @@ interface CustodyListParams {
 @Component({
   selector: 'app-custody-list',
   standalone: true,
-  imports: [    TranslatePipe, ButtonModule, MenuModule,
+  imports: [    TranslatePipe, MenuModule,
     PageHeaderComponent, AsyncPageComponent, RowActionsComponent, DataTableComponent, TableCellDirective,
     EmptyStateComponent, MoneyPipe, StatusStampComponent,
-    ReasonDialogComponent, SplitActionButtonComponent, ActionButtonComponent, ActionIconComponent, ProgressCellComponent,
+    ReasonDialogComponent, SplitActionButtonComponent, ActionButtonComponent, ProgressCellComponent,
     QuickViewComponent, KeyValueListComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -103,9 +102,7 @@ interface CustodyListParams {
         } @else if (isAgent()) {
           <app-action-button kind="requestCustody" label="custody.list.agent_request" [route]="['/custodies', 'new']" />
         }
-        <p-button [text]="true" [rounded]="true" severity="secondary" [ariaLabel]="'common.more_actions' | translate" (onClick)="moreMenu.toggle($event)">
-          <app-action-icon name="dots-vertical" />
-        </p-button>
+        <app-action-button kind="more" [ariaLabel]="'common.more_actions' | translate" (action)="moreMenu.toggle($event)" />
         <p-menu #moreMenu [model]="moreMenuItems()" popup="true" appendTo="body" />
       </div>
     </app-page-header>

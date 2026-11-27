@@ -51,7 +51,10 @@ for (const file of tsFiles(src)) {
 }
 
 function short(p) {
-  return p.replace(/^.*[\\/]src[\\/]/, 'src/');
+  // separators are normalized first: on Windows join() yields backslashes, so
+  // `src/app\features\…` never started with 'src/app/features/' and the T7-05
+  // feature check was silently skipped for every file (it only failed on CI)
+  return p.replace(/\\/g, '/').replace(/^.*\/src\//, 'src/');
 }
 
 if (offenders.length > 0) {

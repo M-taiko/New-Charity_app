@@ -10,7 +10,7 @@ import type { MenuItem } from 'primeng/api';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { ActionButtonComponent, ActionIconComponent } from '@shared/ui/actions/action-button.component';
+import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
@@ -53,7 +53,7 @@ interface TreasuryRow {
     InputNumberModule, TextareaModule, PageHeaderComponent, AsyncPageComponent, StatTileComponent,
     DataTableComponent, TableCellDirective, EmptyStateComponent, FormDialogComponent,
     ConfirmDeleteComponent, RowActionsComponent, MoneyPipe, DatetimePipe,
-    ActionButtonComponent, ActionIconComponent, ChartCardComponent,
+    ActionButtonComponent, ChartCardComponent,
   ],
   template: `
     <app-page-header [title]="'treasury.list.title' | translate" subtitle="treasury.list.subtitle">
@@ -62,9 +62,7 @@ interface TreasuryRow {
              donation + add-treasury moved into the "⋯" menu -->
         <app-action-button kind="create" label="treasury.list.record_expense" [route]="['/expenses', 'new']" />
         <app-action-button kind="transfer" label="treasury.list.transfer" [route]="['/treasury', 'transfer']" />
-        <p-button [text]="true" [rounded]="true" severity="secondary" [ariaLabel]="'common.more_actions' | translate" (onClick)="moreMenu.toggle($event)">
-          <app-action-icon name="dots-vertical" />
-        </p-button>
+        <app-action-button kind="more" [ariaLabel]="'common.more_actions' | translate" (action)="moreMenu.toggle($event)" />
         <p-menu #moreMenu [model]="moreMenuItems" popup="true" appendTo="body" />
       </div>
       <!-- RD-4.4: the current-balance line under the header -->

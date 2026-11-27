@@ -5,7 +5,6 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SelectModule } from 'primeng/select';
 import { MenuModule } from 'primeng/menu';
 import { PopoverModule, Popover } from 'primeng/popover';
-import { ButtonModule } from 'primeng/button';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -28,7 +27,6 @@ import { ToastService } from '@core/errors/toast.service';
 import { BalanceRingComponent } from '@shared/ui/balance-ring/balance-ring.component';
 import { entityColor } from '@shared/lib/chart-colors';
 import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
-import { ActionIconComponent } from '@shared/ui/actions/action-button.component';
 import type { ItemResponse } from '@shared/models/api.models';
 import type { MenuItem } from 'primeng/api';
 
@@ -167,11 +165,9 @@ function sameWidgetOrder(a: readonly string[], b: readonly string[]): boolean {
     DatePipe,
     RouterLink,
     ActionButtonComponent,
-    ActionIconComponent,
     SelectModule,
     MenuModule,
     PopoverModule,
-    ButtonModule,
     FormsModule,
     AsyncPageComponent,
     ChartCardComponent,
@@ -195,9 +191,7 @@ function sameWidgetOrder(a: readonly string[], b: readonly string[]): boolean {
                   [ngModel]="range()" (ngModelChange)="setRange($event)" name="range" styleClass="dash-topbar__select" />
         <!-- P-01: quiet "⋯" menu — refresh + the customize popover live here,
              the header keeps ONE primary (create custody) -->
-        <p-button [text]="true" [rounded]="true" severity="secondary" [ariaLabel]="'dashboard.bento.more' | translate" (onClick)="headerMenu.toggle($event)">
-          <app-action-icon name="dots-vertical" />
-        </p-button>
+        <app-action-button kind="more" [ariaLabel]="'dashboard.bento.more' | translate" (action)="headerMenu.toggle($event)" />
         <p-menu #headerMenu [model]="headerMenuItems()" popup="true" appendTo="body" />
         <p-popover #customizePop appendTo="body">
           <div class="dash-customize__pop">
