@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 import { CHART_HUE_COUNT, entityColor, entityHue } from '../src/app/shared/lib/chart-colors';
 import { seedThemeInitScript } from './gates';
@@ -91,10 +92,12 @@ for (const theme of ['light', 'dark'] as const) {
     await page.setViewportSize({ width: 1280, height: 800 });
 
     // the token follows the theme: the same hue is another value in dark
-    const dashboardResponse = page.waitForResponse((r) => /\/api\/v1\/dashboard(\?|$)/.test(r.url()));
+    // The data the page ranks, asked for directly from the signed-in context. (Reading the page's own
+    // answer back through Playwright failed once in a run under load — "No resource with given
+    // identifier found" — before anything about colours was checked; this is the same server data.)
     await page.goto('/app/dashboard', { waitUntil: 'domcontentloaded' });
-    const dashboard = (await (await dashboardResponse).json()) as { data?: { agents_evaluation?: { agent: { id: number; name: string } }[] } };
     await page.locator('.dash-rank li').first().waitFor({ state: 'visible', timeout: 30_000 });
+    const dashboard = (await (await page.request.get('/api/v1/dashboard')).json()) as { data?: { agents_evaluation?: { agent: { id: number; name: string } }[] } };
     await page.waitForTimeout(600);
 
     const hueExample = entityHue(5);
@@ -136,10 +139,9 @@ for (const theme of ['light', 'dark'] as const) {
     expect(shared!.color, `${shared!.name}: agents-balance ring vs dashboard bar`).toBe(onDashboard.color);
 
     // ── directions: dashboard donut legend ↔ directions report donut legend
-    const perfResponse = page.waitForResponse((r) => /\/api\/v1\/dashboard\/performance/.test(r.url()));
     await page.goto('/app/dashboard', { waitUntil: 'domcontentloaded' });
-    const perf = (await (await perfResponse).json()) as { data?: { spending_by_direction?: { id?: number; label: string }[] } };
     await page.locator('.chart-ranked__row').first().waitFor({ state: 'visible', timeout: 30_000 });
+    const perf = (await (await page.request.get('/api/v1/dashboard/performance')).json()) as { data?: { spending_by_direction?: { id?: number; label: string }[] } };
     const donut = await page.evaluate(() =>
       [...document.querySelectorAll<HTMLElement>('.chart-ranked__row')].map((row) => ({
         label: row.getAttribute('title') ?? '',
@@ -201,4 +203,45 @@ function toRgb(hex: string): string {
 function rgbToHex(rgb: string): string {
   const [r, g, b] = (rgb.match(/\d+/g) ?? []).map(Number);
   return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
+/** where the colours show: the page, and what in it carries an entity's colour */
+const OUT = 'e2e/screenshots/n07';
+
+/** whole page: the real viewport made as tall as the document (how the matrix does it) */
+async function wholePage(page: Page, name: string): Promise<void> {
+  mkdirSync(OUT, { recursive: true });
+  await page.evaluate(() => document.fonts.ready);
+  const height = await page.evaluate(() => document.documentElement.scrollHeight);
+  const width = page.viewportSize()?.width ?? 1280;
+  await page.setViewportSize({ width, height });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${OUT}/${name}.png` });
+  await page.setViewportSize({ width, height: 800 });
+}
+
+/** the colours as they look, for the delivery: the same entities on four pages, both themes, both widths */
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [360, 1280]) {
+    test(`N-07 the colours as they look — ${theme}, ${width}px`, async ({ page }) => {
+      test.setTimeout(180_000);
+      await login(page);
+      await page.addInitScript(seedThemeInitScript);
+      await page.evaluate((t) => sessionStorage.setItem('visual-matrix.theme', t), theme);
+      await page.setViewportSize({ width, height: 800 });
+      const pages: [string, string][] = [
+        ['dashboard', '.dash-rank li'],
+        ['reports/agents-balance', '.beneficiary__avatar--entity'],
+        ['reports/directions', 'app-chart-card .chart-legend__item, app-chart-card .chart-ranked__row'],
+        ['treasury', '.ledger-table .entity-dot'],
+      ];
+      for (const [route, selector] of pages) {
+        await page.goto(`/app/${route}`, { waitUntil: 'domcontentloaded' });
+        await page.locator(selector).first().waitFor({ state: 'visible', timeout: 30_000 });
+        // a canvas is painted once its data is in, and then animates: let it settle
+        await page.waitForTimeout(1_500);
+        await wholePage(page, `${route.replace(/\//g, '~')}__${theme}__${width}`);
+      }
+    });
+  }
 }

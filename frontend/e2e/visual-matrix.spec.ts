@@ -48,6 +48,8 @@ const ROUTES: readonly string[] = [
   'social-cases', 'social-cases/new', 'social-cases/mine', 'social-cases/1', 'social-cases/1/edit',
   'hr', 'hr/employees', 'hr/employees/new', 'hr/employees/1/edit', 'hr/employees/1/salaries',
   'hr/attendance', 'hr/kpi', 'hr/salaries', 'hr/salaries/1', 'hr/salaries/1/edit',
+  // round 6: the page the "سجل مرتبات الموظف" tab opens (it had no route before)
+  'hr/salary-history',
   'procurement/purchase', 'procurement/purchase/new', 'procurement/purchase/1',
   'procurement/maintenance', 'procurement/maintenance/new', 'procurement/maintenance/1',
   'procurement/suppliers',

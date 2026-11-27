@@ -241,10 +241,20 @@ export class TrackingPage {
   allCustodies = computed(() => this.data.value()?.data.custodies ?? []);
 
   /** P-03: agent + status + a date-range over created_at — the table draws
-   *  and runs them client-side (static mode) */
+   *  and runs them client-side (static mode). The status options carry the Arabic
+   *  names the status stamps use (enums.custody_status.*): read off the rows'
+   *  values, they offered the raw codes — "active", "closed", "partially_returned". */
   readonly trackingFilters: TableFilterDef[] = [
     { key: 'agent', label: 'custody.tracking.col_agent', type: 'select', optionsFrom: 'rows', order: 1 },
-    { key: 'status', label: 'common.status', type: 'select', optionsFrom: 'rows', order: 2 },
+    {
+      key: 'status',
+      label: 'common.status',
+      type: 'select',
+      options: this.statusValues
+        .filter((value) => value !== 'all')
+        .map((value) => ({ value, label: this.translate.instant(`enums.custody_status.${value}`) })),
+      order: 2,
+    },
     { key: 'created_at', field: 'created_at', label: 'common.date', type: 'date-range', order: 3 },
   ];
 

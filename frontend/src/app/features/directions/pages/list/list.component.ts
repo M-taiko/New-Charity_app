@@ -107,6 +107,9 @@ interface DirectionsData {
   @if (row.kind === 'category' && isCollapsed(row.id)) {
     <span class="stamp stamp--neutral" aria-hidden="true">+{{ childCounts().get(row.id) }}</span>
   }
+  @if (isOrphan(row)) {
+    <span class="stamp stamp--neutral" [title]="'direction.list.no_category_hint' | translate">{{ 'direction.list.no_category' | translate }}</span>
+  }
 </span></ng-template>
           <ng-template appCell="code" let-row><span class="u-bidi">{{ row.code ?? '—' }}</span></ng-template>
           <ng-template appCell="level" let-row>{{ row.level }}</ng-template>
@@ -225,7 +228,21 @@ export class DirectionListPage {
     return (d?.categories ?? []).map((c) => ({ id: c.id, path: c.path }));
   }
 
-  /** every node (categories + items) in path order */
+  /** every category's id */
+  private readonly categoryIds = computed<ReadonlySet<number>>(() => new Set((this.safeValue()?.categories ?? []).map((c) => c.id)));
+
+  /**
+   * An item whose category no longer exists. It has no place in the tree: no
+   * chevron, nothing to collapse, and — its path being its own name — the sort
+   * used to put such items in front of the whole tree. With more of them than
+   * one page holds, the first page showed no category at all, and expand and
+   * collapse looked dead. They now come after the tree, marked.
+   */
+  isOrphan(node: FlatNode): boolean {
+    return node.kind === 'item' && (node.parent_id === null || !this.categoryIds().has(node.parent_id));
+  }
+
+  /** every node (categories + items): the tree in path order, then the items without a category */
   readonly flatNodes = computed<FlatNode[]>(() => {
     const d = this.safeValue();
     if (!d) {
@@ -233,7 +250,8 @@ export class DirectionListPage {
     }
     const cats: FlatNode[] = d.categories.map((c) => ({ ...c, itemsCount: c.items_count, isActive: c.is_active }));
     const items: FlatNode[] = d.items.map((i) => ({ ...i, itemsCount: 0, isActive: i.is_active }));
-    return [...cats, ...items].sort((a, b) => a.path.localeCompare(b.path, 'ar'));
+    const after = (n: FlatNode): number => (this.isOrphan(n) ? 1 : 0);
+    return [...cats, ...items].sort((a, b) => after(a) - after(b) || a.path.localeCompare(b.path, 'ar'));
   });
 
   /** direct-children count per category id (child categories + items) */

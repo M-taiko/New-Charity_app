@@ -303,6 +303,18 @@ colors: pending amber, approved green, rejected red, info blue, closed gray.
   request that began after it has ended, the table shows its loading body.
   The table narrows the rows it holds by the search text as the user types —
   rows that are the previous answer must not be called empty.
+- **The header is one unbreakable row (round 6)** — the select-all box, the
+  column's name and its sort arrow are one inline box, as wide as what it
+  holds on one line. A column is never narrower than its own header: the name
+  never breaks, and the arrow always sits beside it, never under it. The cost
+  is measured and accepted: wide tables get wider (the matrix reports an arrow
+  under its name, a name on more than one line, or a clipped header).
+- **The filter panel fits its card (round 6)** — `app-table-filters`' panel is
+  as wide as its fields need on one line and never wider than the table card
+  (the card is a size container; `100cqw` is its inner width); its fields wrap;
+  a range field holds two controls with room for both; and it opens flush with
+  the card's start edge. Options are never raw values: a status filter carries
+  the names the stamps use, and a yes/no column is a "نعم / لا" choice.
 
 ### Charts — `app-chart-card` (R5-02)
 
@@ -359,7 +371,7 @@ per visit and saves a whole-page screenshot per visit under
 Each gate is a pair: a `measure…` function that runs in the page and a
 `…Violations` function that decides. `e2e/gates.spec.ts` feeds every gate the
 defect it was written for and asserts it is reported — **a gate that cannot
-fail there is not a gate** (`npm run e2e -- gates.spec.ts`, 57 tests).
+fail there is not a gate** (`npm run e2e -- gates.spec.ts`, 60 tests).
 
 | Gate | Fails when |
 |---|---|
@@ -370,6 +382,8 @@ fail there is not a gate** (`npm run e2e -- gates.spec.ts`, 57 tests).
 | chart card (R5-02) | a card rendered by `app-chart-card` has nothing to plot and still draws a canvas, or shows no empty state; one with data renders neither a canvas nor a table; every series is hidden and there is no legend to turn them back on |
 | phone table (R5-03) | below 768px: a table does not say which columns lead (`[phoneFirst]`), does not start with them, scrolls without a pinned first column / edge fade / hint line, pins one wider than 160px, paints a fade's opaque end away from its edge, has its divider on the far side of the pinned column, or loses the line under its last row. At 768px and above: any of that appears on a desktop table. **The first column is the first cell that renders — a hidden cell is not a column** (round 6 pinned the hidden selection cell of a selectable table and this gate, reading that cell, stayed green): it is read in the header and in the first body row, and a pinned header alone is reported. |
 | stray surface | a card, input, table cell or chrome element paints in the other theme's colour (light in dark, dark in light) |
+| page header holds the page (round 6) | a table, the state wrapper, the tab bar, a form, a KPI grid, a tile or a chart card is inside `app-page-header`. Three pages shipped with the header never closed — the table came out 0px wide and the page looked empty, through 288 green visits, because `<main>` still had its text. `npm run check:headers` catches it at the source first. |
+| table header is one row (round 6) | a sort arrow sits on a line of its own under its name, a name runs on more than one line, or a header is clipped — at both widths |
 | page at its top | a fresh navigation does not land at scrollY 0 |
 | the older gates | sideways scroll (also while loading), console/page errors, raw i18n keys, empty `<main>`, focus stolen on load, unresolved sprite refs, ellipsized numbers/dates, more than one active sidebar item, sidebar pitch > 48px, clipped header/action cells (1280), dashboard tile geometry and donut centre, unequal card heights and a row touching the next block, action buttons of different width (1280), a mobile-card variant |
 

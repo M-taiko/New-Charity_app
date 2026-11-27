@@ -351,16 +351,31 @@
   }
 }
 
-/* ── in the header action bar a real <button> is the small size too (R5-01) ──
-   `app-action-button` renders an anchor for a route and a real <button> for
-   a handler. PrimeNG's `.p-button-sm` lives in its cascade LAYER, and the
-   reset's unlayered `button { font: inherit }` outranks any layered rule — so
-   the button kept the default size: 14px type in a 34px box beside its
-   12px / 30px anchor twin. In the custody header the More button stood 4px
-   proud of the two buttons beside it.
-   Scoped to the action bar ON PURPOSE. The same happens to every small
-   `<p-button>` in the app — 60 of 72 routes — and those pages were verified
-   as they are; it is reported in the round-5 changelog, not changed. */
-app-page-actions button.p-button.p-button-sm {
+/* ── a real <button> is the small size EVERYWHERE ──
+   `app-action-button` renders an anchor for a route and a real <button> for a
+   handler. PrimeNG's `.p-button-sm` lives in its cascade LAYER, and the reset's
+   unlayered `button { font: inherit }` outranks any layered rule — so the real
+   button kept the default size: 14px type in a 34px box beside its 12px / 30px
+   anchor twin. The same button then came in two sizes — in table rows, in
+   dialogs, wherever a handler sits beside a link of the same size.
+   Round 5 scoped this to the header action bar (`app-page-actions`) alone,
+   because it changed the buttons on 60 routes; the owner asked for one size. */
+button.p-button.p-button-sm {
   font-size: var(--p-button-sm-font-size);
+}
+
+/* ── in a table filter panel a date picker fills its half of a range ──
+   A text input is as wide as its natural 20 characters, and a flex item cannot
+   shrink below that. In a filter panel's range — two date pickers in one
+   field — each input kept its 256px: they landed on top of each other and ran
+   out of the panel, on every page with a date-range filter. The input belongs
+   to PrimeNG's template, so the rule lives here and not in the component. */
+.table-filters__range p-datepicker,
+.table-filters__range p-datepicker .p-datepicker-input {
+  min-inline-size: 0;
+}
+
+.table-filters__range p-datepicker .p-datepicker-input {
+  flex: 1 1 0;
+  inline-size: 100%;
 }

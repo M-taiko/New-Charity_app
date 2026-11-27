@@ -38,10 +38,11 @@ interface MyMovementsParams {
   type: string;
 }
 
-/** the transaction types agentTransactions can return, for the type filter */
+/** the transaction types agentTransactions can return, for the type filter
+ *  (a reopened custody writes a `custody_reopen` line, as closing one writes `custody_close`) */
 const TYPE_VALUES = [
   'custody_out', 'expense', 'custody_return', 'custody_transfer_in',
-  'custody_transfer_out', 'recovery', 'donation', 'custody_close',
+  'custody_transfer_out', 'recovery', 'donation', 'custody_close', 'custody_reopen',
 ] as const;
 
 /**

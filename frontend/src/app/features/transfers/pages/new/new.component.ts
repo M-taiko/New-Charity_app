@@ -38,7 +38,7 @@ interface UserCustody {
   imports: [ValidSubmitDirective, TranslatePipe, FormsModule, ButtonModule, SelectModule, InputNumberModule, TextareaModule, PageHeaderComponent, FormSectionComponent, FieldComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'transfer.create.title' | translate" accent="custodies" iconName="arrows-exchange">
+    <app-page-header [title]="'transfer.create.title' | translate" accent="custodies" iconName="arrows-exchange" />
     <form (ngSubmit)="vs.validate() && submit()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
       <app-form-section>
         <app-field label="transfer.create.custody" controlId="custody" [required]="true" hint="common.hint_choose_custody" [error]="serverFieldError(error(), 'custody_id')">

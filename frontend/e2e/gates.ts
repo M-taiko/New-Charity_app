@@ -734,6 +734,120 @@ export function phoneTableViolations(tables: readonly PhoneTableMeasure[], phone
   return out;
 }
 
+// ── Round 6: a page header never holds the page ─────────────────────────────
+
+/**
+ * The blocks a page is made of. None of them belongs inside its header. Three
+ * pages shipped with `<app-page-header>` never closed, so the tab bar, the KPI
+ * tiles and the table were projected into the header's flex row: the table
+ * came out 0px wide and the page looked empty — through 288 green visits,
+ * because `<main>` still had its text.
+ */
+export const PAGE_BLOCK_SELECTOR = [
+  'app-data-table',
+  'app-async-page',
+  'app-section-nav',
+  'form',
+  'app-form-section',
+  '.kpi-grid',
+  'app-stat-tile',
+  'app-chart-card',
+].join(', ');
+
+/**
+ * Runs in the page — sent there alone, so the list above is written out here
+ * too rather than read from the module.
+ */
+export function measureContentInPageHeader(): string[] {
+  const selector = [
+    'app-data-table',
+    'app-async-page',
+    'app-section-nav',
+    'form',
+    'app-form-section',
+    '.kpi-grid',
+    'app-stat-tile',
+    'app-chart-card',
+  ].join(', ');
+  const inside: string[] = [];
+  for (const block of Array.from(document.querySelectorAll<HTMLElement>(selector))) {
+    if (block.closest('app-page-header') !== null) {
+      const name = block.tagName.toLowerCase() + (block.className && typeof block.className === 'string' ? `.${block.className.trim().split(/\s+/)[0]}` : '');
+      inside.push(name);
+    }
+  }
+  return inside;
+}
+
+export function contentInPageHeaderViolations(inside: readonly string[]): string[] {
+  return inside.map((name) => `<${name}> is inside the page header — the page header is never closed (it is closed, or ends with "/>")`);
+}
+
+// ── Round 6: the table header is one row ────────────────────────────────────
+
+export interface TableHeaderMeasure {
+  /** the column, as the table names it */
+  field: string;
+  /** the name runs on this many lines; null when the cell has no name */
+  lines: number | null;
+  /** where the sort arrow sits: on the name's line(s), on a line of its own under them, or there is none */
+  arrow: 'beside' | 'below' | 'none';
+  /** the cell clips what it holds */
+  clipped: boolean;
+}
+
+/**
+ * Runs in the page. In every table header the name is on one line with its
+ * sort arrow beside it, and nothing is clipped: a column is never narrower
+ * than its own header. Measured on every visit, at both widths.
+ */
+export function measureTableHeaders(): TableHeaderMeasure[] {
+  const out: TableHeaderMeasure[] = [];
+  for (const cell of Array.from(document.querySelectorAll<HTMLElement>('.ledger-table .p-datatable-table thead th'))) {
+    const text = cell.querySelector<HTMLElement>('.ledger-table__header-text');
+    const field = cell.getAttribute('data-field') ?? '';
+    const clipped = cell.scrollWidth > cell.clientWidth + 1;
+    if (text === null) {
+      out.push({ field, lines: null, arrow: 'none', clipped });
+      continue;
+    }
+    const textBox = text.getBoundingClientRect();
+    const lineHeight = parseFloat(getComputedStyle(text).lineHeight) || 0;
+    let arrow: TableHeaderMeasure['arrow'] = 'none';
+    const icon = cell.querySelector('p-sorticon');
+    if (icon !== null) {
+      const iconBox = icon.getBoundingClientRect();
+      // below = on a line of its own, under the name. Beside the last line of a name that
+      // runs on several lines is "beside" — the wrapped name is said by `lines`
+      arrow = iconBox.top >= textBox.bottom - 2 ? 'below' : 'beside';
+    }
+    out.push({
+      field,
+      lines: textBox.height === 0 || lineHeight === 0 ? null : Math.round(textBox.height / lineHeight),
+      arrow,
+      clipped,
+    });
+  }
+  return out;
+}
+
+export function tableHeaderViolations(headers: readonly TableHeaderMeasure[]): string[] {
+  const out: string[] = [];
+  for (const header of headers) {
+    const name = header.field === '' ? '(a header cell)' : `"${header.field}"`;
+    if (header.arrow === 'below') {
+      out.push(`the sort arrow of the column ${name} sits under its name — it belongs beside it, on one line`);
+    }
+    if (header.lines !== null && header.lines > 1) {
+      out.push(`the name of the column ${name} runs on ${header.lines} lines — a column is as wide as its header`);
+    }
+    if (header.clipped) {
+      out.push(`the header of the column ${name} is clipped`);
+    }
+  }
+  return out;
+}
+
 // ── Reported, not fixed: form fields wider than their grid (round 5) ────────
 
 export interface FormOverflowMeasure {
@@ -974,6 +1088,14 @@ export async function auditRoute(page: Page, visit: Visit, ctx: AuditContext): P
     //         its first column and says that it scrolls; wider screens are
     //         left exactly as they were
     check(phoneTableViolations(await page.evaluate(measurePhoneTables), viewport.width < PHONE_MAX_WIDTH_PX));
+
+    // round 6 — a page header never holds the page (three pages shipped with it
+    //           never closed: the table was 0px wide and the page looked empty)
+    check(contentInPageHeaderViolations(await page.evaluate(measureContentInPageHeader)));
+
+    // round 6 — in every table header the name is on one line, with its sort
+    //           arrow beside it and nothing clipped — at both widths
+    check(tableHeaderViolations(await page.evaluate(measureTableHeaders)));
 
     // reported in round 5 and not fixed (forms: "do not touch") — counted on
     // every run, never among the excused

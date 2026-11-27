@@ -80,8 +80,12 @@ final class CustodyController extends Controller
 
         $custody->load(['agent', 'accountant', 'treasury', 'expenses' => fn ($q) => $q->latest(), 'expenses.category', 'expenses.item']);
 
+        // `approver` is the transfer's "who decided" — approved_by holds the approver or the rejecter.
+        // (This read a relationship that never existed, `decidedBy`: a custody with no transfer
+        // never noticed — there was nothing to load it for — and every custody WITH a transfer
+        // failed to open.)
         $transfers = \App\Models\CustodyTransfer::where('custody_id', $custody->id)
-            ->with(['fromAgent', 'toAgent', 'decidedBy'])
+            ->with(['fromAgent', 'toAgent', 'approver'])
             ->latest()
             ->get();
 
@@ -114,7 +118,7 @@ final class CustodyController extends Controller
                     'status' => $t->status,
                     'requested_at' => $t->created_at?->toIso8601ZuluString(),
                     'decided_at' => $t->decision_date?->toIso8601ZuluString() ?? $t->updated_at?->toIso8601ZuluString(),
-                    'decided_by' => $t->decidedBy?->name,
+                    'decided_by' => $t->approver?->name,
                     'rejection_reason' => $t->rejection_reason,
                 ]),
                 'return_requests' => $returnRequests->map(fn ($r) => [

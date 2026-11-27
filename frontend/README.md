@@ -84,6 +84,7 @@ frontend/
 | `navigation.spec.ts` | The shell: route changes through the sidebar, active item, back/forward |
 | `button-states.spec.ts` | Every kind of button, both themes: label contrast at rest and with the pointer on it (a screenshot never shows a hover state) |
 | `notifications-unread.spec.ts` | The unread marker on notifications, against a response the spec answers itself (the seeded account has no unread notification; nothing is written) |
+| `visual-matrix.spec.ts` — routes | 73 routes × light/dark × 360/1280 = 292 visits (round 6 added `hr/salary-history`) |
 | `n06-support.ts` | Shared helpers of the round-6 specs: sign-in, a mocked API (every write refused unless the test answers it), labels from `ar.json` |
 | `n01-search-unit.spec.ts` / `n01-search.spec.ts` | N-01: when the palette asks the server and how a match is marked / the palette from the keyboard, against the real search endpoint |
 | `n02-saved-views-unit.spec.ts` / `n02-saved-views.spec.ts` | N-02: the saved-views store (limit, names, a damaged entry) / save → reload → apply on the three lists |

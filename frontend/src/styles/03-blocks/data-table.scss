@@ -10,6 +10,9 @@
   max-width: 100%;
   /* R5-03: the edge fades are positioned against the card */
   position: relative;
+  /* a size container: the table's filter panel is never wider than its card
+     (the panel's `100cqw` is this card's inner width) */
+  container-type: inline-size;
 }
 
 /* the table scrolls sideways inside its card (touch-friendly on phones) */
@@ -107,8 +110,9 @@
   padding: var(--space-2) var(--space-4);
   background: var(--color-surface-inset);
   border-block-end: 1px solid var(--color-hairline);
-  /* R3-04: headers wrap to two lines instead of clipping — long labels like
-     "تحويلات واردة (ج.م)" never ellipsize or overflow their column */
+  /* The CELL lets text wrap (R3-04: nothing in a header is ever clipped). The header row itself
+     does not — `.ledger-table__header-label` is one unbreakable box, so the name and its sort arrow
+     stay on one line and the column grows to hold them. */
   white-space: normal;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -382,10 +386,25 @@
   color: var(--color-text);
 }
 
+/* THE HEADER IS ONE UNBREAKABLE ROW — the select-all box (a selectable table, on a phone), the
+   name and the sort arrow. It is a single inline box, as wide as what it holds on one line, and
+   a column in an automatic layout is never narrower than that: the name never breaks, the arrow
+   never drops under it, and the column always fits its own header.
+   (Until round 6 the name and the arrow were two inline boxes — a line could break between them —
+   and the name could break anywhere: at 1280px 26 arrows sat under their name and 22 names ran
+   on two to four lines.) */
+.ledger-table__header-label {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  white-space: nowrap;
+}
+
 .ledger-table__header-text {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  white-space: nowrap;
 }
 
 /* resize handle — PrimeNG 20 class names */
@@ -420,16 +439,11 @@
   cursor: grabbing;
 }
 
-/* sort icon — R2-08: 4px clearance so the arrow never touches the label */
-.ledger-table th .p-sortable-column-icon {
-  font-size: 10px;
-  margin-inline-start: 4px;
-  opacity: 0.5;
-}
-
-.ledger-table th.p-highlight .p-sortable-column-icon {
-  opacity: 1;
-  color: var(--color-primary);
+/* the sort arrow (PrimeNG 20: the `p-sorticon` host). R2-08: 4px clearance so the arrow never
+   touches the label — the row's gap above. (The rule used to name `.p-sortable-column-icon`,
+   a class of an older PrimeNG that nothing carries any more.) */
+.ledger-table th p-sorticon {
+  flex-shrink: 0;
 }
 
 /* ── R2-05: the actions cell never wraps or clips — one line, icons pinned
@@ -692,7 +706,8 @@
 
 .ledger-table__checkbox--inline {
   display: none;
-  margin-inline-end: var(--space-2);
+  /* inside the header row: with the row's 4px gap, the box sits 8px from the name */
+  margin-inline-end: var(--space-1);
 }
 
 @media (max-width: 767px) {

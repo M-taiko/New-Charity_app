@@ -1370,6 +1370,11 @@ written; both are fixed, measured and gated. They are described where they
 belong ("Found at delivery") rather than left out — the second of them had
 passed every run it was in, once in twenty runs failing.
 
+**And four defects the owner reported from the running app, while this round
+was being delivered.** Two of them had shipped in round 5 and passed every
+matrix visit since; one had been in the code since the API layer was first
+written. They are under "Reported by the owner".
+
 ## What the task assumed, and what the code showed
 
 - *N-01, "Already done: `Ctrl K` palette with recents".* There was a search
@@ -1626,6 +1631,286 @@ verified again here by the matrix's chart gate.
   on its way…") fails on the build as it was and passes on the fixed build;
   so does the test that caught it.
 
+## Reported by the owner — four defects, fixed and gated
+
+The owner opened the delivered build and reported these, in this order.
+
+### U-01 — "إدارة الموظفين" shows nothing in the page ✅
+
+- **What it was:** the title and the tab bar, and an empty page under them.
+  Round 5's delivered picture of `/hr/employees` shows exactly that — it
+  shipped blank, and 288 matrix visits passed it, because `<main>` still held
+  the table's text.
+- **Cause:** in the page's template `<app-page-header>` was opened and never
+  closed. Angular builds that without a word, and projects everything after it
+  — the tab bar, the table — into the header's flex row. Measured on the
+  build: the table's wrapper was **0px wide** (627px tall). The same slip was
+  in two more pages: `/expenses/edit-requests` (its three KPI tiles squeezed
+  into a 40px column, no table) and `/transfers/new` (the whole form inside
+  the header).
+- **Fixed:** the three headers are closed (`… />`, the form eight other pages
+  already use).
+- **Two gates, so it cannot come back unseen:**
+  - `npm run check:headers` (new, part of `verify`): every `<app-page-header>`
+    in a component template is closed — **66 page headers in 120 inline
+    templates**. Reopening one names the file and fails.
+  - the matrix, every visit: no table, state wrapper, tab bar, form, KPI grid,
+    tile or chart card inside a page header.
+- **Measured after the fix:** `/hr/employees` one table, 2 rows; the
+  edit-requests page its three tiles in a row and its table with 8 rows;
+  no console or page error on the three.
+
+### U-02 — the tab "سجل مرتبات الموظف" opens a 404 and does nothing to the table ✅
+
+- **What it was:** the sixth HR tab pointed at `/hr/salary-history`; no such
+  route existed, and the server had no such list — only the salary history of
+  **one** employee. The tab had been a dead link since it was added.
+- **Built:** the page it promised.
+  - Server: `GET /api/v1/hr/salary-history` — every employee's salary record,
+    newest first, with the employee's name; filters **employee, month, year,
+    status**; sorts date, year, month, final salary; the search box finds an
+    employee by name; `…/export` (xlsx, pdf, csv) replays the same query.
+    For whoever manages the treasury only (a Form Request authorises and
+    validates; a service declares what may be filtered; a Resource shapes a
+    row — amounts as two-decimal text).
+  - Page: `/hr/salary-history` — the HR tab bar, the table in server mode with
+    its filter panel built from what the endpoint declares, saved views,
+    export, and a "view" action to the record in "حسابات المرتبات". An empty
+    list offers that page as the way forward.
+- **Acceptance → measured** on the real data, at 1280 and at 360: the page
+  opens from its tab with 6 records; choosing the employee "عبدالرحمن ياسر"
+  sends one request, `filter[employee_id]=2`, and the table goes from **6 rows
+  to his 3**; a click on "الشهر" sends `sort=month`, a second click
+  `sort=-month`, the filter kept; typing "طارق" sends `q=طارق` and shows "no
+  results for this filter" with its "clear the filters". No console or page
+  error.
+- **PHPUnit:** `SalaryHistoryListTest`, 7 tests — the list and its
+  declaration, the four filters, sort and paging, the search (a wildcard typed
+  is a character), what is not declared is refused with 422, only a treasury
+  manager may read it (403 otherwise; with that rule removed the test fails),
+  and the export is a real file.
+- **Found while building it, by looking at the picture:** with no results the
+  whole table vanished — my page treated any empty answer as "no records at
+  all", whose message lives inside the table. Fixed before delivery: an empty
+  answer under a filter is the table's own "no results" state.
+
+### U-03 — `/app/custodies/2` fails with "Call to undefined relationship [decidedBy] on model [App\Models\CustodyTransfer]" ✅
+
+- **Cause:** the custody detail (`GET /api/v1/custodies/{id}`) loads the
+  custody's transfers with a relationship named `decidedBy`. The transfer model
+  never had one — the person who decided is `approver` (the `approved_by`
+  column, written by an approval and by a rejection alike), which the two other
+  places that show this already used. The line came in with the first commit
+  of the API layer.
+- **Why only custody 2:** Laravel looks a relationship up only when there are
+  rows to load it for. **A custody without transfers opened; every custody
+  with a transfer record answered 500.** `/custodies/1` — the custody every
+  test and every matrix visit opens — has none. Reproduced on the real server:
+  `/custodies/1` 200, `/custodies/43` 200, `/custodies/2` **500**.
+- **Fixed:** `approver`. Measured: `/api/v1/custodies/2` → **200**.
+- **PHPUnit:** `CustodyDetailTransfersTest`, 2 tests — a custody with an
+  approved, a rejected and a pending transfer opens, naming who decided each
+  (the approver, the rejecter, nobody); the custody's own agent opens it too.
+  With the defect put back both fail with the owner's exact message.
+- **Then I looked for its siblings:** a script reads every relationship load in
+  `app/` against the relationships the models define (170 loads, 30 models).
+  **None left in the API the SPA uses.** Two more are in the older Blade
+  controllers, both inside `try` blocks where they fail silently:
+  `User::whereDoesntHave('employee')` (`app/Http/Controllers/HrController.php`)
+  and `User::whereHas('custodies')` (`ReportController.php`) — the User model
+  has neither. Not changed: code the SPA does not run, and I cannot exercise
+  the Blade pages.
+
+### U-04 — the sort arrows must always sit beside the column's name ✅
+
+- **The request:** "the arrows for sort always next to the column's name, never
+  broken onto a line under it; the column always fits its content." The picture
+  that came with it is from another application; measured here, the app had the
+  same defect.
+- **Cause:** a header cell let its text wrap (a rule from round 3 so long
+  labels wrap instead of clipping), and the name and the arrow were two
+  separate inline boxes — a line may always break between two such boxes. And
+  because the name could break anywhere, a header contributed almost nothing
+  to its column's minimum width, so a table that fitted its card was free to
+  make a column narrower than its own header.
+- **Measured before, on all 73 routes:** at 1280, **21 arrows under their
+  name and 17 names broken onto two to four lines** (a strict count on the
+  previous build — an arrow not on the name's own line — gave 26 and 22); at
+  360, **74 and 49**.
+- **Fixed:** the header is **one unbreakable row** — the select-all box (a
+  selectable table, on a phone), the name and the arrow — a single inline box
+  as wide as what it holds on one line. A column in an automatic layout is
+  never narrower than that. (The style rule that gave the arrow its 4px
+  clearance named a class of an older PrimeNG that nothing carries any more;
+  the row's gap does it now.)
+- **Measured after, all 73 routes:** at 1280 **0 and 0**, at 360 **0 and 0**;
+  **no header is clipped anywhere** — including the pinned first column on a
+  phone, which is capped at 160px.
+- **What it costs — measured both ways in the same page loads:** a column that
+  always fits its header makes wide tables wider.
+  - At 1280: **6 → 8 tables wider than their card**, 985 → 1,602px in total.
+    Two lists that fitted now scroll sideways: **`/custodies` by 142px** and
+    `/custodies/movements` by 9px. Six others grew by 9–159px; on
+    `reports/reconciliation` the last two columns (the difference and the
+    total) leave the card by 208px until the table is scrolled.
+  - At 360: every one of the 35 tables already scrolled; together they are now
+    **2,187px wider (+15%)** (`/custodies` 617 → 790px over its card).
+  - This is the rule as it was asked for — "always". If the owner prefers the
+    other reading, it is one change in the same place: let a long name break
+    between its words when the table is wider than its card, with the arrow
+  glued to its last word. I did not choose it silently.
+- **Gate:** the matrix, every visit at both widths — an arrow under its name,
+  a name on more than one line, a clipped header are each reported. Its proof
+  (`gates.spec.ts`) builds the header as it was and as it is, and a forced
+  narrow column, from the DOM.
+
+### U-05 — the filter panel overlaps itself and runs out of its box; a status filter in English ✅
+
+- **The report** (a picture of `/custodies/tracking`): the panel's fields on top
+  of each other — a date picker reading "من" over another — its left part cut
+  off, and the "الحالة" filter offering `active, closed,
+  partially_returned…`.
+- **Cause, width and overlap:** the panel was a fixed grid — three 190px
+  columns in a 620px box, at every screen width. A range filter holds **two**
+  controls, and in one 190px cell each date picker's host shrank to 93px while
+  the input inside it kept its natural width of 256px (a text input is as wide
+  as 20 characters, and a flex item cannot shrink below that). So each input
+  overflowed its own box, the two landed on each other, and the second reached
+  past the panel's edge, where the card clipped it. The panel was also anchored
+  to its button, so on a narrow card its far end left the card.
+- **How far it went — every page with a filter panel opened, 20 of them at
+  1280:** **7 pages with overlapping controls** (every page with a date-range
+  filter: the custodies lists and detail, the expenses lists), **2 with
+  controls outside the panel** (`/custodies/tracking`, `/expenses`).
+- **Fixed in the shared panel, so every page gets it:**
+  - the panel is as wide as its fields need on one line — 229px with one
+    filter, 303px on `/custodies`, 451px on the salary history, 736px at the
+    most — and never wider than the table card; past that its fields wrap;
+  - a range field takes room for both of its controls;
+  - a date picker's input fills its half of the range instead of keeping
+    256px;
+  - the panel opens flush with the card's start edge, and is put back there
+    when the window changes.
+- **English options:** two filters took their labels from raw values.
+  - `/custodies/tracking`, "الحالة": the options were read off the rows' status
+    codes. They now carry the Arabic names the status stamps use
+    (`enums.custody_status.*`): معلقة، مقبولة، نشطة، مرفوضة، مُرَد جزئياً، مغلقة.
+  - `/directions`, "نشط": a yes/no column had become a select offering `true`.
+    A yes/no column is a yes/no filter now — a clearable choice of **نعم / لا**,
+    nothing chosen meaning both.
+  - What remains in Latin letters on two lists is two users whose names are
+    stored in English — data, not a label.
+- **Measured after, the same 20 pages at 1280:** controls outside the panel
+  **2 → 0**; the English status and the `true` gone; on every date-range page
+  the two pickers now sit side by side, each inside its own half.
+
+### U-06 — "make both the same size": one size for the same button ✅
+
+- **The report:** a picture of an actions column with the same button drawn
+  larger in one row than in the next.
+- **In this app the same button does come in two sizes, for one known reason**
+  (reported in round 5, "a small `<p-button>` is not small", and left alone
+  then because the fix touched pages marked "do not touch"):
+  `app-action-button` renders an **anchor** for a route and a **real button**
+  for a handler. PrimeNG's small-size rule lives in a cascade layer, and the
+  reset's unlayered `button { font: inherit }` outranks it — so the real button
+  kept the default size, **34px with 14px type, beside a 30px / 12px anchor**
+  with the same label. Round 5 fixed this in the page header only.
+- **Fixed everywhere now:** the one rule that restates the small size for a
+  real button lost its `app-page-actions` scope. Every button labelled small is
+  **30px with 12px type**, anchor or button, in table rows and dialogs as in
+  the header.
+- The row's icon buttons were checked in the code: `.row-actions__btn` fixes
+  30×30 for an anchor and a button alike, and the header's split button uses
+  the default size on both of its halves.
+
+### U-07 — the `custody_reopen` key ✅
+
+- Reopening a closed custody (its balance comes back when an expense is
+  deleted) writes a treasury transaction of type `custody_reopen`. The
+  translations' map of transaction labels (`enums.transaction_type`) had no
+  entry for it, so the row fell back to the raw code.
+- **Added:** `enums.transaction_type.custody_reopen` = **"إعادة فتح عهدة"**,
+  next to `custody_close` ("إقفال عهدة"). Every list that shows a transaction's
+  type reads that map (my movements, custody movements, the custody detail).
+- The type filter of "my movements" offers it too (it listed `custody_close`
+  and not the reopen). Not changed: the treasury detail's type filter, which
+  lists neither; and the shared style map, which gives an unknown type its
+  neutral style by design.
+
+### U-08 — "the collapse and expand in `/app/directions` is not working" ✅
+
+- **What it was:** the first page of the directions table showed 25 rows with no
+  chevron on any of them, and "تجميع الكل" / "توسيع الكل" changed nothing
+  visible.
+- **Expand and collapse themselves worked.** On a category's row the chevron
+  is there, and one click hides that category's children (measured on the root
+  "زكاة": 8 matching rows became 4, and the row showed "زكاة+6").
+- **Cause — orphan items in front of the tree.** Items whose category no
+  longer exists have no category path, so their path is their own name — and
+  the page sorted everything by path. More of them existed than one page holds,
+  so the first page was all orphans: no chevron (items never have one), and
+  nothing a collapse could hide. The tree came after them.
+- **Fixed in the page's ordering:** the tree comes first, in path order; items
+  without a category come after it, each marked **"بدون تصنيف"** with a hint
+  that editing the item moves it to an existing category.
+- **Seen on the way, not changed:** the paginator's report under the table
+  kept reading "من 188" while a search had narrowed the rows to 8. The count
+  the page passes is the filtered one; where it goes stale was not traced.
+- **How this was found:** three looks at the reported page (a click on a row,
+  then at the row count, then at a category's chevron) — a diagnosis of a
+  reported defect, not a test run; nothing else was run.
+
+### U-09 — "where is the data here?" — empty pages after the first, in every table that pages in the browser ✅
+
+- **The report** (two pictures of `/app/directions` with "نشط: نعم"): the
+  pager offered 8 pages and reported rows 126–150 and 176–186 — and the table
+  under it was empty on both.
+- **Cause, in the shared table:** in static mode the table cut out the current
+  page's rows itself (`slice(start, start + 25)`) and handed them to PrimeNG's
+  grid — and told the grid `[lazy]="mode() === 'server'"`. A grid that is not
+  lazy slices its value again, by the page offset (PrimeNG's own code:
+  `const first = this.lazy ? 0 : this.first; return data.slice(first, first +
+  this.rows)`). Page 1 survives that; every page after it sliced 25 rows from
+  offset 125 or 175 and got nothing — under a pager that still counted every
+  page.
+- **Where it could happen:** every table that sorts and pages in the browser
+  with more rows than one page — **all eight report pages**, my custodies,
+  the directions list, both social-cases lists, the per-employee salary
+  history. The six tables marked `staticPaginated="false"` were never
+  affected. It had been this way since the table was written; no earlier
+  test paged a static table.
+- **Second half, found by looking after the first fix:** when the rows
+  shrank (a filter, a search), the table went back to page 1 but PrimeNG's
+  pager stayed where it was — "26 إلى 50" over page 1's rows, and "101 إلى 8
+  من 8" after a search. The pager is PrimeNG's and only moves when its offset
+  input changes; the table's own offset was reset, PrimeNG's never.
+- **Fixed in the shared table, so every table gets it:**
+  - the grid is lazy whenever the table hands it one page (server mode and
+    paged static mode alike) — it no longer slices a second time;
+  - the grid's page offset is bound two-way, and one method, `firstPage()`,
+    returns both the table's offset and PrimeNG's to 0 — called when the
+    search, the filters, "clear all" or a saved view changes the rows.
+  - My first version of that binding was wrong (an effect meant to follow the
+    public `[first]` input also undid every page click); it was caught by the
+    look below and corrected before delivery.
+- **Measured after, on the reported page:** page 2 shows 25 rows ("26 إلى 50
+  من 188"); the filter applied from page 2 takes the pager to page 1 ("1 إلى 25
+  من 186"); page 5 with the filter shows 25 rows ("101 إلى 125"); a search from
+  page 5 gives "1 إلى 8 من 8" on page 1, and clearing it "1 إلى 25 من 186".
+  No console or page errors. No other paged table was looked at: the one
+  report tried has a single row.
+- **This also explains U-08's "seen on the way":** the pager's count that
+  stayed at 188 under a search was the same pager never being moved.
+
+**From here on, at the owner's instruction, nothing was tested:** no browser
+run, no survey, no PHPUnit, and no new test code. U-05 and U-06 were compiled,
+linted and packed, and not run. The last records on disk that come from real
+runs are: `PHPUNIT-OUTPUT.txt` — the backend has not changed since that run;
+and the specs listed under "Round 6 — verification", which predate U-05 and
+U-06. The picture that confirmed the filter panel was taken just before the
+instruction.
+
 ## Found on the way — reported, not fixed
 
 None of these is in TASK4.md. The first four are authorisation gaps on the
@@ -1776,3 +2061,87 @@ relative to the repository; `app/…` means `frontend/src/app/…`.
 
 \* also N-04 and N-06 · † also every list task (N-01 … N-04, N-08) · ‡ also N-03 / N-04 ·
 § also N-09 / N-07 / N-08.
+
+The owner's reports (U-01 … U-06) changed: `app/Http/Controllers/Api/V1/CustodyController.php`
+(U-03); the new `app/Http/Requests/Api/V1/IndexSalaryHistoryRequest.php`,
+`app/Http/Resources/Api/V1/SalaryHistoryResource.php`,
+`app/Http/Controllers/Api/V1/SalaryHistoryController.php`,
+`app/Services/SalaryHistoryService.php`, `routes/api_v1.php` and
+`frontend/src/app/features/hr/pages/salary-history-list/` (U-02); the three
+pages with the unclosed header (U-01);
+`shared/ui/data-table/data-table.component.ts` and
+`frontend/src/styles/03-blocks/data-table.scss` (U-04);
+`shared/ui/table-filters/table-filters.component.ts`, `shared/lib/table-filters.ts`,
+`frontend/src/app/features/custodies/pages/tracking/tracking.component.ts`,
+`frontend/src/styles/02-primeng/_polish.scss` (U-05, U-06);
+`frontend/scripts/check-page-headers.mjs` and `frontend/package.json`
+(`check:headers`); `frontend/e2e/gates.ts` (two gates) and the new route in
+`frontend/e2e/visual-matrix.spec.ts`.
+
+## Round 6 — what was run, and what was not
+
+Stated exactly, because the last two fixes were delivered without a run.
+
+- **PHPUnit — run on the final backend:** `PHPUNIT-OUTPUT.txt`, **67 tests,
+  343 assertions, exit 0**. No PHP file changed after that run.
+- **`npm run verify` — run on the final source** (lint, stylelint, every
+  check, the build): `VERIFY-OUTPUT.txt`. Lint 0 errors / 143 warnings, as in
+  round 5; stylelint 0 errors / 298 warnings, as in round 5.
+- **The browser specs — no complete run exists for the delivered build.** The
+  runs there were, in order:
+  - 202 tests, retries off: 199 passed. The three failures: a stale selector
+    (fixed), a login timeout under load, and the race of "Found at delivery".
+  - 205 tests, retries off: 203 passed. A filter in my own new proof test
+    (fixed) and a runner-level failure in `n07` (the test reads its data
+    another way now).
+  - 213 tests under the project's own retry setting: 212 passed, 1 flaky — the
+    race test's own clock, rewritten and checked twelve times, then shown to
+    fail with the fix switched off.
+  Those three runs are all **older** than the header fix, the page-header
+  fixes, the salary-history page and the custody-detail fix.
+  After them, only `gates.spec.ts` was run on a later build: **60 of 60**.
+- **The visual matrix — not run on any round-6 build.** The 288 whole-page
+  pictures under `frontend/e2e/screenshots/` are **round 5's**. The new
+  gates (the two of this round) have their proof in `gates.spec.ts` and no
+  matrix run behind them.
+- **Measured with throwaway scripts, not specs** (they are not in the
+  repository): the header survey, the filter-panel survey, the salary-history
+  page's filter / sort / search against the real server, the custody detail
+  endpoint before and after. Each figure in this section comes from one of
+  those, taken on the build it describes.
+- **After the owner's instruction to stop testing: nothing was run.** U-05 and
+  U-06 are compiled, linted and packed.
+- **`TASK4.md` is under `docs/reviews/`**, with the earlier task lists; that
+  folder is not in the archive.
+- **Delivery:** `new-charity_app-round6.zip` next to the repository — **25.6 MB,
+  1,325 files** under one `New-Charity_app/` folder, checked by extracting it
+  into a fresh folder: 1,325 files out, the packed `public/app` in it
+  **identical** to the working tree's (200 files with `checksums.txt`), 385
+  PNG pictures (the 288 of round 5's matrix and the sets in the table below),
+  this changelog, `VERIFY-OUTPUT.txt`, `PHPUNIT-OUTPUT.txt`. Not in it:
+  `node_modules`, `vendor`, `.git`, `.env`, `frontend/dist`,
+  `frontend/.angular`, `test-results`, `docs/reviews`, logs and caches.
+- **Nothing is committed.** Everything of rounds 1–6 is in the working tree.
+
+## Round 6 — the pictures
+
+Under `frontend/e2e/screenshots/`, each set in light and dark at 360 and 1280:
+
+| Folder | What it shows | From |
+|---|---|---|
+| `n01/` (4) | the palette with records | its spec |
+| `n02/` (12) | the saved-views panel, its chip, the toolbar | its spec |
+| `n03/` (12) | the quick-view drawer on the three lists | its spec |
+| `n04/` (8) | the selection and the bulk bar | its spec |
+| `n05/` (8) | the attachment field (the camera button and a shrunk photo on a phone) and its page | its spec |
+| `n06/` (8) | the undo toast, a confirm with its amount | its spec |
+| `n07/` (16) | the entity colours on four pages | its spec |
+| `p2/` (22) | the first-run empty states (seven routes at 1280, two at 360) and "no results for this filter" | its spec |
+| `fixes/` (3) | the pinned first column and the focus ring on a phone | a script |
+| `mock/` (4) | the unread notification marker | its spec (round 5) |
+| the 288 at the top | every route, every theme, both widths | **round 5's matrix** |
+
+The sets were taken at different moments of the day on different builds; none
+shows the header rule of U-04 on a wide table. There is no picture of the
+repaired employees and edit-requests pages, or of the filter panel after U-05,
+in the repository — those were looked at and not kept.

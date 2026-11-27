@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, Directive, TemplateRef, computed, effect, inject, input, model, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, Directive, ElementRef, HostListener, TemplateRef, computed, effect, inject, input, model, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
@@ -7,7 +7,6 @@ import { SelectModule } from 'primeng/select';
 import { MultiSelectModule } from 'primeng/multiselect';
 import { InputTextModule } from 'primeng/inputtext';
 import { DatePickerModule } from 'primeng/datepicker';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { Router } from '@angular/router';
 import type { TableFilterDef, TableFilterValue } from '@shared/lib/table-filters';
 import { activeFilterCount, fieldValue, isFilterActive } from '@shared/lib/table-filters';
@@ -34,7 +33,7 @@ export class FilterCustomDirective {
 @Component({
   selector: 'app-table-filters',
   standalone: true,
-  imports: [TranslatePipe, FormsModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, DatePickerModule, ToggleSwitchModule, NgTemplateOutlet],
+  imports: [TranslatePipe, FormsModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, DatePickerModule, NgTemplateOutlet],
   template: `
     <div class="table-filters">
       <p-button [outlined]="true" size="small" severity="secondary" (onClick)="toggle()">
@@ -48,9 +47,9 @@ export class FilterCustomDirective {
       </p-button>
 
       @if (panelOpen()) {
-        <div class="table-filters__panel" role="dialog" [attr.aria-label]="'common.filters' | translate">
+        <div class="table-filters__panel" role="dialog" [attr.aria-label]="'common.filters' | translate" [style.inset-inline-start]="panelOffset()">
           @for (def of visibleDefs(); track def.key) {
-            <label class="table-filters__field">
+            <label class="table-filters__field" [class.table-filters__field--range]="def.type === 'number-range' || def.type === 'date-range'">
               <span class="table-filters__label">{{ def.label | translate }}</span>
               @switch (def.type) {
                 @case ('text') {
@@ -67,7 +66,11 @@ export class FilterCustomDirective {
                             name="f-{{ def.key }}" styleClass="u-full" [display]="'chip'" />
                 }
                 @case ('boolean') {
-                  <p-toggleswitch [ngModel]="draftValue(def.key) === true" (ngModelChange)="setDraft(def.key, $event)" name="f-{{ def.key }}" />
+                  <!-- "نعم" or "لا", and nothing chosen = both. A switch cannot say "only the no's",
+                       and a select of the raw values said "true" -->
+                  <p-select appendTo="body" [options]="yesNo" optionLabel="label" optionValue="value"
+                            [ngModel]="booleanValue(def.key)" (ngModelChange)="setDraft(def.key, $event)"
+                            [showClear]="true" name="f-{{ def.key }}" styleClass="u-full" />
                 }
                 @case ('number-range') {
                   <span class="table-filters__range">
@@ -140,6 +143,7 @@ export class FilterCustomDirective {
     .table-filters__panel {
       position: absolute;
       inset-block-start: calc(100% + var(--space-2));
+      /* flush with the table card's start edge — the component measures it when the panel opens */
       inset-inline-start: 0;
       z-index: 60;
       background: var(--color-surface);
@@ -147,17 +151,32 @@ export class FilterCustomDirective {
       border-radius: var(--radius-m);
       box-shadow: 2px 2px 0 var(--color-hairline);
       padding: var(--space-3);
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      box-sizing: border-box;
+      /* AS WIDE AS ITS FIELDS NEED ON ONE LINE, and never wider than the table card (a size
+         container: 100cqw is the card's inner width) — past that the fields wrap. It used to be
+         a fixed three-column grid of 190px: a range's two date pickers were squeezed into one
+         cell, landed on top of each other and ran out of the panel. */
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
       gap: var(--space-3);
-      min-inline-size: min(520px, 90vw);
-      max-inline-size: min(760px, 92vw);
+      inline-size: max-content;
+      max-inline-size: min(46rem, 100cqw);
     }
     .table-filters__field {
       display: flex;
       flex-direction: column;
       gap: var(--space-1);
       font-size: var(--text-xs);
+      flex: 1 1 10.5rem;
+      min-inline-size: min(10.5rem, 100%);
+      max-inline-size: 13rem;
+    }
+    /* a range holds two controls: room for both */
+    .table-filters__field--range {
+      flex-basis: 21rem;
+      min-inline-size: min(21rem, 100%);
+      max-inline-size: 26rem;
     }
     .table-filters__label {
       color: var(--color-text-muted);
@@ -169,10 +188,10 @@ export class FilterCustomDirective {
     }
     .table-filters__range > * {
       min-width: 0;
-      flex: 1;
+      flex: 1 1 0;
     }
     .table-filters__actions {
-      grid-column: 1 / -1;
+      flex-basis: 100%;
       display: flex;
       justify-content: flex-end;
       gap: var(--space-2);
@@ -223,6 +242,16 @@ export class TableFiltersComponent {
   draft = signal<Record<string, TableFilterValue | undefined>>({});
   private translate = inject(TranslateService);
   private router = inject(Router);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+
+  /** where the panel opens, from the control's start edge (see `placePanel`) */
+  readonly panelOffset = signal('0px');
+
+  /** the two answers of a yes/no filter, in the app's language */
+  readonly yesNo = [
+    { value: true, label: this.translate.instant('common.true') },
+    { value: false, label: this.translate.instant('common.false') },
+  ];
 
   toggle(): void {
     if (this.panelOpen()) {
@@ -231,6 +260,43 @@ export class TableFiltersComponent {
     }
     this.panelOpen.set(true);
     this.opened.emit();
+    this.placePanel();
+  }
+
+  /** the window changed while the panel is open: it is put back against the card's edge */
+  @HostListener('window:resize')
+  onResize(): void {
+    if (this.panelOpen()) {
+      this.placePanel();
+    }
+  }
+
+  /**
+   * The panel opens flush with the TABLE CARD's start edge and is never wider
+   * than the card. It is positioned from this control, which sits anywhere in
+   * the toolbar, so the distance between the two is measured here.
+   */
+  private placePanel(): void {
+    const control = this.host.nativeElement;
+    const card = control.closest<HTMLElement>('.ledger-table');
+    if (card === null) {
+      return;
+    }
+    const cardStyle = getComputedStyle(card);
+    const cardBox = card.getBoundingClientRect();
+    const controlBox = control.getBoundingClientRect();
+    const padding = parseFloat(cardStyle.paddingInlineStart) || 0;
+    // from the control's start edge to the card's inner start edge, outward
+    const outward = cardStyle.direction === 'rtl' ? cardBox.right - padding - controlBox.right : controlBox.left - (cardBox.left + padding);
+    // inset-inline-start counts inward from the control's start edge: the start edge is on the right in RTL
+    const inset = cardStyle.direction === 'rtl' ? -outward : outward;
+    this.panelOffset.set(`${Math.round(inset)}px`);
+  }
+
+  /** a yes/no filter: true, false, or nothing chosen */
+  booleanValue(key: string): boolean | null {
+    const value = this.draft()[key];
+    return typeof value === 'boolean' ? value : null;
   }
 
   readonly visibleDefs = computed(() =>
@@ -350,6 +416,9 @@ export class TableFiltersComponent {
     if (def.type === 'select' || def.type === 'lookup') {
       const opt = (def.options ?? this.lookupOptions()[def.key] ?? []).find((o) => String(o.value) === String(value));
       return opt?.label ?? String(value);
+    }
+    if (def.type === 'boolean') {
+      return this.translate.instant(value === true ? 'common.true' : 'common.false');
     }
     if (Array.isArray(value)) {
       return value.map((v) => String(v)).join(this.translate.instant('common.list_separator'));

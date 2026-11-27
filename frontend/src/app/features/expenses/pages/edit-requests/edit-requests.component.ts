@@ -35,7 +35,7 @@ interface Row {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'expense.edit_requests.title' | translate" accent="expenses" iconName="receipt-2">
+    <app-page-header [title]="'expense.edit_requests.title' | translate" accent="expenses" iconName="receipt-2" />
 
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {

@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\ExpenseItemController as ApiDirections;
 use App\Http\Controllers\Api\V1\HrController as ApiHr;
 use App\Http\Controllers\Api\V1\LookupController as ApiLookup;
 use App\Http\Controllers\Api\V1\ProcurementController as ApiProcurement;
+use App\Http\Controllers\Api\V1\SalaryHistoryController;
 use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\Api\V1\ReportController as ApiReport;
 use App\Http\Controllers\Api\V1\SocialCaseController as ApiCases;
@@ -202,6 +203,8 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::get('hr/kpi', [ApiHr::class, 'kpi']);
             Route::post('hr/kpi', [HrController::class, 'kpiStore']);
             Route::get('hr/salaries', [ApiHr::class, 'salaries']);
+            // the salary record of every employee — what the "سجل مرتبات الموظف" tab opens
+            Route::get('hr/salary-history', SalaryHistoryController::class);
             Route::post('hr/salaries/calculate', [SalaryController::class, 'calculate']);
             Route::get('hr/salaries-report/export', [SalaryController::class, 'exportReport'])
                 ->withoutMiddleware(ApiV1Response::class);
@@ -224,6 +227,7 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::get('hr/kpi/export', [ApiHr::class, 'kpiExport'])->withoutMiddleware(ApiV1Response::class);
             Route::get('hr/salaries/export', [ApiHr::class, 'salariesExport'])->withoutMiddleware(ApiV1Response::class);
             Route::get('hr/employees/{employee}/salary-history/export', [ApiHr::class, 'salaryHistoryExport'])->withoutMiddleware(ApiV1Response::class);
+            Route::get('hr/salary-history/export', [SalaryHistoryController::class, 'export'])->withoutMiddleware(ApiV1Response::class);
             Route::get('purchase-requests/export', [ApiProcurement::class, 'purchaseExport'])->withoutMiddleware(ApiV1Response::class);
             Route::get('maintenance-requests/export', [ApiProcurement::class, 'maintenanceExport'])->withoutMiddleware(ApiV1Response::class);
             Route::get('suppliers/export', [ApiProcurement::class, 'suppliersExport'])->withoutMiddleware(ApiV1Response::class);

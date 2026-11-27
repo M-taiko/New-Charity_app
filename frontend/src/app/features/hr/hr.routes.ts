@@ -10,6 +10,9 @@ export const HR_ROUTES: Routes = [
   { path: 'attendance', loadComponent: () => import('./pages/attendance/attendance.component').then((m) => m.AttendancePage) },
   { path: 'kpi', loadComponent: () => import('./pages/kpi/kpi.component').then((m) => m.KpiPage) },
   { path: 'salaries', loadComponent: () => import('./pages/salaries/salaries.component').then((m) => m.SalariesPage) },
+  // the salary record of every employee — the tab "سجل مرتبات الموظف" (the history of one
+  // employee is employees/:id/salaries above); the tab pointed here before the page existed
+  { path: 'salary-history', loadComponent: () => import('./pages/salary-history-list/salary-history-list.component').then((m) => m.SalaryHistoryListPage) },
   { path: 'salaries/:id/edit', loadComponent: () => import('./pages/salary-edit/salary-edit.component').then((m) => m.SalaryEditPage) },
   { path: 'salaries/:id', loadComponent: () => import('./pages/salary-detail/salary-detail.component').then((m) => m.SalaryDetailPage) },
 ];

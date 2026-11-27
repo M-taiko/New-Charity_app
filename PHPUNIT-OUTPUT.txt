@@ -1,0 +1,12 @@
+PHPUnit 11.5.57 by Sebastian Bergmann and contributors.
+
+Runtime:       PHP 8.5.12
+Configuration: E:\Programming\Work\New-Charity_app\phpunit.xml
+
+................................................................. 65 / 67 ( 97%)
+..                                                                67 / 67 (100%)
+
+Time: 00:30.719, Memory: 112.00 MB
+
+OK (67 tests, 343 assertions)
+EXIT_CODE=0

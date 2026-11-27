@@ -1,0 +1,758 @@
+
+> custody-spa@1.0.0 verify
+> npm run lint && npm run lint:styles && npm run check:compat && npm run check:i18n && npm run check:overlays && npm run check:drag && npm run check:actions && npm run check:icons && npm run check:contrast && npm run check:headers && npm run build && npm run check:size && npm run check:palette && npm run check:readmes
+
+
+> custody-spa@1.0.0 lint
+> eslint "src/**/*.ts" "src/**/*.html"
+
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\app.config.ts
+  73:5   warning  `provideAnimations` is deprecated. 20.2 Use `animate.enter` or `animate.leave` instead. Intent to remove in v23  @typescript-eslint/no-deprecated
+  83:16  warning  `APP_INITIALIZER` is deprecated. from v19.0.0, use provideAppInitializer instead                                 @typescript-eslint/no-deprecated
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\core\auth\auth.service.ts
+  66:16  warning  "may_spend" | "may_manage_treasury" | "may_approve_custody" | "may_create_custody" | "may_transfer_custody" | "may_direct_spend" | "may_manage_expense_items" | "may_view_all_records" | "may_view_all_expenses" | "may_manage_users" | "may_manage_settings" | "may_manage_social_cases" | "may_review_social_case" | "may_add_comments" | "owns_custody" | "is_supervisor" | "is_agent" | "is_manager" | "is_accountant" | "is_researcher" is overridden by string in this union type  @typescript-eslint/no-redundant-type-constituents
+  71:31  warning  Passing a string to String() does not change the type or value of the string                                                                                                                                                                                                                                                                                                                                                                                                             @typescript-eslint/no-unnecessary-type-conversion
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\core\guards\unsaved-changes.guard.ts
+  20:7   warning  Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
+  20:17  warning  Unnecessary optional chain on a non-nullish value                                           @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\core\storage\local-storage.service.ts
+  17:7  warning  Type parameter T is used only once in the function signature  @typescript-eslint/no-unnecessary-type-parameters
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\core\theme\brand-preset.ts
+  25:7  warning  'D_BG' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\auth\login\login.component.ts
+  1:1  warning  Imports "ElementRef" are only used as type  @typescript-eslint/consistent-type-imports
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\broadcasts\pages\list\list.component.ts
+  306:28  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\custodies\pages\edit\edit.component.ts
+  69:49  warning  Unnecessary optional chain on a non-nullish value  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\custodies\pages\list\list.component.ts
+  433:16  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+  434:18  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\custodies\pages\mine-movements\mine-movements.component.ts
+  169:44  warning  Passing a string to String() does not change the type or value of the string  @typescript-eslint/no-unnecessary-type-conversion
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\custodies\pages\mine\mine.component.ts
+  36:15  warning  'ApiErrorBody' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\custodies\pages\new\new.component.ts
+  126:49  warning  Unnecessary optional chain on a non-nullish value  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\dashboard\pages\dashboard\dashboard.component.ts
+    7:1   warning  Imports "Popover" are only used as type            @typescript-eslint/consistent-type-imports
+  570:32  warning  Unnecessary optional chain on a non-nullish value  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\errors\error-pages.ts
+  23:14  warning  Unexpected empty class  @typescript-eslint/no-extraneous-class
+  42:14  warning  Unexpected empty class  @typescript-eslint/no-extraneous-class
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\expenses\pages\detail\detail.component.ts
+  276:13  warning  Passing a number to Number() does not change the type or value of the number  @typescript-eslint/no-unnecessary-type-conversion
+  276:44  warning  Passing a number to Number() does not change the type or value of the number  @typescript-eslint/no-unnecessary-type-conversion
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\expenses\pages\edit-request-detail\edit-request-detail.component.ts
+  163:59  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+  304:12  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\expenses\pages\edit-requests\edit-requests.component.ts
+  162:28  warning  'value' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\expenses\pages\list\list.component.ts
+    48:10  warning  'StatusStampComponent' is defined but never used                                                           @typescript-eslint/no-unused-vars
+   569:14  warning  Operands of '+' operations must be a number or string. Got `string` + `number`                             @typescript-eslint/restrict-plus-operands
+   572:14  warning  Operands of '+' operations must be a number or string. Got `string` + `number`                             @typescript-eslint/restrict-plus-operands
+   590:14  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined         @typescript-eslint/no-unnecessary-condition
+   591:97  warning  'reviewed' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+   592:17  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined         @typescript-eslint/no-unnecessary-condition
+   593:20  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined         @typescript-eslint/no-unnecessary-condition
+  1002:44  warning  Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator  @typescript-eslint/prefer-nullish-coalescing
+  1229:9   warning  Forbidden non-null assertion                                                                               @typescript-eslint/no-non-null-assertion
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\expenses\pages\mine\mine.component.ts
+  267:28  warning  'value' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\expenses\pages\new\new.component.ts
+  167:49  warning  Unnecessary optional chain on a non-nullish value  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\hr\pages\attendance\attendance.component.ts
+  157:91  warning  Operands of '+' operations must be a number or string. Got `string` + `number`                 @typescript-eslint/restrict-plus-operands
+  192:28  warning  'value' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\hr\pages\employee-form\employee-form.component.ts
+  139:67  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+  166:40  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\hr\pages\employees\employees.component.ts
+  138:28  warning  'value' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\hr\pages\kpi\kpi.component.ts
+  147:91  warning  Operands of '+' operations must be a number or string. Got `string` + `number`                 @typescript-eslint/restrict-plus-operands
+  182:28  warning  'value' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\hr\pages\salaries\salaries.component.ts
+  222:28  warning  'value' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\hr\pages\salary-detail\salary-detail.component.ts
+  199:71  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\hr\pages\salary-edit\salary-edit.component.ts
+  116:63  warning  Operands of '+' operations must be a number or string. Got `string` + `number`                                                     @typescript-eslint/restrict-plus-operands
+  118:41  warning  'salary.calculation_method ?? 'daily_rate'' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+  123:29  warning  'salary.notes ?? ''' will use Object's default stringification format ('[object Object]') when stringified                         @typescript-eslint/no-base-to-string
+  148:23  warning  Operands of '+' operations must be a number or string. Got `string` + `number`                                                     @typescript-eslint/restrict-plus-operands
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\hr\pages\salary-history\salary-history.component.ts
+  65:83  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\notifications\pages\list\list.component.ts
+  68:9  warning  Unnecessary conditional, value is always truthy  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\social-cases\pages\detail\detail.component.ts
+  391:20  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\social-cases\pages\list\list.component.ts
+   13:10  warning  'StatTileComponent' is defined but never used                                                       @typescript-eslint/no-unused-vars
+  371:48  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+  409:41  warning  Unnecessary optional chain on a non-nullish value                                                   @typescript-eslint/no-unnecessary-condition
+  513:87  warning  Invalid operand for a '+' operation. Operands must each be a number or string. Got `string | null`  @typescript-eslint/restrict-plus-operands
+  616:28  warning  'value' will use Object's default stringification format ('[object Object]') when stringified       @typescript-eslint/no-base-to-string
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\social-cases\pages\mine\mine.component.ts
+  296:41  warning  Unnecessary optional chain on a non-nullish value                                                   @typescript-eslint/no-unnecessary-condition
+  367:87  warning  Invalid operand for a '+' operation. Operands must each be a number or string. Got `string | null`  @typescript-eslint/restrict-plus-operands
+  403:28  warning  'value' will use Object's default stringification format ('[object Object]') when stringified       @typescript-eslint/no-base-to-string
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\social-cases\pages\new\new.component.ts
+  313:49  warning  Unnecessary optional chain on a non-nullish value                                                   @typescript-eslint/no-unnecessary-condition
+  459:17  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\tasks\pages\detail\detail.component.ts
+  219:69  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\tasks\pages\list\list.component.ts
+  166:41  warning  Unnecessary optional chain on a non-nullish value  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\transfers\pages\detail\detail.component.ts
+  195:67  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\transfers\pages\list\list.component.ts
+  226:40  warning  Passing a string to String() does not change the type or value of the string  @typescript-eslint/no-unnecessary-type-conversion
+  226:88  warning  Passing a string to String() does not change the type or value of the string  @typescript-eslint/no-unnecessary-type-conversion
+  239:42  warning  Unnecessary optional chain on a non-nullish value                             @typescript-eslint/no-unnecessary-condition
+  309:42  warning  Unnecessary optional chain on a non-nullish value                             @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\transfers\pages\new\new.component.ts
+  86:49  warning  Unnecessary optional chain on a non-nullish value  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\treasury\pages\detail\detail.component.ts
+  267:28  warning  Unnecessary conditional, the types have no overlap  @typescript-eslint/no-unnecessary-condition
+  267:46  warning  Unnecessary conditional, the types have no overlap  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\treasury\pages\list\list.component.ts
+  314:19  warning  'this.safeValue()?.meta.summary?.total_balance ?? '0'' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+  323:24  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined                                            @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\treasury\pages\new\new.component.ts
+  73:49  warning  Unnecessary optional chain on a non-nullish value  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\treasury\pages\transfer\transfer.component.ts
+  140:38  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\users\pages\detail\detail.component.ts
+  108:62  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+  153:56  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\users\pages\list\list.component.ts
+  133:13  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+  188:41  warning  Unnecessary optional chain on a non-nullish value                                                   @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\features\users\pages\new\new.component.ts
+  133:63  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+  160:40  warning  Operands of '+' operations must be a number or string. Got `string` + `number`  @typescript-eslint/restrict-plus-operands
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\layout\notification-bell\notification-bell.component.ts
+  205:9   warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+  207:11  warning  Unnecessary conditional, value is always falsy                                                      @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\layout\shell\shell.component.ts
+  210:48  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined         @typescript-eslint/no-unnecessary-condition
+  233:44  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined         @typescript-eslint/no-unnecessary-condition
+  233:57  warning  Unnecessary optional chain on a non-nullish value                                                          @typescript-eslint/no-unnecessary-condition
+  237:65  warning  Unnecessary optional chain on a non-nullish value                                                          @typescript-eslint/no-unnecessary-condition
+  237:72  warning  Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator  @typescript-eslint/prefer-nullish-coalescing
+  323:14  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined         @typescript-eslint/no-unnecessary-condition
+  338:34  warning  Unnecessary optional chain on a non-nullish value                                                          @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\layout\topbar\topbar.component.ts
+  190:41  warning  Unnecessary optional chain on a non-nullish value                                                   @typescript-eslint/no-unnecessary-condition
+  190:69  warning  Unnecessary optional chain on a non-nullish value                                                   @typescript-eslint/no-unnecessary-condition
+  284:9   warning  Unnecessary conditional, the types have no overlap                                                  @typescript-eslint/no-unnecessary-condition
+  287:13  warning  Unnecessary conditional, the types have no overlap                                                  @typescript-eslint/no-unnecessary-condition
+  292:28  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\lib\chart-colors.ts
+  85:10  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\lib\table-filters.ts
+   66:12   warning  Unnecessary conditional, the types have no overlap                                                  @typescript-eslint/no-unnecessary-condition
+  102:43   warning  'value' may use Object's default stringification format ('[object Object]') when stringified        @typescript-eslint/no-base-to-string
+  112:42   warning  'cell ?? ''' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+  116:39   warning  Unnecessary conditional, the types have no overlap                                                  @typescript-eslint/no-unnecessary-condition
+  119:39   warning  Unnecessary conditional, the types have no overlap                                                  @typescript-eslint/no-unnecessary-condition
+  127:26   warning  'cell ?? ''' will use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+  149:17   warning  'value' will use Object's default stringification format ('[object Object]') when stringified       @typescript-eslint/no-base-to-string
+  178:100  warning  'v' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+  179:76   warning  'v' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+  189:62   warning  'v' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+  253:51   warning  'bag[part]' will use Object's default stringification format ('[object Object]') when stringified   @typescript-eslint/no-base-to-string
+  258:36   warning  'value' will use Object's default stringification format ('[object Object]') when stringified       @typescript-eslint/no-base-to-string
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\pipes\pipes.ts
+  9:15  warning  Prefer using the inject() function over constructor parameter injection. Use Angular's migration schematic to automatically refactor: ng generate @angular/core:inject  @angular-eslint/prefer-inject
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\async-page\async-page.component.ts
+  85:62  warning  Passing a boolean to Boolean() does not change the type or value of the boolean  @typescript-eslint/no-unnecessary-type-conversion
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\attachment-field\attachment-field.component.ts
+    1:1   warning  Imports "OnDestroy" are only used as type          @typescript-eslint/consistent-type-imports
+  177:29  warning  Unnecessary optional chain on a non-nullish value  @typescript-eslint/no-unnecessary-condition
+  178:9   warning  Unnecessary conditional, value is always truthy    @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\avatar\avatar.component.ts
+  80:6  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\chart-card\chart-card.component.ts
+  386:12  warning  Promise returned in function argument where a void return was expected  @typescript-eslint/no-misused-promises
+  395:13  warning  'hidden' is assigned a value but never used                             @typescript-eslint/no-unused-vars
+  552:89  warning  Unnecessary optional chain on a non-nullish value                       @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\data-table\data-table.component.ts
+   770:73   warning  'av ?? ''' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+   771:73   warning  'bv ?? ''' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+   772:83   warning  'av ?? ''' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+   772:123  warning  'bv ?? ''' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+   775:21   warning  'av ?? ''' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+   775:52   warning  'bv ?? ''' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+  1032:157  warning  Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator  @typescript-eslint/prefer-nullish-coalescing
+  1033:93   warning  Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator  @typescript-eslint/prefer-nullish-coalescing
+  1056:68   warning  Unnecessary optional chain on a non-nullish value                                                          @typescript-eslint/no-unnecessary-condition
+  1289:24   warning  '_removed' is assigned a value but never used                                                              @typescript-eslint/no-unused-vars
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\form-dialog\form-dialog.component.ts
+  81:3  warning  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\icon\icon-symbol.ts
+   1:1   warning  Imports "IconKey" are only used as type                                                             @typescript-eslint/consistent-type-imports
+  12:10  warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\line-items-editor\line-items-editor.component.ts
+  107:9  warning  Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\page-actions\page-actions.component.ts
+   88:82  warning  Unnecessary conditional, value is always truthy                                                            @typescript-eslint/no-unnecessary-condition
+   89:12  warning  Unnecessary conditional, value is always truthy                                                            @typescript-eslint/no-unnecessary-condition
+  102:33  warning  Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator  @typescript-eslint/prefer-nullish-coalescing
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\print-sheet\print-sheet.component.ts
+  2:46  warning  'computed' is defined but never used  @typescript-eslint/no-unused-vars
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\reason-dialog\reason-dialog.component.ts
+  91:3  warning  Output bindings, including aliases, should not be named as standard DOM events  @angular-eslint/no-output-native
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\stat-tile\stat-tile.component.ts
+  205:22  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+E:\Programming\Work\New-Charity_app\frontend\src\app\shared\ui\table-filters\table-filters.component.ts
+  352:9    warning  Unnecessary conditional, value is always truthy                                                     @typescript-eslint/no-unnecessary-condition
+  417:20   warning  Unnecessary conditional, expected left-hand side of `??` operator to be possibly null or undefined  @typescript-eslint/no-unnecessary-condition
+  417:111  warning  'value' may use Object's default stringification format ('[object Object]') when stringified        @typescript-eslint/no-base-to-string
+  418:35   warning  'value' may use Object's default stringification format ('[object Object]') when stringified        @typescript-eslint/no-base-to-string
+  446:60   warning  'v' will use Object's default stringification format ('[object Object]') when stringified           @typescript-eslint/no-base-to-string
+
+✖ 143 problems (0 errors, 143 warnings)
+  0 errors and 5 warnings potentially fixable with the `--fix` option.
+
+
+> custody-spa@1.0.0 lint:styles
+> stylelint "src/styles/**/*.scss"
+
+
+src/styles/01-base/motion.scss
+   9:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  18:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  37:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  42:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  47:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  51:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  58:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  64:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  69:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  73:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  78:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  88:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  93:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+
+src/styles/01-base/print.scss
+    8:3  ⚠  Unexpected browser feature "css-paged-media" is not supported by Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1                                                                           plugin/no-unsupported-browser-features
+   27:3  ⚠  Unexpected browser feature "css-paged-media" is not supported by Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1                                                                           plugin/no-unsupported-browser-features
+   32:3  ⚠  Unexpected browser feature "css-paged-media" is not supported by Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1                                                                           plugin/no-unsupported-browser-features
+   38:3  ⚠  Unexpected browser feature "css-paged-media" is not supported by Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1                                                                           plugin/no-unsupported-browser-features
+  104:5  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+  155:5  ⚠  Unexpected browser feature "multicolumn" is only partially supported by Edge 109-155, Firefox 115-159, Chrome 109-156                                                                                                                      plugin/no-unsupported-browser-features
+  176:5  ⚠  Unexpected browser feature "css-unicode-bidi" is only partially supported by Safari 27,15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1,26.2,26.3,26.4,26.5,26.6  plugin/no-unsupported-browser-features
+  190:5  ⚠  Unexpected browser feature "multicolumn" is only partially supported by Edge 109-155, Firefox 115-159, Chrome 109-156                                                                                                                      plugin/no-unsupported-browser-features
+  233:5  ⚠  Unexpected browser feature "multicolumn" is only partially supported by Edge 109-155, Firefox 115-159, Chrome 109-156                                                                                                                      plugin/no-unsupported-browser-features
+
+src/styles/01-base/_reset.scss
+   97:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  104:1  ⚠  Unexpected browser feature "css-has" is not supported by Firefox 115-120                                                                                                                                                                         plugin/no-unsupported-browser-features
+  134:1  ⚠  Unexpected browser feature "css-has" is not supported by Firefox 115-120                                                                                                                                                                         plugin/no-unsupported-browser-features
+  136:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                   plugin/no-unsupported-browser-features
+
+src/styles/01-base/_typography.scss
+  17:3  ⚠  Unexpected browser feature "css-unicode-bidi" is only partially supported by Safari 27,15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1,26.2,26.3,26.4,26.5,26.6  plugin/no-unsupported-browser-features
+
+src/styles/02-primeng/_dark-overrides.scss
+   23:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   30:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   32:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   41:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   46:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   47:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   48:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   50:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   58:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   64:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   66:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   67:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   69:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   75:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   79:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   90:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   96:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  100:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  103:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  108:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  114:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  122:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  125:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  131:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  138:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  144:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  149:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  151:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  156:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  162:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  165:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  166:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  173:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  180:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  185:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  186:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  187:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  188:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  192:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  197:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  201:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  203:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  209:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  218:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  224:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  228:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  231:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  232:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  233:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  235:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  240:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  246:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  249:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  255:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  257:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  258:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  259:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  261:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  265:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  271:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  272:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  280:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  281:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  285:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  286:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  291:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  298:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  307:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  318:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  321:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  322:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  323:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  327:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  331:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  334:7  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  337:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  342:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  346:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  348:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  354:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  362:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  363:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  366:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  369:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  373:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  377:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  386:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  387:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  390:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  397:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  398:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  400:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  405:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  406:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  407:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  409:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  413:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  415:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  422:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  425:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  431:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  434:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  436:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  441:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  442:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  443:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  444:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  447:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  456:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  459:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  460:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  461:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  462:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  466:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  472:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  477:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  481:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  484:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  485:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  486:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  489:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  491:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  495:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  496:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  497:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  500:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  501:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  502:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  505:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  510:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  513:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  516:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  517:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  521:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  526:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  528:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  532:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  538:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  539:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  542:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  547:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  550:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  551:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  552:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  554:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  557:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  561:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  564:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+
+src/styles/02-primeng/_polish.scss
+    5:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+    9:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   11:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   15:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   17:3  ⚠  Unexpected browser feature "css-scrollbar" is only partially supported by Edge 109-120, Chrome 109-120, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1         plugin/no-unsupported-browser-features
+   19:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   27:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   28:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   29:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   30:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   32:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   37:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   41:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   48:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   55:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   61:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   66:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   73:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   76:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   81:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   85:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   87:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   91:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+   93:3  ⚠  Unexpected browser feature "css-scrollbar" is only partially supported by Edge 109-120, Chrome 109-120, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1         plugin/no-unsupported-browser-features
+   95:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  103:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  104:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  105:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  106:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  108:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  113:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  117:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  124:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  131:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  137:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  142:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  149:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  152:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  269:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  281:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  287:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  300:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  305:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  312:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  317:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  324:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  329:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  336:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  341:5  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  348:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+
+src/styles/04-utilities/_utilities.scss
+    8:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                   plugin/no-unsupported-browser-features
+   27:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                   plugin/no-unsupported-browser-features
+   84:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                   plugin/no-unsupported-browser-features
+  120:3  ⚠  Unexpected browser feature "css-unicode-bidi" is only partially supported by Safari 27,15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1,26.2,26.3,26.4,26.5,26.6        plugin/no-unsupported-browser-features
+  128:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/app-shell.scss
+   44:5  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+  122:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+  133:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/app-tabs.scss
+  10:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                   plugin/no-unsupported-browser-features
+  11:3  ⚠  Unexpected browser feature "css-scrollbar" is only partially supported by Edge 109-120, Chrome 109-120, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1         plugin/no-unsupported-browser-features
+  13:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  35:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  39:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  44:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  55:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/attachments.scss
+  15:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/chart-card.scss
+  225:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+  320:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/chat.scss
+  13:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/command-palette.scss
+   7:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+  62:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/dashboard-bento.scss
+   70:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+   84:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+  132:3  ⚠  Unexpected browser feature "css-unicode-bidi" is only partially supported by Safari 27,15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1,26.2,26.3,26.4,26.5,26.6  plugin/no-unsupported-browser-features
+  147:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+  339:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+  372:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+  381:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+  483:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+  609:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+  621:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/data-table.scss
+    6:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+   20:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+   44:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+   53:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+   86:3  ⚠  Unexpected browser feature "css-unicode-bidi" is only partially supported by Safari 27,15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1,26.2,26.3,26.4,26.5,26.6  plugin/no-unsupported-browser-features
+  607:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                             plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/dialog.scss
+  25:5  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/login.scss
+   22:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+  371:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/money.scss
+  4:3  ⚠  Unexpected browser feature "css-unicode-bidi" is only partially supported by Safari 27,15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1,26.2,26.3,26.4,26.5,26.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/notices.scss
+  9:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/notification-bell.scss
+  26:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/page-states.scss
+  49:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/quick-view.scss
+  28:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                                                                plugin/no-unsupported-browser-features
+  52:3  ⚠  Unexpected browser feature "css-display-contents" is only partially supported by Edge 109-155, Firefox 115-159, Chrome 109-156, Safari 27,15.4,15.5,15.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1,26.2,26.3,26.4,26.5,26.6,16,16.1,16.2,16.3,16.4,16.5,16.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/section-nav.scss
+   8:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                   plugin/no-unsupported-browser-features
+   9:3  ⚠  Unexpected browser feature "css-scrollbar" is only partially supported by Edge 109-120, Chrome 109-120, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1         plugin/no-unsupported-browser-features
+  12:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  27:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  32:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  41:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/segmented-bar.scss
+  6:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/segmented-links.scss
+  13:3  ⚠  Unexpected browser feature "intrinsic-width" is only partially supported by Firefox 115-159, Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/sidebar.scss
+   14:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                   plugin/no-unsupported-browser-features
+   61:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                   plugin/no-unsupported-browser-features
+   70:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6                                                                                                                                                   plugin/no-unsupported-browser-features
+  170:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  175:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  180:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/stamp.scss
+  27:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  37:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  47:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  57:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  67:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/stat-tile.scss
+  63:3  ⚠  Unexpected browser feature "css-unicode-bidi" is only partially supported by Safari 27,15.4,15.5,15.6,16,16.1,16.2,16.3,16.4,16.5,16.6,17,17.1,17.2,17.3,17.4,17.5,17.6,18,18.1,18.2,18.3,18.4,18.5-18.7,26,26.1,26.2,26.3,26.4,26.5,26.6  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/toast-host.scss
+  74:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  82:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+  90:3  ⚠  Unexpected browser feature "css-nesting" is not supported by Edge 109-111, Firefox 115-116, Chrome 109-111, Safari 15.4,15.5,15.6,16,16.1,16.2,16.3,16.4 and only partially supported by Edge 112-119, Chrome 112-119, Safari 16.5,16.6,17,17.1  plugin/no-unsupported-browser-features
+
+src/styles/03-blocks/topbar.scss
+   20:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+   28:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+   58:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+  143:3  ⚠  Unexpected browser feature "css-overflow" is only partially supported by Safari 15.4,15.5,15.6  plugin/no-unsupported-browser-features
+
+⚠ 298 problems (0 errors, 298 warnings)
+
+
+> custody-spa@1.0.0 check:compat
+> node scripts/check-compat.mjs
+
+check-compat: OK
+
+> custody-spa@1.0.0 check:i18n
+> node scripts/check-i18n.mjs
+
+check-i18n: OK (943 keys used, 1502 defined)
+
+> custody-spa@1.0.0 check:overlays
+> node scripts/check-overlays.mjs
+
+check-overlays: OK
+
+> custody-spa@1.0.0 check:drag
+> node scripts/check-drag.mjs
+
+check-drag: OK
+
+> custody-spa@1.0.0 check:actions
+> node scripts/check-actions.mjs
+
+check-actions: OK
+
+> custody-spa@1.0.0 check:icons
+> node scripts/check-icons.mjs
+
+check-icons: OK (88 used names, 91 sprite symbols)
+
+> custody-spa@1.0.0 check:contrast
+> node scripts/check-contrast.mjs
+
+light active  5.21:1
+light info    6.16:1
+light warning 4.84:1
+light danger  5.72:1
+light neutral 6.19:1
+dark  active  6.28:1
+dark  info    4.99:1
+dark  warning 6.92:1
+dark  danger  4.80:1
+dark  neutral 6.92:1
+check-contrast: OK (AA 4.5:1 in both themes)
+
+> custody-spa@1.0.0 check:headers
+> node scripts/check-page-headers.mjs
+
+check-page-headers: OK (66 page headers in 120 inline templates, every one closed)
+
+> custody-spa@1.0.0 build
+> ng build
+
+❯ Building...
+✔ Building...
+Initial chunk files   | Names               |  Raw size | Estimated transfer size
+chunk-RO2XGIV5.js     | -                   | 230.17 kB |                65.13 kB
+main-5I3LELEA.js      | main                | 192.49 kB |                34.26 kB
+chunk-IPEIL2QU.js     | -                   | 185.12 kB |                46.74 kB
+styles-LFTQKPQO.css   | styles              | 127.42 kB |                16.74 kB
+polyfills-OORPYLQ5.js | polyfills           |  34.76 kB |                11.45 kB
+chunk-UI6IY7NI.js     | -                   |   4.33 kB |                 1.17 kB
+chunk-PER47NQZ.js     | -                   |   1.16 kB |               621 bytes
+chunk-FA4ZV7SE.js     | -                   |   1.13 kB |               516 bytes
+chunk-EQT5JVLG.js     | -                   | 871 bytes |               871 bytes
+chunk-YEWEO3AL.js     | -                   | 868 bytes |               868 bytes
+chunk-3NCOKQ57.js     | -                   | 164 bytes |               164 bytes
+chunk-O5NJKEKK.js     | -                   | 124 bytes |               124 bytes
+
+                      | Initial total       | 778.61 kB |               178.66 kB
+
+Lazy chunk files      | Names               |  Raw size | Estimated transfer size
+chunk-KVBHUXTR.js     | -                   | 295.26 kB |                56.25 kB
+chunk-74TVFXUX.js     | auto                | 207.31 kB |                61.97 kB
+chunk-DHYATZQJ.js     | -                   | 105.77 kB |                19.95 kB
+chunk-OGPYJ3I4.js     | -                   | 101.93 kB |                21.59 kB
+chunk-T6BHAF5I.js     | -                   |  58.22 kB |                11.72 kB
+chunk-RKUQ5BDC.js     | -                   |  51.41 kB |                 8.60 kB
+chunk-7BDZQTM6.js     | -                   |  45.13 kB |                 9.82 kB
+chunk-EHIE5MPJ.js     | detail-component    |  41.25 kB |                 8.90 kB
+chunk-QLNE3M7Q.js     | shell-component     |  39.63 kB |                10.77 kB
+chunk-XMWXDOB3.js     | -                   |  38.49 kB |                 8.43 kB
+chunk-CHUV5U74.js     | -                   |  37.57 kB |                 9.01 kB
+chunk-MUMZNA2U.js     | dashboard-component |  37.10 kB |                 9.61 kB
+chunk-OBNBCISQ.js     | list-component      |  34.61 kB |                 9.00 kB
+chunk-TJKMYSPQ.js     | -                   |  33.86 kB |                 7.34 kB
+chunk-RE4ULPGW.js     | mine-component      |  31.25 kB |                 6.86 kB
+...and 148 more lazy chunks files. Use "--verbose" to show all the files.
+
+Application bundle generation complete. [11.807 seconds] - 2026-11-27T13:08:31.517Z
+
+Output location: E:\Programming\Work\New-Charity_app\frontend\dist\app
+
+
+> custody-spa@1.0.0 check:size
+> node scripts/check-bundle-size.mjs
+
+check-bundle-size: OK (initial 53214 gzipped)
+
+> custody-spa@1.0.0 check:palette
+> node scripts/check-palette.mjs
+
+check-palette: OK
+
+> custody-spa@1.0.0 check:readmes
+> node scripts/check-readmes.mjs
+
+check-readmes: OK (root, frontend, backend)
+EXIT_CODE=0

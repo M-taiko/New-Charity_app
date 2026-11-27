@@ -177,7 +177,11 @@ export function deriveFilters(columns: readonly { field: string; header: string;
     }
     const allNumbers = nonNull.every((v) => typeof v === 'number' || /^-?\d+(\.\d+)?$/.test(String(v)));
     const allDates = nonNull.every((v) => /^\d{4}-\d{2}-\d{2}/.test(String(v)));
-    if (allNumbers && !allDates) {
+    // a yes/no column is a yes/no filter. As a select of its values it offered "true"
+    const allBooleans = nonNull.every((v) => typeof v === 'boolean');
+    if (allBooleans) {
+      defs.push({ key: col.field, label: col.header, type: 'boolean', order: defs.length });
+    } else if (allNumbers && !allDates) {
       defs.push({ key: col.field, label: col.header, type: 'number-range', order: defs.length });
     } else if (allDates) {
       defs.push({ key: col.field, label: col.header, type: 'date-range', order: defs.length });

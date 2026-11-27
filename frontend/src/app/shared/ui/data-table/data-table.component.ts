@@ -242,7 +242,7 @@ export class TableFooterCellDirective {
 
       <p-table #table
         [value]="displayRows()"
-        [lazy]="mode() === 'server'"
+        [lazy]="pagedHere()"
         (onLazyLoad)="onLazyLoad($event)"
         (onColReorder)="onColReorder($event)"
         (onColResize)="onColResize($event)"
@@ -253,7 +253,7 @@ export class TableFooterCellDirective {
         [paginatorDropdownAppendTo]="'body'"
         [showCurrentPageReport]="true"
         [currentPageReportTemplate]="'common.table_report' | translate"
-        [first]="first()"
+        [(first)]="primeFirst"
         [styleClass]="density() === 'compact' ? 'p-datatable-sm' : ''"
         [resizableColumns]="true"
         [columnResizeMode]="'expand'"
@@ -297,19 +297,26 @@ export class TableFooterCellDirective {
                 scope="col"
                 [attr.aria-sort]="ariaSort(col.field)"
               >
-                <!-- on a phone the box sits inside a header cell that sorts on click: the click is its own,
-                     or it would select the page and sort the column — and a sort clears the selection -->
-                @if (selectable() && i === 0) {
-                  <input #pageBoxInline type="checkbox" class="ledger-table__checkbox ledger-table__checkbox--inline"
-                         [checked]="allOnPageSelected()" [indeterminate]="someOnPageSelected()"
-                         (change)="togglePage(pageBoxInline.checked)"
-                         (click)="$event.stopPropagation()" (dblclick)="$event.stopPropagation()"
-                         [attr.aria-label]="'table.bulk.select_all' | translate" />
-                }
-                <span class="ledger-table__header-text">{{ col.header | translate }}</span>
-                @if (isSortable(col)) {
-                  <p-sortIcon [field]="sortFieldOf(col)" />
-                }
+                <!-- ONE unbreakable row: the select-all box (a selectable table, on a phone), the name
+                     and the sort arrow. It is a single inline box, as wide as what it holds on one line —
+                     so a column is never narrower than its own header, the name never breaks, and the
+                     arrow always sits beside it. (As two boxes, a line could break between them: at
+                     1280px 26 arrows sat under their name.) -->
+                <span class="ledger-table__header-label">
+                  <!-- on a phone the box sits inside a header cell that sorts on click: the click is its own,
+                       or it would select the page and sort the column — and a sort clears the selection -->
+                  @if (selectable() && i === 0) {
+                    <input #pageBoxInline type="checkbox" class="ledger-table__checkbox ledger-table__checkbox--inline"
+                           [checked]="allOnPageSelected()" [indeterminate]="someOnPageSelected()"
+                           (change)="togglePage(pageBoxInline.checked)"
+                           (click)="$event.stopPropagation()" (dblclick)="$event.stopPropagation()"
+                           [attr.aria-label]="'table.bulk.select_all' | translate" />
+                  }
+                  <span class="ledger-table__header-text">{{ col.header | translate }}</span>
+                  @if (isSortable(col)) {
+                    <p-sortIcon [field]="sortFieldOf(col)" />
+                  }
+                </span>
               </th>
             }
           </tr>
@@ -494,6 +501,25 @@ export class DataTableComponent {
   total = input(0);
   perPage = input(25);
   first = input(0);
+
+  /**
+   * PrimeNG's own page offset, two-way bound to its grid. The pager is
+   * PrimeNG's: a table that goes back to its first page has to move PrimeNG's
+   * too, and PrimeNG only does that when this value CHANGES.
+   */
+  protected readonly primeFirst = signal(0);
+
+  /**
+   * True when this table hands PrimeNG exactly the rows of ONE page and keeps
+   * the paging itself: server mode, and static mode with its own paging. The
+   * grid must then be lazy. A grid that is not lazy slices its value by the
+   * page offset — so page 2 onward was a slice of page 1's rows: empty, under
+   * a pager that still offered every page. That was every static table with
+   * more than one page (the directions list: pages 2–8 showed nothing).
+   */
+  readonly pagedHere = computed(
+    () => this.mode() === 'server' || (this.mode() === 'static' && this.staticPaginated() && !this.printingAllRows()),
+  );
   loading = input(false);
   title = input('');
   summary = input<Record<string, string>>({});
@@ -691,6 +717,18 @@ export class DataTableComponent {
       });
       inject(DestroyRef).onDestroy(() => {
         this.cancelGiveUp();
+      });
+      // a page may send the table to other rows through the public `[first]` input: the pager
+      // follows it. Only THAT is followed here — read on the pager's own page changes, this
+      // effect pushed the bound offset straight back to 0 after every page click, and the
+      // pager could then never be moved by `firstPage()`
+      let firstFromPage = this.first();
+      effect(() => {
+        const wanted = this.first();
+        if (wanted !== firstFromPage) {
+          firstFromPage = wanted;
+          this.primeFirst.set(wanted);
+        }
       });
     }
 
@@ -1078,11 +1116,16 @@ export class DataTableComponent {
       : '';
   });
 
+  /** back to the first page: this table's offset and PrimeNG's — the pager is PrimeNG's */
+  private firstPage(): void {
+    this.staticPage.set(0);
+    this.primeFirst.set(0);
+  }
+
   onSearch(term: string): void {
     this.searchQuery.set(term);
-    if (this.mode() === 'static') {
-      this.staticPage.set(0);
-    } else {
+    this.firstPage();
+    if (this.mode() !== 'static') {
       this.emitQuery();
     }
   }
@@ -1155,9 +1198,8 @@ export class DataTableComponent {
 
   onFiltersApplied(values: Record<string, TableFilterValue | undefined>): void {
     this.filterValues.set(values);
-    if (this.mode() === 'static') {
-      this.staticPage.set(0);
-    } else {
+    this.firstPage();
+    if (this.mode() !== 'static') {
       this.emitQuery();
     }
   }
@@ -1230,7 +1272,7 @@ export class DataTableComponent {
       panel.clearAll();
     }
     this.searchQuery.set('');
-    this.staticPage.set(0);
+    this.firstPage();
     this.clearFilters.emit();
     if (this.mode() !== 'static') {
       this.emitQuery();
@@ -1453,7 +1495,7 @@ export class DataTableComponent {
     if (view === null) {
       return;
     }
-    this.staticPage.set(0);
+    this.firstPage();
     this.searchQuery.set(view.q);
     this.filterValues.set({ ...view.filters });
     this.applySort(view.sort);

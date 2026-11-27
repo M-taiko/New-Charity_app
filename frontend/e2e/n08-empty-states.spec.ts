@@ -395,13 +395,11 @@ test.describe('N-08 no results for this filter: the table stays, and offers the 
      */
     const asked: string[] = [];
     let unfiltered = 0;
-    let searchAnsweredAt = Number.POSITIVE_INFINITY;
     await page.route('**/api/v1/social-cases?*', async (route) => {
       const q = new URL(route.request().url()).searchParams.get('q') ?? '';
       asked.push(q);
       if (q === NO_MATCH) {
         await answerEmpty(route);
-        searchAnsweredAt = Date.now();
         return;
       }
       // the list's own second load: slow, as on a poor connection
@@ -414,8 +412,7 @@ test.describe('N-08 no results for this filter: the table stays, and offers the 
     await page.locator('.ledger-table tbody tr').first().waitFor({ state: 'visible', timeout: 25_000 });
     // the second load is on its way now, held for 1.5s: there is time to type inside it
     await expect.poll(() => unfiltered, { timeout: 10_000 }).toBe(2);
-    // one clock for the page and for this test: every empty state the table ever gets, and when
-    const offset = Date.now() - (await page.evaluate(() => performance.now()));
+    // every empty state the table ever gets, and when — in the page's own clock
     await page.evaluate(() => {
       const inserted: number[] = [];
       (window as unknown as { __emptyStates: number[] }).__emptyStates = inserted;
@@ -434,14 +431,42 @@ test.describe('N-08 no results for this filter: the table stays, and offers the 
     // the search's answer has come: "no results for this filter" is the final state
     await page.locator('.ledger-table .empty-state__action button').waitFor({ state: 'visible', timeout: 25_000 });
     await page.waitForTimeout(600);
-    const inserted = (await page.evaluate(() => (window as unknown as { __emptyStates?: number[] }).__emptyStates ?? []) as number[])
-      .map((at) => Math.round(at + offset));
-    const before = inserted.filter((at) => at < searchAnsweredAt);
+    // when the browser started the search's own request — the same clock as the insertions above.
+    // (Measured from the answer instead, the state that the answer itself brings read as 9ms
+    // "early" once: the runner stamps the answer after the browser has it.)
+    const { inserted, searchAskedAt } = await page.evaluate((term) => {
+      const list = (window as unknown as { __emptyStates?: number[] }).__emptyStates ?? [];
+      const entry = performance.getEntriesByType('resource').find((candidate) => candidate.name.includes(`q=${term}`));
+      return { inserted: list.map((at) => Math.round(at)), searchAskedAt: entry ? Math.round(entry.startTime) : null };
+    }, NO_MATCH);
+    const before = inserted.filter((at) => searchAskedAt !== null && at < searchAskedAt);
     expect(asked.filter((q) => q === NO_MATCH), 'the search was asked once').toHaveLength(1);
+    expect(searchAskedAt, 'the search request is in the page timing').not.toBeNull();
     expect(
       before.length,
-      `empty states put into the table BEFORE the search's answer (${JSON.stringify(inserted.map((at) => at - searchAnsweredAt))} ms around it)`,
+      `empty states put into the table BEFORE the search was asked (${JSON.stringify(inserted.map((at) => at - (searchAskedAt ?? 0)))} ms around it)`,
     ).toBe(0);
     expect(inserted.length, 'the answer itself brings the state').toBeGreaterThan(0);
   });
 });
+
+/** "no results for this filter" as it looks, for the delivery: both themes, both widths */
+for (const theme of ['light', 'dark'] as const) {
+  for (const width of [360, 1280]) {
+    test(`N-08 "no results for this filter" as it looks — ${theme} @ ${width}`, async ({ page }) => {
+      test.setTimeout(120_000);
+      await login(page);
+      await page.addInitScript(seedThemeInitScript);
+      await page.evaluate((t) => sessionStorage.setItem('visual-matrix.theme', t), theme);
+      await page.setViewportSize({ width, height: 800 });
+      await refuseWrites(page);
+      await emptyWhen(page, 'expenses', (url) => url.searchParams.get('q') === NO_MATCH);
+      await page.goto('/app/expenses', { waitUntil: 'domcontentloaded' });
+      await page.locator('.ledger-table tbody tr').first().waitFor({ state: 'visible', timeout: 25_000 });
+      await page.locator('.ledger-table__filter').fill(NO_MATCH);
+      await page.locator('.ledger-table .empty-state__action button').waitFor({ state: 'visible', timeout: 15_000 });
+      await page.waitForTimeout(500);
+      await wholePage(page, `n08-no-results__expenses__${theme}__${width}`);
+    });
+  }
+}

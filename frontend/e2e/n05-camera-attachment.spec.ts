@@ -324,15 +324,20 @@ for (const theme of ['light', 'dark'] as const) {
       await page.goto(FORM, { waitUntil: 'domcontentloaded' });
       const field = page.locator('app-attachment-field');
       await field.waitFor({ state: 'visible', timeout: 25_000 });
+      // the field with its label around it (the field's own box starts below the top of its button)
+      const framed = page.locator('app-field:has(app-attachment-field)');
       // on a phone a photo is "taken" through the camera input: the preview says what it became
       if (width < 600) {
+        await expect(field.locator('p-button.attachment-field__capture')).toBeVisible();
         const photo = await paintPhoto(page, 6 * 1_048_576);
         await field.locator('input[capture]').setInputFiles({ name: 'receipt.jpg', mimeType: 'image/jpeg', buffer: photo.buffer });
         await field.locator('.attachment-field__preview').waitFor({ state: 'visible', timeout: 30_000 });
+      } else {
+        await expect(field.locator('p-button.attachment-field__capture')).toBeHidden();
       }
       await page.evaluate(() => document.fonts.ready);
       await page.waitForTimeout(400);
-      await field.screenshot({ path: `${OUT}/field__${theme}__${width}.png`, animations: 'disabled' });
+      await framed.screenshot({ path: `${OUT}/field__${theme}__${width}.png`, animations: 'disabled' });
       await wholePage(page, `form__${theme}__${width}`);
     });
   }

@@ -10,16 +10,19 @@ import {
   PINNED_MAX_WIDTH_PX,
   actionAreaViolations,
   chartCardViolations,
+  contentInPageHeaderViolations,
   consoleErrorViolations,
   formOverflowNote,
   kpiGridViolations,
   measureActionAreas,
   measureChartCards,
+  measureContentInPageHeader,
   measureFormOverflow,
   measureKpiGrids,
   measurePhoneTables,
   measureStraySurfaces,
   measureTableCells,
+  measureTableHeaders,
   measureTheme,
   phoneTableViolations,
   rawLiteralViolations,
@@ -28,11 +31,13 @@ import {
   scrollViolations,
   seedThemeInitScript,
   straySurfaceViolations,
+  tableHeaderViolations,
   themeViolations,
   type ActionAreaMeasure,
   type ChartCardMeasure,
   type KpiGrid,
   type PhoneTableMeasure,
+  type TableHeaderMeasure,
   type ThemeSnapshot,
   type TileBox,
 } from './gates';
@@ -852,6 +857,79 @@ test.describe('R5-03 phone table gate', () => {
     ]);
     // no body row: nothing to say
     expect(phoneTableViolations([table({ ...CUSTODIES, ...PAINTED_RIGHT, bodyPinned: null })], true)).toEqual([]);
+  });
+
+  test('round 6 — in every header the name is on one line with its arrow beside it, and nothing is clipped', () => {
+    const header = (over: Partial<TableHeaderMeasure> = {}): TableHeaderMeasure => ({ field: 'amount', lines: 1, arrow: 'beside', clipped: false, ...over });
+    expect(tableHeaderViolations([header()])).toEqual([]);
+    // as it was on 26 columns: the arrow under a name that fitted on one line
+    expect(tableHeaderViolations([header({ arrow: 'below' })])).toEqual([
+      'the sort arrow of the column "amount" sits under its name — it belongs beside it, on one line',
+    ]);
+    // as it was on 22: the name broken to fit a narrow column (four lines, on one report)
+    expect(tableHeaderViolations([header({ field: 'net_transfers', lines: 4, arrow: 'below' })])).toEqual([
+      'the sort arrow of the column "net_transfers" sits under its name — it belongs beside it, on one line',
+      'the name of the column "net_transfers" runs on 4 lines — a column is as wide as its header',
+    ]);
+    expect(tableHeaderViolations([header({ clipped: true, arrow: 'none' })])).toEqual(['the header of the column "amount" is clipped']);
+    // a cell without a name (the selection cell) has nothing to say
+    expect(tableHeaderViolations([header({ field: '', lines: null, arrow: 'none' })])).toEqual([]);
+  });
+
+  test('round 6 — the header is measured from the DOM: two inline boxes break, one unbreakable row does not', async ({ page }) => {
+    const table = (layout: 'fixed' | 'auto', label: string, fixedWidth = 70): string => `<html lang="ar" dir="rtl"><body><div class="ledger-table"><table class="p-datatable-table" style="width:220px;table-layout:${layout}"><thead><tr>
+      <th data-field="custody" style="padding:4px;line-height:13px;white-space:normal;overflow-wrap:anywhere;overflow:hidden;${layout === 'fixed' ? `width:${fixedWidth}px` : ''}">${label}</th>
+      <th data-field="amount" style="padding:4px">المبلغ</th>
+    </tr></thead></table></div></body></html>`;
+    const arrow = '<p-sorticon style="display:inline-flex;width:12px;height:12px"></p-sorticon>';
+    // as it was: the name and the arrow two inline boxes. A name too long for its column breaks inside
+    // its box (22 columns ran on two to four lines) and the arrow drops to a line of its own under it…
+    await page.setContent(table('fixed', `<span class="ledger-table__header-text" style="display:inline-flex">التحويلات الواردة (ج.م)</span>${arrow}`));
+    const [shipped] = await page.evaluate(measureTableHeaders);
+    expect(shipped).toMatchObject({ field: 'custody', arrow: 'below' });
+    expect(shipped.lines, 'the name broken to fit the column').toBeGreaterThan(1);
+    expect(tableHeaderViolations([shipped])).toEqual([
+      'the sort arrow of the column "custody" sits under its name — it belongs beside it, on one line',
+      `the name of the column "custody" runs on ${shipped.lines} lines — a column is as wide as its header`,
+    ]);
+    // …and a name that fits its column exactly still loses its arrow to the next line (26 columns)
+    await page.setContent(table('fixed', `<span class="ledger-table__header-text" style="display:inline-flex">مصروفات</span>${arrow}`, 60));
+    const [shortName] = await page.evaluate(measureTableHeaders);
+    expect(shortName).toMatchObject({ field: 'custody', lines: 1, arrow: 'below' });
+    expect(tableHeaderViolations([shortName])).toEqual(['the sort arrow of the column "custody" sits under its name — it belongs beside it, on one line']);
+    // now: one unbreakable row, and an automatic layout — the column grows to hold it
+    await page.setContent(table('auto', `<span class="ledger-table__header-label" style="display:inline-flex;flex-wrap:nowrap;gap:4px;align-items:center;white-space:nowrap"><span class="ledger-table__header-text" style="display:inline-flex;white-space:nowrap">التحويلات الواردة (ج.م)</span>${arrow}</span>`));
+    const [fixed] = await page.evaluate(measureTableHeaders);
+    expect(fixed).toMatchObject({ field: 'custody', lines: 1, arrow: 'beside', clipped: false });
+    expect(tableHeaderViolations(await page.evaluate(measureTableHeaders))).toEqual([]);
+    // the same row in a column that is forced narrow (a fixed layout and a width): the column cannot
+    // grow, the cell clips — and says so
+    await page.setContent(table('fixed', `<span class="ledger-table__header-label" style="display:inline-flex;flex-wrap:nowrap;white-space:nowrap"><span class="ledger-table__header-text" style="display:inline-flex;white-space:nowrap">عهد الطلبات</span>${arrow}</span>`, 50));
+    const clipped = await page.evaluate(measureTableHeaders);
+    expect(clipped[0]).toMatchObject({ field: 'custody', clipped: true });
+    expect(tableHeaderViolations(clipped)).toEqual(['the header of the column "custody" is clipped']);
+  });
+
+  test('round 6 — no page block inside the page header: the blank pages round 5 shipped', async ({ page }) => {
+    // as three pages were: the header never closed, so the tab bar and the table became its content —
+    // in a flex row, where the table got 0px and the page looked empty (and <main> kept its text)
+    const unclosed = `<html lang="ar" dir="rtl"><body><app-page-header><header class="page-header"><div class="page-header__meta" style="display:flex">
+      <app-section-nav><nav class="section-nav"></nav></app-section-nav>
+      <app-async-page><app-data-table><div class="ledger-table"></div></app-data-table></app-async-page>
+    </div></header></app-page-header></body></html>`;
+    await page.setContent(unclosed);
+    expect(await page.evaluate(measureContentInPageHeader)).toEqual(['app-section-nav', 'app-async-page', 'app-data-table']);
+    expect(contentInPageHeaderViolations(await page.evaluate(measureContentInPageHeader))).toEqual([
+      '<app-section-nav> is inside the page header — the page header is never closed (it is closed, or ends with "/>")',
+      '<app-async-page> is inside the page header — the page header is never closed (it is closed, or ends with "/>")',
+      '<app-data-table> is inside the page header — the page header is never closed (it is closed, or ends with "/>")',
+    ]);
+    // as it should be: the header closed, the page after it
+    await page.setContent(`<html lang="ar" dir="rtl"><body><app-page-header><header class="page-header"><div class="page-header__actions"><button>export</button></div></header></app-page-header>
+      <app-section-nav><nav class="section-nav"></nav></app-section-nav>
+      <app-async-page><app-data-table><div class="ledger-table"></div></app-data-table></app-async-page></body></html>`);
+    expect(await page.evaluate(measureContentInPageHeader)).toEqual([]);
+    expect(contentInPageHeaderViolations(await page.evaluate(measureContentInPageHeader))).toEqual([]);
   });
 
   test('the paint is read from real gradients and shadows — the round-5 rules, verbatim, are reported', async ({ page }) => {

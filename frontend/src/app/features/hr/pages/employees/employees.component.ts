@@ -37,7 +37,7 @@ interface Row {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-page-header [title]="'hr.employees.title' | translate" accent="hr" iconName="briefcase">
+    <app-page-header [title]="'hr.employees.title' | translate" accent="hr" iconName="briefcase" />
 
     <app-section-nav module="hr" />
 
