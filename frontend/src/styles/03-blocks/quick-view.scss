@@ -1,0 +1,123 @@
+/* N-03: the quick view — a drawer on the start side (the right in RTL), 420px wide.
+   It is PrimeNG's dialog appended to the body, so these rules are global. */
+
+/* The drawer is on the START side: the right in this right-to-left app. PrimeNG's "right" is
+   mirrored to the end in RTL — the left — so the mask is told where the start is, per direction. */
+[dir='rtl'] .p-dialog-mask.quick-view-mask {
+  justify-content: flex-start !important;
+}
+
+[dir='ltr'] .p-dialog-mask.quick-view-mask {
+  justify-content: flex-end !important;
+}
+
+.p-dialog.quick-view {
+  inline-size: min(420px, 100vw);
+  block-size: 100dvh;
+  max-block-size: 100dvh;
+  margin: 0;
+  border-radius: 0;
+  border-block: 0;
+  border-inline-start: 1px solid var(--color-hairline);
+  border-inline-end: 0;
+}
+
+.p-dialog.quick-view .p-dialog-content {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+}
+
+.quick-view__subtitle {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  margin-block: 0 var(--space-3);
+}
+
+.quick-view__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.quick-view__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* the page's own actions arrive in one wrapper: it becomes transparent, so the
+   same gap separates every button of the footer — the record's and the page link */
+.quick-view__actions > [quick-actions] {
+  display: contents;
+}
+
+/* the row that opens the drawer: it is a focusable row of the table, drawn as one outlined line */
+.ledger-table tr.ledger-table__row--activatable {
+  cursor: pointer;
+}
+
+.ledger-table tr.ledger-table__row--activatable:hover > td {
+  background: var(--color-surface-inset);
+}
+
+[dir='rtl'] .ledger-table tr.ledger-table__row--activatable:focus-visible > td {
+  box-shadow: inset 0 2px 0 var(--color-focus), inset 0 -2px 0 var(--color-focus);
+}
+
+[dir='rtl'] .ledger-table tr.ledger-table__row--activatable:focus-visible > td:first-child {
+  box-shadow: inset 0 2px 0 var(--color-focus), inset 0 -2px 0 var(--color-focus), inset -2px 0 0 var(--color-focus);
+}
+
+[dir='rtl'] .ledger-table tr.ledger-table__row--activatable:focus-visible > td:last-child {
+  box-shadow: inset 0 2px 0 var(--color-focus), inset 0 -2px 0 var(--color-focus), inset 2px 0 0 var(--color-focus);
+}
+
+[dir='ltr'] .ledger-table tr.ledger-table__row--activatable:focus-visible > td:first-child {
+  box-shadow: inset 0 2px 0 var(--color-focus), inset 0 -2px 0 var(--color-focus), inset 2px 0 0 var(--color-focus);
+}
+
+[dir='ltr'] .ledger-table tr.ledger-table__row--activatable:focus-visible > td:last-child {
+  box-shadow: inset 0 2px 0 var(--color-focus), inset 0 -2px 0 var(--color-focus), inset -2px 0 0 var(--color-focus);
+}
+
+/* On a phone a selectable table hides its selection cell (N-04): the first cell that
+   renders is then the second. The start cap belongs to it — on the hidden first
+   cell it was painted on nothing, and the ring stayed open on that side. `:where`
+   adds the condition at the same specificity as the rule above. */
+@media (max-width: 767px) {
+  [dir='rtl'] .ledger-table:where([data-selectable='true']) tr.ledger-table__row--activatable:focus-visible > td:nth-child(2) {
+    box-shadow: inset 0 2px 0 var(--color-focus), inset 0 -2px 0 var(--color-focus), inset -2px 0 0 var(--color-focus);
+  }
+
+  [dir='ltr'] .ledger-table:where([data-selectable='true']) tr.ledger-table__row--activatable:focus-visible > td:nth-child(2) {
+    box-shadow: inset 0 2px 0 var(--color-focus), inset 0 -2px 0 var(--color-focus), inset 2px 0 0 var(--color-focus);
+  }
+}
+
+/* the drawer is not part of a printed page */
+@media print {
+  .quick-view-mask {
+    display: none !important;
+  }
+}
+
+/* a phone: the drawer is the whole screen — not the sheet other dialogs become */
+@media (max-width: 640px) {
+  .p-dialog.quick-view {
+    inline-size: 100vw !important;
+    block-size: 100dvh;
+    max-block-size: 100dvh;
+    margin: 0 !important;
+    border: 0;
+    border-radius: 0 !important;
+  }
+
+  .p-dialog.quick-view .p-dialog-content {
+    max-block-size: none;
+  }
+
+  .p-dialog-mask.quick-view-mask {
+    align-items: stretch !important;
+  }
+}

@@ -19,9 +19,11 @@ import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { journalMoneyClass, journalStampClass } from '@shared/lib/journal-style';
+import { entityColor } from '@shared/lib/chart-colors';
 import type { ItemResponse, ListResponse } from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { Router } from '@angular/router';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface TreasuryDetail {
   id: number;
@@ -46,7 +48,7 @@ interface TransactionRow {
 @Component({
   selector: 'app-treasury-detail',
   standalone: true,
-  imports: [MenuModule,
+  imports: [DatetimeCellComponent, MenuModule,
     TranslatePipe, FormsModule, ButtonModule, SelectModule, PageHeaderComponent,
     AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective,
     EmptyStateComponent, PrintSheetComponent, ConfirmDeleteComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent,
@@ -77,7 +79,11 @@ interface TransactionRow {
                 <div class="key-value-list">
                   <div class="key-value-list__item">
                     <span class="key-value-list__key">{{ 'treasury.list.name' | translate }}</span>
-                    <span class="key-value-list__value">{{ treasury.name }}</span>
+                    <span class="key-value-list__value u-flex u-center-y u-gap-1">
+                      <!-- N-07: the treasury's own colour — the same dot beside its row in the list -->
+                      <span class="entity-dot" aria-hidden="true" [style.background]="entityColor(treasury.id)"></span>
+                      <span>{{ treasury.name }}</span>
+                    </span>
                   </div>
                   <div class="key-value-list__item">
                     <span class="key-value-list__key">{{ 'treasury.list.balance' | translate }}</span>
@@ -98,14 +104,14 @@ interface TransactionRow {
             <section class="chart-card">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'treasury.detail.stats' | translate }}</span></div>
               <div class="kpi-grid">
-                <app-stat-tile [label]="'treasury.detail.total_in'" [value]="treasury.stats.total_in" [money]="true" tone="success" />
-                <app-stat-tile [label]="'treasury.detail.total_out'" [value]="treasury.stats.total_out" [money]="true" tone="danger" />
-                <app-stat-tile [label]="'treasury.list.transactions_count'" [value]="treasury.stats.total_transactions" tone="primary" />
+                <app-stat-tile [label]="'treasury.detail.total_in'" [value]="treasury.stats.total_in" [money]="true" tone="success" iconName="received" accent="treasury" />
+                <app-stat-tile [label]="'treasury.detail.total_out'" [value]="treasury.stats.total_out" [money]="true" tone="danger" iconName="sent" accent="treasury" />
+                <app-stat-tile [label]="'treasury.list.transactions_count'" [value]="treasury.stats.total_transactions" iconName="history" accent="treasury" />
               </div>
             </section>
           </div>
 
-          <app-data-table
+          <app-data-table [phoneFirst]="['date', 'type', 'amount']"
             [title]="'treasury.detail.transactions' | translate"
             [columns]="columns"
             [rows]="treasury.transactions.data"
@@ -124,10 +130,10 @@ interface TransactionRow {
                 size="small"
               />
             </div>
-            <ng-template appCell="date" let-row><span class="u-bidi u-muted">{{ row.date | datetime }}</span></ng-template>
+            <ng-template appCell="date" let-row><app-datetime-cell [value]="row.date" /></ng-template>
             <ng-template appCell="type" let-row><span class="stamp" [class]="stampClass(row.type)">{{ row.type | enumLabel: 'transaction_type' }}</span></ng-template>
             <ng-template appCell="description" let-row>{{ row.description }}</ng-template>
-            <ng-template appCell="amount" let-row><span class="u-bidi" [class]="moneyClass(row.type)">{{ row.amount | money }}</span></ng-template>
+            <ng-template appCell="amount" let-row><span class="u-bidi" [class]="moneyClass(row.type)">{{ row.amount | money: false }}</span></ng-template>
             <ng-template appCell="user" let-row>{{ row.user?.name ?? '—' }}</ng-template>
             <div empty>
               <app-empty-state [title]="'treasury.detail.empty' | translate" [text]="'common.no_data' | translate" accent="treasury" iconName="building-bank" />
@@ -156,6 +162,9 @@ export class TreasuryDetailPage {
 
   /** RD-5.2: journal-ledger pill + signed money colors for the transactions table */
   readonly stampClass = journalStampClass;
+
+  /** N-07: this treasury's own colour for the dot beside its name */
+  entityColor = entityColor;
   readonly moneyClass = journalMoneyClass;
 
   private http = inject(HttpClient);

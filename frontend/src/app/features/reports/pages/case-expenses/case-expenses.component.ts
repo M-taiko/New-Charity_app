@@ -13,10 +13,10 @@ import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/da
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { ApiClient } from '@core/http/api-client';
 import type { DirectionNode, ItemResponse, ListResponse, Lookups } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface CaseExpensesData {
   summary: { total_amount: string; count: number };
@@ -35,11 +35,11 @@ interface CaseExpensesData {
 @Component({
   selector: 'app-case-expenses-report',
   standalone: true,
-  imports: [
+  imports: [DatetimeCellComponent, 
     FieldComponent, TranslatePipe, FormsModule, ButtonModule, DatePickerModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
     DataTableComponent, TableCellDirective, 
-    PrintSheetComponent, StatTileComponent, MoneyPipe, DatetimePipe,
+    PrintSheetComponent, StatTileComponent, MoneyPipe,
   ],
   template: `
     <app-print-sheet [title]="'report.case_expenses.title' | translate">
@@ -79,27 +79,27 @@ interface CaseExpensesData {
 
           <div class="kpi-grid">
             <app-stat-tile [label]="'common.total'" [value]="d.summary.total_amount" [money]="true" accent="reports" iconName="report-analytics" />
-            <app-stat-tile [label]="'common.count'" [value]="d.summary.count" />
-            <app-stat-tile [label]="'report.case_expenses.average'" [value]="average()" [money]="true" />
+            <app-stat-tile [label]="'common.count'" [value]="d.summary.count" iconName="records" accent="reports" />
+            <app-stat-tile [label]="'report.case_expenses.average'" [value]="average()" [money]="true" iconName="average" accent="reports" />
           </div>
 
           <div class="u-mt-4">
-            <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/social-case-expenses" mode="static" [autoFilters]="true" [title]="'report.case_expenses.col_category'"
+            <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/social-case-expenses" mode="static" [autoFilters]="true" [phoneFirst]="['category', 'total']" [title]="'report.case_expenses.col_category'"
               [columns]="categoryCols" [rows]="d.by_category" [emptyLabel]="'report.case_expenses.empty'">
               <ng-template appCell="category" let-row>{{ row.category }}</ng-template>
               <ng-template appCell="count" let-row><span class="u-bidi">{{ row.count }}</span></ng-template>
-              <ng-template appCell="total" let-row><span class="u-bidi">{{ row.total | money }}</span></ng-template>
+              <ng-template appCell="total" let-row><span class="u-bidi">{{ row.total | money: false }}</span></ng-template>
               <ng-template appCell="percentage" let-row><span class="u-bidi">{{ row.percentage }}%</span></ng-template>
             </app-data-table>
           </div>
 
           <div class="u-mt-4">
-            <app-data-table mode="static" [autoFilters]="true" [columns]="expenseCols" [rows]="d.expenses" [emptyLabel]="'report.case_expenses.empty'">
-              <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
+            <app-data-table [phoneFirst]="['date', 'case', 'amount']" mode="static" [autoFilters]="true" [columns]="expenseCols" [rows]="d.expenses" [emptyLabel]="'report.case_expenses.empty'">
+              <ng-template appCell="date" let-row><app-datetime-cell [value]="row.date" /></ng-template>
               <ng-template appCell="case" let-row>{{ row.case ?? '—' }}</ng-template>
               <ng-template appCell="category" let-row>{{ row.category ?? '—' }}</ng-template>
               <ng-template appCell="item" let-row>{{ row.item ?? '—' }}</ng-template>
-              <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+              <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money: false }}</span></ng-template>
               <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
               <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
             </app-data-table>

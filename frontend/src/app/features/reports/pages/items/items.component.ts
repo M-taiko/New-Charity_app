@@ -65,25 +65,25 @@ interface ItemsData {
 
           <div class="kpi-grid">
             <app-stat-tile [label]="'common.total'" [value]="d.summary.total_amount" [money]="true" accent="reports" iconName="report-analytics" />
-            <app-stat-tile [label]="'common.count'" [value]="d.summary.count" />
-            <app-stat-tile [label]="'report.items.items_count'" [value]="d.items.length" />
-            <app-stat-tile [label]="'report.items.average'" [value]="average()" [money]="true" />
+            <app-stat-tile [label]="'common.count'" [value]="d.summary.count" iconName="records" accent="reports" />
+            <app-stat-tile [label]="'report.items.items_count'" [value]="d.items.length" iconName="records" accent="reports" />
+            <app-stat-tile [label]="'report.items.average'" [value]="average()" [money]="true" iconName="average" accent="reports" />
           </div>
 
           <div class="u-mt-4">
-            <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/expense-items" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.items" [emptyLabel]="'report.items.empty'">
+            <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/expense-items" mode="static" [autoFilters]="true" [phoneFirst]="['item', 'total']" [columns]="cols" [rows]="d.items" [emptyLabel]="'report.items.empty'">
               <ng-template appCell="item" let-row>{{ row.item }}</ng-template>
               <ng-template appCell="category" let-row>{{ row.category ?? '—' }}</ng-template>
               <ng-template appCell="count" let-row><span class="u-bidi">{{ row.count }}</span></ng-template>
-              <ng-template appCell="total" let-row><span class="u-bidi">{{ row.total | money }}</span></ng-template>
-              <ng-template appCell="average" let-row><span class="u-bidi">{{ row.average | money }}</span></ng-template>
+              <ng-template appCell="total" let-row><span class="u-bidi">{{ row.total | money: false }}</span></ng-template>
+              <ng-template appCell="average" let-row><span class="u-bidi">{{ row.average | money: false }}</span></ng-template>
               <ng-template appCell="percentage" let-row><span class="u-bidi">{{ row.percentage }}%</span></ng-template>
             </app-data-table>
           </div>
 
           @if (d.items.length > 0) {
             <div class="kpi-grid u-mt-4">
-              <app-chart-card [title]="'report.items.chart'" [series]="itemsSeries()" />
+              <app-chart-card [title]="'report.items.chart'" [series]="itemsSeries()" accent="reports" iconName="report-analytics" />
             </div>
           }
         }

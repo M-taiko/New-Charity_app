@@ -97,18 +97,18 @@ interface ReportsData {
           <div class="bento">
             <!-- hero KPI strip: the four headline numbers -->
             <section class="bento__widget bento__widget--full">
-              <div class="kpi-grid kpi-grid--4">
+              <div class="kpi-grid">
                 <a class="tile-link" routerLink="/treasury" [title]="'common.open_page' | translate">
-                  <app-stat-tile [label]="'report.dashboard.treasury_balance'" [value]="d.treasury_balance" [money]="true" tone="success" accent="treasury" iconName="custody" caption="report.dashboard.treasury_caption" [captionParams]="{ n: fig('today') | money: false }" />
+                  <app-stat-tile [label]="'report.dashboard.treasury_balance'" [value]="d.treasury_balance" [money]="true" accent="treasury" iconName="custody" caption="report.dashboard.treasury_caption" [captionParams]="{ n: fig('today') | money: false }" />
                 </a>
                 <a class="tile-link" routerLink="/expenses" [title]="'common.open_page' | translate">
-                  <app-stat-tile [label]="'report.dashboard.total_expenses'" [value]="d.total_spent" [money]="true" tone="danger" accent="expenses" iconName="myExpense" caption="report.dashboard.expenses_today_hint" [captionParams]="{ n: fig('today') | money: false }" />
+                  <app-stat-tile [label]="'report.dashboard.total_expenses'" [value]="d.total_spent" [money]="true" accent="expenses" iconName="myExpense" caption="report.dashboard.expenses_today_hint" [captionParams]="{ n: fig('today') | money: false }" />
                 </a>
                 <a class="tile-link" routerLink="/custodies" [title]="'common.open_page' | translate">
-                  <app-stat-tile [label]="'report.dashboard.active_custodies'" [value]="d.active_custodies" tone="info" accent="custodies" iconName="custody" caption="report.dashboard.custody_total_hint" [captionParams]="{ n: d.total_custodies }" />
+                  <app-stat-tile [label]="'report.dashboard.active_custodies'" [value]="d.active_custodies" accent="custodies" iconName="custody" caption="report.dashboard.custody_total_hint" [captionParams]="{ n: d.total_custodies }" />
                 </a>
-                <a class="tile-link" routerLink="/cases" [title]="'common.open_page' | translate">
-                  <app-stat-tile [label]="'report.dashboard.social_cases'" [value]="d.total_social_cases" tone="primary" accent="cases" iconName="case" caption="report.dashboard.pending_cases_hint" [captionParams]="{ n: d.pending_cases }" />
+                <a class="tile-link" routerLink="/social-cases" [title]="'common.open_page' | translate">
+                  <app-stat-tile [label]="'report.dashboard.social_cases'" [value]="d.total_social_cases" accent="cases" iconName="case" caption="report.dashboard.pending_cases_hint" [captionParams]="{ n: d.pending_cases }" />
                 </a>
               </div>
             </section>
@@ -138,7 +138,7 @@ interface ReportsData {
                   <span class="dash-insight__value u-bidi is-primary">{{ fig('grand_total') | money: false }}</span>
                 </div>
               </div>
-              <app-chart-card [title]="'report.dashboard.charts.expenses_by_day'" [series]="byDaySeries()" chartType="bar" [height]="220" />
+              <app-chart-card [title]="'report.dashboard.charts.expenses_by_day'" [series]="byDaySeries()" chartType="bar" [height]="220" accent="reports" iconName="report-analytics" />
             </section>
 
             <!-- quick links: the detailed reports as action chips -->
@@ -187,7 +187,7 @@ interface ReportsData {
                   <span class="dash-insight__value u-bidi">{{ d.closed_custodies }}</span>
                 </div>
               </div>
-              <app-chart-card [title]="'report.dashboard.charts.custodies_by_agents'" [series]="agentsSeries()" chartType="bar" [height]="220" />
+              <app-chart-card [title]="'report.dashboard.charts.custodies_by_agents'" [series]="agentsSeries()" chartType="bar" orientation="y" [height]="260" accent="reports" iconName="report-analytics" />
             </section>
 
             <!-- case report: status figures + researchers chart -->
@@ -197,30 +197,30 @@ interface ReportsData {
               </div>
               <ul class="dash-attention">
                 <li>
-                  <a routerLink="/cases">
+                  <a routerLink="/social-cases">
                     {{ 'case.list.approved' | translate }}
                     <span class="dash-attention__count u-bidi">{{ d.approved_cases }}</span>
                   </a>
                 </li>
                 <li>
-                  <a routerLink="/cases">
+                  <a routerLink="/social-cases">
                     {{ 'case.list.pending' | translate }}
                     <span class="dash-attention__count dash-attention__count--neutral u-bidi">{{ d.pending_cases }}</span>
                   </a>
                 </li>
                 <li>
-                  <a routerLink="/cases">
+                  <a routerLink="/social-cases">
                     {{ 'report.dashboard.rejected' | translate }}
                     <span class="dash-attention__count u-bidi">{{ d.rejected_cases }}</span>
                   </a>
                 </li>
               </ul>
-              <app-chart-card [title]="'report.dashboard.charts.cases_by_researchers'" [series]="researchersSeries()" chartType="bar" [height]="200" />
+              <app-chart-card [title]="'report.dashboard.charts.cases_by_researchers'" [series]="researchersSeries()" chartType="bar" [height]="200" accent="reports" iconName="report-analytics" />
             </section>
 
             <!-- category donut (direction-aware) -->
             <section class="bento__widget bento__widget--wide">
-              <app-chart-card [title]="'report.dashboard.charts.expenses_by_category'" [series]="categorySeries()" [height]="240" />
+              <app-chart-card [title]="'report.dashboard.charts.expenses_by_category'" [series]="categorySeries()" [height]="240" accent="reports" iconName="report-analytics" />
             </section>
 
             <!-- governorates table (T34) -->
@@ -230,13 +230,13 @@ interface ReportsData {
                 <span class="chart-card__spacer"></span>
                 <p-button [label]="'report.governorates.title' | translate" size="small" [text]="true" routerLink="/reports/governorates" />
               </div>
-              <app-data-table listUrl="/reports" mode="static" [autoFilters]="true" [columns]="govCols" [rows]="governoratesTop()" [emptyLabel]="'report.governorates.empty'">
+              <app-data-table listUrl="/reports" mode="static" [autoFilters]="true" [phoneFirst]="['label', 'total']" [columns]="govCols" [rows]="governoratesTop()" [emptyLabel]="'report.governorates.empty'">
                 <ng-template appCell="label" let-row>{{ row.label }}
 @if (!row.standard) {
   <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
 }</ng-template>
-                <ng-template appCell="total" let-row><span class="money u-bidi">{{ row.total | money }}</span></ng-template>
-                <ng-template appCell="expenses_total" let-row><span class="u-bidi">{{ row.expenses_total | money }}</span></ng-template>
+                <ng-template appCell="total" let-row><span class="money u-bidi">{{ row.total | money: false }}</span></ng-template>
+                <ng-template appCell="expenses_total" let-row><span class="u-bidi">{{ row.expenses_total | money: false }}</span></ng-template>
               </app-data-table>
               <p class="u-muted u-small u-mt-2">{{ 'report.dashboard.governorates_hint' | translate }}</p>
             </section>
@@ -352,7 +352,7 @@ export class ReportsDashboardPage {
   categorySeries = computed(() => {
     const children = this.stats.value()?.explorer.children;
     if (children && children.length > 0) {
-      return children.slice(0, 6).map((c) => ({ label: c.name, value: c.amount }));
+      return children.slice(0, 10).map((c) => ({ label: c.name, value: c.amount }));
     }
     return (this.data.value()?.expenses_by_category ?? [])
       .slice(0, 6)

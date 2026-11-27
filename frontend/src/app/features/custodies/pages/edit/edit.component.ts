@@ -4,7 +4,7 @@ import { ChangeDetectionStrategy, Component, inject, input, signal, viewChild } 
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import type { NgForm } from '@angular/forms';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -19,6 +19,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 interface CustodyEditDto {
   amount: string;
@@ -28,7 +29,7 @@ interface CustodyEditDto {
 @Component({
   selector: 'app-custody-edit',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, PageHeaderComponent, AsyncPageComponent, FieldComponent, FormSectionComponent, ActionButtonComponent],
+  imports: [ValidSubmitDirective, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, PageHeaderComponent, AsyncPageComponent, FieldComponent, FormSectionComponent, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'custody.edit.title' | translate" accent="custodies" iconName="wallet">
@@ -38,7 +39,7 @@ interface CustodyEditDto {
     </app-page-header>
 
     <app-async-page [resource]="pageState" variant="form" [backLink]="['/custodies']">
-      <form (ngSubmit)="save()" #f="ngForm">
+      <form (ngSubmit)="vs.validate() && save()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
         <app-form-section>
           <app-field label="custody.create.amount" controlId="cu-amount" [required]="true">
             <p-inputnumber inputId="cu-amount" name="amount" [(ngModel)]="amount" mode="decimal" [minFractionDigits]="2" [min]="0.01" required styleClass="u-full" />
@@ -50,7 +51,7 @@ interface CustodyEditDto {
         @if (error()) { <div class="dialog__alert" role="alert">{{ error() }}</div> }
         <div class="sticky-actions">
           <app-action-button kind="back" label="common.back" [route]="['/custodies']" />
-          <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
+          <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="sending()" />
         </div>
       </form>
     </app-async-page>
@@ -59,6 +60,7 @@ interface CustodyEditDto {
 export class CustodyEditPage implements OnInit {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+  private translate = inject(TranslateService);
 
   /** UX-6.4: dirty template form → the unsaved-changes guard warns on leave */
   private formRef = viewChild<NgForm>('f');
@@ -106,9 +108,13 @@ export class CustodyEditPage implements OnInit {
   }
 
   save(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>(`/custodies/${this.id()}/update`, { amount: this.amount(), notes: this.notes() }))
       .then((res) => { this.sending.set(false); this.toast.success(res.message); history.back(); })
-      .catch((err: unknown) => { this.sending.set(false); this.error.set((err as HttpErrorResponse).error?.message ?? 'errors.generic'); });
+      // the banner renders the string raw — translate the fallback key
+      .catch((err: unknown) => { this.sending.set(false); this.error.set((err as HttpErrorResponse).error?.message ?? this.translate.instant('errors.generic')); });
   }
 }

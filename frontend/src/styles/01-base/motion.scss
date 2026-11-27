@@ -27,23 +27,12 @@
 // ── LITE (= the old Full): standard transitions + shimmer run by default ──
 // no extra rules needed — the base styles are Lite.
 
-// ── FULL: the rich layer — pages, cards, overlays, micro-interactions ─────
+// ── FULL: the rich layer — cards, overlays, micro-interactions ─────────────
+// (No page-enter animation: it faded the whole page in from opacity 0 on
+// every route change — the "blank then show" flash. Route swaps are instant;
+// the optional cross-fade is the router's withViewTransitions, old → new.)
 @media (prefers-reduced-motion: no-preference) {
   :root[data-motion='full'] {
-    // route/page enter: fade + 10px slide-up (lists); detail pages slide from
-    // the inline-end — applied by appReveal on each page root
-    .page-enter {
-      animation: page-enter 280ms var(--ease-out) both;
-    }
-
-    .page-enter--detail {
-      animation: page-enter-side 300ms var(--ease-out) both;
-    }
-
-    .page-enter--form {
-      animation: page-enter-scale 280ms var(--ease-out) both;
-    }
-
     // cards / tiles / sections reveal on first appearance (appReveal)
     .reveal-item {
       animation: reveal-up 320ms var(--ease-out) both;
@@ -107,50 +96,15 @@
   }
 }
 
-@keyframes page-enter {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes page-enter-side {
-  from {
-    opacity: 0;
-    transform: translateX(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes page-enter-scale {
-  from {
-    opacity: 0;
-    transform: scale(0.985);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
+// Shared reveal keyframe — translate ONLY. It used to start at opacity 0,
+// which made cards and table rows render invisible and fade in (content
+// "blank then showing" after every navigation). Content is never hidden now.
 @keyframes reveal-up {
   from {
-    opacity: 0;
     transform: translateY(8px);
   }
 
   to {
-    opacity: 1;
     transform: translateY(0);
   }
 }

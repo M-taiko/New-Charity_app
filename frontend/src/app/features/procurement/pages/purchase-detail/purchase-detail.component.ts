@@ -288,6 +288,9 @@ export class PurchaseDetailPage {
   }
 
   submitApprove(): void {
+    if (this.sending()) {
+      return;
+    }
     const treasuryId = this.approveTreasuryId();
     if (treasuryId === null || this.approveCategoryId() === null || this.approveAmount === null || !this.amountMatches()) {
       return;
@@ -304,6 +307,9 @@ export class PurchaseDetailPage {
   }
 
   submitReject(reason: string): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.rejectError.set(null);
     void firstValueFrom(this.api.action(`/purchase-requests/${this.id()}/reject`, { rejection_reason: reason }))
@@ -318,6 +324,9 @@ export class PurchaseDetailPage {
   }
 
   submitPurchase(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.purchaseError.set(null);
     void firstValueFrom(this.api.action(`/purchase-requests/${this.id()}/purchased`, {

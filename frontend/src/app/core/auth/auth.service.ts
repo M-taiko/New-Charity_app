@@ -31,12 +31,19 @@ export class AuthService {
       .pipe(tap((res) => { this.setMe(res.data); }));
   }
 
+  /** N-06: one logout at a time — the menu item and a session-expiry race both call this */
   logout(): void {
+    if (this.loggingOut) {
+      return;
+    }
+    this.loggingOut = true;
     this.http.post('/auth/logout', {}).subscribe({
       complete: () => { this.clear(); },
       error: () => { this.clear(); },
     });
   }
+
+  private loggingOut = false;
 
   setMe(me: Me): void {
     this.meSignal.set(me);

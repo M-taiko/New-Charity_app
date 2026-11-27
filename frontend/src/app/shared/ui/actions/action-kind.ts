@@ -62,6 +62,7 @@ export const ACTION_KINDS = {
   openLinked: { severity: 'info', variant: 'text', icon: 'external-link' },
   transfer: { severity: 'info', variant: 'outlined', icon: 'arrows-exchange' },
   delegate: { severity: 'info', variant: 'outlined', icon: 'arrows-exchange' }, // T7-05: task delegate
+  family: { severity: 'info', variant: 'outlined', icon: 'users' }, // N-03: quick view → a case's family members
 
   // soft tinted (RD-3.1) — the Stitch "soft button": tint background + semantic
   // foreground; used heavily on the custodies/expenses screens
@@ -79,6 +80,7 @@ export const ACTION_KINDS = {
   submit: { variant: 'filled', icon: 'check' },
   apply: { variant: 'filled', icon: 'filter' },
   send: { variant: 'filled', icon: 'check' }, // T7-05: task send
+  markRead: { variant: 'filled', icon: 'check' }, // R4-06: mark all notifications read — the page's one primary
 
   // secondary — outlined brand
   back: { severity: 'secondary', variant: 'outlined', icon: 'chevron-right' },
@@ -86,10 +88,12 @@ export const ACTION_KINDS = {
   export: { severity: 'secondary', variant: 'outlined', icon: 'download' },
   print: { variant: 'filled', icon: 'printer' }, // RD-4.8: primary print button
   download: { severity: 'secondary', variant: 'outlined', icon: 'download' }, // T7-05: payslip/attachment
+  openPage: { severity: 'secondary', variant: 'outlined', icon: 'external-link' }, // N-03: the quick view → the full page
   quickAdd: { severity: 'secondary', variant: 'outlined', icon: 'plus' }, // T7-05: quick expense
   customize: { severity: 'secondary', variant: 'outlined', icon: 'dots' }, // T7-05: dashboard customize
   donate: { severity: 'secondary', variant: 'outlined', icon: 'cash' }, // T7-05: receive donation
   reset: { severity: 'secondary', variant: 'text', icon: 'filter' }, // T7-05: clear filters
+  clearSelection: { severity: 'secondary', variant: 'text' }, // N-04: the bulk bar's "clear the selection"
 
   // tertiary / row actions — text / icon-only
   view: { variant: 'text', icon: 'eye' },

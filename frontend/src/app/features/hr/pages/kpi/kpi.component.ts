@@ -51,7 +51,9 @@ interface Row {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table listUrl="/hr/kpi"
+        <app-data-table
+        [exportQuery]="tableExportQuery()" listUrl="/hr/kpi"
+        [phoneFirst]="['employee', 'name', 'target']"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -63,8 +65,8 @@ interface Row {
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
           <ng-template appCell="employee" let-row>{{ row.employee ?? '—' }}</ng-template>
           <ng-template appCell="name" let-row>{{ row.name ?? '—' }}</ng-template>
-          <ng-template appCell="target" let-row><span class="u-bidi">{{ row.target | money }}</span></ng-template>
-          <ng-template appCell="actual" let-row><span class="u-bidi">{{ row.actual | money }}</span></ng-template>
+          <ng-template appCell="target" let-row><span class="u-bidi">{{ row.target | money: false }}</span></ng-template>
+          <ng-template appCell="actual" let-row><span class="u-bidi">{{ row.actual | money: false }}</span></ng-template>
           <ng-template appCell="percentage" let-row>{{ row.percentage ?? '—' }}</ng-template>
           <div empty>
             <app-empty-state [title]="'hr.kpi.empty' | translate" [text]="'common.no_data' | translate" accent="hr" iconName="briefcase" />
@@ -105,6 +107,16 @@ export class KpiPage {
     { field: 'percentage', header: 'hr.kpi.col_percent', sortable: true }
   ];
 
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
+
   params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
 
   data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string }>({
@@ -136,6 +148,9 @@ export class KpiPage {
   }
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.form.employee_id === null || this.form.metric_name === '') { return; }
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>('/hr/kpi', this.form)).then((res) => {

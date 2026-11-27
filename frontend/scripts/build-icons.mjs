@@ -20,7 +20,13 @@ const BARE_OVERRIDES = {
 
 const symbols = [];
 const missing = [];
+// R3-07.4: several ICON_MAP keys alias the same tabler glyph (case +
+// externalReceipt → heart-handshake, user + profile → user) — emit each
+// symbol ONCE so the sprite id count matches check-icons' Set
+const seen = new Set();
 for (const name of iconNames) {
+  if (seen.has(name)) continue;
+  seen.add(name);
   if (name in BARE_OVERRIDES) {
     symbols.push(`<symbol id="tabler-${name}" viewBox="0 0 24 24">${BARE_OVERRIDES[name]}</symbol>`);
     continue;

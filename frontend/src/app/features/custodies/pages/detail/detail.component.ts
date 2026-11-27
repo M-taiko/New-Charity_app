@@ -18,7 +18,6 @@ import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
-import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
@@ -30,6 +29,7 @@ import { FlowRibbonComponent } from '@shared/ui/flow-ribbon/flow-ribbon.componen
 import type { RingSegment } from '@shared/ui/balance-ring/balance-ring.component';
 import { BalanceRingComponent } from '@shared/ui/balance-ring/balance-ring.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
+import type { KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
@@ -37,6 +37,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface CustodyExpense {
   id: number; amount: string; type: string; description: string | null;
@@ -71,65 +72,72 @@ type DonationType = 'external_donation' | 'expense_refund';
 @Component({
   selector: 'app-custody-detail',
   standalone: true,
-  imports: [FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, KeyValueListComponent, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, AppTabsComponent, FlowRibbonComponent, PageActionsComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent, IconComponent, StatTileComponent],
+  imports: [DatetimeCellComponent, FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, StatusStampComponent, PrintSheetComponent, FormDialogComponent, ReasonDialogComponent, AppTabsComponent, FlowRibbonComponent, PageActionsComponent, BalanceRingComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent, IconComponent, StatTileComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-print-sheet [title]="'custody.detail.title' | translate">
       @if (safeValue(); as c) {
         <app-page-header [title]="'#' + c.id" [subtitle]="c.agent ?? ''" accent="custodies" iconName="wallet">
-          <!-- T7-10: the enforced action bar — print + edit visible, the rest
-               fold into its More menu; status decisions stay in the sticky bar -->
+          <!-- T7-10 + R5-01: ONE primary + ONE secondary as buttons, the rest
+               (print, transfer when offered, donation) in the More menu;
+               status decisions stay in the sticky bar -->
           <app-page-actions actions [pageActions]="headerActions(c)" />
         </app-page-header>
       }
 
       <app-async-page [resource]="data" variant="detail" [backLink]="['/custodies']">
         @if (safeValue(); as c) {
-          <!-- T6-10: one sticky action bar — primary decision first, destructive last -->
-          <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
-            @if (showApproveRequest(c)) {
-              <app-action-button kind="accept" label="custody.detail.approve_request" size="small" (action)="acceptDlg.open(); openAccept()" />
-            }
-            @if (showAgentAccept(c)) {
-              <app-action-button kind="accept" label="custody.detail.agent_accept" size="small" (action)="agentAcceptDlg.open()" />
-            }
-            @if (showReceive(c)) {
-              <app-action-button kind="receive" label="custody.detail.receive" size="small" (action)="receiveDlg.open()" />
-            }
-            @if (showAgentReturn(c)) {
-              <app-action-button kind="returnCustody" label="custody.detail.return" size="small" (action)="returnOpen.set(!returnOpen())" />
-            }
-            @if (showRequestReturn(c) && !hasPendingReturnRequest(c)) {
-              <app-action-button kind="requestReturn" label="custody.detail.request_return" size="small" (action)="reqReturnDlg.open(); openReqReturn()" />
-            }
-            @if (showRequestReturn(c) && hasPendingReturnRequest(c)) {
-              <span class="u-small u-muted">{{ 'custody.detail.pending_return_note' | translate }}</span>
-            }
-            @if (showAgentAccept(c)) {
-              <app-action-button kind="reject" label="custody.detail.reject" size="small" (action)="agentRejectDlg.open()" />
-            }
-            @if (showApproveRequest(c)) {
-              <app-action-button kind="reject" label="custody.detail.reject_request" size="small" (action)="rejectDlg.open()" />
-            }
-            @if (showCancel(c)) {
-              <app-action-button kind="cancel" label="custody.detail.cancel_custody" size="small" (action)="cancelDlg.open()" />
-            }
+          <!-- P-04: the status pill rides with the header — #id + agent are
+               already in the page header; no separate status row below -->
+          <div class="u-flex u-gap-3 u-flex-wrap u-mb-3">
+            <app-status-stamp [status]="c.status" namespace="custody_status" [large]="true" />
+            <span class="u-small u-muted">{{ c.status_detail }}</span>
           </div>
+
+          <!-- T6-10: one sticky action bar — primary decision first, destructive
+               last. R5-01: not rendered at all when it would hold no action -->
+          @if (hasStickyAction(c)) {
+            <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
+              @if (showApproveRequest(c)) {
+                <app-action-button kind="accept" label="custody.detail.approve_request" size="small" (action)="acceptDlg.open(); openAccept()" />
+              }
+              @if (showAgentAccept(c)) {
+                <app-action-button kind="accept" label="custody.detail.agent_accept" size="small" (action)="agentAcceptDlg.open()" />
+              }
+              @if (showReceive(c)) {
+                <app-action-button kind="receive" label="custody.detail.receive" size="small" (action)="receiveDlg.open()" />
+              }
+              @if (showAgentReturn(c)) {
+                <app-action-button kind="returnCustody" label="custody.detail.return" size="small" (action)="returnOpen.set(!returnOpen())" />
+              }
+              @if (showRequestReturn(c) && !hasPendingReturnRequest(c)) {
+                <app-action-button kind="requestReturn" label="custody.detail.request_return" size="small" (action)="reqReturnDlg.open(); openReqReturn()" />
+              }
+              @if (showRequestReturn(c) && hasPendingReturnRequest(c)) {
+                <span class="u-small u-muted">{{ 'custody.detail.pending_return_note' | translate }}</span>
+              }
+              @if (showAgentAccept(c)) {
+                <app-action-button kind="reject" label="custody.detail.reject" size="small" (action)="agentRejectDlg.open()" />
+              }
+              @if (showApproveRequest(c)) {
+                <app-action-button kind="reject" label="custody.detail.reject_request" size="small" (action)="rejectDlg.open()" />
+              }
+              @if (showCancel(c)) {
+                <app-action-button kind="cancel" label="custody.detail.cancel_custody" size="small" (action)="cancelDlg.open()" />
+              }
+            </div>
+          }
 
           @if (showReturnDisabledHint(c)) {
             <p class="field__hint u-mb-2">{{ 'custody.detail.return_disabled_hint' | translate }}</p>
           }
 
-          <div class="u-flex u-gap-3 u-flex-wrap u-mb-4">
-            <app-status-stamp [status]="c.status" namespace="custody_status" [large]="true" />
-            <span class="u-small u-muted">{{ c.status_detail }}</span>
-          </div>
-
           <app-flow-ribbon [steps]="flowSteps(c)" />
 
-          <!-- RD-4.10: the facts card (2/3) with a primary header band + the
-               status card (1/3) with the spending-ratio bar -->
-          <div class="detail-grid u-mt-4">
+          <!-- P-04: ONE facts card (clean 2-col key/value, brand band kept) —
+               the duplicate status_info card is gone; the spent ratio moved
+               under the ring -->
+          <div class="u-mt-4">
             <section class="card-hero">
               <header class="card-hero__band">
                 <span>{{ 'custody.detail.facts' | translate }}</span>
@@ -142,10 +150,6 @@ type DonationType = 'external_donation' | 'expense_refund';
                     <span class="key-value-list__value">{{ c.agent ?? '—' }}</span>
                   </div>
                   <div class="key-value-list__item">
-                    <span class="key-value-list__key">{{ 'custody.detail.breakdown.amount' | translate }}</span>
-                    <span class="key-value-list__value money money--link u-bidi u-fw-bold">{{ c.amount | money }}</span>
-                  </div>
-                  <div class="key-value-list__item">
                     <span class="key-value-list__key">{{ 'glossary.treasury' | translate }}</span>
                     <span class="key-value-list__value"><span class="stamp stamp--info">{{ c.treasury ?? '—' }}</span></span>
                   </div>
@@ -154,12 +158,16 @@ type DonationType = 'external_donation' | 'expense_refund';
                     <span class="key-value-list__value">{{ c.accountant ?? '—' }}</span>
                   </div>
                   <div class="key-value-list__item">
-                    <span class="key-value-list__key">{{ 'common.notes' | translate }}</span>
-                    <span class="key-value-list__value">{{ c.notes ?? '—' }}</span>
-                  </div>
-                  <div class="key-value-list__item">
                     <span class="key-value-list__key">{{ 'common.date' | translate }}</span>
                     <span class="key-value-list__value u-bidi">{{ c.created_at | datetime: false }}</span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'custody.detail.breakdown.amount' | translate }}</span>
+                    <span class="key-value-list__value money money--link u-bidi u-fw-bold">{{ c.amount | money }}</span>
+                  </div>
+                  <div class="key-value-list__item">
+                    <span class="key-value-list__key">{{ 'common.notes' | translate }}</span>
+                    <span class="key-value-list__value">{{ c.notes ?? '—' }}</span>
                   </div>
                 </div>
                 <div class="card-hero__foot u-flex u-gap-2 u-flex-wrap">
@@ -168,27 +176,10 @@ type DonationType = 'external_donation' | 'expense_refund';
                 </div>
               </div>
             </section>
-
-            <section class="chart-card">
-              <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.status_info' | translate }}</span></div>
-              <div class="u-flex u-flex-column u-gap-3">
-                <app-status-stamp [status]="c.status" namespace="custody_status" [large]="true" />
-                <p class="u-small u-muted">{{ c.status_detail }}</p>
-                <div>
-                  <div class="u-flex u-justify-between u-small u-mb-1">
-                    <span class="u-muted">{{ 'custody.list.col_spent_percent' | translate }}</span>
-                    <span class="u-bidi">{{ spentRatio(c) }}%</span>
-                  </div>
-                  <div class="progress-cell__bar">
-                    <div class="progress-cell__fill" [style.width.%]="spentRatio(c)"></div>
-                  </div>
-                </div>
-              </div>
-            </section>
           </div>
 
-          <!-- RD-4.10: five tinted summary mini-cards -->
-          <div class="kpi-grid kpi-grid--5 u-mt-4">
+          <!-- P-04: ONE summary strip of 5 tinted mini-cards -->
+          <div class="kpi-grid u-mt-4">
             <app-stat-tile [label]="'custody.detail.breakdown.received_transfer'" [value]="c.transferred_in" [money]="true" [tinted]="true" tone="info" />
             <app-stat-tile [label]="'custody.detail.breakdown.sent_transfer'" [value]="c.transferred_out" [money]="true" [tinted]="true" tone="danger" />
             <app-stat-tile [label]="'custody.detail.breakdown.remaining'" [value]="c.remaining" [money]="true" [tinted]="true" tone="success" />
@@ -196,22 +187,32 @@ type DonationType = 'external_donation' | 'expense_refund';
             <app-stat-tile [label]="'custody.detail.breakdown.returned'" [value]="c.returned" [money]="true" [tinted]="true" tone="warning" />
           </div>
 
-          <div class="kpi-grid u-mt-4">
-            <app-balance-ring [segments]="ringSegments(c)" [total]="c.remaining" />
-            <div class="chart-card">
-              <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.breakdown.title' | translate }}</span></div>
-              <app-key-value-list [items]="breakdown(c)" />
+          <!-- P-04: ONE balance ring with a 3-item legend + the spent ratio —
+               the duplicate "توزيع رصيد العهدة" list is deleted -->
+          <section class="chart-card u-mt-4">
+            <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.breakdown.title' | translate }}</span></div>
+            <div class="u-flex u-gap-4 u-flex-wrap u-center-y">
+              <app-balance-ring [segments]="ringSegments(c)" [total]="c.remaining" />
+              <div class="u-flex-1">
+                <div class="u-flex u-justify-between u-small u-mb-1">
+                  <span class="u-muted">{{ 'custody.list.col_spent_percent' | translate }}</span>
+                  <span class="u-bidi">{{ spentRatio(c) }}%</span>
+                </div>
+                <div class="progress-cell__bar">
+                  <div class="progress-cell__fill" [style.width.%]="spentRatio(c)"></div>
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
 
           <app-tabs class="u-mt-4" id="custody-detail" [tabs]="tabs()" [(active)]="detailTab" />
 
           @if (detailTab() === 'returns') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.returns' | translate }}</span></div>
-            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="returnRequestCols" [rows]="c.return_requests">
-              <ng-template appCell="requested_at" let-row><span class="u-bidi">{{ row.requested_at | datetime }}</span></ng-template>
-              <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
+            <app-data-table [phoneFirst]="['requested_at', 'status', 'amount']" mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="returnRequestCols" [rows]="c.return_requests">
+              <ng-template appCell="requested_at" let-row><app-datetime-cell [value]="row.requested_at" /></ng-template>
+              <ng-template appCell="amount" let-row>{{ row.amount | money: false }}</ng-template>
               <ng-template appCell="reason" let-row>{{ row.reason || '—' }}
 @if (row.rejection_reason) { <span class="u-small u-muted">{{ row.rejection_reason }}</span> }</ng-template>
               <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="return_request" /></ng-template>
@@ -232,13 +233,22 @@ type DonationType = 'external_donation' | 'expense_refund';
           }
 
           @if (detailTab() === 'transactions') {
+          <!-- P-04: the journal ledger — datetime · type pill · in (green) ·
+               out (red) · running balance · description, with footer totals -->
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.transactions' | translate }}</span></div>
-            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="transactionCols" [rows]="c.transactions">
-              <ng-template appCell="date" let-row><span class="u-bidi u-muted">{{ row.date | datetime }}</span></ng-template>
+            <app-data-table mode="static" [staticPaginated]="false" [phoneFirst]="['date', 'in', 'out']" [columns]="ledgerCols" [rows]="ledgerRows(c)">
+              <ng-template appCell="date" let-row><app-datetime-cell [value]="row.date" /></ng-template>
               <ng-template appCell="type" let-row><span class="stamp" [class]="txStampClass(row.type)">{{ row.type | enumLabel: 'transaction_type' }}</span></ng-template>
+              <ng-template appCell="in" let-row>@if (row.delta >= 0) { <span class="money money--pos u-bidi">{{ row.amount | money: false }}</span> } @else { <span class="u-muted">—</span> }</ng-template>
+              <ng-template appCell="out" let-row>@if (row.delta < 0) { <span class="money money--neg u-bidi">{{ row.amount | money: false }}</span> } @else { <span class="u-muted">—</span> }</ng-template>
+              <ng-template appCell="balance" let-row><span class="u-bidi u-fw-semibold">{{ row.balance | money: false }}</span></ng-template>
               <ng-template appCell="description" let-row>{{ row.description }}</ng-template>
-              <ng-template appCell="amount" let-row><span class="u-bidi" [class]="txMoneyClass(row.type)">{{ row.amount | money }}</span></ng-template>
+              <ng-template appFooterCell="description">
+                <span class="u-fw-semibold">{{ 'common.total' | translate }}</span>
+              </ng-template>
+              <ng-template appFooterCell="in"><span class="money money--pos u-bidi u-fw-semibold">{{ ledgerTotals(c).in | money: false }}</span></ng-template>
+              <ng-template appFooterCell="out"><span class="money money--neg u-bidi u-fw-semibold">{{ ledgerTotals(c).out | money: false }}</span></ng-template>
             </app-data-table>
           </section>
 
@@ -247,12 +257,12 @@ type DonationType = 'external_donation' | 'expense_refund';
           @if (detailTab() === 'expenses') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.detail.expenses' | translate }}</span></div>
-            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="expenseCols" [rows]="c.expenses">
+            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [phoneFirst]="['date', 'amount']" [columns]="expenseCols" [rows]="c.expenses">
               <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime: false }}</span></ng-template>
               <ng-template appCell="description" let-row><a [routerLink]="['/expenses', row.id]">{{ row.description || '—' }}</a>
 @if (row.split.length > 1) { <span class="stamp stamp--info">{{ 'expense.detail.custody_split_note' | translate }}</span> }</ng-template>
               <ng-template appCell="direction" let-row><span class="u-small">{{ row.direction || ('expense.list.filter.no_direction' | translate) }}</span></ng-template>
-              <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
+              <ng-template appCell="amount" let-row>{{ row.amount | money: false }}</ng-template>
             </app-data-table>
           </section>
 
@@ -312,31 +322,31 @@ type DonationType = 'external_donation' | 'expense_refund';
         </div>
       </app-form-dialog>
 
-      <!-- manager rejects the agent's request -->
+      <!-- manager rejects the agent's request — N-06: every decision below shows the money it decides about -->
       <app-reason-dialog #rejectDlg [header]="'custody.detail.reject' | translate"
                          [label]="'custody.detail.reject_reason' | translate" [submitLabel]="'common.confirm' | translate"
-                         [sending]="sending()" [error]="actionError()" (submit)="submitReject($event)" />
+                         [details]="custodyDetails()" [sending]="sending()" [error]="actionError()" (submit)="submitReject($event)" />
 
       <!-- accountant/manager cancels their own pending custody -->
       <app-reason-dialog #cancelDlg [header]="'custody.detail.cancel_custody' | translate"
                          [label]="'custody.detail.cancel_reason' | translate" [submitLabel]="'common.confirm' | translate"
-                         [minLength]="1" [sending]="sending()" [error]="actionError()" (submit)="submitCancel($event)" />
+                         [details]="custodyDetails()" [minLength]="1" [sending]="sending()" [error]="actionError()" (submit)="submitCancel($event)" />
 
       <!-- agent rejects the custody the accountant created -->
       <app-reason-dialog #agentRejectDlg [header]="'custody.detail.reject' | translate"
                          [label]="'custody.detail.reject_reason' | translate" [submitLabel]="'common.confirm' | translate"
-                         [minLength]="1" [sending]="sending()" [error]="actionError()" (submit)="submitAgentReject($event)" />
+                         [details]="custodyDetails()" [minLength]="1" [sending]="sending()" [error]="actionError()" (submit)="submitAgentReject($event)" />
 
       <!-- agent confirms receiving the money -->
       <app-form-dialog #receiveDlg [header]="'custody.detail.receive' | translate"
-                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       [submitLabel]="'common.confirm' | translate" [details]="custodyDetails()" [sending]="sending()" [error]="actionError()"
                        (submit)="submitReceive()">
         <p>{{ 'custody.detail.receive_confirm' | translate }}</p>
       </app-form-dialog>
 
       <!-- agent accepts the custody the accountant sent -->
       <app-form-dialog #agentAcceptDlg [header]="'custody.detail.agent_accept' | translate"
-                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       [submitLabel]="'common.confirm' | translate" [details]="custodyDetails()" [sending]="sending()" [error]="actionError()"
                        (submit)="submitAgentAccept()">
         <p>{{ 'custody.detail.agent_accept_confirm' | translate }}</p>
       </app-form-dialog>
@@ -394,7 +404,7 @@ type DonationType = 'external_donation' | 'expense_refund';
 
       <!-- custody owner approves a pending return request (executed immediately) -->
       <app-form-dialog #rrOwnerDlg [header]="'custody.detail.approve_rr' | translate"
-                       [submitLabel]="'common.confirm' | translate" [sending]="sending()" [error]="actionError()"
+                       [submitLabel]="'common.confirm' | translate" [details]="returnDetails(rrOwnerApprove())" [sending]="sending()" [error]="actionError()"
                        (submit)="submitRrOwnerApprove()">
         <p>{{ 'custody.detail.rr_owner_note' | translate }}</p>
       </app-form-dialog>
@@ -431,13 +441,13 @@ export class CustodyDetailPage {
   id = input.required<number>();
   sending = signal(false);
 
-  /** detail sections (T6-11): one table visible at a time */
-  detailTab = signal<string>('overview');
+  /** P-04: three tabs — expenses / return requests / the journal ledger
+   *  (the always-visible overview content is not a tab any more) */
+  detailTab = signal<string>('expenses');
   readonly tabs = computed<AppTab[]>(() => [
-    { id: 'overview', label: 'custody.detail.tab_overview' },
+    { id: 'expenses', label: 'custody.detail.expenses' },
     { id: 'returns', label: 'custody.detail.returns' },
     { id: 'transactions', label: 'custody.detail.transactions' },
-    { id: 'expenses', label: 'custody.detail.expenses' },
   ]);
   actionError = signal<HttpErrorResponse | null>(null);
 
@@ -451,6 +461,32 @@ export class CustodyDetailPage {
   rrApprove = signal<ReturnRequestRow | null>(null);
   rrTreasuryId = signal<number | null>(null);
   rrOwnerApprove = signal<ReturnRequestRow | null>(null);
+
+  private moneyPipe = new MoneyPipe();
+
+  /** N-06: what a decision on this custody is about — its amount, who holds it, which treasury funds it */
+  readonly custodyDetails = computed<readonly KeyValueItem[]>(() => {
+    const c = this.safeValue();
+    if (c === null) {
+      return [];
+    }
+    return [
+      { label: 'common.amount_egp', value: this.moneyPipe.transform(c.amount, false) },
+      { label: 'custody.list.col_agent', value: c.agent ?? '—' },
+      { label: 'glossary.treasury', value: c.treasury ?? '—' },
+    ];
+  });
+
+  /** N-06: what approving a return request returns */
+  returnDetails(r: ReturnRequestRow | null): readonly KeyValueItem[] {
+    if (r === null) {
+      return [];
+    }
+    return [
+      { label: 'common.amount_egp', value: this.moneyPipe.transform(r.amount, false) },
+      { label: 'custody.return_requests.col_requested_by', value: r.requested_by ?? '—' },
+    ];
+  }
   donationType = signal<DonationType>('external_donation');
   donationAmount = signal<number | null>(null);
   donationDescription = signal('');
@@ -481,11 +517,14 @@ export class CustodyDetailPage {
     { field: 'actions', header: 'common.actions' },
   ];
 
-  readonly transactionCols = [
-    { field: 'date', header: 'common.date' },
+  /** P-04: the journal ledger columns — in/out split + running balance */
+  readonly ledgerCols = [
+    { field: 'date', header: 'common.date', minWidth: 110 },
     { field: 'type', header: 'common.type' },
+    { field: 'in', header: 'custody.detail.ledger_in', numeric: true, minWidth: 110 },
+    { field: 'out', header: 'custody.detail.ledger_out', numeric: true, minWidth: 110 },
+    { field: 'balance', header: 'custody.detail.ledger_balance', numeric: true, minWidth: 110 },
     { field: 'description', header: 'common.description' },
-    { field: 'amount', header: 'common.amount', numeric: true },
   ];
 
   readonly expenseCols = [
@@ -528,14 +567,29 @@ export class CustodyDetailPage {
 
   /** secondary actions live in the header More menu (T6-10) */
   /** T7-10: the header action list — the component enforces visibility + More */
+  /**
+   * R5-01: the primary first, one secondary beside it, everything else in
+   * the More menu. `print` is pinned to the menu: it is a FILLED brand button
+   * by kind (it is the one primary on the report pages), and beside
+   * "طلب عهدة جديدة" that made two primaries in one header.
+   */
   headerActions(c: CustodyDetail): PageAction[] {
     return [
-      { kind: 'print', label: 'common.print', run: () => { this.printPage(); } },
+      { kind: 'create', label: 'custody.mine.request_new', route: ['/custodies/new'], visible: this.isAgent() },
       { kind: 'edit', label: 'common.edit', route: ['/custodies', c.id, 'edit'], visible: this.canManageTreasury() },
       { kind: 'transfer', label: 'custody.detail.transfer_to_agent', route: ['/transfers/new'], visible: this.showTransferShortcut(c) },
-      { kind: 'create', label: 'custody.mine.request_new', route: ['/custodies/new'], visible: this.isAgent() },
       { kind: 'donate', label: 'custody.detail.donation_add', run: () => { this.donationDlg().open(); this.openDonation(); }, visible: this.showDonation(c) },
+      { kind: 'print', label: 'common.print', run: () => { this.printPage(); }, menu: true },
     ];
+  }
+
+  /**
+   * R5-01: the sticky bar is rendered only when it holds an action. A closed
+   * custody has none, and the unconditional bar showed as an empty 25px strip
+   * under the status line.
+   */
+  hasStickyAction(c: CustodyDetail): boolean {
+    return this.showApproveRequest(c) || this.showAgentAccept(c) || this.showReceive(c) || this.showAgentReturn(c) || this.showRequestReturn(c) || this.showCancel(c);
   }
 
   isAgent(): boolean {
@@ -683,28 +737,42 @@ export class CustodyDetailPage {
     return Math.max(0, Math.min(100, Math.round(((this.parseFloat(c.spent) + this.parseFloat(c.returned)) / base) * 100)));
   }
 
+  /** P-04: THREE ring segments — spent / returned / remaining (the 6-way
+   *  split repeated the mini-cards and the old breakdown list) */
   ringSegments(c: CustodyDetail): RingSegment[] {
     return [
       { label: 'custody.detail.breakdown.spent', amount: c.spent },
-      { label: 'custody.detail.breakdown.sent_transfer', amount: c.transferred_out },
       { label: 'custody.detail.breakdown.returned', amount: c.returned },
-      { label: 'custody.detail.breakdown.pending_return', amount: c.pending_return },
-      { label: 'custody.detail.breakdown.frozen', amount: c.frozen },
       { label: 'custody.detail.breakdown.remaining', amount: c.remaining },
     ];
   }
 
-  breakdown(c: CustodyDetail): { label: string; value: string }[] {
-    return [
-      { label: 'custody.detail.breakdown.amount', value: c.amount },
-      { label: 'custody.detail.breakdown.received_transfer', value: c.transferred_in },
-      { label: 'custody.detail.breakdown.spent', value: c.spent },
-      { label: 'custody.detail.breakdown.sent_transfer', value: c.transferred_out },
-      { label: 'custody.detail.breakdown.returned', value: c.returned },
-      { label: 'custody.detail.breakdown.pending_return', value: c.pending_return },
-      { label: 'custody.detail.breakdown.frozen', value: c.frozen },
-      { label: 'custody.detail.breakdown.remaining', value: c.remaining },
-    ];
+  /** P-04: the journal ledger — transactions in chronological order with a
+   *  running balance (in-green/out-red semantics from txMoneyClass) */
+  ledgerRows(c: CustodyDetail): { id: number; type: string; amount: string; delta: number; balance: string; description: string | null; user: string | null; date: string | null }[] {
+    const chronological = [...c.transactions].reverse();
+    let balance = 0;
+    return chronological.map((tx) => {
+      const amount = this.parseFloat(tx.amount);
+      // the running balance must end at c.remaining — sanity-check in dev
+      const delta = this.txMoneyClass(tx.type).includes('pos') ? amount : -amount;
+      balance += delta;
+      return { ...tx, delta, balance: balance.toFixed(2) };
+    });
+  }
+
+  /** P-04: footer totals for the ledger's in/out columns */
+  ledgerTotals(c: CustodyDetail): { in: string; out: string } {
+    let totalIn = 0;
+    let totalOut = 0;
+    for (const row of this.ledgerRows(c)) {
+      if (row.delta >= 0) {
+        totalIn += row.delta;
+      } else {
+        totalOut += -row.delta;
+      }
+    }
+    return { in: totalIn.toFixed(2), out: totalOut.toFixed(2) };
   }
 
   keyValues(c: CustodyDetail): { label: string; value: string }[] {
@@ -822,6 +890,9 @@ export class CustodyDetailPage {
   }
 
   submitReturn(custodyId: number): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.returnAmount() === null) {
       return;
     }

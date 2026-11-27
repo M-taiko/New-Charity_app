@@ -6,16 +6,19 @@ import { SharedModule } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { ApiErrorBody } from '../../models/api.models';
+import { KeyValueListComponent, type KeyValueItem } from '../key-value-list/key-value-list.component';
 
 /**
  * One pattern for every modal form (plan 11.14): inline field errors stay in
  * the page form; this host shows the general alert, keeps values on error,
  * and disables submit while sending (T25).
+ *
+ * N-06: `details` says what the form decides about, above its fields.
  */
 @Component({
   selector: 'app-form-dialog',
   standalone: true,
-  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule, FormsModule],
+  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule, FormsModule, KeyValueListComponent],
   template: `
     <p-dialog appendTo="body"
       [visible]="visible()"
@@ -31,6 +34,11 @@ import type { ApiErrorBody } from '../../models/api.models';
       [dismissableMask]="!sending()"
       [closeOnEscape]="!sending()"
     >
+      @if (details().length) {
+        <div class="confirm-details">
+          <app-key-value-list [items]="details()" />
+        </div>
+      }
       <ng-content />
       @if (alert()) {
         <div class="dialog__alert" role="alert">
@@ -51,7 +59,7 @@ import type { ApiErrorBody } from '../../models/api.models';
           />
           <p-button
             [label]="submitLabel() | translate"
-            (onClick)="submit.emit()"
+            (onClick)="submitNow()"
             [loading]="sending()"
             [disabled]="sending()"
           />
@@ -66,6 +74,8 @@ export class FormDialogComponent {
   submitLabel = input('common.save');
   sending = input(false);
   error = input<HttpErrorResponse | null>(null);
+  /** what the form decides about (N-06) — the amount of a money movement first */
+  details = input<readonly KeyValueItem[]>([]);
 
   visible = model(false);
   submit = output();
@@ -84,6 +94,14 @@ export class FormDialogComponent {
 
   open(): void {
     this.visible.set(true);
+  }
+
+  /** N-06: the disabled state is drawn after the handler ran — a click that lands before then submits nothing */
+  submitNow(): void {
+    if (this.sending()) {
+      return;
+    }
+    this.submit.emit();
   }
 
   onVisibleChange(next: boolean): void {

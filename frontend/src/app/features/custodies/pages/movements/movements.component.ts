@@ -7,7 +7,6 @@ import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
@@ -15,10 +14,10 @@ import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { journalMoneyClass, journalStampClass } from '@shared/lib/journal-style';
 import type { ListResponse } from '@shared/models/api.models';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface Row {
   id: number;
@@ -46,9 +45,8 @@ interface MovementsParams {
 @Component({
   selector: 'app-custody-movements',
   standalone: true,
-  imports: [SectionNavComponent,
-    TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableCellDirective,
-    EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe,
+  imports: [DatetimeCellComponent, TranslatePipe, RouterLink, ButtonModule, PageHeaderComponent, AsyncPageComponent, PrintSheetComponent, StatTileComponent, DataTableComponent, TableCellDirective,
+    EmptyStateComponent, MoneyPipe, EnumLabelPipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -59,18 +57,18 @@ interface MovementsParams {
         </div>
       </app-page-header>
 
-    <app-section-nav module="custodies" />
-
       <app-async-page [resource]="data" variant="list">
         @if (data.value(); as page) {
         <div class="kpi-grid">
           <app-stat-tile [label]="'custody.movements.received'" [value]="summaryValue('received')" [money]="true" accent="custodies" iconName="wallet" />
-          <app-stat-tile [label]="'custody.movements.returned'" [value]="summaryValue('returned')" [money]="true" />
-          <app-stat-tile [label]="'custody.movements.transferred'" [value]="summaryValue('transferred')" [money]="true" />
-          <app-stat-tile [label]="'custody.movements.spent'" [value]="summaryValue('spent')" [money]="true" />
+          <app-stat-tile [label]="'custody.movements.returned'" [value]="summaryValue('returned')" [money]="true" iconName="return" accent="custodies" />
+          <app-stat-tile [label]="'custody.movements.transferred'" [value]="summaryValue('transferred')" [money]="true" iconName="sent" accent="custodies" />
+          <app-stat-tile [label]="'custody.movements.spent'" [value]="summaryValue('spent')" [money]="true" iconName="expense" accent="custodies" />
         </div>
 
-        <app-data-table listUrl="/custodies/movements"
+        <app-data-table
+        [exportQuery]="tableExportQuery()" listUrl="/custodies/movements"
+        [phoneFirst]="['date', 'type', 'amount']"
           [filters]="metaFilters()"
           (queryChange)="onQuery($event)"
           [tableKey]="tableKey"
@@ -82,7 +80,7 @@ interface MovementsParams {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appCell="date" let-row><span class="u-bidi u-muted">{{ row.date | datetime }}</span></ng-template>
+          <ng-template appCell="date" let-row><app-datetime-cell [value]="row.date" /></ng-template>
           <ng-template appCell="type" let-row><span class="stamp" [class]="stampClass(row.type)">{{ row.type | enumLabel: 'transaction_type' }}</span></ng-template>
           <ng-template appCell="custody_id" let-row>@if (row.custody_id) {
   <a [routerLink]="['/custodies', row.custody_id]" class="case-code u-bidi">#{{ row.custody_id }}</a>
@@ -91,7 +89,7 @@ interface MovementsParams {
 }</ng-template>
           <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
           <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
-          <ng-template appCell="amount" let-row><span class="u-bidi" [class]="moneyClass(row.type)">{{ row.amount | money }}</span></ng-template>
+          <ng-template appCell="amount" let-row><span class="u-bidi" [class]="moneyClass(row.type)">{{ row.amount | money: false }}</span></ng-template>
           <div empty>
             <app-empty-state [title]="'custody.movements.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
           </div>
@@ -118,6 +116,16 @@ export class MovementsPage {
     { field: 'user', searchField: 'user', header: 'custody.movements.col_by', sortable: true },
     { field: 'amount', header: 'common.amount', sortable: true, numeric: true },
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal<MovementsParams>({ page: 1, per_page: 25, q: '', sort: '' });
 

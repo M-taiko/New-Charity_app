@@ -148,7 +148,7 @@ interface PollFeedMsg {
                   <p-button
                     styleClass="direction-trail__chip u-full chat-poll-option"
                     [text]="true"
-                    [disabled]="poll.is_closed"
+                    [disabled]="poll.is_closed || voting() !== null"
                     (onClick)="vote(poll.id, $index)"
                   >
                     {{ (poll.my_vote === $index ? '✓ ' : '') + option.text }}
@@ -166,6 +166,7 @@ interface PollFeedMsg {
                       kind="closePoll"
                       label="chat.poll.close"
                       size="small"
+                      [loading]="closing() === poll.id"
                       (action)="closePoll(poll.id)"
                     />
                   }
@@ -191,7 +192,7 @@ interface PollFeedMsg {
             (keydown.enter)="$event.preventDefault(); send()"
           ></textarea>
         </app-field>
-        <p-button (onClick)="send()" [ariaLabel]="'chat.send' | translate">
+        <p-button (onClick)="send()" [loading]="sendingMsg()" [ariaLabel]="'chat.send' | translate">
           <ng-template pTemplate="icon"><app-icon name="send" [size]="16" /></ng-template>
         </p-button>
       </div>
@@ -259,6 +260,8 @@ export class ChatPage implements OnDestroy {
   private auth = inject(AuthService);
 
   draft = signal('');
+  /** true while a message is on its way (N-06) */
+  sendingMsg = signal(false);
   messages = signal<ChatMsg[]>([]);
   loaded = signal(false);
 
@@ -305,33 +308,55 @@ export class ChatPage implements OnDestroy {
     document.removeEventListener('visibilitychange', this.visibilityHandler);
   }
 
+  /** N-06: one message at a time — a held Enter key repeated this handler and posted the text many times */
   send(): void {
     const text = this.draft().trim();
-    if (!text) {
+    if (!text || this.sendingMsg()) {
       return;
     }
+    this.sendingMsg.set(true);
+    // the message is on its way: the composer empties now and gets the text back if it fails
+    this.draft.set('');
     void firstValueFrom(this.http.post<ActionResponse>('/chat', { body: text }))
       .then(() => {
-        this.draft.set('');
+        this.sendingMsg.set(false);
         // the new message arrives through the incremental feed — no full reload
         void this.pollNow();
       })
-      .catch((err: unknown) => { this.toast.apiError(this.errMsg(err)); });
+      .catch((err: unknown) => {
+        this.sendingMsg.set(false);
+        this.draft.set(text);
+        this.toast.apiError(this.errMsg(err));
+      });
   }
 
+  /** N-06: one vote at a time per poll (the id of the poll being voted, or null) */
+  voting = signal<number | null>(null);
+  closing = signal<number | null>(null);
+
   vote(pollId: number, optionIndex: number): void {
+    if (this.voting() !== null) {
+      return;
+    }
+    this.voting.set(pollId);
     void firstValueFrom(this.http.post<ActionResponse>(`/chat-polls/${pollId}/vote`, { option_index: optionIndex }))
       .then(() => this.reload()) // vote tallies are only visible on the full feed
-      .catch((err: unknown) => { this.toast.apiError(this.errMsg(err)); });
+      .catch((err: unknown) => { this.toast.apiError(this.errMsg(err)); })
+      .finally(() => { this.voting.set(null); });
   }
 
   closePoll(pollId: number): void {
+    if (this.closing() !== null) {
+      return;
+    }
+    this.closing.set(pollId);
     void firstValueFrom(this.http.post<ActionResponse>(`/chat-polls/${pollId}/close`, {}))
       .then(() => {
         this.toast.success('chat.poll.closed');
         void this.reload();
       })
-      .catch((err: unknown) => { this.toast.apiError(this.errMsg(err)); });
+      .catch((err: unknown) => { this.toast.apiError(this.errMsg(err)); })
+      .finally(() => { this.closing.set(null); });
   }
 
   /** the per-message delete action (T5-04) — shared row-actions instead of a raw button */
@@ -374,6 +399,9 @@ export class ChatPage implements OnDestroy {
    * poll to it — otherwise it would never appear in the feed.
    */
   submitPoll(): void {
+    if (this.pollSending()) {
+      return;
+    }
     const question = this.pollQuestion().trim();
     const options = this.pollOptions().map((opt) => opt.trim()).filter((opt) => opt !== '');
     if (!question) {

@@ -4,6 +4,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import type { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { reloadList } from '@shared/lib/list-state';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -72,13 +73,13 @@ interface DirectionsData {
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (safeValue(); as d) {
         <div class="kpi-grid">
-          <app-stat-tile [label]="'direction.list.roots'" [value]="d.stats.roots" />
-          <app-stat-tile [label]="'direction.list.total_categories'" [value]="d.stats.total_categories" />
-          <app-stat-tile [label]="'direction.list.total_items'" [value]="d.stats.total_items" />
-          <app-stat-tile [label]="'direction.list.inactive'" [value]="d.stats.inactive" />
+          <app-stat-tile [label]="'direction.list.roots'" [value]="d.stats.roots" iconName="direction" />
+          <app-stat-tile [label]="'direction.list.total_categories'" [value]="d.stats.total_categories" iconName="tree" />
+          <app-stat-tile [label]="'direction.list.total_items'" [value]="d.stats.total_items" iconName="records" />
+          <app-stat-tile [label]="'direction.list.inactive'" [value]="d.stats.inactive" iconName="closed" />
         </div>
 
-        <app-data-table mode="static" [autoFilters]="true" [columns]="columns" [rows]="visibleNodes()" [title]="'direction.list.title'" [emptyLabel]="'direction.list.empty'">
+        <app-data-table [phoneFirst]="['name', 'is_active']" mode="static" [autoFilters]="true" [columns]="columns" [rows]="visibleNodes()" [title]="'direction.list.title'" [emptyLabel]="'direction.list.empty'">
           <span toolbar class="ledger-table__spacer"></span>
           <div toolbar class="u-flex u-gap-2">
             <p-button [label]="'direction.list.expand_all' | translate" size="small" [text]="true" (onClick)="setAllCollapsed(false)" />
@@ -334,16 +335,24 @@ export class DirectionListPage {
     this.dialogOpen = true;
   }
 
+  /** N-06: the item whose status is being toggled (its id, or null) — a toggle sent twice ends where it started */
+  toggling = signal<number | null>(null);
+
   /** POST /expense-items/{id}/toggle-status — items only (T3-30) */
   toggleStatus(node: { id: number }): void {
+    if (this.toggling() !== null) {
+      return;
+    }
+    this.toggling.set(node.id);
     void firstValueFrom(this.api.action(`/expense-items/${node.id}/toggle-status`))
       .then((res) => {
         this.toast.success(res.message);
-        this.data.reload();
+        reloadList(this.data);
       })
       .catch((err: unknown) => {
         this.toast.apiError((err as HttpErrorResponse).error?.message ?? 'errors.generic', (err as HttpErrorResponse).error?.code);
-      });
+      })
+      .finally(() => { this.toggling.set(null); });
   }
 
   openDelete(node: { id: number; kind: string; name: string }): void {
@@ -354,6 +363,9 @@ export class DirectionListPage {
   }
 
   save(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     const isItem = this.form.kind === 'item';
     const base = isItem ? 'expense-items' : 'expense-categories';

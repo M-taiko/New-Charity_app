@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { iconSymbol } from '@shared/ui/icon/icon-symbol';
 
 /**
  * The stamp (plan 10.1.3): meaning carried by icon + fill + border style —
@@ -8,7 +9,8 @@ import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 const STAMP_SHAPES: Record<string, { variant: string; icon: string }> = {
   // custody statuses
   pending: { variant: 'pending', icon: 'clock' },
-  accepted: { variant: 'info', icon: 'info' },
+  // R2-08: the bare "i" glyph read as a dot — accepted gets the clear check
+  accepted: { variant: 'info', icon: 'success' },
   active: { variant: 'success', icon: 'success' },
   rejected: { variant: 'danger', icon: 'rejected' },
   cancelled: { variant: 'neutral', icon: 'closed' },
@@ -19,7 +21,7 @@ const STAMP_SHAPES: Record<string, { variant: string; icon: string }> = {
   approved: { variant: 'success', icon: 'success' },
   // review
   reviewed: { variant: 'success', icon: 'success' },
-  not_reviewed: { variant: 'neutral', icon: 'clock' },
+  not_reviewed: { variant: 'pending', icon: 'clock' },
   // cases
   in_progress: { variant: 'pending', icon: 'clock' },
   resolved: { variant: 'success', icon: 'success' },
@@ -41,7 +43,7 @@ const STAMP_SHAPES: Record<string, { variant: string; icon: string }> = {
   template: `
     <span class="stamp stamp--{{ shape().variant }}" [class.stamp--lg]="large()" [class.stamp--stamp-in]="stampIn()">
       <svg class="stamp__icon" aria-hidden="true">
-        <use [attr.href]="'assets/icons/sprite.svg#tabler-' + shape().icon" />
+        <use [attr.href]="'assets/icons/sprite.svg#tabler-' + iconSymbol(shape().icon)" />
       </svg>
       <span>{{ status() | enumLabel: namespace() }}</span>
     </span>
@@ -49,6 +51,9 @@ const STAMP_SHAPES: Record<string, { variant: string; icon: string }> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class StatusStampComponent {
+  /** semantic icon name resolver exposed to the template (B-01) */
+  readonly iconSymbol = iconSymbol;
+
   status = input.required<string>();
   namespace = input.required<string>();
   large = input(false);

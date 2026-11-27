@@ -89,16 +89,16 @@ interface CaseDetail {
         <div actions class="u-flex u-gap-2 u-flex-wrap">
           <!-- T6-10: max 3 visible buttons; decisions live in the sticky bar -->
           @if (canManage()) {
-            <app-action-button kind="edit" label="common.edit" size="small" [route]="['/cases', id(), 'edit']" />
+            <app-action-button kind="edit" label="common.edit" size="small" [route]="['/social-cases', id(), 'edit']" />
           }
           @if (canManage()) {
             <app-action-button kind="delete" label="common.delete" size="small" (action)="openCaseDelete()" />
           }
-          <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/cases" />
+          <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/social-cases" />
         </div>
       </app-page-header>
 
-      <app-async-page [resource]="pageResource" variant="detail" [backLink]="['/cases']">
+      <app-async-page [resource]="pageResource" variant="detail" [backLink]="['/social-cases']">
         @if (safeValue(); as item) {
           <!-- T6-10: one sticky action bar — primary decision first, destructive-free ordering -->
           <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
@@ -118,9 +118,9 @@ interface CaseDetail {
 
           <div class="kpi-grid">
             <app-stat-tile [label]="'case.form.monthly_income'" [value]="item.monthly_income" [money]="true" accent="cases" iconName="heart-handshake" />
-            <app-stat-tile [label]="'case.form.monthly_expenses'" [value]="item.monthly_expenses" [money]="true" />
-            <app-stat-tile [label]="'case.detail.total_spent'" [value]="item.total_spent" [money]="true" />
-            <app-stat-tile [label]="'case.form.family_members_count'" [value]="item.family_members_count" />
+            <app-stat-tile [label]="'case.form.monthly_expenses'" [value]="item.monthly_expenses" [money]="true" iconName="trendDown" accent="cases" />
+            <app-stat-tile [label]="'case.detail.total_spent'" [value]="item.total_spent" [money]="true" iconName="expense" accent="cases" />
+            <app-stat-tile [label]="'case.form.family_members_count'" [value]="item.family_members_count" iconName="users" accent="cases" />
           </div>
 
           @if (managerWarning(item); as warning) {
@@ -173,10 +173,10 @@ interface CaseDetail {
           @if (caseTab() === 'expenses') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'case.detail.expenses' | translate }}</span></div>
-            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="expenseCols" [rows]="item.expenses" [emptyLabel]="'case.detail.empty_expenses'">
+            <app-data-table [phoneFirst]="['user', 'amount']" mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="expenseCols" [rows]="item.expenses" [emptyLabel]="'case.detail.empty_expenses'">
               <ng-template appCell="id" let-row><a [routerLink]="['/expenses', row.id]" class="u-bidi">#{{ row.id }}</a></ng-template>
               <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
-              <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+              <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money: false }}</span></ng-template>
               <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime: false }}</span></ng-template>
               <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
             </app-data-table>
@@ -187,7 +187,7 @@ interface CaseDetail {
           @if (caseTab() === 'family') {
           <section class="chart-card u-mt-4">
             <div class="chart-card__head"><span class="chart-card__title">{{ 'case.detail.family_members' | translate }} ({{ item.family_members.length }})</span></div>
-            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="familyCols" [rows]="item.family_members" [emptyLabel]="'case.modal.empty_family'">
+            <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [phoneFirst]="['index', 'name']" [columns]="familyCols" [rows]="item.family_members" [emptyLabel]="'case.modal.empty_family'">
               <ng-template appCell="index" let-row let-index="index"><span class="u-bidi">{{ index + 1 }}</span></ng-template>
               <ng-template appCell="name" let-row let-index="index">{{ row.name }}</ng-template>
               <ng-template appCell="relation" let-row let-index="index">{{ label('case.enums.relation.' + row.relation) }}</ng-template>
@@ -406,6 +406,9 @@ export class CaseDetailPage {
 
   /** the reject endpoint saves the typed text into internal_notes via the `notes` field */
   submitReject(notes: string): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.actionError.set(null);
     void firstValueFrom(this.api.action(`/social-cases/${this.id()}/reject`, { notes })).then((res) => {
@@ -442,6 +445,6 @@ export class CaseDetailPage {
   }
 
   onDeleted(): void {
-    void this.router.navigateByUrl('/cases');
+    void this.router.navigateByUrl('/social-cases');
   }
 }

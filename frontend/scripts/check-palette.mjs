@@ -16,6 +16,8 @@ const PALETTE = new Set([
   '#e11d48', '#10b981', '#f59e0b', '#d97706', '#3b82f6',
   '#ecfdf5', '#eff6ff', '#fffbeb', '#fff1f2',
   '#f43f5e', '#ef4444',
+  // status pill / soft-button TEXT foregrounds (B-03 — AA on the tints)
+  '#047857', '#b45309', '#be123c', '#1d4ed8', '#57534e',
   // ── Chart palette (light) ──
   '#2563eb', '#15803d', '#dc2626', '#cbd5e1', '#eae4dc',
   // ── Tinted summary-card borders (light) ──

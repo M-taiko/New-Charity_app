@@ -25,23 +25,112 @@
   flex: 1;
 }
 
+/* N-09: the view toggle's place, kept while the card loads and when it is empty */
+.chart-card__toggle--reserved {
+  visibility: hidden;
+}
+
+/* R2-03: the optional "view all" link in the card head */
+.chart-card__viewall {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  margin-inline-end: var(--space-2);
+}
+
+.chart-card__viewall:hover {
+  color: var(--color-primary);
+}
+
+/* Body + plot are column-flex so the CHART grows into any extra card height
+   (equal-height rows below) instead of leaving a blank strip — flex, never
+   percentages.
+   N-09: the PLOT has its height from the card's first frame — the `height`
+   input (--chart-h), as its minimum — whether it is still loading, empty or
+   drawn. The body is content-sized around it (the legend lives in it too: a
+   fixed body height would squeeze the plot to make room). It used to be the
+   content that decided: a chart popped in when its request landed and
+   everything under it jumped. The 220px floor is the minimum every body had
+   before, kept so that no chart changes size. */
 .chart-card__body {
   position: relative;
-  min-height: 220px;
+  min-height: max(var(--chart-h, 220px), 220px);
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
 }
 
-/* plot wrapper — keeps the doughnut total overlay anchored to the canvas (T7-03) */
+/* N-09: what the body shows while its data is on its way — exactly the room
+   the plot will take */
+.chart-card__loading {
+  flex: 1 1 auto;
+  min-height: var(--chart-h, 220px);
+  border-radius: var(--radius-m);
+}
+
+/* N-09: the ranked legend's placeholder rows — real rows with a non-breaking
+   space for text, so each is exactly as tall as the row that replaces it */
+.chart-ranked__row--loading {
+  pointer-events: none;
+}
+
+.chart-ranked__row--loading .chart-ranked__label,
+.chart-ranked__row--loading .chart-ranked__amount,
+.chart-ranked__row--loading .chart-ranked__pct {
+  border-radius: var(--radius-s);
+}
+
+.chart-ranked__row--loading .chart-ranked__amount {
+  inline-size: 4.5em;
+}
+
+/* the "show all" line the loaded legend carries past its visible rows — the
+   same button, disabled and blank, so it is exactly as tall */
+.chart-card__more--loading {
+  pointer-events: none;
+  inline-size: 6em;
+  border-radius: var(--radius-s);
+}
+
+/* R5-02: a chart with nothing to plot shows the shared empty state. It fills
+   the body and centres in it — the card is stretched to the height of its
+   row neighbours, and the state must not hug the top of all that space. */
+.chart-card__body > app-empty-state {
+  display: flex;
+  flex: 1 1 auto;
+}
+
+.chart-card__body > app-empty-state > .empty-state {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+/* plot wrapper — keeps the doughnut total overlay anchored to the canvas (T7-03).
+   N-09: never shorter than the card's height, in every state (see the body) */
 .chart-card__plot {
   position: relative;
+  flex: 1 1 auto;
+  min-height: var(--chart-h, 220px);
+  display: flex;
+  flex-direction: column;
 }
 
+.chart-card__canvas {
+  position: relative;
+  flex: 1 1 auto;
+}
+
+/* B-07.4: flex-centering works in both directions — translate(-50%) was
+   off-center in RTL and pushed the figure into the ring */
 .chart-card__total {
   position: absolute;
-  inset-block-start: 50%;
-  inset-inline-start: 50%;
-  transform: translate(-50%, -50%);
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-weight: 700;
   font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
 
@@ -55,6 +144,92 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 2px var(--space-3);
+  min-width: 0;
+}
+
+/* the two-row grouped-bar legend (current vs previous period) */
+.chart-legend--compare {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ── Ranked donut legend (P-01): ONE line per row — label · amount · % —
+   with the progress as a thin underline. (Two-line rows with a separate
+   track made this list ~38px per row and the card 500px tall.) ── */
+.chart-legend--ranked {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chart-ranked__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  padding-block-end: calc(var(--space-1) + 3px);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-s);
+  font: inherit;
+  font-size: var(--text-2xs);
+  color: var(--color-text);
+  text-align: start;
+  cursor: pointer;
+}
+
+.chart-ranked__row:hover {
+  background: var(--color-surface-inset);
+}
+
+.chart-ranked__row:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.chart-ranked__row.is-hidden {
+  opacity: 0.45;
+}
+
+.chart-ranked__label {
+  flex: 1;
+  min-width: 0;
+  /* long direction names wrap onto a second line — never a `…` (R2-04) */
+  overflow-wrap: anywhere;
+}
+
+.chart-ranked__amount {
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-ranked__pct {
+  min-width: 3.5em;
+  text-align: end;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* the progress bar hugs the row's bottom edge as a 3px underline */
+.chart-ranked__track {
+  position: absolute;
+  inset-inline: var(--space-2);
+  bottom: 3px;
+  display: block;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-inset);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.chart-ranked__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
 }
 
 .chart-legend__item {
@@ -95,12 +270,11 @@
   flex-shrink: 0;
 }
 
+/* R2-04: legend labels never truncate — they wrap instead of showing `11/…` */
 .chart-legend__label {
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   font-size: var(--text-2xs);
 }
 
@@ -203,4 +377,62 @@
   .detail-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── D-09: collapsible info callout (custodies/new "معلومات مهمة") ── */
+.info-callout__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  list-style: none;
+}
+
+.info-callout__summary::-webkit-details-marker {
+  display: none;
+}
+
+.info-callout__summary::after {
+  content: '▾';
+  font-size: 12px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  transition: rotate var(--dur-fast) var(--ease-out);
+}
+
+.info-callout[open] .info-callout__summary::after {
+  rotate: 180deg;
+}
+
+.info-callout ul {
+  margin-block-start: var(--space-3);
+}
+
+/* "show all" under a capped ranked list — quiet text link, switches the
+   card to its table view (which lists every row) */
+.chart-card__more {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: var(--space-1) 0 0;
+  font: inherit;
+  font-size: var(--text-2xs);
+  color: var(--color-text-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.chart-card__more:hover {
+  color: var(--color-primary);
+}
+
+.chart-card__more:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-s);
 }

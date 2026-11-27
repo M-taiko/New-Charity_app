@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityLog;
 use App\Models\Expense;
 use App\Models\Custody;
 use App\Models\SocialCase;
@@ -736,6 +737,12 @@ class ExpenseController extends Controller
         }
 
         $isQuickExpense = $expense->is_quick_expense;
+        // N-06: what the expense was before this review, so reviewUndo can put it back exactly
+        $before = [
+            'was_quick' => (bool) $isQuickExpense,
+            'reviewed_by' => $expense->reviewed_by,
+            'reviewed_at' => $expense->reviewed_at?->format('Y-m-d H:i:s'),
+        ];
 
         $expense->update([
             'reviewed_by' => $user->id,
@@ -761,7 +768,7 @@ class ExpenseController extends Controller
             ? 'تمت مراجعة المصروف السريع #' . $expense->id . ' وتحويله إلى مصروف عادي بواسطة ' . $user->name
             : 'تمت مراجعة المصروف #' . $expense->id . ' بواسطة ' . $user->name;
 
-        ActivityLogService::reviewed($expense, $logMessage);
+        ActivityLogService::reviewed($expense, $logMessage, $before);
 
         $message = $isQuickExpense
             ? 'تمت مراجعة المصروف وتحويله من مصروف سريع إلى مصروف عادي'
@@ -790,6 +797,13 @@ class ExpenseController extends Controller
                 : back()->with('error', $message);
         }
 
+        // N-06: who reviewed it and when, so unreviewUndo can put it back exactly
+        $before = [
+            'unreviewed' => true,
+            'reviewed_by' => $expense->reviewed_by,
+            'reviewed_at' => $expense->reviewed_at?->format('Y-m-d H:i:s'),
+        ];
+
         $expense->update([
             'reviewed_by' => null,
             'reviewed_at' => null,
@@ -804,9 +818,133 @@ class ExpenseController extends Controller
             'expense'
         );
 
-        ActivityLogService::updated($expense, 'قام المدير ' . $user->name . ' بإلغاء مراجعة المصروف #' . $expense->id . ' وفتح التعديل مرة أخرى');
+        ActivityLogService::updated($expense, 'قام المدير ' . $user->name . ' بإلغاء مراجعة المصروف #' . $expense->id . ' وفتح التعديل مرة أخرى', $before);
 
         $message = 'تم إلغاء المراجعة وفتح التعديل على المصروف';
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * كم تبقى مهلة التراجع عن مراجعة أو عن إلغائها (N-06). التوست يعرض زر
+     * التراجع ثماني ثوان فقط؛ المهلة على الخادم أوسع لتغطي التأخير وإعادة الإرسال.
+     */
+    private const UNDO_WINDOW_MINUTES = 10;
+
+    /**
+     * التراجع عن مراجعة (N-06): يعيد المصروف إلى ما كان عليه قبل المراجعة —
+     * بمن راجعه وفي أي وقت، وحالته "السريعة" إذا حُوّل — كما سُجّل في سجل النشاط
+     * وقت المراجعة. للمراجع نفسه أو للمدير، وضمن المهلة فقط. (إلغاء المراجعة
+     * العادي يبقى كما هو: للمدير، ودون إعادة المصروف إلى حالة "سريع".)
+     */
+    public function reviewUndo(Request $request, Expense $expense)
+    {
+        $user = auth()->user();
+        abort_unless($user->hasRole('محاسب') || $user->hasRole('مدير'), 403);
+
+        $entry = ActivityLog::where('subject_type', Expense::class)
+            ->where('subject_id', $expense->id)
+            ->where('event', 'reviewed')
+            ->orderByDesc('id')
+            ->first();
+        $before = is_array($entry?->properties) ? $entry->properties : [];
+
+        // the entry must describe the review that is still on the expense
+        $isOwnReview = $entry !== null
+            && (int) $entry->user_id === (int) $user->id
+            && (int) $expense->reviewed_by === (int) $user->id;
+        abort_unless($isOwnReview || $user->hasRole('مدير'), 403, 'فقط من راجع المصروف أو المدير يمكنه التراجع');
+
+        $expired = $entry === null
+            || !array_key_exists('was_quick', $before)
+            || $entry->created_at?->lt(now()->subMinutes(self::UNDO_WINDOW_MINUTES));
+        if ($expired) {
+            $message = 'انتهت مهلة التراجع عن هذه المراجعة';
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $message, 'code' => 'review.undo_expired'], 422)
+                : back()->with('error', $message);
+        }
+
+        $expense->update([
+            'reviewed_by' => $before['reviewed_by'] ?? null,
+            'reviewed_at' => $before['reviewed_at'] ?? null,
+            'is_quick_expense' => (bool) $before['was_quick'],
+        ]);
+
+        // the agent was told the expense was reviewed — tell them it is not, when it no longer is
+        if ($expense->fresh()->reviewed_at === null) {
+            \App\Services\NotificationService::notifyUser(
+                $expense->user_id,
+                'تم التراجع عن مراجعة مصروف',
+                'تم التراجع عن مراجعة المصروف رقم #' . $expense->id . ' - أصبح غير مراجع كما كان',
+                'warning',
+                $expense->id,
+                'expense'
+            );
+        }
+
+        ActivityLogService::updated($expense, 'تراجع ' . $user->name . ' عن مراجعة المصروف #' . $expense->id . ' وأعاده إلى حالته السابقة', ['undo_of' => 'reviewed']);
+
+        $message = 'تم التراجع: أعيد المصروف إلى حالته قبل المراجعة';
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'message' => $message]);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * التراجع عن إلغاء مراجعة (N-06): يعيد المراجعة التي ألغاها المدير — بمراجعها
+     * ووقتها — كما سُجّلت في سجل النشاط وقت الإلغاء. للمدير الذي ألغاها، وضمن المهلة.
+     */
+    public function unreviewUndo(Request $request, Expense $expense)
+    {
+        $user = auth()->user();
+        abort_unless($user->hasRole('مدير'), 403, 'فقط المدير يمكنه التراجع عن إلغاء المراجعة');
+
+        $entry = ActivityLog::where('subject_type', Expense::class)
+            ->where('subject_id', $expense->id)
+            ->where('event', 'updated')
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get()
+            ->first(fn (ActivityLog $log) => ($log->properties['unreviewed'] ?? false) === true);
+
+        $expired = $entry === null
+            || $expense->isReviewed()
+            || $entry->created_at?->lt(now()->subMinutes(self::UNDO_WINDOW_MINUTES));
+        if ($expired) {
+            $message = 'انتهت مهلة التراجع عن إلغاء المراجعة';
+            return $request->expectsJson()
+                ? response()->json(['success' => false, 'message' => $message, 'code' => 'review.undo_expired'], 422)
+                : back()->with('error', $message);
+        }
+
+        $expense->update([
+            'reviewed_by' => $entry->properties['reviewed_by'] ?? null,
+            'reviewed_at' => $entry->properties['reviewed_at'] ?? null,
+        ]);
+
+        if ($expense->fresh()->isReviewed()) {
+            \App\Services\NotificationService::notifyUser(
+                $expense->user_id,
+                'أعيدت مراجعة مصروف',
+                'أعيدت مراجعة المصروف رقم #' . $expense->id . ' بعد التراجع عن إلغائها',
+                'info',
+                $expense->id,
+                'expense'
+            );
+        }
+
+        ActivityLogService::updated($expense, 'تراجع المدير ' . $user->name . ' عن إلغاء مراجعة المصروف #' . $expense->id . ' وأعادها', ['undo_of' => 'unreviewed']);
+
+        $message = 'تم التراجع: أعيدت مراجعة المصروف كما كانت';
 
         if ($request->expectsJson()) {
             return response()->json(['success' => true, 'message' => $message]);

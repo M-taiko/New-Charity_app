@@ -22,3 +22,14 @@ export function serverFieldError(error: unknown, field: string): string | null {
   const messages = errors[field] ?? errors[`${field}.0`];
   return Array.isArray(messages) && messages.length > 0 ? messages[0] : null;
 }
+
+/**
+ * What a failed request said (N-06): the server's message and business code,
+ * for `toast.apiError(failure.message, failure.code)`. Accepts anything a
+ * promise's rejection hands over; the generic key when it said nothing.
+ */
+export function apiFailure(err: unknown): { message: string; code?: string } {
+  const body = (err instanceof HttpErrorResponse ? err.error : null) as ApiErrorBody | null;
+  const message = typeof body?.message === 'string' && body.message !== '' ? body.message : 'errors.generic';
+  return body?.code ? { message, code: body.code } : { message };
+}

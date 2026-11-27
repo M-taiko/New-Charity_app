@@ -5,10 +5,12 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
+import { MenuModule } from 'primeng/menu';
+import type { MenuItem } from 'primeng/api';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
+import { ActionButtonComponent, ActionIconComponent } from '@shared/ui/actions/action-button.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
@@ -22,8 +24,11 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
+import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
+import type { ChartSeries } from '@shared/ui/chart-card/chart-card.component';
+import { entityColor } from '@shared/lib/chart-colors';
 import type { HttpErrorResponse } from '@angular/common/http';
-import type { ActionResponse, ListResponse } from '@shared/models/api.models';
+import type { ActionResponse, ItemResponse, ListResponse } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
 
 interface TreasuryRow {
@@ -43,19 +48,24 @@ interface TreasuryRow {
 @Component({
   selector: 'app-treasury-list',
   standalone: true,
-  imports: [SectionNavComponent, 
-    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, SelectModule,
+  imports: [
+    FieldComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, MenuModule, InputTextModule, SelectModule,
     InputNumberModule, TextareaModule, PageHeaderComponent, AsyncPageComponent, StatTileComponent,
     DataTableComponent, TableCellDirective, EmptyStateComponent, FormDialogComponent,
     ConfirmDeleteComponent, RowActionsComponent, MoneyPipe, DatetimePipe,
+    ActionButtonComponent, ActionIconComponent, ChartCardComponent,
   ],
   template: `
-    <app-page-header [title]="'treasury.list.title' | translate" subtitle="treasury.list.subtitle" accent="treasury" iconName="building-bank">
+    <app-page-header [title]="'treasury.list.title' | translate" subtitle="treasury.list.subtitle">
       <div actions class="u-flex u-gap-2 u-flex-wrap">
-        <p-button [label]="'treasury.list.transfer' | translate" [outlined]="true" size="small" routerLink="/treasury/transfer" />
-        <p-button [label]="'treasury.list.receive_donation' | translate" size="small" (onClick)="openDonation(null)" />
-        <p-button [label]="'treasury.list.add' | translate" size="small" routerLink="/treasury/new" />
-        <p-button [label]="'treasury.list.record_expense' | translate" size="small" routerLink="/expenses/new" />
+        <!-- P-06/D-03: primary record-expense + one secondary transfer;
+             donation + add-treasury moved into the "⋯" menu -->
+        <app-action-button kind="create" label="treasury.list.record_expense" [route]="['/expenses', 'new']" />
+        <app-action-button kind="transfer" label="treasury.list.transfer" [route]="['/treasury', 'transfer']" />
+        <p-button [text]="true" [rounded]="true" severity="secondary" [ariaLabel]="'common.more_actions' | translate" (onClick)="moreMenu.toggle($event)">
+          <app-action-icon name="dots-vertical" />
+        </p-button>
+        <p-menu #moreMenu [model]="moreMenuItems" popup="true" appendTo="body" />
       </div>
       <!-- RD-4.4: the current-balance line under the header -->
       <p class="u-muted u-small">
@@ -64,16 +74,44 @@ interface TreasuryRow {
       </p>
     </app-page-header>
 
-    <app-section-nav module="treasury" />
-
     <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
-        <div class="kpi-grid kpi-grid--2">
-          <app-stat-tile [label]="'treasury.list.count'" [value]="summaryCount()" tone="primary" accent="treasury" iconName="building-bank" />
-          <app-stat-tile [label]="'treasury.list.total_balance'" [value]="summaryBalance()" [money]="true" tone="success" iconName="custody" accent="treasury" />
+        <!-- P-06: a balance card PER treasury (name · balance · movements) —
+             generic zeros told nothing; the sum rides the header line -->
+        <div class="kpi-grid">
+          @for (t of treasuries(); track t.id) {
+            <a class="tile-link" [routerLink]="['/treasury', t.id]">
+              <app-stat-tile [label]="t.name" [value]="t.balance" [money]="true" iconName="custody" accent="treasury" [caption]="'treasury.list.transactions_count'" [captionParams]="{ n: t.transactions_count ?? 0 }" />
+            </a>
+          }
         </div>
 
-        <app-data-table listUrl="/treasury"
+        <!-- P-06 (R2-03): income vs expenses (grouped bars) + the net cash-flow
+             trend — the chart cards ARE the widgets, no card-in-card.
+             R4-02: each series is named in the legend and the tooltip -->
+        @if (flowMonths().length > 0) {
+          <div class="bento">
+            <section class="bento__widget bento__widget--wide bento__widget--bare">
+              <app-chart-card title="treasury.charts.income_expenses"
+                              chartType="bar"
+                              seriesLabel="treasury.charts.income_label"
+                              [series]="incomeSeries()"
+                              [compare]="expensesSeries()"
+                              compareLabel="treasury.charts.expenses_label"
+                              [height]="220" accent="treasury" iconName="treasury" />
+            </section>
+            <section class="bento__widget bento__widget--bare">
+              <app-chart-card title="treasury.charts.cash_trend"
+                              chartType="line"
+                              [series]="netFlowSeries()"
+                              [height]="220" accent="treasury" iconName="treasury" />
+            </section>
+          </div>
+        }
+
+        <app-data-table
+        [exportQuery]="tableExportQuery()" listUrl="/treasury"
+        [phoneFirst]="['name', 'balance']"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -87,11 +125,17 @@ interface TreasuryRow {
         >
           <div toolbar class="u-flex u-gap-2">
           </div>
-          <ng-template appCell="name" let-row><a [routerLink]="['/treasury', row.id]">{{ row.name }}</a>
-@if (row.notes) {
-  <div class="u-muted u-small u-truncate">{{ row.notes }}</div>
-}</ng-template>
-          <ng-template appCell="balance" let-row><span class="money money--pos u-bidi">{{ row.balance | money }}</span></ng-template>
+          <ng-template appCell="name" let-row>
+            <a [routerLink]="['/treasury', row.id]" class="u-flex u-center-y u-gap-1">
+              <!-- N-07: the treasury's own colour — the same dot on its detail page -->
+              <span class="entity-dot" aria-hidden="true" [style.background]="entityColor(row.id)"></span>
+              <span>{{ row.name }}</span>
+            </a>
+            @if (row.notes) {
+              <div class="u-muted u-small u-truncate">{{ row.notes }}</div>
+            }
+          </ng-template>
+          <ng-template appCell="balance" let-row><span class="money money--pos u-bidi">{{ row.balance | money: false }}</span></ng-template>
           <ng-template appCell="transactions_count" let-row>{{ row.transactions_count ?? '—' }}</ng-template>
           <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime: false }}</span></ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
@@ -160,6 +204,15 @@ export class TreasuryListPage {
   private toast = inject(ToastService);
   private translate = inject(TranslateService);
 
+  /** N-07: a treasury's own colour for the dot beside its name — the template binds it */
+  entityColor = entityColor;
+
+  /** P-06/D-03: receive-donation + add-treasury live in the quiet "⋯" menu */
+  readonly moreMenuItems: MenuItem[] = [
+    { label: this.translate.instant('treasury.list.receive_donation'), command: () => { this.openDonation(null); } },
+    { label: this.translate.instant('treasury.list.add'), routerLink: '/treasury/new' },
+  ];
+
   readonly deleteDlg = viewChild.required(ConfirmDeleteComponent);
 
   readonly tableKey = 'list.component';
@@ -178,6 +231,16 @@ export class TreasuryListPage {
     { label: this.translate.instant('treasury.donation.source_external'), value: 'external' },
     { label: this.translate.instant('treasury.donation.source_return'), value: 'returnings' },
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal<{ page: number; per_page: number; q: string; sort?: string }>({ page: 1, per_page: 25, q: '' });
 
@@ -253,6 +316,41 @@ export class TreasuryListPage {
     return String(this.safeValue()?.meta.summary?.total_balance ?? '0');
   }
 
+  /** P-06: /dashboard/money-flow — six months of income + expenses */
+  private readonly moneyFlow = resource<{ month: string; income: string; expenses: string }[], unknown>({
+    loader: () =>
+      firstValueFrom(
+        this.http.get<ItemResponse<{ income_vs_expenses: { month: string; income: string; expenses: string }[] }>>('/dashboard/money-flow'),
+      )
+        .then((res) => res.data.income_vs_expenses ?? [])
+        .catch(() => []),
+  });
+
+  private readonly flowRows = computed(() => {
+    try {
+      return this.moneyFlow.value() ?? [];
+    } catch {
+      return [];
+    }
+  });
+
+  flowMonths = computed(() => this.flowRows().map((r) => r.month));
+
+  /** income bars — the main series of the grouped chart */
+  incomeSeries = computed<ChartSeries[]>(() =>
+    this.flowRows().map((r) => ({ label: r.month, value: parseFloat(r.income) || 0 })),
+  );
+
+  /** expense bars — the compare series (--chart-muted) */
+  expensesSeries = computed<ChartSeries[] | null>(() =>
+    this.flowRows().map((r) => ({ label: r.month, value: parseFloat(r.expenses) || 0 })),
+  );
+
+  /** net cash flow per month — the trend line */
+  netFlowSeries = computed<ChartSeries[]>(() =>
+    this.flowRows().map((r) => ({ label: r.month, value: (parseFloat(r.income) || 0) - (parseFloat(r.expenses) || 0) })),
+  );
+
   balanceAfter(): string {
     const treasury = this.treasuries().find((t) => t.id === this.donation.treasury_id);
     const base = parseFloat(treasury?.balance ?? '0') || 0;
@@ -294,6 +392,9 @@ export class TreasuryListPage {
   }
 
   submitDonation(): void {
+    if (this.sending()) {
+      return;
+    }
     if (!this.donation.treasury_id || !this.donation.amount) {
       return;
     }

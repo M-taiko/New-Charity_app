@@ -1,9 +1,10 @@
 import type { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { catchError, finalize, retry, tap, throwError, timeout } from 'rxjs';
+import { catchError, finalize, retry, tap, throwError, timeout, timer } from 'rxjs';
 import { APP_CONFIG } from '@core/config/app-config';
 import { ToastService } from '@core/errors/toast.service';
+import { isSafeToRepeat } from '@core/http/single-flight';
 import { offline, trackRequestEnd, trackRequestStart } from '@core/http/progress-state';
 
 /** Prefixes every request with the /api/v1 base (absolute URLs untouched). */
@@ -21,6 +22,8 @@ export const apiUrlInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req.clone({ url: `${APP_CONFIG.apiBase}/${path}`, withCredentials: true }));
 };
 
+const RETRY_DELAY_MS = 250;
+
 /**
  * Central error handling (plan 18): 401 → login and back, 403 → forbidden page,
  * 404 → not-found, 419 → one retry after refresh, 5xx/network → toast + offline flag.
@@ -32,7 +35,13 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     timeout(60_000),
-    retry({ count: 1, delay: 250 }),
+    // N-06: only a request the server may safely receive twice is sent again on
+    // its own. A write that timed out or failed may already have been processed —
+    // repeating it is the double submit every page now guards against.
+    retry({
+      count: 1,
+      delay: (error: unknown) => (isSafeToRepeat(req.method) ? timer(RETRY_DELAY_MS) : throwError(() => error)),
+    }),
     catchError((err: HttpErrorResponse) => {
       // 419: CSRF expired — the cookie refreshes on this failed call, retry once.
       if (err.status === 419 && !req.headers.get('X-Retry-After-419')) {

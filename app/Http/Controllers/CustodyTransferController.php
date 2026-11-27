@@ -226,6 +226,38 @@ class CustodyTransferController extends Controller
     }
 
     /**
+     * Undo of a cancel (N-06) — the SPA's undo button. API only: JSON whatever
+     * the client sent. The rules live in the service; this names the refusals.
+     */
+    public function restore(Request $request, CustodyTransfer $custodyTransfer)
+    {
+        try {
+            $this->service->restoreTransfer($custodyTransfer, $request->user()->id);
+
+            return response()->json(['success' => true, 'message' => 'تمت إعادة التحويل المُلغى وتجميد مبلغه من جديد']);
+        } catch (\RuntimeException $e) {
+            $messages = [
+                'restore.not_cancelled' => 'هذا التحويل ليس مُلغى',
+                'restore.not_allowed' => 'فقط من ألغى التحويل يمكنه إعادته',
+                'restore.expired' => 'انتهت مهلة التراجع عن إلغاء التحويل',
+            ];
+            $code = $e->getMessage();
+
+            return response()->json([
+                'success' => false,
+                'message' => $messages[$code] ?? 'لا يمكن إعادة هذا التحويل',
+                'code' => $code,
+            ], $code === 'restore.not_cancelled' ? 409 : 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'code' => 'transfer.restore_refused',
+            ], 422);
+        }
+    }
+
+    /**
      * Get DataTable data for sent transfers
      */
     public function sentTransfersData()

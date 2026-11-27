@@ -11,13 +11,13 @@ import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ActionResponse} from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 interface TreasuryOption {
   id: number;
@@ -29,8 +29,7 @@ interface TreasuryOption {
 @Component({
   selector: 'app-treasury-transfer',
   standalone: true,
-  imports: [SectionNavComponent, 
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule,
+  imports: [ValidSubmitDirective, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule, InputNumberModule,
     TextareaModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe, ActionButtonComponent,
   ],
   template: `
@@ -39,9 +38,7 @@ interface TreasuryOption {
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/treasury" />
       </div>
     </app-page-header>
-
-    <app-section-nav module="treasury" />
-    <form (ngSubmit)="submit()" #f="ngForm">
+    <form (ngSubmit)="vs.validate() && submit()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
       <app-form-section [title]="'treasury.transfer.details' | translate" columns="3">
         <app-field label="treasury.transfer.from" controlId="transfer-from" [required]="true" hint="common.hint_treasury_balance" [error]="serverFieldError(error(), 'from_treasury_id')">
           <p-select appendTo="body"
@@ -100,7 +97,7 @@ interface TreasuryOption {
           type="submit"
           [label]="'treasury.transfer.submit' | translate"
           [loading]="sending()"
-          [disabled]="f.invalid || sending() || overBalance()"
+          [disabled]="sending() || overBalance()"
         />
       </div>
     </form>
@@ -153,6 +150,9 @@ export class TreasuryTransferPage {
   }
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.fromId() === null || this.toId() === null || this.amount() === null) {
       return;
     }

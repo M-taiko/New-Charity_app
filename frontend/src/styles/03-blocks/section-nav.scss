@@ -48,28 +48,10 @@
   }
 }
 
-/* T7-09: the active indicator carries the module accent — each module is
-   recognizable in navigation as in headers and tiles, light and dark */
-$section-nav-accent: (
-  custodies: var(--accent-custodies),
-  expenses: var(--accent-expenses),
-  treasury: var(--accent-treasury),
-  cases: var(--accent-cases),
-  hr: var(--accent-hr),
-  tasks: var(--accent-tasks),
-  procurement: var(--accent-procurement),
-  reports: var(--accent-reports),
-);
-
-@each $module, $accent in $section-nav-accent {
-  .section-nav--#{$module} .section-nav__link--active {
-    color: $accent;
-
-    &::after {
-      border-block-end-color: $accent;
-    }
-  }
-}
+/* R4-05: the active tab is BRAND. It used to take the module accent (blue for
+   HR, the only module that still has a section nav) while every other piece
+   of navigation — sidebar, segmented links — highlights in brand brown. The
+   per-module accent map that did this is retired, as it is in the sidebar. */
 
 @media print {
   .section-nav {

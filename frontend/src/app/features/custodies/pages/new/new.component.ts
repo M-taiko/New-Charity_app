@@ -20,6 +20,7 @@ import { FormSectionComponent } from '@shared/ui/form-section/form-section.compo
 import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import type { ActionResponse, ItemResponse, Lookups } from '@shared/models/api.models';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 type Variant = 'agent' | 'for-agent' | 'personal';
 
@@ -33,7 +34,7 @@ type Variant = 'agent' | 'for-agent' | 'personal';
 @Component({
   selector: 'app-custody-form',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe, ActionButtonComponent],
+  imports: [ValidSubmitDirective, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, FieldComponent, FormSectionComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="title() | translate" [subtitle]="subtitle() | translate" accent="custodies" iconName="wallet">
@@ -43,7 +44,7 @@ type Variant = 'agent' | 'for-agent' | 'personal';
     </app-page-header>
 
     <div class="detail-grid">
-      <form (ngSubmit)="submit()" #f="ngForm">
+      <form (ngSubmit)="vs.validate() && submit()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
         <app-form-section>
           @if (variant() === 'for-agent') {
             <app-field label="custody.create.agent" controlId="agent" [required]="true" [error]="serverFieldError(error(), 'agent_id')">
@@ -90,17 +91,24 @@ type Variant = 'agent' | 'for-agent' | 'personal';
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
           <app-action-button kind="back" label="common.back" [route]="['/custodies']" />
-          <p-button type="submit" [label]="submitLabel() | translate" [loading]="sending()" [disabled]="f.invalid || sending() || overBalance()" />
+          <p-button type="submit" [label]="submitLabel() | translate" [loading]="sending()" [disabled]="sending() || overBalance()" />
         </div>
       </form>
 
+      <!-- D-09: the "معلومات مهمة" box is a COLLAPSIBLE callout — open on
+           desktop, collapsed to its title on phones (it was a tall bullet
+           wall pushing the form down) -->
       <aside class="chart-card">
-        <div class="chart-card__head"><span class="chart-card__title">{{ 'custody.create.info_title' | translate }}</span></div>
-        <ul class="u-column u-gap-1 u-small">
-          @for (hint of hints(); track hint) {
-            <li>{{ hint | translate }}</li>
-          }
-        </ul>
+        <details class="info-callout" [open]="infoOpen()" (toggle)="onInfoToggle($event)">
+          <summary class="info-callout__summary">
+            <span class="chart-card__title">{{ 'custody.create.info_title' | translate }}</span>
+          </summary>
+          <ul class="u-column u-gap-1 u-small">
+            @for (hint of hints(); track hint) {
+              <li>{{ hint | translate }}</li>
+            }
+          </ul>
+        </details>
       </aside>
     </div>
   `,
@@ -126,6 +134,16 @@ export class CustodyFormPage implements OnInit {
   issuedDate = signal<string>(new Date().toISOString().slice(0, 10));
   notes = signal('');
   sending = signal(false);
+
+  /** D-09: the info callout starts open on desktop, collapsed on phones */
+  readonly infoOpen = signal(typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches);
+
+  onInfoToggle(event: Event): void {
+    const details = event.target as HTMLDetailsElement | null;
+    if (details) {
+      this.infoOpen.set(details.open);
+    }
+  }
   error = signal<HttpErrorResponse | null>(null);
   /** exposed to the template — templates see class members, not module imports */
   readonly serverFieldError = serverFieldError;
@@ -272,6 +290,9 @@ export class CustodyFormPage implements OnInit {
   }
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.amount() === null || this.overBalance()) {
       return;
     }

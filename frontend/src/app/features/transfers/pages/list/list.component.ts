@@ -4,7 +4,6 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal,
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
-import type { HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { AuthService } from '@core/auth/auth.service';
@@ -22,9 +21,12 @@ import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog
 import { ToastService } from '@core/errors/toast.service';
 import { ApiClient } from '@core/http/api-client';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
+import type { KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
+import { reloadList } from '@shared/lib/list-state';
+import { apiFailure } from '@shared/lib/server-field-errors';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ActionResponse, ListResponse } from '@shared/models/api.models';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface Row {
   id: number;
@@ -60,10 +62,10 @@ interface TransferListParams {
 @Component({
   selector: 'app-transfer-list',
   standalone: true,
-  imports: [AppTabsComponent, ConfirmDialogComponent, 
+  imports: [DatetimeCellComponent, AppTabsComponent, ConfirmDialogComponent, 
     TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
-    EmptyStateComponent, RowActionsComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
+    EmptyStateComponent, RowActionsComponent, MoneyPipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -81,8 +83,8 @@ interface TransferListParams {
       @if (data.value(); as page) {
         <div class="kpi-grid">
         <app-stat-tile [label]="'transfer.list.pending_count'" [value]="summaryValue('pending_count')" accent="custodies" iconName="arrows-exchange" />
-        <app-stat-tile [label]="'transfer.list.approved_count'" [value]="summaryValue('approved_count')" />
-        <app-stat-tile [label]="'transfer.list.rejected_count'" [value]="summaryValue('rejected_count')" />
+        <app-stat-tile [label]="'transfer.list.approved_count'" [value]="summaryValue('approved_count')" iconName="approved" accent="custodies" />
+        <app-stat-tile [label]="'transfer.list.rejected_count'" [value]="summaryValue('rejected_count')" iconName="declined" accent="custodies" />
         </div>
 
       @if (pendingForMe() > 0) {
@@ -94,7 +96,8 @@ interface TransferListParams {
         </div>
       }
 
-      <app-data-table listUrl="/custody-transfers"
+      <app-data-table [phoneFirst]="['custody_id', 'status', 'amount']"
+        [exportQuery]="tableExportQuery()" listUrl="/custody-transfers"
         [tableKey]="tableKey"
         [columns]="columns"
         [rows]="page.data"
@@ -114,10 +117,10 @@ interface TransferListParams {
 } @else {
   <span>—</span>
 }</ng-template>
-        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money: false }}</span></ng-template>
         <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="transfer_status" /></ng-template>
-        <ng-template appCell="requested_at" let-row><span class="u-bidi">{{ row.requested_at | datetime }}</span></ng-template>
-        <ng-template appCell="decided_at" let-row><span class="u-bidi">{{ row.decided_at | datetime }}</span></ng-template>
+        <ng-template appCell="requested_at" let-row><app-datetime-cell [value]="row.requested_at" /></ng-template>
+        <ng-template appCell="decided_at" let-row><app-datetime-cell [value]="row.decided_at" /></ng-template>
         <ng-template appCell="decided_by" let-row>{{ row.decided_by ?? '—' }}</ng-template>
         <ng-template appCell="rejection_reason" let-row>{{ row.rejection_reason ?? '—' }}</ng-template>
         <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
@@ -128,10 +131,10 @@ interface TransferListParams {
       </div>
     </app-async-page>
 
-    <!-- T6-80: confirm cancelling a pending transfer -->
+    <!-- T6-80: confirm cancelling a pending transfer — N-06: with the money it frees -->
     <app-confirm-dialog #cancelDlg [header]="'transfers.cancel' | translate"
                         [message]="'transfers.cancel_confirm'" [confirmLabel]="'transfers.cancel'"
-                        confirmKind="cancel" (confirmed)="submitCancel()" />
+                        confirmKind="cancel" [details]="cancelDetails()" (confirmed)="submitCancel()" />
   `,
 })
 export class TransferListPage {
@@ -139,8 +142,24 @@ export class TransferListPage {
   private auth = inject(AuthService);
   private api = inject(ApiClient);
   private toast = inject(ToastService);
+  private moneyPipe = new MoneyPipe();
   private readonly cancelDlg = viewChild<ConfirmDialogComponent>('cancelDlg');
   cancelTarget = signal<Row | null>(null);
+  /** true while a cancel is on its way (N-06) */
+  cancelling = signal(false);
+
+  /** N-06: what the cancel confirm is about — the amount, then who receives it */
+  readonly cancelDetails = computed<readonly KeyValueItem[]>(() => {
+    const row = this.cancelTarget();
+    if (row === null) {
+      return [];
+    }
+    return [
+      { label: 'common.amount_egp', value: this.moneyPipe.transform(row.amount, false) },
+      { label: 'glossary.receiver', value: row.receiver ?? '—' },
+      { label: 'transfer.list.col_custody', value: row.custody_id === null ? '—' : `#${row.custody_id}` },
+    ];
+  });
 
   readonly tableKey = 'list.component';
 
@@ -169,6 +188,16 @@ export class TransferListPage {
     ];
     return this.isManagement() ? [{ value: 'all' }, ...tabs] : tabs;
   });
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal<TransferListParams>({ page: 1, per_page: 25, q: '', scope: 'sent' });
 
@@ -237,18 +266,42 @@ export class TransferListPage {
     this.cancelDlg()?.open();
   }
 
+  /** T6-80 + N-06: cancel, then offer the restore from the toast for a few seconds */
   submitCancel(): void {
+    if (this.cancelling()) {
+      return;
+    }
     const row = this.cancelTarget();
     if (!row) {
       return;
     }
+    this.cancelling.set(true);
     void firstValueFrom(this.api.post<ActionResponse>(`/custody-transfers/${row.id}/cancel`, {}))
       .then((res) => {
-        this.toast.success(res.message);
-        this.data.reload();
+        this.cancelling.set(false);
+        this.cancelTarget.set(null);
+        this.toast.success(res.message, { undo: () => { this.restore(row); } });
+        reloadList(this.data);
       })
-      .catch((err: HttpErrorResponse) => {
-        this.toast.apiError(err.error?.message ?? 'errors.generic', err.error?.code);
+      .catch((err: unknown) => {
+        this.cancelling.set(false);
+        const failure = apiFailure(err);
+        this.toast.apiError(failure.message, failure.code);
+      });
+  }
+
+  /** N-06: the inverse of a cancel — back to pending, the amount frozen again */
+  private restore(row: Row): void {
+    void firstValueFrom(this.api.post<ActionResponse>(`/custody-transfers/${row.id}/restore`, {}))
+      .then((res) => {
+        this.toast.info(res.message);
+        reloadList(this.data);
+      })
+      .catch((err: unknown) => {
+        // e.g. the window closed, or the custody no longer holds the amount
+        const failure = apiFailure(err);
+        this.toast.apiError(failure.message, failure.code);
+        reloadList(this.data);
       });
   }
 

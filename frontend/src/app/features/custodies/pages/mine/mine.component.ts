@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, resource, signal,
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import type { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
@@ -16,7 +16,6 @@ import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
@@ -29,12 +28,16 @@ import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.co
 import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
+import type { KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
+import { reloadList } from '@shared/lib/list-state';
+import { apiFailure } from '@shared/lib/server-field-errors';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ApiErrorBody, ItemResponse } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { SplitButtonModule } from 'primeng/splitbutton';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface MineCustody {
   id: number; agent: string | null; treasury: string | null; amount: string;
@@ -78,7 +81,7 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
 @Component({
   selector: 'app-my-custodies',
   standalone: true,
-  imports: [SectionNavComponent, FieldComponent, TranslatePipe, RouterLink, SplitButtonModule, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, StatTileComponent, EmptyStateComponent, FormDialogComponent, ContentDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, AppTabsComponent, MenuModule, StatusStampComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent],
+  imports: [DatetimeCellComponent, FieldComponent, TranslatePipe, RouterLink, SplitButtonModule, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, StatTileComponent, EmptyStateComponent, FormDialogComponent, ContentDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, AppTabsComponent, MenuModule, StatusStampComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'custody.mine.title' | translate" accent="custodies" iconName="wallet">
@@ -92,31 +95,29 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
       </div>
     </app-page-header>
 
-    <app-section-nav module="custodies" />
-
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as d) {
         <div class="kpi-grid">
           <app-stat-tile [label]="'custody.mine.remaining'" [value]="stat('total_remaining')" [money]="true" accent="custodies" iconName="wallet" />
-          <app-stat-tile [label]="'custody.mine.amount'" [value]="stat('total_amount')" [money]="true" />
-          <app-stat-tile [label]="'custody.mine.spent'" [value]="stat('total_spent')" [money]="true" />
-          <app-stat-tile [label]="'custody.mine.total'" [value]="stat('total_custodies')" />
+          <app-stat-tile [label]="'custody.mine.amount'" [value]="stat('total_amount')" [money]="true" iconName="cash" accent="custodies" />
+          <app-stat-tile [label]="'custody.mine.spent'" [value]="stat('total_spent')" [money]="true" iconName="expense" accent="custodies" />
+          <app-stat-tile [label]="'custody.mine.total'" [value]="stat('total_custodies')" iconName="sum" accent="custodies" />
           @if (parseFloatStat('frozen') > 0) {
-            <app-stat-tile [label]="'dashboard.agent.frozen'" [value]="stat('frozen')" [money]="true" [inset]="true" />
+            <app-stat-tile [label]="'dashboard.agent.frozen'" [value]="stat('frozen')" [money]="true" [inset]="true" iconName="clock" accent="custodies" />
           }
         </div>
 
         <app-tabs class="u-mt-4" id="mine" [tabs]="tabs()" [(active)]="tab" />
 
         @if (tab() !== 'transfers') {
-          <app-data-table mode="static" [autoFilters]="true" class="u-mt-4" [columns]="custodyCols" [rows]="rows()"
+          <app-data-table [phoneFirst]="['created_at', 'status', 'amount']" mode="static" [autoFilters]="true" class="u-mt-4" [columns]="custodyCols" [rows]="rows()"
                             [title]="'custody.mine.title'" [emptyLabel]="'custody.mine.empty'">
             <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime: false }}</span></ng-template>
-            <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
-            <ng-template appCell="transferred_in" let-row>@if (parseFloat(row.transferred_in) > 0) { {{ row.transferred_in | money }} } @else { — }</ng-template>
-            <ng-template appCell="spent" let-row>{{ row.spent | money }}</ng-template>
-            <ng-template appCell="returned" let-row>{{ row.returned | money }}</ng-template>
-            <ng-template appCell="remaining" let-row>{{ row.remaining | money }}
+            <ng-template appCell="amount" let-row>{{ row.amount | money: false }}</ng-template>
+            <ng-template appCell="transferred_in" let-row>@if (parseFloat(row.transferred_in) > 0) { {{ row.transferred_in | money: false }} } @else { — }</ng-template>
+            <ng-template appCell="spent" let-row>{{ row.spent | money: false }}</ng-template>
+            <ng-template appCell="returned" let-row>{{ row.returned | money: false }}</ng-template>
+            <ng-template appCell="remaining" let-row>{{ row.remaining | money: false }}
 @if (parseFloat(row.frozen) > 0) {
   <span class="u-small u-muted">{{ 'custody.detail.breakdown.frozen' | translate }}: {{ row.frozen | money }}</span>
 }</ng-template>
@@ -294,25 +295,27 @@ const OPEN_STATUSES = ['accepted', 'active', 'partially_returned', 'closed'];
       </div>
     </app-form-dialog>
 
-    <!-- reject an incoming transfer with a reason -->
+    <!-- reject an incoming transfer with a reason — N-06: with the money it refuses -->
     <app-reason-dialog #transferRejectDlg [header]="'custody.mine.reject_transfer' | translate"
                        [label]="'common.reason'" [submitLabel]="'common.confirm' | translate"
+                       [details]="transferDetails(rejectTransfer())"
                        [sending]="sending()" [error]="actionError()" (submit)="submitTransferReject($event)" />
 
-    <!-- T6-80: confirm cancelling a pending transfer I sent -->
+    <!-- T6-80: confirm cancelling a pending transfer I sent — N-06: with the money it frees -->
     <app-confirm-dialog #cancelDlg [header]="'transfers.cancel' | translate"
                         [message]="'transfers.cancel_confirm'" [confirmLabel]="'transfers.cancel'"
-                        confirmKind="cancel" (confirmed)="submitCancelTransfer()" />
+                        confirmKind="cancel" [details]="transferDetails(cancelTarget())"
+                        (confirmed)="submitCancelTransfer()" />
 
     <!-- per-custody transactions drawer -->
     <app-content-dialog [visible]="txCustodyId() !== null" (visibleChange)="txCustodyId.set($event ? txCustodyId() : null)"
               [header]="'custody.detail.transactions'" [width]="'min(680px, 94vw)'">
       @if (txDetail.value(); as tx) {
-        <app-data-table mode="static" [autoFilters]="true" [columns]="transactionCols" [rows]="tx.transactions">
-          <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
+        <app-data-table mode="static" [autoFilters]="true" [phoneFirst]="['date', 'type', 'amount']" [columns]="transactionCols" [rows]="tx.transactions">
+          <ng-template appCell="date" let-row><app-datetime-cell [value]="row.date" /></ng-template>
           <ng-template appCell="type" let-row>{{ row.type | enumLabel: 'transaction_type' }}</ng-template>
           <ng-template appCell="description" let-row>{{ row.description }}</ng-template>
-          <ng-template appCell="amount" let-row>{{ row.amount | money }}</ng-template>
+          <ng-template appCell="amount" let-row>{{ row.amount | money: false }}</ng-template>
         </app-data-table>
       } @else if (txDetail.isLoading()) {
         <div class="skeleton skeleton--tile"></div>
@@ -326,6 +329,7 @@ export class MyCustodiesPage {
   private toast = inject(ToastService);
   private auth = inject(AuthService);
   private translate = inject(TranslateService);
+  private moneyPipe = new MoneyPipe();
   private router = inject(Router);
 
   tab = signal<Tab>('active');
@@ -535,7 +539,11 @@ export class MyCustodiesPage {
   // ── dialog openers (reset stale state before showing) ──
 
   /** T6-80: cancel a pending transfer I sent — releases the frozen amount */
+  /** T6-80 + N-06: cancel a pending transfer I sent, then offer the restore from the toast */
   submitCancelTransfer(): void {
+    if (this.sending()) {
+      return;
+    }
     const t = this.cancelTarget();
     if (!t) {
       return;
@@ -545,14 +553,46 @@ export class MyCustodiesPage {
     void firstValueFrom(this.api.post(`/custody-transfers/${t.id}/cancel`, {}))
       .then((res) => {
         this.sending.set(false);
-        this.toast.success(((res as { message?: string })?.message) ?? this.translate.instant('transfers.cancel_success'));
-        this.data.reload();
+        this.cancelTarget.set(null);
+        const answer = res as { message?: string } | null;
+        this.toast.success(answer?.message ?? this.translate.instant('transfers.cancel_success'), {
+          undo: () => { this.restoreTransfer(t.id); },
+        });
+        reloadList(this.data);
       })
-      .catch((err: HttpErrorResponse) => {
+      .catch((err: unknown) => {
         this.sending.set(false);
-        this.actionError.set(err);
-        this.toast.apiError((err.error as ApiErrorBody | null)?.message ?? 'errors.generic', (err.error as ApiErrorBody | null)?.code);
+        this.actionError.set(err instanceof HttpErrorResponse ? err : null);
+        const failure = apiFailure(err);
+        this.toast.apiError(failure.message, failure.code);
       });
+  }
+
+  /** N-06: the inverse of a cancel — back to pending, the amount frozen again */
+  private restoreTransfer(id: number): void {
+    void firstValueFrom(this.api.action(`/custody-transfers/${id}/restore`))
+      .then((res) => {
+        this.toast.info(res.message);
+        reloadList(this.data);
+      })
+      .catch((err: unknown) => {
+        // e.g. the window closed, or the custody no longer holds the amount
+        const failure = apiFailure(err);
+        this.toast.apiError(failure.message, failure.code);
+        reloadList(this.data);
+      });
+  }
+
+  /** N-06: what a transfer confirm is about — the amount, then the two parties */
+  transferDetails(t: MineTransfer | null): readonly KeyValueItem[] {
+    if (t === null) {
+      return [];
+    }
+    return [
+      { label: 'common.amount_egp', value: this.moneyPipe.transform(t.amount, false) },
+      { label: 'glossary.sender', value: t.sender ?? '—' },
+      { label: 'glossary.receiver', value: t.receiver ?? '—' },
+    ];
   }
 
   openDonation(custodyId?: number): void {
@@ -589,6 +629,9 @@ export class MyCustodiesPage {
   // ── submissions ──
 
   submitExternal(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.extAmount() === null || !this.extSource()) {
       return;
     }
@@ -611,6 +654,9 @@ export class MyCustodiesPage {
   }
 
   submitDonation(): void {
+    if (this.sending()) {
+      return;
+    }
     const custodyId = this.donationCustodyId();
     if (custodyId === null || this.donationAmount() === null || !this.donationDescription().trim()) {
       return;
@@ -634,6 +680,9 @@ export class MyCustodiesPage {
   }
 
   submitRecovery(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.recoveryAmount() === null || !this.recoveryDescription().trim()) {
       return;
     }
@@ -656,6 +705,9 @@ export class MyCustodiesPage {
   }
 
   submitRefund(): void {
+    if (this.sending()) {
+      return;
+    }
     const amount = this.refundAmount();
     if (this.refundCustodyId() === null || amount === null || !this.refundDescription().trim()) {
       return;
@@ -681,6 +733,9 @@ export class MyCustodiesPage {
   }
 
   submitReceive(): void {
+    if (this.sending()) {
+      return;
+    }
     const transfer = this.receiveTransfer();
     if (!transfer) {
       return;
@@ -702,6 +757,9 @@ export class MyCustodiesPage {
   }
 
   submitTransferReject(reason: string): void {
+    if (this.sending()) {
+      return;
+    }
     const transfer = this.rejectTransfer();
     if (!transfer) {
       return;

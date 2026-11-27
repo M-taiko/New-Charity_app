@@ -70,12 +70,26 @@ final class DashboardController extends BladeDashboardController
             $view = 'researcher';
         }
 
+        // B-08: the attention widget needs three DISTINCT numbers — pending
+        // custodies and custodies needing follow-up (active with money left
+        // and no expense recorded in the last 7 days) were missing.
+        $followUpCutoff = now()->subDays(7);
+        $pendingCustodies = \App\Models\Custody::where('status', 'pending')->count();
+        $custodiesNeedingFollowUp = \App\Models\Custody::query()
+            ->where('status', 'active')
+            ->whereRaw('COALESCE(amount + transferred_in - spent - returned, 0) > 0')
+            ->whereDoesntHave('expenses', fn ($q) => $q->where('expense_date', '>=', $followUpCutoff))
+            ->where('created_at', '<', $followUpCutoff)
+            ->count();
+
         return response()->json([
             'data' => [
                 'view' => $view,
                 'range' => $range,
                 'treasury_balance' => number_format((float) ($data['treasury']->balance ?? 0), 2, '.', ''),
                 'active_custodies' => (int) $data['activeCustodies'],
+                'pending_custodies' => (int) $pendingCustodies,
+                'custodies_needing_follow_up' => (int) $custodiesNeedingFollowUp,
                 'pending_cases' => (int) $data['pendingCases'],
                 'today_expenses' => number_format((float) $data['todayExpenses'], 2, '.', ''),
                 'total_spent' => number_format((float) $data['totalSpent'], 2, '.', ''),
@@ -299,17 +313,18 @@ final class DashboardController extends BladeDashboardController
         return (int) round(((int) \App\Models\SocialCase::where('status', 'approved')->count() / $total) * 100);
     }
 
-    /** top expense categories by spend in range (T7-08 donut) */
+    /** top expense categories by spend in range (T7-08 donut). Each row carries the
+     *  category id, so the same category keeps one colour on every chart (N-07) */
     private function spendingByDirection($from, $to): array
     {
         return \App\Models\Expense::whereBetween('expense_date', [$from, $to])
             ->join('expense_categories as ec', 'ec.id', '=', 'expenses.expense_category_id')
-            ->groupBy('ec.name')
-            ->selectRaw('ec.name as label, COALESCE(SUM(expenses.amount), 0) as total')
+            ->groupBy('ec.id', 'ec.name')
+            ->selectRaw('ec.id as id, ec.name as label, COALESCE(SUM(expenses.amount), 0) as total')
             ->orderByDesc('total')
             ->limit(8)
             ->get()
-            ->map(fn ($row) => ['label' => $row->label, 'value' => number_format((float) $row->total, 2, '.', '')])
+            ->map(fn ($row) => ['id' => (int) $row->id, 'label' => $row->label, 'value' => number_format((float) $row->total, 2, '.', '')])
             ->values()
             ->all();
     }
@@ -385,7 +400,9 @@ final class DashboardController extends BladeDashboardController
         ];
     }
 
-    private function mapResearcherStats(array $stats): array
+    /** @var array|null — null for users who are not researchers (managers saw
+     *  a TypeError when their empty stats hit the array return type) */
+    private function mapResearcherStats(array $stats): ?array
     {
         if ($stats === []) {
             return null;

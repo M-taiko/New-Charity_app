@@ -74,6 +74,12 @@ final class LookupController extends Controller
                 ])->values(),
                 'agents' => User::role('مندوب')->orderBy('name')->get(['id', 'name'])->values(),
                 'researchers' => User::role('باحث اجتماعي')->orderBy('name')->get(['id', 'name'])->values(),
+                // D-01: sidebar badge counts for the queues that need attention
+                // (numeric badge-numeric on the nav item); null for viewers
+                'attention_counts' => $user->can('view_all_records') ? [
+                    'pending_custodies' => \App\Models\Custody::where('status', 'pending')->count(),
+                    'pending_edit_requests' => \App\Models\ExpenseEditRequest::where('status', 'pending')->count(),
+                ] : null,
             ],
         ])->header('Cache-Control', 'private, max-age=60');
     }

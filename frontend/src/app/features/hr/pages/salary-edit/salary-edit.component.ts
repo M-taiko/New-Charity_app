@@ -22,11 +22,12 @@ import type { LoadableResource } from '@shared/ui/async-page/async-page.componen
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 @Component({
   selector: 'app-salary-edit',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, SelectModule, PageHeaderComponent, FieldComponent, FormSectionComponent, AsyncPageComponent],
+  imports: [ValidSubmitDirective, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, TextareaModule, SelectModule, PageHeaderComponent, FieldComponent, FormSectionComponent, AsyncPageComponent],
   template: `
     <app-page-header [title]="'hr.salaries.edit_title' | translate" accent="hr" iconName="briefcase">
       <div actions>
@@ -36,7 +37,7 @@ import { FormSectionComponent } from '@shared/ui/form-section/form-section.compo
     <!-- T5-07: a failed load shows the error state with retry instead of a blank
          form that could be saved over the real salary -->
     <app-async-page [resource]="pageState" variant="form" [backLink]="['/hr/salaries']">
-      <form (ngSubmit)="save()" #f="ngForm">
+      <form (ngSubmit)="vs.validate() && save()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
         <app-form-section>
           <app-field label="hr.salaries.col_base" controlId="s-base" [required]="true" [error]="serverFieldError(error(), 'base_salary')">
             <p-inputnumber inputId="s-base" name="base" [(ngModel)]="baseSalary" required [min]="0" mode="decimal" [minFractionDigits]="2" [useGrouping]="false" styleClass="u-full" />
@@ -64,7 +65,7 @@ import { FormSectionComponent } from '@shared/ui/form-section/form-section.compo
         </app-form-section>
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
-          <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
+          <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="sending()" />
         </div>
       </form>
     </app-async-page>
@@ -138,6 +139,9 @@ export class SalaryEditPage implements OnInit {
   }
 
   save(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.error.set(null);
     void firstValueFrom(

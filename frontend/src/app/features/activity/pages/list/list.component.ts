@@ -7,8 +7,8 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ListResponse } from '@shared/models/api.models';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface Row {
   id: number;
@@ -23,10 +23,10 @@ interface Row {
 @Component({
   selector: 'app-list-page',
   standalone: true,
-  imports: [
+  imports: [DatetimeCellComponent, 
     TranslatePipe,
     PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
-    EmptyStateComponent, DatetimePipe,
+    EmptyStateComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -34,7 +34,9 @@ interface Row {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table listUrl="/activity-logs"
+        <app-data-table
+        [exportQuery]="tableExportQuery()" listUrl="/activity-logs"
+        [phoneFirst]="['created_at', 'event']"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -44,7 +46,7 @@ interface Row {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+          <ng-template appCell="created_at" let-row><app-datetime-cell [value]="row.created_at" /></ng-template>
           <ng-template appCell="user" let-row>{{ row.user ?? '—' }}</ng-template>
           <ng-template appCell="event" let-row>{{ row.event ?? '—' }}</ng-template>
           <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
@@ -67,6 +69,16 @@ export class ActivityListPage {
     { field: 'event', header: 'activity.col_event', sortable: true },
     { field: 'description', header: 'activity.col_description', sortable: true }
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
 

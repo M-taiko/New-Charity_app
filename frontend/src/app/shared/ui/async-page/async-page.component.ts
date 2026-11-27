@@ -60,12 +60,20 @@ export class AsyncPageComponent {
   /** optional back link handed to the error state (e.g. the parent list) */
   backLink = input<readonly unknown[] | null>(null);
 
+  /**
+   * N-09: keep the skeleton a little longer — while something the content's
+   * LAYOUT depends on is still on its way (the dashboard's saved widget
+   * order). Content that appears and is rearranged a moment later is a
+   * layout shift; a skeleton that holds is none.
+   */
+  hold = input(false);
+
   /** a failed load with nothing to show (value() would throw here — never read it) */
   readonly failed = computed(() => this.resource().error() !== undefined);
 
-  /** first load without a value yet — keeps stale content during reloads */
+  /** first load without a value yet — keeps stale content during reloads; or held (N-09) */
   readonly loading = computed(() =>
-    !this.failed() && this.resource().isLoading() && !this.readValueGuarded());
+    !this.failed() && ((this.resource().isLoading() && !this.readValueGuarded()) || this.hold()));
 
   /** empty slot only for a loaded, non-empty-flagged value */
   readonly showEmpty = computed(() => {

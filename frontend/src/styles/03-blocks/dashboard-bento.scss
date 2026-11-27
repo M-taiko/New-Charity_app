@@ -66,6 +66,25 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  /* B-12: widgets clip — a chart or legend can never push the page wide */
+  overflow: hidden;
+}
+
+/* R2-03: chromeless grid slot — for sections whose CHILD is already a card
+   (app-chart-card). Prevents card-in-card; the child spans the full slot.
+   The chart host's flex fill (display + flex: 1) is defined ONCE in
+   kpi-grid.scss ("Equal height: GLOBAL") — never re-declare display here:
+   this file loads later and an equal-specificity `display: block` silently
+   disabled the equal-height rule once. */
+.bento__widget--bare {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  overflow: visible;
+  /* R3-01: never a percentage height — the child card sizes itself */
+  height: auto;
+  min-height: 0;
 }
 
 .dash-viewall {
@@ -114,12 +133,26 @@ a.dash-kpi:hover {
   text-align: start;
 }
 
-/* quick actions (RD-3.7): surface-container tiles, outline border, primary
-   hover border — icon + label-lg, 2/3-column grid like the Stitch dashboard */
+/* quick actions (RD-3.7 → P-01): strict 3-column grid of equal tiles —
+   labels are short so nothing wraps; phones drop to 2 columns */
 .dash-chips {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-2);
+  min-width: 0;
+}
+
+.dash-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .dash-chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .dash-chip {
@@ -157,6 +190,70 @@ a.dash-kpi:hover {
 
 .dash-chip--soft svg {
   color: var(--color-text-muted);
+}
+
+/* ── B-12: flex children can always shrink (kept with the widget block above) ── */
+.bento__widget > .chart-card {
+  min-width: 0;
+}
+
+/* P-01: the collapsed "additional analytics" section (aging + funnel) */
+.dash-extra {
+  padding: 0;
+}
+
+/* R2-08: a shared chevron + label row — the chevron sits right beside the
+   text (never a tiny marker at the far edge) and rotates on open */
+.dash-extra__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  list-style: none;
+  border-radius: var(--radius-m);
+}
+
+.dash-extra__summary::-webkit-details-marker {
+  display: none;
+}
+
+.dash-extra__summary::after {
+  content: '▾';
+  font-size: 12px;
+  line-height: 1;
+  transition: rotate var(--dur-fast) var(--ease-out);
+}
+
+.dash-extra[open] .dash-extra__summary::after {
+  rotate: 180deg;
+}
+
+.dash-extra__summary:hover {
+  color: var(--color-text);
+}
+
+.dash-extra[open] .dash-extra__summary {
+  border-block-end: 1px solid var(--color-hairline);
+}
+
+.dash-extra .dash-insight-cols {
+  padding: var(--space-4);
+}
+
+/* the customize popover body */
+.dash-customize__pop {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: min(360px, 90vw);
+}
+
+.dash-customize__title {
+  font-size: var(--text-sm);
 }
 
 /* needs-attention list (RD-3.7): surface-container rows + outline border +
@@ -284,15 +381,15 @@ a.dash-kpi:hover {
   overflow: hidden;
 }
 
+/* N-07: the bar wears its entity's colour, bound from the template
+   ([style.background]="entityColor(id)") — the module accent below is only
+   the fallback for a row without an id. The researchers' bars used to be the
+   HR accent (`--alt`); they are their own entity colour now too. */
 .dash-rank__fill {
   display: block;
   height: 100%;
   border-radius: var(--radius-full);
   background: var(--accent-custodies);
-}
-
-.dash-rank__fill--alt {
-  background: var(--accent-hr);
 }
 
 .dash-rank__score {

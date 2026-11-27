@@ -43,7 +43,8 @@ interface Row {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table listUrl="/hr/employees"
+        <app-data-table [phoneFirst]="['name', 'status', 'salary']"
+        [exportQuery]="tableExportQuery()" listUrl="/hr/employees"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -56,7 +57,7 @@ interface Row {
           <ng-template appCell="name" let-row>{{ row.name ?? '—' }}</ng-template>
           <ng-template appCell="department" let-row>{{ row.department ?? '—' }}</ng-template>
           <ng-template appCell="job_title" let-row>{{ row.job_title ?? '—' }}</ng-template>
-          <ng-template appCell="salary" let-row><span class="u-bidi">{{ row.salary | money }}</span></ng-template>
+          <ng-template appCell="salary" let-row><span class="u-bidi">{{ row.salary | money: false }}</span></ng-template>
           <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="employee_status" /></ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
@@ -80,6 +81,16 @@ export class EmployeesPage {
     { field: 'status', header: 'common.status', sortable: true },
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
 

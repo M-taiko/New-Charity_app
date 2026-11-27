@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { iconHref } from '@shared/ui/icon/icon-symbol';
 
 /** Row action severity follows the action-kind map (T6-13): danger red, success green, warn amber, info blue-teal. */
 export type RowActionSeverity = 'default' | 'danger' | 'success' | 'warn' | 'info';
@@ -31,36 +32,40 @@ export interface RowActionItem {
   imports: [TranslatePipe, RouterLink],
   template: `
     <div class="row-actions">
-      @for (action of visibleActions(); track $index) {
-        @if (action.route; as route) {
-          <a
-            class="row-actions__btn"
-            [class]="rowActionClass(action)"
-            [class.row-actions__btn--disabled]="action.disabled === true"
-            [title]="action.label | translate"
-            [attr.aria-label]="action.label | translate"
-            [routerLink]="route"
-            [attr.tabindex]="action.disabled === true ? -1 : null"
-            [attr.aria-disabled]="action.disabled === true ? true : null"
-          >
-            <svg width="16" height="16" aria-hidden="true">
-              <use [attr.href]="'assets/icons/sprite.svg#tabler-' + action.icon" />
-            </svg>
-          </a>
+      @for (slot of iconSlots(); track $index) {
+        @if (slot; as action) {
+          @if (action.route; as route) {
+            <a
+              class="row-actions__btn"
+              [class]="rowActionClass(action)"
+              [class.row-actions__btn--disabled]="action.disabled === true"
+              [title]="action.label | translate"
+              [attr.aria-label]="action.label | translate"
+              [routerLink]="route"
+              [attr.tabindex]="action.disabled === true ? -1 : null"
+              [attr.aria-disabled]="action.disabled === true ? true : null"
+            >
+              <svg width="16" height="16" aria-hidden="true">
+                <use [attr.href]="iconHref(action.icon)" />
+              </svg>
+            </a>
+          } @else {
+            <button
+              type="button"
+              class="row-actions__btn"
+              [class]="rowActionClass(action)"
+              [title]="action.label | translate"
+              [attr.aria-label]="action.label | translate"
+              [disabled]="action.disabled === true"
+              (click)="action.handler?.()"
+            >
+              <svg width="16" height="16" aria-hidden="true">
+                <use [attr.href]="iconHref(action.icon)" />
+              </svg>
+            </button>
+          }
         } @else {
-          <button
-            type="button"
-            class="row-actions__btn"
-            [class]="rowActionClass(action)"
-            [title]="action.label | translate"
-            [attr.aria-label]="action.label | translate"
-            [disabled]="action.disabled === true"
-            (click)="action.handler?.()"
-          >
-            <svg width="16" height="16" aria-hidden="true">
-              <use [attr.href]="'assets/icons/sprite.svg#tabler-' + action.icon" />
-            </svg>
-          </button>
+          <span class="row-actions__placeholder" aria-hidden="true"></span>
         }
       }
     </div>
@@ -90,7 +95,7 @@ export interface RowActionItem {
                 (click)="close()"
               >
                 <svg width="16" height="16" aria-hidden="true">
-                  <use [attr.href]="'assets/icons/sprite.svg#tabler-' + action.icon" />
+                  <use [attr.href]="iconHref(action.icon)" />
                 </svg>
                 <span>{{ action.label | translate }}</span>
               </a>
@@ -104,7 +109,7 @@ export interface RowActionItem {
                 (click)="action.handler?.(); close()"
               >
                 <svg width="16" height="16" aria-hidden="true">
-                  <use [attr.href]="'assets/icons/sprite.svg#tabler-' + action.icon" />
+                  <use [attr.href]="iconHref(action.icon)" />
                 </svg>
                 <span>{{ action.label | translate }}</span>
               </button>
@@ -115,14 +120,42 @@ export interface RowActionItem {
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { '(document:click)': 'onDocumentClick($event)', class: 'row-actions-host' },
+  host: {
+    '(document:click)': 'onDocumentClick($event)',
+    '[class.row-actions-host--all-visible]': 'menuActions().length === 0',
+    class: 'row-actions-host',
+  },
 })
 export class RowActionsComponent {
+  /** sprite href builder exposed to the template (B-01) */
+  readonly iconHref = iconHref;
+
   actions = input.required<RowActionItem[]>();
+  /** D-06: how many actions render as inline icons — the rest live in "⋯".
+   *  Fixed slots keep icons from jumping between rows. */
+  max = input(2);
 
   menuOpen = false;
 
   visibleActions = computed(() => this.actions().filter((a) => a.visible !== false));
+
+  /**
+   * R2-05: FIXED inline slots — slot i is always visibleActions()[i], never
+   * shifted by an absent earlier action. Missing slots render an invisible
+   * placeholder of the same width, so the view icon never jumps between rows
+   * and every row keeps the same height (no wrapping).
+   */
+  iconSlots = computed<(RowActionItem | null)[]>(() => {
+    const slots: (RowActionItem | null)[] = [];
+    const actions = this.visibleActions();
+    for (let i = 0; i < this.max(); i++) {
+      slots.push(actions[i] ?? null);
+    }
+    return slots;
+  });
+
+  /** actions beyond the inline slots — the ⋯ menu carries them */
+  menuActions = computed(() => this.visibleActions().slice(this.max()));
 
   /** icon-button class per action severity (T6-13) */
   rowActionClass(action: RowActionItem): string {

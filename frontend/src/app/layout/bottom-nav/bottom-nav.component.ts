@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
+import { iconHref } from '@shared/ui/icon/icon-symbol';
 import type { NavItem } from '../shell/nav-items';
 
 /** Bottom navigation on phones (plan 19.2): the role's most-used items. */
@@ -17,7 +18,7 @@ import type { NavItem } from '../shell/nav-items';
           [routerLink]="item.route"
         >
           <svg width="20" height="20" aria-hidden="true">
-            <use [attr.href]="'assets/icons/sprite.svg#tabler-' + item.icon" />
+            <use [attr.href]="iconHref(item.icon)" />
           </svg>
           <span>{{ item.label | translate }}</span>
         </a>
@@ -27,5 +28,7 @@ import type { NavItem } from '../shell/nav-items';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class BottomNavComponent {
+  readonly iconHref = iconHref;
+
   items = input<NavItem[]>([]);
 }

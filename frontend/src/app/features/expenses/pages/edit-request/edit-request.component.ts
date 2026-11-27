@@ -22,6 +22,7 @@ import { AttachmentFieldComponent } from '@shared/ui/attachment-field/attachment
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import type { ActionResponse, DirectionNode, ItemResponse, ListResponse } from '@shared/models/api.models';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 interface ApprovedCase { id: number; name: string }
 
@@ -33,7 +34,7 @@ interface ApprovedCase { id: number; name: string }
 @Component({
   selector: 'app-edit-request-form',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, AsyncPageComponent, FormSectionComponent, FieldComponent, DirectionPickerComponent, LineItemsEditorComponent, AttachmentFieldComponent, KeyValueListComponent, ActionButtonComponent],
+  imports: [ValidSubmitDirective, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, AsyncPageComponent, FormSectionComponent, FieldComponent, DirectionPickerComponent, LineItemsEditorComponent, AttachmentFieldComponent, KeyValueListComponent, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'expense.form.request_title' | translate" accent="expenses" iconName="receipt-2">
@@ -52,7 +53,7 @@ interface ApprovedCase { id: number; name: string }
           ]" />
         </section>
       }
-      <form (ngSubmit)="submit()" #f="ngForm">
+      <form (ngSubmit)="vs.validate() && submit()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
         <app-form-section title="expense.form.section_basics">
           <app-field label="expense.form.type" controlId="ertype" [required]="true" [error]="serverFieldError(error(), 'expense_type')">
             <p-select appendTo="body" inputId="ertype" [options]="expenseTypeOptions" optionLabel="label" optionValue="value" [(ngModel)]="expenseType" name="type" required styleClass="u-full" (ngModelChange)="onExpenseType()" />
@@ -102,7 +103,7 @@ interface ApprovedCase { id: number; name: string }
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
           <app-action-button kind="back" label="common.back" [route]="['/expenses', id()]" />
-          <p-button type="submit" [label]="'expense.form.submit_request' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
+          <p-button type="submit" [label]="'expense.form.submit_request' | translate" [loading]="sending()" [disabled]="sending()" />
         </div>
       </form>
     </app-async-page>
@@ -241,6 +242,9 @@ export class EditRequestFormPage {
   }
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.amount() === null || this.description().trim() === '') {
       return;
     }

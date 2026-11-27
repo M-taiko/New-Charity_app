@@ -76,15 +76,19 @@ interface SalaryDetail {
   template: `
     <app-async-page [resource]="data" variant="detail" [backLink]="['/hr/salaries']">
       @if (safeValue(); as item) {
-          <!-- T6-10: one sticky action bar — primary decision first -->
-          <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
-            @if (item.status === 'calculated') {
-              <app-action-button kind="approve" label="hr.salaries.detail.approve" size="small" (action)="act('approve')" [loading]="sending()" />
-            }
-            @if (item.status === 'approved') {
-              <app-action-button kind="recordExpense" label="hr.salaries.detail.record_expense" size="small" (action)="act('record-expense')" [loading]="sending()" />
-            }
-          </div>
+          <!-- T6-10: one sticky action bar — primary decision first. R5-01:
+               only the two pending statuses have a decision to offer; for the
+               others the unconditional bar was an empty 25px strip -->
+          @if (item.status === 'calculated' || item.status === 'approved') {
+            <div class="sticky-actions u-flex u-gap-2 u-flex-wrap">
+              @if (item.status === 'calculated') {
+                <app-action-button kind="approve" label="hr.salaries.detail.approve" size="small" (action)="act('approve')" [loading]="sending()" />
+              }
+              @if (item.status === 'approved') {
+                <app-action-button kind="recordExpense" label="hr.salaries.detail.record_expense" size="small" (action)="act('record-expense')" [loading]="sending()" />
+              }
+            </div>
+          }
         <app-print-sheet [title]="'hr.salaries.detail.title' | translate">
           <app-page-header [title]="itemTitle(item)" accent="hr" iconName="briefcase">
             <div actions class="u-flex u-gap-2 u-flex-wrap">
@@ -248,6 +252,9 @@ export class SalaryDetailPage {
   }
 
   addAllowance(): void {
+    if (this.allowanceSending()) {
+      return;
+    }
     if (!this.allowanceForm.name.trim() || this.allowanceForm.amount === null) {
       this.allowanceInvalid.set(true);
       return;

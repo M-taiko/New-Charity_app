@@ -50,13 +50,30 @@ interface ActiveBroadcast {
         <app-icon name="menu-2" [size]="18" />
       </button>
 
-      <span class="topbar__title">{{ pageTitle() | translate }}</span>
+      <!-- D-02: breadcrumb, not a repeated page title — the page H1 says that -->
+      <nav class="topbar__crumbs" [attr.aria-label]="'a11y.breadcrumb' | translate">
+        @for (crumb of crumbs(); track $index; let last = $last) {
+          @if (!last) {
+            <span class="topbar__crumb">{{ crumb.key ? (crumb.key | translate) : crumb.raw }}</span>
+            <span class="topbar__crumb-sep" aria-hidden="true">‹</span>
+          } @else {
+            <span class="topbar__crumb topbar__crumb--current">{{ crumb.key ? (crumb.key | translate) : crumb.raw }}</span>
+          }
+        }
+      </nav>
 
       @if (offlineFlag()) {
         <span class="stamp stamp--pending">{{ 'errors.offline_title' | translate }}</span>
       }
 
       <span class="topbar__spacer"></span>
+
+      <!-- D-02/X-01: the visible search trigger — opens the Ctrl+K palette -->
+      <button type="button" class="topbar__search" (click)="paletteOpen.set(true)">
+        <app-icon name="search" [size]="14" />
+        <span class="topbar__search-hint">{{ 'command.search_hint' | translate }}</span>
+        <kbd class="topbar__search-kbd">Ctrl K</kbd>
+      </button>
 
       <button
         type="button"
@@ -132,6 +149,10 @@ interface ActiveBroadcast {
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // N-01: Ctrl+K (Cmd+K on a Mac) opens the palette — the shortcut the search box advertises
+    '(document:keydown)': 'onShortcut($event)',
+  },
 })
 export class TopbarComponent {
   readonly theme = inject(ThemeService);
@@ -145,6 +166,14 @@ export class TopbarComponent {
   readonly offlineFlag = offline;
   readonly pending = pendingRequests;
 
+  /** an urgent broadcast's own shortcut (if it ever has one) is left alone: Shift and Alt are not ours */
+  onShortcut(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      this.paletteOpen.set(!this.paletteOpen());
+    }
+  }
+
   /** active urgent broadcast for the current user (T3-101), null once dismissed */
   readonly broadcast = signal<ActiveBroadcast | null>(null);
 
@@ -152,11 +181,13 @@ export class TopbarComponent {
     this.loadBroadcast();
   }
 
-  /** POST /broadcasts/active — a read wrapped in POST (session-dismissed ids live server-side) */
+  /** POST /broadcasts/active — a read wrapped in POST (session-dismissed ids live server-side).
+   *  D-02: an empty payload (no title AND no message) renders nothing. */
   private loadBroadcast(): void {
     void firstValueFrom(this.http.post<ItemResponse<ActiveBroadcast | null>>('/broadcasts/active', {}))
       .then((res) => {
-        this.broadcast.set(res.data ?? null);
+        const b = res.data ?? null;
+        this.broadcast.set(b && (b.title?.trim() !== '' || b.message?.trim() !== '') ? b : null);
       })
       .catch(() => {
         this.broadcast.set(null);
@@ -193,33 +224,74 @@ export class TopbarComponent {
     { initialValue: this.router.url },
   );
 
-  readonly pageTitle = computed(() => {
+  /** first URL segment → module label */
+  private static readonly MODULE_LABELS: Record<string, string> = {
+    dashboard: 'nav.dashboard',
+    treasury: 'nav.treasury',
+    custodies: 'nav.custodies',
+    transfers: 'nav.transfers',
+    expenses: 'nav.expenses',
+    directions: 'nav.directions',
+    reports: 'nav.reports',
+    cases: 'nav.cases',
+    'social-cases': 'nav.cases',
+    hr: 'nav.hr',
+    procurement: 'nav.procurement',
+    tasks: 'nav.tasks',
+    chat: 'nav.chat',
+    notifications: 'nav.notifications',
+    broadcasts: 'nav.broadcasts',
+    activity: 'nav.activity',
+    users: 'nav.users',
+    settings: 'nav.settings',
+    profile: 'nav.profile',
+  };
+
+  /** second URL segment → page label (compound keys first, then generic) */
+  private static readonly SUB_LABELS: Record<string, string> = {
+    'custodies/mine': 'nav.my_custodies',
+    'expenses/mine': 'nav.my_expenses',
+    'social-cases/mine': 'nav.my_cases',
+    'hr/employees': 'hr.employees.title',
+    'hr/attendance': 'hr.dashboard.view_attendance',
+    'hr/salaries': 'hr.dashboard.total_salaries',
+    'hr/kpi': 'hr.dashboard.kpi_achievement',
+    tracking: 'nav.custody_tracking',
+    movements: 'nav.custody_movements',
+    'return-requests': 'nav.return_requests',
+    'edit-requests': 'nav.edit_requests',
+    new: 'common.add',
+    edit: 'common.edit',
+    transfer: 'nav.transfers',
+    purchase: 'nav.purchase_requests',
+    maintenance: 'nav.maintenance_requests',
+    suppliers: 'nav.suppliers',
+  };
+
+  /**
+   * D-02 breadcrumb: module › page (#id for detail routes). The topbar never
+   * repeats the page H1 — deep leaf actions (edit/new) map to their label.
+   */
+  readonly crumbs = computed<{ key: string; raw?: string }[]>(() => {
     const url = this.currentPath().split('?')[0].split('#')[0];
     const segments = url.split('/').filter(Boolean);
     if (segments.length === 0) {
-      return 'nav.dashboard';
+      return [{ key: 'nav.dashboard' }];
     }
-    const map: Record<string, string> = {
-      dashboard: 'nav.dashboard',
-      treasury: 'nav.treasury',
-      custodies: 'nav.custodies',
-      transfers: 'nav.transfers',
-      expenses: 'nav.expenses',
-      directions: 'nav.directions',
-      reports: 'nav.reports',
-      cases: 'nav.cases',
-      'social-cases': 'nav.cases',
-      hr: 'nav.hr',
-      procurement: 'nav.procurement',
-      tasks: 'nav.tasks',
-      chat: 'nav.chat',
-      notifications: 'nav.notifications',
-      broadcasts: 'nav.broadcasts',
-      activity: 'nav.activity',
-      users: 'nav.users',
-      settings: 'nav.settings',
-      profile: 'nav.profile',
-    };
-    return map[segments[0]] ?? 'nav.dashboard';
+    const crumbs: { key: string; raw?: string }[] = [
+      { key: TopbarComponent.MODULE_LABELS[segments[0]] ?? 'nav.dashboard' },
+    ];
+    if (segments[1] !== undefined) {
+      if (/^\d+$/.test(segments[1])) {
+        crumbs.push({ key: '', raw: `#${segments[1]}` });
+        if (segments[2] !== undefined) {
+          crumbs.push({ key: TopbarComponent.SUB_LABELS[segments[2]] ?? 'common.open' });
+        }
+      } else {
+        const compound = `${segments[0]}/${segments[1]}`;
+        crumbs.push({ key: TopbarComponent.SUB_LABELS[compound] ?? TopbarComponent.SUB_LABELS[segments[1]] ?? 'common.open' });
+      }
+    }
+    return crumbs;
   });
 }

@@ -22,6 +22,7 @@ import { FieldComponent } from '@shared/ui/field/field.component';
 import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 type EmployeeForm = Record<string, string | number | boolean | null | undefined | string[]>;
 
@@ -29,7 +30,7 @@ type EmployeeForm = Record<string, string | number | boolean | null | undefined 
 @Component({
   selector: 'app-employee-form',
   standalone: true,
-  imports: [ButtonModule, DatePickerModule, FormsModule, InputNumberModule, InputTextModule, PageHeaderComponent, RouterLink, SelectModule, TranslatePipe, FieldComponent, FormSectionComponent, AsyncPageComponent],
+  imports: [ValidSubmitDirective, ButtonModule, DatePickerModule, FormsModule, InputNumberModule, InputTextModule, PageHeaderComponent, RouterLink, SelectModule, TranslatePipe, FieldComponent, FormSectionComponent, AsyncPageComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="isEdit() ? ('common.edit' | translate) : ('hr.employees.add' | translate)" accent="hr" iconName="briefcase">
@@ -40,7 +41,7 @@ type EmployeeForm = Record<string, string | number | boolean | null | undefined 
     <!-- T5-07: a failed edit-load shows the error state with retry instead of a
          blank form that could be saved over the real employee -->
     <app-async-page [resource]="pageState" variant="form" [backLink]="['/hr/employees']">
-        <form (ngSubmit)="save()" #f="ngForm">
+        <form (ngSubmit)="vs.validate() && save()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
           <app-form-section>
           <app-field label="hr.employees.user" [controlId]="fid('user_id')" [required]="true" [error]="serverFieldError(error(), 'user_id')">
             <p-select appendTo="body" [inputId]="fid('user_id')" [options]="userOptions()" optionLabel="name" optionValue="id" [filter]="true" [(ngModel)]="model.user_id" name="user_id" required styleClass="u-full" [placeholder]="'common.choose' | translate" />
@@ -63,7 +64,7 @@ type EmployeeForm = Record<string, string | number | boolean | null | undefined 
         </app-form-section>
           @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
           <div class="sticky-actions">
-            <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
+            <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="sending()" />
           </div>
         </form>
       </app-async-page>
@@ -155,6 +156,9 @@ export class EmployeeFormPage implements OnInit {
   }
 
   save(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.error.set(null);
     const id = this.id();

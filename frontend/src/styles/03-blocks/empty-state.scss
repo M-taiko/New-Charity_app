@@ -24,6 +24,19 @@
   max-width: 420px;
 }
 
+/* N-08: the call to action under the lines */
+.empty-state__action {
+  margin-block-start: var(--space-2);
+}
+
+/* N-09: compact — icon + one line, no illustration — for the small body it
+   sits in (a chart card). The full state (chip + 96px pattern + lines) stood
+   about 256px tall and stretched the card it was in. */
+.empty-state--compact {
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-3);
+}
+
 /* full-page variant (403/404 routes) */
 .empty-state--page {
   min-height: 60vh;

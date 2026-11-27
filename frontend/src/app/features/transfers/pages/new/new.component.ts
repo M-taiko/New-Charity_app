@@ -18,6 +18,7 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { Router } from '@angular/router';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 interface UserCustody {
   id: number;
@@ -34,11 +35,11 @@ interface UserCustody {
 @Component({
   selector: 'app-transfer-form',
   standalone: true,
-  imports: [TranslatePipe, FormsModule, ButtonModule, SelectModule, InputNumberModule, TextareaModule, PageHeaderComponent, FormSectionComponent, FieldComponent, MoneyPipe, ActionButtonComponent],
+  imports: [ValidSubmitDirective, TranslatePipe, FormsModule, ButtonModule, SelectModule, InputNumberModule, TextareaModule, PageHeaderComponent, FormSectionComponent, FieldComponent, MoneyPipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'transfer.create.title' | translate" accent="custodies" iconName="arrows-exchange">
-    <form (ngSubmit)="submit()" #f="ngForm">
+    <form (ngSubmit)="vs.validate() && submit()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
       <app-form-section>
         <app-field label="transfer.create.custody" controlId="custody" [required]="true" hint="common.hint_choose_custody" [error]="serverFieldError(error(), 'custody_id')">
           <p-select appendTo="body" inputId="custody" [options]="custodyOptions()" optionLabel="reason" optionValue="id"
@@ -68,7 +69,7 @@ interface UserCustody {
       <div class="sticky-actions">
         <app-action-button kind="back" label="common.back" [route]="['/transfers']" />
         <p-button type="submit" [label]="'transfer.create.submit' | translate" [loading]="sending()"
-                  [disabled]="f.invalid || sending() || maxTransferable() <= 0" />
+                  [disabled]="sending() || maxTransferable() <= 0" />
       </div>
     </form>
   `,
@@ -126,6 +127,9 @@ export class TransferFormPage {
   }
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.custodyId() === null || this.receiverId() === null || this.amount() === null) return;
     this.sending.set(true);
     this.error.set(null);

@@ -1,16 +1,30 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import {
+  RAW_I18N_KEY,
+  auditRoute,
+  reportedSummary,
+  screenshotWholePage,
+  seedThemeInitScript,
+  type AuditContext,
+  type Theme,
+  type Viewport,
+} from './gates';
 
 /**
  * Visual QA matrix (Task4 T4-28): every route × light/dark × 360/1280 px.
- * Saves one screenshot per combination under e2e/screenshots/ and FAILS on
- * the four things code scanning cannot catch:
- *   1. horizontal page scroll
- *   2. console errors / page errors during load
- *   3. a literal i18n key shown to the user ("custody.list.title" on screen)
- *   4. an empty <main> (blank page)
+ * Saves one WHOLE-PAGE screenshot per combination under e2e/screenshots/ and
+ * fails on what code scanning cannot catch. The gates themselves live in
+ * `e2e/gates.ts` — next to `e2e/gates.spec.ts`, which proves each one can fail.
  *
- * Review the screenshot set once per delivery round; pages that still look
- * unfinished become the next batch of polish tasks.
+ *   scroll · console errors · raw i18n keys · empty <main> · focus steal ·
+ *   sprite refs · ellipsized numbers · sidebar state and pitch · clipped
+ *   cells · dashboard tile geometry · equal card heights · actions buttons ·
+ *   one table per screen — and since round 4: the theme is really PAINTED
+ *   (R4-01: all "dark" screenshots used to be light), no raw `true/false` in
+ *   a table cell (R4-03), one KPI-row rule (R4-04), no surface painted in the
+ *   other theme's colour, and a page that opens at its top.
  *
  * Needs the PHP server + seeded data + the packed SPA (same as spa.spec.ts).
  */
@@ -41,92 +55,90 @@ const ROUTES: readonly string[] = [
   'chat', 'notifications', 'broadcasts', 'activity', 'activity/mine',
   'users', 'users/new', 'users/1', 'users/1/edit',
   'settings', 'profile',
+  // R3-07.3: error pages join the audited routes
+  'forbidden', 'not-found',
 ];
 
-const THEMES = ['light', 'dark'] as const;
-const VIEWPORTS = [
+const THEMES: readonly Theme[] = ['light', 'dark'];
+const VIEWPORTS: readonly Viewport[] = [
   { name: '360', width: 360, height: 800 },
   { name: '1280', width: 1280, height: 800 },
-] as const;
+];
 
-/** dotted Latin identifiers that are never legitimate UI text (i18n keys) */
-const RAW_I18N_KEY = /[a-z_]+\.[a-z0-9_]+(?:\.[a-z0-9_]+)+/;
+/** the packed sprite's symbol ids — the source of truth for the icon gate (B-01).
+ *  public/app lives at the REPO root (frontend/ is a sibling of public/). */
+const CONTEXT: AuditContext = {
+  spriteIds: new Set(
+    [...readFileSync(resolve(__dirname, '../../public/app/assets/icons/sprite.svg'), 'utf8').matchAll(/id="([^"]+)"/g)].map((m) => m[1]),
+  ),
+};
 
 async function login(page: Page): Promise<void> {
   await page.goto('/app/login', { waitUntil: 'networkidle' });
+
+  // guard the login page itself (it is never a checkRoute target): submit
+  // empty fields and assert the validation state renders NO raw i18n key
+  // (the errors.generic/required_hint banner once leaked untranslated)
+  await page.click('button[type="submit"]');
+  await page.waitForTimeout(400);
+  const loginText = (await page.locator('form').first().innerText().catch(() => '')) || '';
+  const loginRawKey = RAW_I18N_KEY.exec(loginText);
+  expect(loginRawKey, `login page raw i18n key "${loginRawKey?.[0] ?? ''}"`).toBeNull();
+
   await page.fill('input[type="email"]', EMAIL);
   await page.fill('input[type="password"]', PASSWORD);
   await page.click('button[type="submit"]');
   await page.waitForURL(/dashboard/, { timeout: 20_000 });
-  await expect(page.locator('.sidebar__link').first()).toBeVisible({ timeout: 15_000 });
-}
-
-async function checkRoute(
-  page: Page,
-  route: string,
-  theme: string,
-  viewport: { name: string; width: number; height: number },
-): Promise<void> {
-  const errors: string[] = [];
-  const onConsole = (m: { type(): string; text(): string }): void => {
-    if (m.type() === 'error') {
-      errors.push('console: ' + m.text().slice(0, 200));
-    }
-  };
-  const onPageError = (e: Error): void => {
-    errors.push('pageerror: ' + String(e).slice(0, 200));
-  };
-  page.on('console', onConsole);
-  page.on('pageerror', onPageError);
-
-  await page.setViewportSize({ width: viewport.width, height: viewport.height });
-  await page.evaluate((t) => {
-    document.documentElement.setAttribute('data-theme', t);
-  }, theme);
-  await page.goto('/app/' + route, { waitUntil: 'domcontentloaded' });
-
-  // settle: header or error state visible, then one paint for skeletons→content
-  await expect(page.locator('app-page-header, .error-state, .empty-state, .stat-tile, .form-section, .chat, .ledger-table, .chart-card').first()).toBeVisible({ timeout: 15_000 });
-  await page.waitForTimeout(1_200);
-
-  // 1 — no horizontal page scroll
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-  expect(overflow, `${route} [${theme}/${viewport.name}] horizontal scroll +${overflow}px`).toBeLessThanOrEqual(1);
-
-  // 3 — no literal i18n key rendered
-  const mainText = (await page.locator('main').first().innerText().catch(() => '')) || '';
-  const rawKey = RAW_I18N_KEY.exec(mainText);
-  expect(rawKey, `${route} [${theme}/${viewport.name}] literal i18n key "${rawKey?.[0] ?? ''}"`).toBeNull();
-
-  // 4 — never an empty <main>
-  expect(mainText.trim().length, `${route} [${theme}/${viewport.name}] empty <main>`).toBeGreaterThan(0);
-
-  // 2 — console/page errors (dead API calls, template errors)
-  // noise: aborted requests while navigating on
-  const realErrors = errors.filter((e) => !e.includes('net::ERR_ABORTED'));
-  expect(realErrors, `${route} [${theme}/${viewport.name}] console errors`).toEqual([]);
-
-  page.removeListener('console', onConsole);
-  page.removeListener('pageerror', onPageError);
-
-  await page.screenshot({
-    path: `e2e/screenshots/${route.replaceAll('/', '~')}__${theme}__${viewport.name}.png`,
-    fullPage: false,
-  });
+  await expect(page.locator('.sidebar__link').first()).toBeVisible({ timeout: 30_000 });
 }
 
 test.describe.serial('visual QA matrix', () => {
-  test('every route in light/dark × 360/1280 with no scroll, errors, raw keys or blank pages', async ({ page }) => {
-    test.slow();
+  test('every route in light/dark × 360/1280 with no scroll, errors, raw keys, blank pages or false-dark renders', async ({ page }) => {
+    // 288 visits (72 routes × light/dark × 360/1280) × ~3.4s ≈ 16 minutes —
+    // no ceiling for this soak test
+    test.setTimeout(0);
     await login(page);
+
+    // R4-01: the theme reaches the app through the storage it restores from.
+    // The old `document.documentElement.setAttribute('data-theme', t)` before
+    // `goto()` was discarded by the navigation, so all 144 "dark" screenshots
+    // were light (mean brightness 243 — identical to the light set).
+    await page.addInitScript(seedThemeInitScript);
+
+    const excused: string[] = [];
+    const reported: string[] = [];
+    const NOT_FIXED = '(reported in round 5, not fixed)';
     for (const route of ROUTES) {
       for (const theme of THEMES) {
         for (const viewport of VIEWPORTS) {
-          await checkRoute(page, route, theme, viewport);
+          const { problems, notes } = await auditRoute(page, { route, theme, viewport }, CONTEXT);
+          excused.push(...notes.filter((note) => !note.includes(NOT_FIXED)));
+          reported.push(...notes.filter((note) => note.includes(NOT_FIXED)));
+
+          // R4-08.1: whole page — a 1280×800 crop cut every long page
+          // (dashboard, forms, custody detail) in half. Taken BEFORE the
+          // assertion so a failing visit leaves its picture behind.
+          await screenshotWholePage(
+            page,
+            `e2e/screenshots/${route.replaceAll('/', '~')}__${theme}__${viewport.name}.png`,
+            viewport,
+          );
+
+          // soft on purpose: one run reports EVERY failing visit instead of
+          // stopping at the first and costing 16 minutes per finding
+          expect.soft(problems, problems.join('\n')).toEqual([]);
         }
       }
+    }
+    // nothing is silenced quietly: what the gates saw and excused is in the
+    // log — and what is known and deliberately not fixed is counted apart
+    const visits = ROUTES.length * THEMES.length * VIEWPORTS.length;
+    console.log(`visual matrix: ${visits} visits; excused by a verified reason: ${excused.length}; reported and not fixed: ${reported.length} visits`);
+    for (const note of excused) {
+      console.log(`  excused: ${note}`);
+    }
+    if (reported.length) {
+      console.log(`  reported, not fixed: ${reportedSummary(reported)}`);
     }
   });
 });

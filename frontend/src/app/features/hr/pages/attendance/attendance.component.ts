@@ -18,10 +18,10 @@ import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import type { ListResponse, ActionResponse } from '@shared/models/api.models';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface Row {
   id: number;
@@ -36,10 +36,10 @@ interface Row {
 @Component({
   selector: 'app-attendance-page',
   standalone: true,
-  imports: [SectionNavComponent, 
+  imports: [DatetimeCellComponent, SectionNavComponent, 
     TranslatePipe, FormsModule, ButtonModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
-    EmptyStateComponent, DatetimePipe, EnumLabelPipe,
+    EmptyStateComponent, EnumLabelPipe,
     FormDialogComponent, FieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -52,7 +52,8 @@ interface Row {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table listUrl="/hr/attendance"
+        <app-data-table [phoneFirst]="['employee', 'status']"
+        [exportQuery]="tableExportQuery()" listUrl="/hr/attendance"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -70,7 +71,7 @@ interface Row {
             </app-field>
           </div>
           <ng-template appCell="employee" let-row>{{ row.employee ?? '—' }}</ng-template>
-          <ng-template appCell="date" let-row><span class="u-bidi">{{ row.date | datetime }}</span></ng-template>
+          <ng-template appCell="date" let-row><app-datetime-cell [value]="row.date" /></ng-template>
           <ng-template appCell="check_in" let-row><span class="u-bidi">{{ row.check_in ?? '—' }}</span></ng-template>
           <ng-template appCell="check_out" let-row><span class="u-bidi">{{ row.check_out ?? '—' }}</span></ng-template>
           <ng-template appCell="status" let-row><span class="stamp">{{ row.status | enumLabel: 'attendance' }}</span></ng-template>
@@ -109,6 +110,16 @@ export class AttendancePage {
   ];
 
   /** T3-91: month/year filter — defaults to the current month, reloads on change */
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
+
   params = signal({ page: 1, per_page: 25, q: '', status: 'all', month: new Date().getMonth() + 1, year: new Date().getFullYear() });
 
   data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string; month: number; year: number }>({
@@ -147,6 +158,9 @@ export class AttendancePage {
   }
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.form.employee_id === null) { return; }
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>('/hr/attendance', this.form)).then((res) => {

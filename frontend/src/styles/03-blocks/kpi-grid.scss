@@ -1,84 +1,149 @@
-/* ═══ KPI Grid — flexbox tile rows ═══
-   Two modes:
-   • DEFAULT `.kpi-grid` — 3 per row with smart leftovers (solo→100%, pair→50%)
-   • EXPLICIT `.kpi-grid--2/4/5/6` — fixed column count, children always
-     take 1/n of the row regardless of how many render (conditional tiles
-     must never change sibling widths).
-   Every default-mode count/leftover rule is scoped with
-   :not([class*='kpi-grid--']) so its higher specificity can never bleed
-   into a modifier grid. */
+/* ═══ KPI Grid — ONE rule for every page (R4-04) ═══
+   A `.kpi-grid` is a CSS grid. Its column count follows from two things only
+   — how many tiles it holds and how wide the row is — never from a page's
+   own modifier class:
 
-.kpi-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-  margin-block-end: var(--space-4);
-  align-items: stretch;
+   • the ROW sets the ceiling: 1 column below 376px, 2 from 376, 3 from 572,
+     4 from 768, 5 from 964 (a 180px tile + 16px gaps). The row is measured as
+     the `app-async-page` container, so it tracks the real content width: at a
+     1280px viewport the row is 976px and five tiles sit five-up (182px each).
+   • the TILE COUNT picks inside that ceiling so the last row is never a lone
+     card: 5 → 5 · 6 → 3+3 · 7 → 4+3 · 8 → 4+4 · 9 → 5+4 · 11 → 4+4+3.
+
+   Every tile in a grid is the same width. The flex "leftover" rules this
+   replaces (a 4th tile stretched across the whole row, a pair at 50%) are what
+   put a 976px card under three 315px ones. */
+
+@use 'sass:list';
+@use 'sass:math';
+
+// Columns for $n tiles when at most $max fit: the fewest rows whose last row
+// is at least half full and never a single tile; between layouts with the same
+// number of rows, the one whose last row is fullest (3+3 over 4+2, 4+4 over
+// 5+3). 7 tiles in a 2-wide row can only wrap 2+2+2+1, so they stack.
+// (e2e/gates.spec.ts compiles this file and checks the table it emits.)
+@function kpi-cols($n, $max) {
+  $best: 1;
+  $best-rows: 999;
+  $best-fill: 0;
+  $limit: math.min($n, $max);
+
+  @if $limit > 1 {
+    @for $try from 2 through $limit {
+      $rem: $n % $try;
+      $fill: if($rem == 0, 1, math.div($rem, $try));
+      $rows: math.ceil(math.div($n, $try));
+
+      @if $rem != 1 and $fill >= 0.5 and ($rows < $best-rows or ($rows == $best-rows and $fill > $best-fill)) {
+        $best: $try;
+        $best-rows: $rows;
+        $best-fill: $fill;
+      }
+    }
+  }
+
+  @return $best;
 }
 
-/* a grid nested in a grid must never get the 1/3 flex squeeze — it
-   overflows its tile/section; let it span the full width instead */
+/* the containers a KPI row reads its width from. The page content covers
+   every top-level row (KPI rows always live inside app-async-page; a
+   container cannot query itself, so the grid is not its own container). A
+   card may embed a row: treasury detail nests its three tiles in a 278px
+   side card, which must measure the CARD (→ one column), not the page. */
+main app-async-page,
+.chart-card {
+  container-type: inline-size;
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--kpi-cols, 1), minmax(0, 1fr));
+  /* R3-01: stretch alone gives equal-height rows — no percentage heights */
+  align-items: stretch;
+  gap: var(--space-4);
+  margin-block-end: var(--space-4);
+}
+
+/* one tier per row width; each overrides the previous one for the same tile
+   count (same specificity, later in source).
+   :has() and container queries are in every browser of .browserslistrc except
+   Firefox ESR 115, which takes the auto-fit fallback right below. */
+/* stylelint-disable plugin/no-unsupported-browser-features -- see the @supports fallback */
+@each $tier in (376px 2), (572px 3), (768px 4), (964px 5) {
+  @container (min-width: #{list.nth($tier, 1)}) {
+    @for $n from 1 through 16 {
+      .kpi-grid:has(> :nth-child(#{$n})):not(:has(> :nth-child(#{$n + 1}))) {
+        --kpi-cols: #{kpi-cols($n, list.nth($tier, 2))};
+      }
+    }
+
+    /* beyond 16 tiles (data-driven rows) take the ceiling */
+    .kpi-grid:has(> :nth-child(17)) {
+      --kpi-cols: #{list.nth($tier, 2)};
+    }
+  }
+}
+
+/* no :has(): as many equal columns as fit the row (a lone last tile is then
+   possible — the price of a browser that cannot count its children) */
+@supports not (selector(:has(*))) {
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+/* stylelint-enable plugin/no-unsupported-browser-features */
+
+/* a grid nested in a grid spans the whole row instead of being squeezed
+   into one tile */
 .kpi-grid .kpi-grid {
-  flex-basis: 100%;
+  grid-column: 1 / -1;
   margin-block-end: 0;
 }
 
-/* ── Default mode: 3 per row ─────────────────────────────────── */
-.kpi-grid > * {
-  flex: 0 0 calc((100% - 2 * var(--space-4)) / 3);
-  min-width: 0;
-  min-height: 100%;
-}
+/* ── Equal height: cards fill their row — GLOBAL ────────────────
+   Side-by-side cards (any .kpi-grid row, a .bento row of chart widgets, a
+   .tile-link wrapper) must share one height: the shorter card stretches to
+   the tallest. The ROW container already stretches its items
+   (align-items: stretch on the flex/grid row); the card host is then a
+   column-flex box whose single card grows with flex: 1.
 
-/* exactly 1 child: full width */
-.kpi-grid:not([class*='kpi-grid--']):has(> :only-child) > * {
-  flex-basis: 100%;
-}
-
-/* exactly 2 children: 50/50 */
-.kpi-grid:not([class*='kpi-grid--']):has(> :nth-child(2):last-child) > * {
-  flex-basis: calc((100% - var(--space-4)) / 2);
-}
-
-/* solo leftover (4th, 7th, 10th… is the last child): full width */
-.kpi-grid:not([class*='kpi-grid--']) > :last-child:nth-child(3n + 1):not(:first-child) {
-  flex-basis: 100%;
-}
-
-/* pair leftover (items 3n+1 and 3n+2 are the last two): 50/50 each */
-.kpi-grid:not([class*='kpi-grid--']) > :nth-last-child(2):nth-child(3n + 1),
-.kpi-grid:not([class*='kpi-grid--']) > :nth-last-child(2):nth-child(3n + 1) ~ :last-child {
-  flex-basis: calc((100% - var(--space-4)) / 2);
-}
-
-/* ── Equal height: cards fill their flex line ──────────────────
-   The flex item is the component host (app-stat-tile / app-chart-card)
-   or the tile-link wrapper — stretch sizes THAT box, and the inner card
-   must fill it or side-by-side cards end up with mismatched bottoms. */
+   FLEX, never percentages — R3-01 showed that min-height/height: 100% on
+   grid children resolve against auto-height ancestors and inflate cards to
+   ~700px on phones. Flex-grow cannot do that: it only distributes space the
+   container already has. */
 .kpi-grid > app-stat-tile,
-.kpi-grid > app-chart-card {
-  display: block;
-  min-height: 100%;
+.kpi-grid > app-chart-card,
+.tile-link > app-stat-tile,
+.tile-link > app-chart-card,
+.bento__widget--bare > app-chart-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.kpi-grid .stat-tile,
-.kpi-grid .chart-card {
-  height: 100%;
+/* in a COLUMN container (the bare bento slot) the chart host also takes
+   the remaining height of its slot; inside row containers (kpi-grid,
+   tile-link) stretch already sized it */
+.bento__widget--bare > app-chart-card,
+.tile-link > app-stat-tile,
+.tile-link > app-chart-card {
+  flex: 1 1 auto;
+}
+
+.kpi-grid > app-stat-tile > .stat-tile,
+.kpi-grid > app-chart-card > .chart-card,
+.tile-link > app-stat-tile > .stat-tile,
+.tile-link > app-chart-card > .chart-card,
+.bento__widget--bare > app-chart-card > .chart-card {
+  flex: 1 1 auto;
 }
 
 .tile-link {
   display: flex;
   flex-direction: column;
-  min-height: 100%;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-}
-
-.tile-link > app-stat-tile,
-.tile-link > app-chart-card {
-  flex: 1;
-  min-height: 0;
 }
 
 .stat-tile {
@@ -88,105 +153,48 @@
   gap: var(--space-1);
 }
 
-.stat-tile__label {
-  flex-shrink: 0;
+/* ── Vertical rhythm — GLOBAL ────────────────────────────────────
+   A chart row / card row always keeps breathing room before the block that
+   follows it (a table, another section…). Only applies when something
+   actually follows, so last-in-page rows add no dead space. */
+.bento + *,
+.kpi-grid + app-data-table,
+app-chart-card + app-data-table,
+app-data-table + .bento,
+app-data-table + .kpi-grid {
+  margin-block-start: var(--space-4);
+}
+
+/* custom-element hosts are inline by default — give the card/table/page
+   hosts a block box so those margins (and normal stacking) apply */
+main app-data-table,
+main app-chart-card,
+main app-stat-tile,
+main app-async-page {
+  display: block;
+}
+
+/* …but inside a row/grid container the SAME hosts must stay flex items */
+main .kpi-grid > app-chart-card,
+main .kpi-grid > app-stat-tile,
+main .bento > app-chart-card,
+main .tile-link > app-chart-card,
+main .tile-link > app-stat-tile {
+  display: flex;
 }
 
 .stat-tile__value {
   flex: 1;
   display: flex;
   align-items: center;
+  gap: var(--space-1);
+  /* R2-02: the value is an LTR-isolated flex row — pack it to flex-end so the
+     figure's edge matches the label/caption/delta inline-start edge above
+     and below (text-align alone does nothing inside a flex container) */
+  justify-content: flex-end;
 }
 
+/* column-flex items keep their height when the tile is stretched/limited */
 .stat-tile__caption {
   flex-shrink: 0;
-}
-
-/* ── Default mode responsive ──────────────────────────────────── */
-@media (max-width: 1024px) {
-  .kpi-grid > * {
-    flex-basis: calc((100% - var(--space-4)) / 2);
-  }
-
-  .kpi-grid:not([class*='kpi-grid--']):has(> :only-child) > * {
-    flex-basis: 100%;
-  }
-
-  .kpi-grid:not([class*='kpi-grid--']) > :last-child:nth-child(2n + 1):not(:first-child) {
-    flex-basis: 100%;
-  }
-}
-
-@media (max-width: 576px) {
-  .kpi-grid > * {
-    flex-basis: 100%;
-  }
-}
-
-/* ── RD-3.2: explicit column counts the Stitch screens use (2/4/5/6).
-   Flex basis = (100% − (n−1)·gap) / n; collapse 6→3→2→1, 5→3→2→1,
-   4→2→1 as the viewport narrows. Children keep 1/n width no matter
-   how many tiles actually render (conditional tiles included). */
-.kpi-grid--2 > * {
-  flex-basis: calc((100% - var(--space-4)) / 2);
-}
-
-.kpi-grid--4 > * {
-  flex-basis: calc((100% - 3 * var(--space-4)) / 4);
-}
-
-/* a lone 5th tile (conditional aggregates) becomes a horizontal totals
-   banner: label at the start, the big figure at the end — fills the full
-   width instead of hugging one side with dead space */
-.kpi-grid--4 > :last-child:nth-child(5):not(:only-child) {
-  flex-basis: 100%;
-}
-
-.kpi-grid--4 > :last-child:nth-child(5):not(:only-child) .stat-tile {
-  flex-flow: row wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
-  padding-block: var(--space-4);
-}
-
-.kpi-grid--4 > :last-child:nth-child(5):not(:only-child) .stat-tile__value {
-  font-size: var(--text-2xl);
-}
-
-.kpi-grid--4 > :last-child:nth-child(5):not(:only-child) .stat-tile__caption {
-  flex-basis: 100%;
-}
-
-.kpi-grid--5 > * {
-  flex-basis: calc((100% - 4 * var(--space-4)) / 5);
-}
-
-.kpi-grid--6 > * {
-  flex-basis: calc((100% - 5 * var(--space-4)) / 6);
-}
-
-@media (max-width: 1024px) {
-  .kpi-grid--4 > *,
-  .kpi-grid--5 > *,
-  .kpi-grid--6 > * {
-    flex-basis: calc((100% - 2 * var(--space-4)) / 3);
-  }
-}
-
-@media (max-width: 768px) {
-  .kpi-grid--4 > *,
-  .kpi-grid--5 > *,
-  .kpi-grid--6 > * {
-    flex-basis: calc((100% - var(--space-4)) / 2);
-  }
-}
-
-@media (max-width: 576px) {
-  .kpi-grid--2 > *,
-  .kpi-grid--4 > *,
-  .kpi-grid--5 > *,
-  .kpi-grid--6 > * {
-    flex-basis: 100%;
-  }
 }

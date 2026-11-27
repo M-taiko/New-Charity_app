@@ -17,6 +17,9 @@
       {
         "ignoreAtRules": [
           "each",
+          "if",
+          "else",
+          "for",
           "use",
           "forward",
           "include",

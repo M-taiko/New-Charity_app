@@ -18,7 +18,6 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.component';
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
@@ -26,6 +25,7 @@ import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import type { ActionResponse, ListResponse } from '@shared/models/api.models';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface Row {
   id: number;
@@ -52,10 +52,10 @@ interface SelectOption<T> {
 @Component({
   selector: 'app-list-page',
   standalone: true,
-  imports: [
+  imports: [DatetimeCellComponent, 
     TranslatePipe, FormsModule, ButtonModule, InputTextModule, SelectModule, TextareaModule,
     PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
-    EmptyStateComponent, DatetimePipe, StatusStampComponent,
+    EmptyStateComponent, StatusStampComponent,
     RowActionsComponent, ConfirmDialogComponent, FormDialogComponent, FieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,7 +66,8 @@ interface SelectOption<T> {
 
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table listUrl="/broadcasts"
+        <app-data-table [phoneFirst]="['title', 'status']"
+        [exportQuery]="tableExportQuery()" listUrl="/broadcasts"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -81,8 +82,8 @@ interface SelectOption<T> {
           <ng-template appCell="level" let-row>{{ levelLabel(row.level) }}</ng-template>
           <ng-template appCell="sender" let-row>{{ row.sender ?? '—' }}</ng-template>
           <ng-template appCell="status" let-row><app-status-stamp [status]="liveStatus(row)" namespace="broadcast" /></ng-template>
-          <ng-template appCell="expires_at" let-row><span class="u-bidi">{{ row.expires_at | datetime }}</span></ng-template>
-          <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+          <ng-template appCell="expires_at" let-row><app-datetime-cell [value]="row.expires_at" /></ng-template>
+          <ng-template appCell="created_at" let-row><app-datetime-cell [value]="row.created_at" /></ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
             <app-empty-state [title]="'broadcast.empty' | translate" [text]="'common.no_data' | translate" />
@@ -183,6 +184,16 @@ export class BroadcastsPage {
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
 
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
+
   params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
 
   data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string }>({
@@ -224,6 +235,9 @@ export class BroadcastsPage {
   }
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.form.title.trim() === '' || this.form.message.trim() === '') {
       this.formError.set('required');
       return;

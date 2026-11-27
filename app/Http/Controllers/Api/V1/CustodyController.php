@@ -59,6 +59,7 @@ final class CustodyController extends Controller
 
         return response()->json(ApiList::envelope($paginator, fn () => [
             'accepted' => Custody::whereIn('status', ['accepted', 'active'])->count(),
+            'active' => Custody::where('status', 'active')->count(),
             'pending' => Custody::where('status', 'pending')->count(),
             'rejected' => Custody::where('status', 'rejected')->count(),
             'closed_or_cancelled' => Custody::whereIn('status', ['closed', 'cancelled'])->count(),
@@ -141,7 +142,9 @@ final class CustodyController extends Controller
      */
     public function export(Request $request): StreamedResponse
     {
-        $this->authorize('may_manage_treasury');
+        // same guard as index() — 'may_manage_treasury' is a FRONTEND ability
+        // name, never a Laravel permission, so this always answered 403
+        $this->authorize('manage_treasury');
 
         $query = Custody::with(['agent', 'treasury'])->orderBy('created_at', 'desc');
         if ($request->filled('status') && $request->status !== 'all') {

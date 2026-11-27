@@ -209,6 +209,9 @@ export class MaintenanceDetailPage {
   }
 
   submitAssign(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.assignTo === null) {
       return;
     }
@@ -220,6 +223,9 @@ export class MaintenanceDetailPage {
   }
 
   submitReject(reason: string): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.rejectError.set(null);
     // the controller currently ignores the reason field; it is sent for parity
@@ -230,6 +236,9 @@ export class MaintenanceDetailPage {
   }
 
   submitResolve(notes: string): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.resolveError.set(null);
     void firstValueFrom(this.api.action(`/maintenance-requests/${this.id()}/resolve`, { resolution_notes: notes }))

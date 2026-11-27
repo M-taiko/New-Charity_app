@@ -12,7 +12,6 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastService } from '@core/errors/toast.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
@@ -23,6 +22,7 @@ import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component
 import type { ListResponse, ActionResponse } from '@shared/models/api.models';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
+import { LtrCellComponent } from '@shared/ui/ltr-cell/ltr-cell.component';
 
 interface Row {
   id: number;
@@ -37,10 +37,11 @@ interface Row {
 @Component({
   selector: 'app-suppliers-page',
   standalone: true,
-  imports: [SectionNavComponent, FormsModule, 
+  imports: [FormsModule,
     TranslatePipe, ButtonModule, InputTextModule, TextareaModule,
-    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective, 
+    PageHeaderComponent, AsyncPageComponent, DataTableComponent, TableCellDirective,
     EmptyStateComponent, ConfirmDeleteComponent, FormDialogComponent, FieldComponent, RowActionsComponent,
+    LtrCellComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -50,11 +51,11 @@ interface Row {
       </div>
     </app-page-header>
 
-    <app-section-nav module="procurement" />
-
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
-        <app-data-table listUrl="/suppliers"
+        <app-data-table
+        [exportQuery]="tableExportQuery()" listUrl="/suppliers"
+        [phoneFirst]="['name', 'phone']"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -68,8 +69,8 @@ interface Row {
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
           <ng-template appCell="name" let-row>{{ row.name ?? '—' }}</ng-template>
-          <ng-template appCell="phone" let-row>{{ row.phone ?? '—' }}</ng-template>
-          <ng-template appCell="email" let-row>{{ row.email ?? '—' }}</ng-template>
+          <ng-template appCell="phone" let-row><span class="u-bidi">{{ row.phone ?? '—' }}</span></ng-template>
+          <ng-template appCell="email" let-row><app-ltr-cell [value]="row.email ?? '—'" /></ng-template>
           <ng-template appCell="purchase_requests_count" let-row>{{ row.purchase_requests_count ?? '—' }}</ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
@@ -110,10 +111,21 @@ export class SuppliersPage {
   readonly columns = [
     { field: 'name', header: 'procurement.suppliers.col_name', sortable: true },
     { field: 'phone', header: 'procurement.suppliers.col_phone', sortable: true },
-    { field: 'email', header: 'procurement.suppliers.col_email', sortable: true },
+    // an address is one unbreakable token: the column is never squeezed under it
+    { field: 'email', header: 'procurement.suppliers.col_email', sortable: true, minWidth: 220 },
     { field: 'purchase_requests_count', header: 'procurement.suppliers.col_requests', sortable: true },
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal<{ page: number; per_page: number; q: string; sort?: string; status: string }>({ page: 1, per_page: 25, q: '', sort: '', status: 'all' });
 
@@ -184,6 +196,9 @@ export class SuppliersPage {
   form = { name: '', phone: '', email: '', address: '', notes: '' };
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.form.name === '') { return; }
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>('/suppliers', this.form)).then((res) => {

@@ -146,6 +146,9 @@ export class UserDetailPage {
   }
 
   saveRoles(userId: number): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>('/users/' + userId + '/assign-roles', { roles: this.selectedRoles }))
       .then((res) => {

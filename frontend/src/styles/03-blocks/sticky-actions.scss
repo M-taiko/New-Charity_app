@@ -10,6 +10,16 @@
   z-index: 10;
 }
 
+/* R5-01: a bar with no action in it must not exist as a strip. The two pages
+   that showed one on real data (custody detail, salary detail) now render
+   the bar conditionally; this covers every other bar and any status / role
+   combination in which all of a bar's actions are hidden. Angular leaves
+   only comment nodes behind for inactive @if blocks, and :empty ignores
+   comments. */
+.sticky-actions:empty {
+  display: none;
+}
+
 /* Non-sticky variant for in-flow forms (Task4 T4-22) */
 .form-actions {
   display: flex;

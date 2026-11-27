@@ -78,6 +78,25 @@ frontend/
 | `spa.spec.ts` | Smoke test: shell, routing, login flow |
 | `dialogs.spec.ts` | Dialog components behavior |
 | `roles/roles.spec.ts` | Role-based access checks |
+| `visual-matrix.spec.ts` | Every route × light/dark × 360/1280: runs every gate in `gates.ts` and saves a whole-page screenshot per visit under `e2e/screenshots/` |
+| `gates.ts` | The matrix's gates — one `measure…` function that runs in the page and one `…Violations` function that decides, per gate (see `docs/design-system.md`) |
+| `gates.spec.ts` | Proof that each gate can fail: feeds it the defect it was written for and asserts it is reported |
+| `navigation.spec.ts` | The shell: route changes through the sidebar, active item, back/forward |
+| `button-states.spec.ts` | Every kind of button, both themes: label contrast at rest and with the pointer on it (a screenshot never shows a hover state) |
+| `notifications-unread.spec.ts` | The unread marker on notifications, against a response the spec answers itself (the seeded account has no unread notification; nothing is written) |
+| `n06-support.ts` | Shared helpers of the round-6 specs: sign-in, a mocked API (every write refused unless the test answers it), labels from `ar.json` |
+| `n01-search-unit.spec.ts` / `n01-search.spec.ts` | N-01: when the palette asks the server and how a match is marked / the palette from the keyboard, against the real search endpoint |
+| `n02-saved-views-unit.spec.ts` / `n02-saved-views.spec.ts` | N-02: the saved-views store (limit, names, a damaged entry) / save → reload → apply on the three lists |
+| `n03-quick-view.spec.ts` | N-03: the quick-view drawer — focus trap, Escape, the focus back on the row, the list untouched |
+| `n04-bulk-unit.spec.ts` / `n04-bulk-actions.spec.ts` | N-04: exact totals and per-id answers / the selection, the bar, one request, the refused id — and on a phone the pinned column under the boxes |
+| `n05-camera-attachment.spec.ts` | N-05: the shrink plan, and a 7 MB photo uploaded under 2 MB on the real form |
+| `n06-unit.spec.ts` / `n06-safety.spec.ts` / `n06-feedback.spec.ts` | N-06: one request per identical write, the undo shortcut / double-clicked submits send one request / undo toasts and confirms with their details |
+| `n07-entity-color.spec.ts` | N-07: the entity colour is deterministic and spread, and the same across pages and themes |
+| `n08-empty-states.spec.ts` | N-08: first-run and no-results states, the call to action per role, and no "no results" before the server answered |
+| `n09-layout-stability.spec.ts` | N-09: every `@for` has a `track`, and `/dashboard` does not shift while loading |
+
+The round-6 specs answer their own list and action requests (or refuse every
+write): none of them changes a record in the database.
 
 ## `src/` — the application
 
@@ -99,7 +118,7 @@ frontend/
 | `01-base/print.scss` | Print styles (hides sidebars/filter bars, ledger-friendly) |
 | `02-primeng/_polish.scss` | PrimeNG overrides: outlined/text buttons per theme, RTL datepicker month arrows, light-mode danger buttons |
 | `02-primeng/_dark-overrides.scss` | Comprehensive dark-theme overrides for every PrimeNG component and BEM block |
-| `03-blocks/*.scss` | One file per BEM block: `app-shell`, `sidebar`, `topbar`, `bottom-nav`, `command-palette`, `data-table`, `filter-bar`, `page-header`, `stat-tile`, `kpi-grid`, `stamp`, `field`, `form-section`, `sticky-actions`, `empty-state`, `skeleton`, `timeline`, `chart-card`, `dialog`, `direction-trail`, `money`, `login`, `chat`, `line-items`, `attachments`, `notification-bell`, `theme-toggle`, `toast-host`, `key-value-list`, `segmented-bar`, `balance-ring`, `flow-ribbon` |
+| `03-blocks/*.scss` | One file per BEM block: `app-shell`, `sidebar`, `topbar`, `bottom-nav`, `command-palette`, `data-table`, `filter-bar`, `page-header`, `stat-tile`, `kpi-grid`, `stamp`, `field`, `form-section`, `sticky-actions`, `empty-state`, `skeleton`, `timeline`, `chart-card`, `dialog`, `direction-trail`, `money`, `login`, `chat`, `line-items`, `attachments`, `notification-bell`, `theme-toggle`, `toast-host`, `key-value-list`, `segmented-bar`, `balance-ring`, `flow-ribbon`, `quick-view` |
 | `04-utilities/_utilities.scss` | `u-flex`, `u-gap-*`, `u-full`, `u-bidi`, `u-muted`, … utility classes |
 
 ### `src/assets/`
@@ -117,7 +136,9 @@ frontend/
 | File | Description |
 |---|---|
 | `http/api-client.ts` | The single HTTP client for `/api/v1` |
-| `http/interceptors.ts` | Auth-token attachment, error normalization, 401 handling |
+| `http/interceptors.ts` | Auth-token attachment, error normalization, 401 handling; a failed request is sent again only when it is a read |
+| `http/single-flight.ts` | One request per identical write while one is in flight (a double-clicked submit sends one POST) |
+| `notifications/notification-read.service.ts` | Marking notifications read, with an undo that asks the server to mark them unread |
 | `http/progress-state.ts` | Global request progress indicator state |
 | `auth/auth.service.ts` | Login/logout, `/me` session, abilities |
 | `auth/auth.guard.ts` | `authGuard` / `guestGuard` route guards |
@@ -146,10 +167,10 @@ frontend/
 |---|---|
 | `shell/shell.component.ts` | Right-side sidebar + top bar + content grid; collapse/expand with state-aware RTL chevron |
 | `shell/nav-items.ts` | Navigation tree per permission |
-| `topbar/topbar.component.ts` | Page title, theme toggle, menu button |
+| `topbar/topbar.component.ts` | Page title, theme toggle, menu button, and the search box that opens the palette (`Ctrl+K` / `Cmd+K`) |
 | `bottom-nav/bottom-nav.component.ts` | Phone bottom navigation |
-| `command-palette/command-palette.component.ts` | Ctrl+K command palette |
-| `notification-bell/notification-bell.component.ts` | Notification bell with unread count |
+| `command-palette/command-palette.component.ts` | Ctrl+K command palette: pages and recent pages, and — from two characters — records from `GET /search` (custodies, expenses, social cases, users), grouped, with "see all results" |
+| `notification-bell/notification-bell.component.ts` | Notification bell with unread count; marking read can be undone |
 | `user-menu/user-menu.component.ts` | User chip + popup menu (sprite icons, theme & motion toggles, logout) |
 
 ### `src/app/shared/` — shared library
@@ -158,11 +179,15 @@ frontend/
 
 **`pipes/`** — `money.pipe.ts` (decimal-safe currency), `datetime.pipe.ts` (UTC → localized), `relative-time.pipe.ts` ("just now"), `enum-label.pipe.ts` (enum → i18n label), `pipes.ts` (barrel).
 
+**`lib/`** — pure functions, no components: `table-filters.ts` and `saved-views.ts` (what filters, and a table's saved views), `command-palette.ts` (what the palette asks for and lists), `money-sum.ts` (exact totals in whole piasters), `bulk-result.ts` (a per-id answer), `list-state.ts` (`reloadList`: a reload Angular refused is asked again), `undo-shortcut.ts`, `notification-undo.ts`, `server-field-errors.ts`, `image-shrink.ts` (N-05's plan), `chart-colors.ts` (`entityColor`), `chart-series.ts` / `chart-format.ts`, `journal-style.ts`.
+
 **`ui/`** — the component catalog (one folder each; `ui.ts` is the barrel):
 
 | Component | Description |
 |---|---|
-| `data-table` | The only table in the app: server pagination/sort, client search (money/date/enum aware), resizable + reorderable columns, per-user state in localStorage |
+| `data-table` | The only table in the app: server pagination/sort, client search (money/date/enum aware), resizable + reorderable columns, per-user state in localStorage; optional row selection with a bulk bar (`selectable`), saved views (`savedViews`), a quick view on the row (`rowActivatable`). Two states are never confused: "no data at all" and "no results for this filter" — and the latter is read only from rows that answer the search on screen |
+| `table-filters` / `table-views` | The table toolbar's filter panel and its saved-views panel (never open at the same time) |
+| `quick-view` | A record's summary in a drawer on the start side (420px; the whole screen on a phone), with the record's actions |
 | `page-header` | Title + actions bar |
 | `stat-tile` | KPI tile (money/count) |
 | `status-stamp` | Status "stamp" with per-enum styling |
@@ -170,15 +195,15 @@ frontend/
 | `direction-picker` | Cascading 4-level accounting-direction picker (T30) |
 | `direction-trail` | Read-only direction breadcrumb |
 | `line-items-editor` | Expense line items with running total + non-blocking mismatch warning |
-| `attachment-field` | File upload field |
-| `form-dialog` | Modal form wrapper |
-| `confirm-dialog` | Confirmation dialog |
-| `empty-state` | Empty/error state |
+| `attachment-field` | File upload field; on a phone also "التقاط صورة" (camera capture), shrunk on the device to the size limit |
+| `form-dialog` / `reason-dialog` / `confirm-delete` | Modal form, reason and delete dialogs: a submit is sent once (repeated clicks and Enter are ignored while pending); a `details` list says what is being changed |
+| `confirm-dialog` | Confirmation dialog with an optional `details` key-value list (amount, agent, treasury) for money actions |
+| `empty-state` | Empty state with `title`, `hint` and a call to action (a route or a kind) — for "no data at all"; `compact` inside a table or a chart card |
 | `balance-ring` | Custody balance ring chart |
 | `segmented-bar` / `flow-ribbon` / `timeline` / `chart-card` | Chart primitives (chart.js hosts) |
-| `key-value-list` | Detail key/value list |
+| `key-value-list` | Detail key/value list (also the `details` of the dialogs) |
 | `print-sheet` | Print-friendly sheet |
-| `toast-host` | Toast outlet |
+| `toast-host` | Toast outlet; a toast may carry an undo button (8 s; `Ctrl+Z` / `Cmd+Z`) |
 | `user-chip` | Avatar + name chip |
 
 ### `src/app/features/` — one folder per domain

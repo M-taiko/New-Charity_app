@@ -4,30 +4,50 @@
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-l);
   overflow: hidden;
+  /* the table card can always shrink to its column — the TABLE scrolls
+     inside it, the page never does */
+  min-width: 0;
+  max-width: 100%;
+  /* R5-03: the edge fades are positioned against the card */
+  position: relative;
 }
 
-/* widened columns (expand resize mode) scroll instead of blowing out the page */
+/* the table scrolls sideways inside its card (touch-friendly on phones) */
 .ledger-table .p-datatable-table-container {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
-/* fixed layout: column widths are exact — saved/specified widths are honored
-   verbatim (auto layout would redistribute them), cells clip gracefully.
-   min-width 100%: p-table's expand-resize writes an inline px width equal to
-   the saved column sum — stale (narrower) sums shrank the whole table inside
-   the card. min-width beats inline width, so the header ALWAYS spans the
-   card, while legitimately widened tables (>100%) keep their horizontal
-   scroll and the resize feature stays intact. */
+/* COLUMNS FIT THEIR CONTENT — never squeezed. Automatic layout sizes every
+   column to what it holds (numbers, dates and short labels on one line; a
+   long text column wraps only past 28rem). The table fills the card when
+   there is room; when the columns need more than the card is wide, the table
+   simply gets wider and the container scrolls left/right — on any screen.
+   (The old `table-layout: fixed` squeezed columns to fit, clipping content.) */
 .ledger-table .p-datatable-table {
-  table-layout: fixed;
+  table-layout: auto;
   width: 100%;
   min-width: 100%;
 }
 
-.ledger-table .p-datatable-table td,
-.ledger-table .p-datatable-table th {
+.ledger-table .p-datatable-table td {
+  white-space: nowrap;
+  max-width: 28rem;
+}
+
+.ledger-table .p-datatable-table th,
+.ledger-table .p-datatable-table td {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* B-04: never ellipsize numbers or dates — the leading digits are the value.
+   Numeric cells get a 96px min-width floor from the column defaults instead. */
+.ledger-table td.ledger-table__cell-num,
+.ledger-table td .dt-cell {
+  text-overflow: clip;
+  overflow: visible;
 }
 
 .ledger-table__header {
@@ -87,7 +107,12 @@
   padding: var(--space-2) var(--space-4);
   background: var(--color-surface-inset);
   border-block-end: 1px solid var(--color-hairline);
-  white-space: nowrap;
+  /* R3-04: headers wrap to two lines instead of clipping — long labels like
+     "تحويلات واردة (ج.م)" never ellipsize or overflow their column */
+  white-space: normal;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  vertical-align: bottom;
 
   /* sortable / resizable / reorderable columns */
   cursor: pointer;
@@ -197,24 +222,153 @@
   display: none;
 }
 
+/* Phones and narrow windows: the SAME table as desktop — it only scrolls
+   sideways. No card variant, no column squeezing. */
 @media (max-width: 768px) {
-  .ledger-table .p-datatable-table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .ledger-table table {
-    min-width: max-content;
-  }
-
-  .ledger-table th,
-  .ledger-table td {
-    white-space: nowrap;
-  }
-
   .ledger-table .p-paginator {
     flex-wrap: wrap;
     gap: var(--space-1);
+  }
+}
+
+/* ≤480px the row cannot hold the controls AND the report: the wrap used to
+   push the first-page button and the page-size select onto a second, shuffled
+   line. The report now takes its own line under the controls. */
+@media (max-width: 480px) {
+  .ledger-table .p-paginator,
+  .notices .p-paginator {
+    justify-content: center;
+  }
+
+  .ledger-table .p-paginator .p-paginator-current,
+  .notices .p-paginator .p-paginator-current {
+    order: 10;
+    flex-basis: 100%;
+    text-align: center;
+  }
+}
+
+/* ── R5-03: a table that scrolls sideways says so, and keeps its first column ──
+   `appScrollEdges` writes on the card which edges still have columns behind
+   them (data-scroll / data-scroll-start / data-scroll-end) and places two fade
+   elements over the table's own box — not the toolbar, not the pager. The
+   first column is pinned only while the table really is wider than its card,
+   so a table that fits never changes. All of it lives below 768px — on a
+   wider screen a table behaves exactly as before. */
+.ledger-table__fade {
+  position: absolute;
+  width: 36px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* An edge fade is OPAQUE AT THE EDGE IT SITS ON and clears toward the columns.
+   A gradient starts with its first colour: `to right, surface, transparent`
+   is surface at the LEFT. Gradients do not know the direction of the page, so
+   each edge states its paint for both. (Round 5 shipped these mirrored — the
+   fade erased the row lines 36px inside the table and left the cut-off content
+   untouched at the edge; caught in the pixel review, now gated.) */
+
+/* more toward the end edge: the left in RTL, the right in LTR */
+.ledger-table__fade--end {
+  inset-inline-end: 0;
+  background: linear-gradient(to left, var(--color-surface), transparent);
+}
+
+[dir='rtl'] .ledger-table__fade--end {
+  background: linear-gradient(to right, var(--color-surface), transparent);
+}
+
+/* … or toward the start edge; the directive offsets it past the pinned column,
+   so it sits against the column's exposed edge: the left of it in RTL */
+.ledger-table__fade--start {
+  inset-inline-start: 0;
+  background: linear-gradient(to right, var(--color-surface), transparent);
+}
+
+[dir='rtl'] .ledger-table__fade--start {
+  background: linear-gradient(to left, var(--color-surface), transparent);
+}
+
+/* phones: one line that says it in words */
+.ledger-table__scroll-hint {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .ledger-table[data-scroll-end='true'] > .ledger-table__fade--end,
+  .ledger-table[data-scroll-start='true'] > .ledger-table__fade--start {
+    opacity: 1;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+
+  .ledger-table[data-scroll='true'] .ledger-table__scroll-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-4) 0;
+    font-size: var(--text-2xs);
+    color: var(--color-text-muted);
+  }
+
+  /* the pinned first column. A sticky cell must paint its own row line —
+     collapsed borders are painted by the table and do not travel with it —
+     hence `separate` here, only for a table that scrolls (no cell has a
+     vertical border, so the rows look exactly the same).
+     Nothing else changes: every row keeps its own line, and the last body
+     row's line is also what separates the body from a totals row (the footer
+     cells draw no top border). Round 5 briefly removed that line under a
+     `:has(tfoot)` rule, on the assumption that two lines would meet there;
+     in pixels there was only ever one. */
+  .ledger-table[data-scroll='true'] .p-datatable-table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  /* WHICH cell leads a row: its first — except on a selectable table (N-04),
+     whose selection cell comes first in every row and is hidden on a phone.
+     There the first DATA cell is the second. `:first-child` alone also matches
+     a cell that is not rendered: written with it alone, this rule pinned the
+     hidden cell and took the pinned column away from the expenses and the
+     social-cases lists on phones (measured: the first column scrolled 250px).
+     `:where` adds the condition without adding specificity — both lists stay
+     at (0,4,1), as before — so the theme's hover and zebra rules still win. */
+  .ledger-table[data-scroll='true'] .p-datatable-table :is(th, td):first-child,
+  .ledger-table:where([data-selectable='true'])[data-scroll='true'] .p-datatable-table :is(th, td):nth-child(2) {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 2;
+    background: var(--color-surface);
+    /* the divider between the pinned column and the columns passing under it:
+       on the column's EXPOSED edge. An inset shadow with a NEGATIVE x offset
+       is painted on the right inner edge — correct for LTR, where the pinned
+       column is at the left; RTL needs the rule below. */
+    box-shadow: inset -1px 0 0 var(--color-hairline);
+    /* a phone card is ~330px: the pinned column leaves most of it to scroll */
+    max-width: 10rem;
+  }
+
+  [dir='rtl'] .ledger-table[data-scroll='true'] .p-datatable-table :is(th, td):first-child,
+  [dir='rtl'] .ledger-table:where([data-selectable='true'])[data-scroll='true'] .p-datatable-table :is(th, td):nth-child(2) {
+    box-shadow: inset 1px 0 0 var(--color-hairline);
+  }
+
+  .ledger-table[data-scroll='true'] .p-datatable-table th:first-child,
+  .ledger-table:where([data-selectable='true'])[data-scroll='true'] .p-datatable-table th:nth-child(2) {
+    z-index: 3;
+    background: var(--color-surface-inset);
+  }
+
+  /* No hover rule of its own: the theme's row-hover and zebra rules
+     (`.p-datatable tbody tr:hover td`, 0,4,3) outrank the background above
+     (0,4,1), so the pinned cell hovers and stripes exactly with its row. */
+}
+
+@media print {
+  .ledger-table > .ledger-table__fade,
+  .ledger-table .ledger-table__scroll-hint {
+    display: none;
   }
 }
 
@@ -266,10 +420,10 @@
   cursor: grabbing;
 }
 
-/* sort icon */
+/* sort icon — R2-08: 4px clearance so the arrow never touches the label */
 .ledger-table th .p-sortable-column-icon {
   font-size: 10px;
-  margin-inline-start: 2px;
+  margin-inline-start: 4px;
   opacity: 0.5;
 }
 
@@ -278,15 +432,161 @@
   color: var(--color-primary);
 }
 
-/* ── Spending-ratio cell (RD-3.3): slim progress bar + tabular percent ── */
+/* ── R2-05: the actions cell never wraps or clips — one line, icons pinned
+   to the inline-end edge; absent slots keep their width via placeholders ── */
+.ledger-table__cell-actions {
+  white-space: nowrap;
+}
+
+.ledger-table__cell-actions > * {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+  vertical-align: middle;
+}
+
+/* invisible same-width placeholder for an absent action slot */
+.row-actions__placeholder {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* ── GLOBAL: the text button in an actions cell FILLS the remaining width ──
+   A labelled workflow button (مراجعة / إلغاء المراجعة / approve…) used to
+   size to its own label, so rows ended at different edges with dead space
+   beside them. The icon slots keep their fixed width at the inline-end; the
+   text button takes the rest, centred, so every row shares the same edges.
+   Applies to the `.cell-action-text` wrapper and to a labelled button that
+   is the last child of any actions cell. */
+.ledger-table__cell-actions app-row-actions {
+  flex: 0 0 auto;
+}
+
+.ledger-table__cell-actions .cell-action-text,
+.ledger-table__cell-actions > * > app-action-button:last-child,
+.ledger-table__cell-actions > * > p-button:last-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+}
+
+.ledger-table__cell-actions .cell-action-text > app-action-button,
+.ledger-table__cell-actions .cell-action-text > p-button,
+.ledger-table__cell-actions .cell-action-text > app-action-button > p-button,
+.ledger-table__cell-actions > * > app-action-button:last-child > p-button {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+}
+
+.ledger-table__cell-actions .cell-action-text .p-button,
+.ledger-table__cell-actions > * > app-action-button:last-child .p-button,
+.ledger-table__cell-actions > * > p-button:last-child .p-button {
+  width: 100%;
+  justify-content: center;
+}
+
+/* R2-05: in-table text workflow buttons (مراجعة / إلغاء المراجعة) collapse
+   to icon-only below 1280px so the cell never overflows — an icon-only
+   button must not stretch, so the fill is switched off there */
+@media (max-width: 1279px) {
+  .ledger-table__cell-actions .cell-action-text .p-button-label {
+    display: none;
+  }
+
+  .ledger-table__cell-actions .cell-action-text,
+  .ledger-table__cell-actions .cell-action-text > app-action-button,
+  .ledger-table__cell-actions .cell-action-text > p-button {
+    flex: 0 0 auto;
+  }
+
+  .ledger-table__cell-actions .cell-action-text .p-button {
+    width: auto;
+  }
+}
+
+/* ── P-07: beneficiary cell — avatar initials + name link ── */
+.beneficiary {
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.beneficiary:hover span:last-child {
+  color: var(--color-primary);
+}
+
+.beneficiary__avatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-on-primary-soft);
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* N-07: the ring is the entity's own colour, bound from the template
+   ([style.borderColor]="entityColor(id)") — the hairline is only the fallback
+   for a row without an id */
+.beneficiary__avatar--entity {
+  border: 2px solid var(--color-hairline);
+}
+
+/* N-07: an entity's colour as a dot beside its name (a treasury in the list and
+   on its detail page) — the same colour wherever that entity appears */
+.entity-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+  background: var(--color-hairline);
+}
+
+/* ── R4-03: role pills — small NEUTRAL chips (a role is a label, not a
+   status, so they are not stamps): two at most, the rest folded into "+N"
+   with every role in the container's tooltip. ── */
+.role-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  max-width: 100%;
+}
+
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-inset);
+  border: 1px solid var(--color-hairline);
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── Spending-ratio cell (RD-3.3 → R2-08): slim bar + tabular percent on
+   ONE line, per Stitch _11 — the % sits beside the bar, not under it ── */
 .progress-cell {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  gap: var(--space-2);
   min-width: 96px;
 }
 
 .progress-cell__bar {
+  flex: 1;
+  min-width: 48px;
   height: 8px;
   border-radius: var(--radius-full);
   background: var(--color-surface-inset);
@@ -369,7 +669,99 @@
   padding-block: var(--space-3);
 }
 
-/* columns that cannot sort (computed values) — no pointer, no hover hint */
-.ledger-table th.ledger-table__th--nosort {
-  cursor: default;
+/* ── N-04: selection and the bulk bar ─────────────────────────────────
+   A selectable table has a checkbox column of its own on a wide screen. On a
+   phone that column is hidden and each checkbox sits in the first cell
+   instead — the first column is the one pinned there (R5-03), so the boxes
+   stay in reach while the rest of the table scrolls. */
+.ledger-table__cell-select {
+  inline-size: 2.75rem;
+  min-inline-size: 2.75rem;
+  max-inline-size: 2.75rem;
+  text-align: center;
+}
+
+.ledger-table__checkbox {
+  inline-size: 1rem;
+  block-size: 1rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.ledger-table__checkbox--inline {
+  display: none;
+  margin-inline-end: var(--space-2);
+}
+
+@media (max-width: 767px) {
+  .ledger-table[data-selectable='true'] .ledger-table__cell-select {
+    display: none;
+  }
+
+  .ledger-table[data-selectable='true'] .ledger-table__checkbox--inline {
+    display: inline-block;
+  }
+}
+
+.ledger-table tr.ledger-table__row--selected > td {
+  background: var(--color-primary-soft);
+}
+
+/* On a phone the tint must also cover the pinned first cell, whose own background rule
+   (0,4,1) outranks the one above. (0,4,2): above that rule, below the theme's hover and
+   zebra rules (0,4,3) — the same order as on a wide screen, where nothing is pinned */
+@media (max-width: 767px) {
+  .ledger-table[data-selectable='true'] .p-datatable-table tr.ledger-table__row--selected > td {
+    background: var(--color-primary-soft);
+  }
+}
+
+/* The bar: fixed to the end edge of the viewport, centred, while at least one
+   row is selected. Not sticky inside the card: the card clips (overflow:
+   hidden), which makes it the scroll container a sticky child answers to —
+   and the card itself never scrolls. On a phone it sits above the floating
+   quick-expense button and the bottom navigation. */
+.ledger-table__bulk {
+  position: fixed;
+  inset-block-end: var(--space-4);
+  inset-inline: var(--space-4);
+  margin-inline: auto;
+  max-inline-size: 760px;
+  z-index: 950;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-l);
+  box-shadow: 2px 2px 0 var(--color-hairline);
+}
+
+.ledger-table__bulk-count {
+  flex-shrink: 0;
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-primary-soft);
+  color: var(--color-on-primary-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .ledger-table__bulk {
+    /* above the bottom navigation and the floating quick-expense button */
+    inset-block-end: calc(var(--topbar-h) + 4.5rem);
+  }
+}
+
+@media print {
+  .ledger-table__bulk,
+  .ledger-table__checkbox {
+    display: none;
+  }
 }

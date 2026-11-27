@@ -8,7 +8,6 @@ import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
@@ -35,8 +34,7 @@ interface Row {
 @Component({
   selector: 'app-maintenance-list-page',
   standalone: true,
-  imports: [ StatusStampComponent, EnumLabelPipe,SectionNavComponent, 
-    TranslatePipe, RouterLink, ButtonModule,
+  imports: [ StatusStampComponent, EnumLabelPipe,TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, ConfirmDeleteComponent, RowActionsComponent,
   ],
@@ -48,17 +46,16 @@ interface Row {
       </div>
     </app-page-header>
 
-    <app-section-nav module="procurement" />
-
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
         <div class="kpi-grid">
           <app-stat-tile [label]="'procurement.maintenance.pending'" [value]="summaryValue('pending')" accent="procurement" iconName="shopping-cart" />
-          <app-stat-tile [label]="'procurement.maintenance.in_progress'" [value]="summaryValue('in_progress')" />
-          <app-stat-tile [label]="'procurement.maintenance.resolved'" [value]="summaryValue('resolved')" />
+          <app-stat-tile [label]="'procurement.maintenance.in_progress'" [value]="summaryValue('in_progress')" iconName="inProgress" accent="procurement" />
+          <app-stat-tile [label]="'procurement.maintenance.resolved'" [value]="summaryValue('resolved')" iconName="approved" accent="procurement" />
         </div>
 
-        <app-data-table listUrl="/maintenance-requests"
+        <app-data-table [phoneFirst]="['title', 'status']"
+        [exportQuery]="tableExportQuery()" listUrl="/maintenance-requests"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -100,6 +97,16 @@ export class MaintenanceListPage {
     { field: 'reported_by', header: 'procurement.maintenance.col_reporter', sortable: true },
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
 

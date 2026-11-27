@@ -12,7 +12,6 @@ import { SelectModule } from 'primeng/select';
 import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { AppTabsComponent } from '@shared/ui/tabs/tabs.component';
 import type { AppTab } from '@shared/ui/tabs/tabs.component';
@@ -26,10 +25,11 @@ import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.componen
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
 import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
+import type { KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import type { ActionResponse, ListResponse, Lookups } from '@shared/models/api.models';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface Row {
   id: number;
@@ -62,10 +62,9 @@ interface ReturnRequestParams {
 @Component({
   selector: 'app-return-requests',
   standalone: true,
-  imports: [AppTabsComponent, SectionNavComponent, 
-    TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
+  imports: [DatetimeCellComponent, AppTabsComponent, TranslatePipe, RouterLink, FormsModule, ButtonModule, SelectModule,
     PageHeaderComponent, AsyncPageComponent, RowActionsComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
-    EmptyStateComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
+    EmptyStateComponent, MoneyPipe, StatusStampComponent,
     FormDialogComponent, ReasonDialogComponent, ConfirmDialogComponent, FieldComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -76,23 +75,22 @@ interface ReturnRequestParams {
       </div>
     </app-page-header>
 
-    <app-section-nav module="custodies" />
-
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
         @if (hasSummary()) {
           <div class="kpi-grid">
             <app-stat-tile [label]="'custody.return_requests.tab_pending'" [value]="summaryValue('pending_count')" accent="custodies" iconName="wallet" />
-            <app-stat-tile [label]="'custody.return_requests.tab_approved'" [value]="summaryValue('approved_count')" />
-            <app-stat-tile [label]="'custody.return_requests.tab_rejected'" [value]="summaryValue('rejected_count')" />
-            <app-stat-tile [label]="'custody.return_requests.total_amount'" [value]="summaryValue('total_pending_amount')" [money]="true" />
+            <app-stat-tile [label]="'custody.return_requests.tab_approved'" [value]="summaryValue('approved_count')" iconName="approved" accent="custodies" />
+            <app-stat-tile [label]="'custody.return_requests.tab_rejected'" [value]="summaryValue('rejected_count')" iconName="declined" accent="custodies" />
+            <app-stat-tile [label]="'custody.return_requests.total_amount'" [value]="summaryValue('total_pending_amount')" [money]="true" iconName="cash" accent="custodies" />
           </div>
         }
 
       <!-- T6-11/T6-30: the status chips become tabs — no page-level filter markup -->
       <app-tabs id="return-requests" [tabs]="statusTabDefs" [(active)]="statusTab" (tabChange)="setParam('status', $event)" />
 
-      <app-data-table listUrl="/custodies/return-requests"
+      <app-data-table [phoneFirst]="['custody_id', 'agent', 'status', 'amount']"
+        [exportQuery]="tableExportQuery()" listUrl="/custodies/return-requests"
         [tableKey]="tableKey"
         [columns]="columns()"
         [rows]="page.data"
@@ -108,12 +106,12 @@ interface ReturnRequestParams {
         <ng-template appCell="custody_id" let-row><a routerLink="/custodies/{{ row.custody_id }}" class="u-bidi">#{{ row.custody_id }}</a></ng-template>
         <ng-template appCell="agent" let-row>{{ row.agent ?? '—' }}</ng-template>
         <ng-template appCell="requested_by" let-row>{{ row.requested_by ?? '—' }}</ng-template>
-        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money: false }}</span></ng-template>
         <ng-template appCell="reason" let-row>{{ row.reason ?? '—' }}</ng-template>
         <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="return_request" /></ng-template>
-        <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+        <ng-template appCell="created_at" let-row><app-datetime-cell [value]="row.created_at" /></ng-template>
         <ng-template appCell="approved_by" let-row>{{ row.approved_by ?? '—' }}</ng-template>
-        <ng-template appCell="approved_at" let-row><span class="u-bidi">{{ row.approved_at | datetime }}</span></ng-template>
+        <ng-template appCell="approved_at" let-row><app-datetime-cell [value]="row.approved_at" /></ng-template>
         <ng-template appCell="rejection_reason" let-row>{{ row.rejection_reason ?? '—' }}</ng-template>
         <ng-template appCell="actions" let-row>
           @if (canDecide()) {
@@ -127,22 +125,23 @@ interface ReturnRequestParams {
       }
     </app-async-page>
 
-    <!-- Approve without treasury: custody-owner path (approve_custody without manage_treasury) -->
+    <!-- Approve without treasury: custody-owner path (approve_custody without manage_treasury).
+         N-06: the dialog's primary — it was red, as if destructive — and it shows the money it returns -->
     <app-confirm-dialog
       [header]="'custody.return_requests.approve'"
       [message]="'custody.return_requests.approve_confirm'"
       [confirmLabel]="'custody.return_requests.approve'"
+      confirmKind="submit"
+      [details]="requestDetails()"
       (confirmed)="submitApprove()"
     />
 
     <!-- Approve with treasury: accountant/manager path (manage_treasury) -->
     <app-form-dialog #treasuryDlg [header]="'custody.return_requests.approve_with_treasury'"
                      [submitLabel]="'custody.return_requests.approve'" [sending]="sending()" [error]="actionError()"
+                     [details]="requestDetails()"
                      (submit)="submitApproveWithTreasury()">
       @if (active(); as row) {
-        <div class="dialog__alert" role="status">
-          <span class="u-bidi">{{ 'custody.return_requests.request_line' | translate: { custody: '#' + row.custody_id, agent: row.agent ?? '—', amount: row.amount | money } }}</span>
-        </div>
         <p class="u-small u-muted">{{ 'custody.return_requests.approve_executes_now' | translate }}</p>
         <app-field label="custody.return_requests.choose_treasury" controlId="approve-treasury" [required]="true">
           <p-select appendTo="body" inputId="approve-treasury" [options]="treasuries()" optionLabel="name" optionValue="id"
@@ -154,11 +153,12 @@ interface ReturnRequestParams {
       }
     </app-form-dialog>
 
-    <!-- Reject with a required reason -->
+    <!-- Reject with a required reason — N-06: with the money it refuses -->
     <app-reason-dialog
       [header]="'custody.return_requests.reject'"
       [label]="'custody.return_requests.reject_reason'"
       [submitLabel]="'custody.return_requests.reject'"
+      [details]="requestDetails()"
       [sending]="sending()"
       [error]="actionError()"
       (submit)="submitReject($event)"
@@ -169,6 +169,7 @@ export class ReturnRequestsPage {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
+  private moneyPipe = new MoneyPipe();
 
   readonly tableKey = 'return-requests.component';
 
@@ -188,7 +189,7 @@ export class ReturnRequestsPage {
 
   columns = computed(() =>
     this.canDecide()
-      ? [...this.baseColumns, { field: 'actions', header: 'common.actions', sortable: false }]
+      ? [...this.baseColumns, { field: 'actions', header: 'common.actions', sortable: false, pinned: 'end' as const }]
       : this.baseColumns,
   );
 
@@ -198,6 +199,16 @@ export class ReturnRequestsPage {
     { value: 'approved', label: 'custody.return_requests.tab_approved' },
     { value: 'rejected', label: 'custody.return_requests.tab_rejected' },
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal<ReturnRequestParams>({ page: 1, per_page: 25, q: '', status: 'all' });
 
@@ -247,6 +258,19 @@ export class ReturnRequestsPage {
   hasSummary = computed(() => Object.keys(this.data.value()?.meta.summary ?? {}).length > 0);
 
   active = signal<Row | null>(null);
+
+  /** N-06: what each decision is about — the money, then the custody and who holds it */
+  readonly requestDetails = computed<readonly KeyValueItem[]>(() => {
+    const row = this.active();
+    if (row === null) {
+      return [];
+    }
+    return [
+      { label: 'common.amount_egp', value: this.moneyPipe.transform(row.amount, false) },
+      { label: 'custody.return_requests.col_number', value: `#${row.custody_id}` },
+      { label: 'custody.return_requests.col_agent', value: row.agent ?? '—' },
+    ];
+  });
   approveTreasuryId = signal<number | null>(null);
   sending = signal(false);
   actionError = signal<HttpErrorResponse | null>(null);

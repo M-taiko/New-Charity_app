@@ -8,7 +8,6 @@ import { firstValueFrom } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { AuthService } from '@core/auth/auth.service';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
@@ -20,6 +19,8 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import type { ListResponse } from '@shared/models/api.models';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
+import type { TableQuery } from '@shared/lib/table-filters';
+import { reloadList } from '@shared/lib/list-state';
 
 interface Row {
   id: number;
@@ -36,8 +37,7 @@ interface Row {
 @Component({
   selector: 'app-purchase-list-page',
   standalone: true,
-  imports: [ StatusStampComponent, EnumLabelPipe,SectionNavComponent, 
-    TranslatePipe, RouterLink, ButtonModule,
+  imports: [ StatusStampComponent, EnumLabelPipe,TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
     EmptyStateComponent, ConfirmDeleteComponent, MoneyPipe, RowActionsComponent,
   ],
@@ -49,35 +49,47 @@ interface Row {
       </div>
     </app-page-header>
 
-    <app-section-nav module="procurement" />
-
     <app-async-page [resource]="data" variant="list">
       @if (data.value(); as page) {
         <div class="kpi-grid">
           <app-stat-tile [label]="'procurement.purchase.pending'" [value]="summaryValue('pending')" accent="procurement" iconName="shopping-cart" />
-          <app-stat-tile [label]="'procurement.purchase.approved'" [value]="summaryValue('approved')" />
-          <app-stat-tile [label]="'procurement.purchase.purchased'" [value]="summaryValue('purchased')" />
+          <app-stat-tile [label]="'procurement.purchase.approved'" [value]="summaryValue('approved')" iconName="approved" accent="procurement" />
+          <app-stat-tile [label]="'procurement.purchase.purchased'" [value]="summaryValue('purchased')" iconName="suppliers" accent="procurement" />
         </div>
 
-        <app-data-table listUrl="/purchase-requests"
+        <app-data-table [phoneFirst]="['title', 'status', 'estimated_cost']"
+        [exportQuery]="tableExportQuery()" listUrl="/purchase-requests"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
           [total]="page.meta.total"
           [perPage]="params().per_page"
           [loading]="data.isLoading()"
+          [filtered]="pageFiltered"
+          (clearFilters)="clearPageFilters()"
           (pageChange)="onPage($event)"
+          (queryChange)="onQuery($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
           <ng-template appCell="title" let-row>{{ row.title ?? '—' }}</ng-template>
           <ng-template appCell="category" let-row>{{ row.category | enumLabel: 'purchase_category' }}</ng-template>
           <ng-template appCell="priority" let-row><span class="stamp">{{ row.priority | enumLabel: 'priority' }}</span></ng-template>
-          <ng-template appCell="estimated_cost" let-row><span class="u-bidi">{{ row.estimated_cost | money }}</span></ng-template>
+          <ng-template appCell="estimated_cost" let-row><span class="u-bidi">{{ row.estimated_cost | money: false }}</span></ng-template>
           <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="purchase_request" /></ng-template>
           <ng-template appCell="requested_by" let-row>{{ row.requested_by ?? '—' }}</ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
           <div empty>
-            <app-empty-state [title]="'procurement.purchase.empty' | translate" [text]="'common.no_data' | translate" accent="procurement" iconName="shopping-cart" />
+            <!-- N-08: no request at all yet — the first one is one click away.
+                 The button is for every signed-in user, because that is what
+                 the server allows today (its store() checks no permission) -->
+            <app-empty-state
+              [title]="'procurement.purchase.empty_first' | translate"
+              [hint]="'procurement.purchase.empty_first_hint' | translate"
+              accent="procurement"
+              iconName="shopping-cart"
+              [actionLabel]="'procurement.purchase.create_first'"
+              [actionRoute]="firstRequestRoute"
+            />
           </div>
         </app-data-table>
       }
@@ -103,6 +115,16 @@ export class PurchaseListPage {
     { field: 'requested_by', header: 'procurement.purchase.col_requester', sortable: true },
     { field: 'actions', header: 'common.actions', sortable: false },
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
 
@@ -150,10 +172,37 @@ export class PurchaseListPage {
 
   setParam(key: string, value: string): void {
     this.params.update((p) => ({ ...p, [key]: value, page: 1 }));
-    this.data.reload();
+    reloadList(this.data);
   }
 
   onSearch(term: string): void { this.setParam('q', term); }
+
+  /** N-08: where the empty state's call to action goes */
+  readonly firstRequestRoute: readonly unknown[] = ['/procurement', 'purchase', 'new'];
+
+  /** N-08: the status chips filter outside the table — the table must know, to say "no results" and not "no data" */
+  pageFiltered = (): boolean => this.params().status !== 'all';
+
+  /** N-08: the table's "clear the filters" clears the chips too */
+  clearPageFilters(): void {
+    if (this.params().status === 'all') {
+      return;
+    }
+    this.params.update((p) => ({ ...p, status: 'all', page: 1 }));
+    reloadList(this.data);
+  }
+
+  /**
+   * N-08: the table's search box reaches the server. It used to be typed into
+   * nothing: the table emitted its query and nobody listened. Paging is
+   * `onPage`'s; only the text is handled here.
+   */
+  onQuery(query: TableQuery): void {
+    if (this.params().q === query.q) {
+      return;
+    }
+    this.setParam('q', query.q);
+  }
 
   onPage(event: { page: number; per_page: number; sort?: string }): void {
     // p-table re-emits onLazyLoad on every render — only reload on real changes
@@ -163,7 +212,7 @@ export class PurchaseListPage {
       return;
     }
     this.params.update((p) => ({ ...p, page: event.page, per_page: event.per_page, sort }));
-    this.data.reload();
+    reloadList(this.data);
   }
 }
 

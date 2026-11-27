@@ -233,6 +233,8 @@
 
 .login__input {
   width: 100%;
+  /* P-09: 44px touch target — comfortable on phones, aligned on desktop */
+  min-height: 44px;
   /* icon on inline-start, eye toggle on inline-end */
   padding: var(--space-3);
   padding-inline: calc(var(--space-3) + var(--space-6) + var(--space-1)) calc(var(--space-3) + var(--space-6));

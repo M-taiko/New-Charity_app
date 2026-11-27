@@ -6,7 +6,9 @@ export default defineConfig({
   timeout: 60_000,
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  // one retry absorbs serial-load stalls (single-worker PHP server + MySQL on
+  // a dev machine) without hiding real, reproducible failures
+  retries: 1,
   use: {
     baseURL: 'http://127.0.0.1:8000',
     headless: true,

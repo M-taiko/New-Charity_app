@@ -1,0 +1,122 @@
+/* notices (R4-06) — the notifications page as a grouped timeline: اليوم /
+   أمس / أقدم, one row per notification. An unread row carries a brand dot and
+   a bold title; the message wraps in full (the old table cell cut it with an
+   ellipsis); the whole row opens the related record. */
+.notices {
+  background: var(--color-surface);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.notices__group + .notices__group {
+  border-block-start: 1px solid var(--color-hairline);
+}
+
+.notices__heading {
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.notices__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* one row = one tappable whole. It is an <a> when the notification points at
+   a record and a <button> when it only marks itself read — same look. */
+.notice__link {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: 0;
+  border-block-end: 1px solid var(--color-hairline-soft);
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+
+.notice:last-child .notice__link {
+  border-block-end: 0;
+}
+
+.notice__link:hover {
+  background: var(--color-surface-inset);
+}
+
+.notice__link:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+/* the unread marker. Read rows keep the hollow dot so every title starts on
+   the same line. Colour is never the only cue: the title is bold and screen
+   readers get "غير مقروء". */
+.notice__dot {
+  width: 8px;
+  height: 8px;
+  margin-block-start: 5px;
+  border-radius: var(--radius-full);
+  background: var(--color-hairline);
+}
+
+.notice--unread .notice__dot {
+  background: var(--color-primary);
+}
+
+.notice__main {
+  display: block;
+  min-width: 0;
+  line-height: 1.5;
+}
+
+.notice__title {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.notice--unread .notice__title {
+  font-weight: 700;
+}
+
+/* the full message — wraps, never ellipsizes */
+.notice__text {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.notice__meta {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--text-2xs);
+}
+
+.notices__pager-wrap {
+  margin-block-start: var(--space-4);
+}
+
+@media print {
+  .notices__pager-wrap {
+    display: none;
+  }
+}

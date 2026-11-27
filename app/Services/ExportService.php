@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\Setting;
 use Illuminate\Http\Request;
+use OpenSpout\Common\Entity\Row;
 use Illuminate\Support\Collection;
 use OpenSpout\Common\Entity\Style\CellAlignment;
 use OpenSpout\Common\Entity\Style\Style;
 use OpenSpout\Common\Entity\Style\CellVerticalAlignment;
 use OpenSpout\Writer\XLSX\Options as XlsxOptions;
 use OpenSpout\Writer\XLSX\Writer as XlsxWriter;
+use OpenSpout\Writer\CSV\Options as CsvOptions;
 use OpenSpout\Writer\CSV\Writer as CsvWriter;
 use Mpdf\Mpdf;
 use Mpdf\Config\FontVariables;
@@ -98,50 +101,48 @@ class ExportService
         ];
 
         return response()->streamDownload(function () use ($rows, $columns, $org, $title, $filters, $capped) {
-            $options = new XlsxOptions();
-            $options->shouldCreateNewSheetsAutomatically(false);
-            $writer = new XlsxWriter($options);
+            // openspout v5: rows carry their style (Row::fromValues); the v3
+            // extras (auto sheet creation, autofilter, freeze, sheet RTL) left
+            // the library — org/title header rows + column order carry the
+            // document structure instead
+            $writer = new XlsxWriter(new XlsxOptions());
             $writer->openToFile('php://output');
 
             $sheet = $writer->getCurrentSheet();
             $sheet->setName(mb_substr($title, 0, 28));
-            $sheet->setRightToLeft(true);
 
             // org / title / filters block, then the capped notice when hit
             $orgStyle = (new Style())->setFontBold()->setFontSize(13);
-            $writer->addRowWithStyle([$org], $orgStyle);
-            $writer->addRow([$title . ' — ' . now()->format('Y-m-d H:i')]);
+            $writer->addRow(Row::fromValues([$org], $orgStyle));
+            $writer->addRow(Row::fromValues([$title . ' — ' . now()->format('Y-m-d H:i')]));
             if ($filters !== '') {
-                $writer->addRow([$filters]);
+                $writer->addRow(Row::fromValues([$filters]));
             }
             if ($capped) {
-                $writer->addRow(['تم اقتطاع التصدير عند ' . self::MAX_ROWS . ' صف (الحد الأقصى للتصدير)']);
+                $writer->addRow(Row::fromValues(['تم اقتطاع التصدير عند ' . self::MAX_ROWS . ' صف (الحد الأقصى للتصدير)']));
             }
-            $writer->addRow(['']);
+            $writer->addRow(Row::fromValues(['']));
 
-            // header row — styled, frozen, with auto-filter over the data
-            $headerRow = array_map(fn ($c) => $c['label'], $columns);
+            // header row — bold on the sand tint
             $headerStyle = (new Style())
                 ->setFontBold()
                 ->setBackgroundColor('DFD7D3')
                 ->setCellAlignment(CellAlignment::CENTER)
                 ->setCellVerticalAlignment(CellVerticalAlignment::CENTER);
-            $writer->addRowWithStyle($headerRow, $headerStyle);
-            $options->setRowRangeAutoFilter(6, 6 + max($rows->count(), 1));
-            $options->freezeRow(6);
+            $writer->addRow(Row::fromValues(array_map(fn ($c) => $c['label'], $columns), $headerStyle));
 
             foreach ($rows as $row) {
-                $writer->addRow(array_map(
+                $writer->addRow(Row::fromValues(array_map(
                     fn ($c) => ($c['numeric'] ?? false) ? (float) $row[$c['key']] : (string) ($row[$c['key']] ?? ''),
                     $columns,
-                ));
+                )));
             }
             if ($rows->isNotEmpty()) {
                 $totals = $this->totalsRow($rows, $columns);
-                $writer->addRowWithStyle(array_map(
+                $writer->addRow(Row::fromValues(array_map(
                     fn ($c) => ($c['numeric'] ?? false) ? (float) $totals[$c['key']] : (string) $totals[$c['key']],
                     $columns,
-                ), (new Style())->setFontBold());
+                ), (new Style())->setFontBold()));
             }
             $writer->close();
         }, "{$fileBase}.xlsx", $headers);
@@ -156,36 +157,39 @@ class ExportService
         ];
 
         return response()->streamDownload(function () use ($rows, $columns, $org, $title, $filters, $capped) {
-            $writer = new CsvWriter();
-            $writer->setFieldDelimiter(',');
+            // openspout v5: the delimiter rides CSV Options (default ','), and
+            // SHOULD_ADD_BOM is turned off — the BOM is echoed manually below
+            $csvOptions = new CsvOptions();
+            $csvOptions->SHOULD_ADD_BOM = false;
+            $writer = new CsvWriter($csvOptions);
             $writer->openToFile('php://output');
             echo "\xEF\xBB\xBF"; // BOM
 
-            $writer->addRow([$org]);
-            $writer->addRow([$title . ' — ' . now()->format('Y-m-d H:i')]);
+            $writer->addRow(Row::fromValues([$org]));
+            $writer->addRow(Row::fromValues([$title . ' — ' . now()->format('Y-m-d H:i')]));
             if ($filters !== '') {
-                $writer->addRow([$filters]);
+                $writer->addRow(Row::fromValues([$filters]));
             }
             if ($capped) {
-                $writer->addRow(['تم اقتطاع التصدير عند ' . self::MAX_ROWS . ' صف']);
+                $writer->addRow(Row::fromValues(['تم اقتطاع التصدير عند ' . self::MAX_ROWS . ' صف']));
             }
-            $writer->addRow([]);
+            $writer->addRow(Row::fromValues(['']));
 
-            $writer->addRow(array_map(fn ($c) => $c['label'], $columns));
+            $writer->addRow(Row::fromValues(array_map(fn ($c) => $c['label'], $columns)));
             foreach ($rows as $row) {
-                $writer->addRow(array_map(
+                $writer->addRow(Row::fromValues(array_map(
                     fn ($c) => ($c['numeric'] ?? false)
                         ? number_format((float) $row[$c['key']], 2, '.', '')
                         : (string) ($row[$c['key']] ?? ''),
                     $columns,
-                ));
+                )));
             }
             if ($rows->isNotEmpty()) {
                 $totals = $this->totalsRow($rows, $columns);
-                $writer->addRow(array_map(
+                $writer->addRow(Row::fromValues(array_map(
                     fn ($c) => ($c['numeric'] ?? false) ? number_format((float) $totals[$c['key']], 2, '.', '') : (string) $totals[$c['key']],
                     $columns,
-                ));
+                )));
             }
             $writer->close();
         }, "{$fileBase}.csv", $headers);
@@ -196,7 +200,7 @@ class ExportService
         $landscape = count($columns) >= 7;
         $headers = ['Content-Type' => 'application/pdf'];
 
-        return response()->streamDownload(function () use ($rows, $columns, $org, $title, $filters, $capped, $landscape) {
+        return response()->streamDownload(function () use ($rows, $columns, $org, $title, $filters, $capped, $landscape, $fileBase) {
             // DejaVu Sans ships with mPDF and covers Arabic; mPDF's engine does
             // the RTL shaping. Drop an Amiri TTF into storage/fonts to upgrade.
             $mpdf = new Mpdf([
@@ -242,7 +246,9 @@ class ExportService
             $html .= '</table></body></html>';
 
             $mpdf->WriteHTML($html);
-            $mpdf->Output($fileBase . '.pdf', \Mpdf\Output\Destination::DOWNLOAD);
+            // streamDownload owns the headers — return the bytes, not another
+            // attachment download
+            echo $mpdf->Output($fileBase . '.pdf', \Mpdf\Output\Destination::STRING_RETURN);
         }, "{$fileBase}.pdf", $headers);
     }
 

@@ -7,17 +7,20 @@ import { ButtonModule } from 'primeng/button';
 import { TextareaModule } from 'primeng/textarea';
 import type { HttpErrorResponse } from '@angular/common/http';
 import type { ApiErrorBody } from '@shared/models/api.models';
+import { KeyValueListComponent, type KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
 
 /**
  * The shared reason/notes dialog (T3-02): every reject / cancel / resolve
  * action that the API requires a reason for goes through here — no action
  * ever sends hard-coded human text. The page receives the typed text via
  * `submit` and posts it under the field name its endpoint expects.
+ *
+ * N-06: `details` says what the decision is about, above the field.
  */
 @Component({
   selector: 'app-reason-dialog',
   standalone: true,
-  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule, FormsModule, TextareaModule],
+  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule, FormsModule, TextareaModule, KeyValueListComponent],
   template: `
     <p-dialog appendTo="body"
       [visible]="visible()"
@@ -33,6 +36,11 @@ import type { ApiErrorBody } from '@shared/models/api.models';
       [dismissableMask]="!sending()"
       [closeOnEscape]="!sending()"
     >
+      @if (details().length) {
+        <div class="confirm-details">
+          <app-key-value-list [items]="details()" />
+        </div>
+      }
       <div class="field">
         <label class="field__label" for="reason-dialog-input">{{ label() | translate }} *</label>
         <textarea
@@ -77,6 +85,8 @@ export class ReasonDialogComponent {
   error = input<HttpErrorResponse | null>(null);
   minLength = input(3);
   maxLength = input(1000);
+  /** what the decision is about (N-06) — the amount of a money movement first */
+  details = input<readonly KeyValueItem[]>([]);
 
   submit = output<string>();
   /** fires on ANY hide (mask click, Esc, cancel button) — pages that need to react (T6-16) */
@@ -114,7 +124,11 @@ export class ReasonDialogComponent {
     this.visible.set(next);
   }
 
+  /** N-06: the footer button is disabled while sending — the Ctrl+Enter on the textarea is not, so the guard is here */
   confirm(): void {
+    if (this.sending()) {
+      return;
+    }
     this.tried.set(true);
     const value = this.reason().trim();
     if (value.length < this.minLength()) {

@@ -9,21 +9,21 @@ import { ToastService } from '@core/errors/toast.service';
 import { AuthService } from '@core/auth/auth.service';
 import { ApiClient } from '@core/http/api-client';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent, type LoadableResource } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import type { TableColumn } from '@shared/ui/data-table/data-table.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
+import { paramsFiltered, reloadList } from '@shared/lib/list-state';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FormDialogComponent } from '@shared/ui/form-dialog/form-dialog.component';
 import { ConfirmDeleteComponent } from '@shared/ui/confirm-delete/confirm-delete.component';
 import { RowActionsComponent, type RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ItemResponse, ListResponse } from '@shared/models/api.models';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 /** my-cases rows are the raw SocialCase model (no researcher relation) */
 interface Row {
@@ -69,34 +69,37 @@ interface QuickDetail {
 @Component({
   selector: 'app-my-cases',
   standalone: true,
-  imports: [SectionNavComponent, 
-    TranslatePipe, RouterLink, ButtonModule,
+  imports: [DatetimeCellComponent, TranslatePipe, RouterLink, ButtonModule,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent,
     DataTableComponent, TableCellDirective, 
     DataTableComponent, TableCellDirective, 
     EmptyStateComponent, FormDialogComponent, ConfirmDeleteComponent,
-    RowActionsComponent, KeyValueListComponent, StatusStampComponent, DatetimePipe,
+    RowActionsComponent, KeyValueListComponent, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'case.mine.title' | translate" accent="cases" iconName="heart-handshake">
       <div actions class="u-flex u-gap-2">
-        <p-button [label]="'case.mine.create' | translate" size="small" routerLink="/cases/new" />
+        <!-- N-08: the same rule as the empty state's call to action -->
+        @if (canManage()) {
+          <p-button [label]="'case.mine.create' | translate" size="small" routerLink="/social-cases/new" />
+        }
       </div>
     </app-page-header>
 
-    <app-section-nav module="cases" />
-
-    <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
+    <!-- N-08: "no data at all" is this page's empty slot; "no results for this
+         filter or search" keeps the table, with its way back -->
+    <app-async-page [resource]="pageResource" variant="list" [empty]="isFirstRun">
       @if (data.value(); as page) {
         <div class="kpi-grid">
           <app-stat-tile [label]="'case.list.total'" [value]="summaryValue('total')" accent="cases" iconName="heart-handshake" />
-          <app-stat-tile [label]="'case.list.pending'" [value]="summaryValue('pending')" />
-          <app-stat-tile [label]="'case.list.approved'" [value]="summaryValue('approved')" />
-          <app-stat-tile [label]="'case.list.rejected'" [value]="summaryValue('rejected')" />
+          <app-stat-tile [label]="'case.list.pending'" [value]="summaryValue('pending')" iconName="pending" accent="cases" />
+          <app-stat-tile [label]="'case.list.approved'" [value]="summaryValue('approved')" iconName="approved" accent="cases" />
+          <app-stat-tile [label]="'case.list.rejected'" [value]="summaryValue('rejected')" iconName="declined" accent="cases" />
         </div>
 
-        <app-data-table listUrl="/my-cases"
+        <app-data-table [phoneFirst]="['name', 'status']"
+        [exportQuery]="tableExportQuery()" listUrl="/my-cases"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -109,21 +112,30 @@ interface QuickDetail {
           (pageChange)="onPage($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-          <ng-template appCell="name" let-row><a [routerLink]="['/cases', row.id]">{{ row.name ?? '—' }}</a></ng-template>
+          <ng-template appCell="name" let-row><a [routerLink]="['/social-cases', row.id]">{{ row.name ?? '—' }}</a></ng-template>
           <ng-template appCell="phone" let-row><span class="u-bidi">{{ row.phone ?? '—' }}</span></ng-template>
           <ng-template appCell="assistance_type" let-row>{{ label('case.enums.assistance.' + row.assistance_type) }}</ng-template>
           <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="social_case" /></ng-template>
-          <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+          <ng-template appCell="created_at" let-row><app-datetime-cell [value]="row.created_at" /></ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         </app-data-table>
       }
       <div empty>
-        <app-empty-state [title]="'case.mine.empty' | translate" [text]="'common.no_data' | translate" accent="cases" iconName="heart-handshake" />
+        <!-- N-08: no case of mine yet — the first one is one click away for a
+             role that may add one -->
+        <app-empty-state
+          [title]="'case.mine.empty_first' | translate"
+          [hint]="'case.mine.empty_first_hint' | translate"
+          accent="cases"
+          iconName="heart-handshake"
+          [actionLabel]="canManage() ? 'case.mine.create_first' : ''"
+          [actionRoute]="canManage() ? firstCaseRoute : null"
+        />
       </div>
     </app-async-page>
 
     <app-form-dialog [header]="familyHeader()" [submitLabel]="'case.modal.close'" [(visible)]="familyOpen" [sending]="familyLoading()">
-      <app-data-table mode="static" [autoFilters]="true" [columns]="familyCols" [rows]="familyMembers()" [emptyLabel]="'case.modal.empty_family'">
+      <app-data-table mode="static" [autoFilters]="true" [phoneFirst]="['index', 'name', 'status']" [columns]="familyCols" [rows]="familyMembers()" [emptyLabel]="'case.modal.empty_family'">
         <ng-template appCell="index" let-row let-index="index"><span class="u-bidi">{{ index + 1 }}</span></ng-template>
         <ng-template appCell="name" let-row let-index="index">{{ row.name }}</ng-template>
         <ng-template appCell="relation" let-row let-index="index">{{ label('case.enums.relation.' + row.relationship) }}</ng-template>
@@ -172,6 +184,16 @@ export class MyCasesPage {
     { field: 'phone', header: 'case.form.member_phone' },
   ];
 
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
+
   params = signal<{ page: number; per_page: number; q: string; sort?: string; status: string }>({ page: 1, per_page: 25, q: '', sort: '', status: 'all' });
 
   /** the active filter[...] values — forwarded verbatim (T7-07 server contract) */
@@ -190,7 +212,7 @@ export class MyCasesPage {
       sort: query.sort !== '' ? query.sort : p.sort,
       q: query.q,
     }));
-    this.data.reload();
+    reloadList(this.data);
   }
 
   data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string }>({
@@ -210,7 +232,7 @@ export class MyCasesPage {
     },
     isLoading: () => this.data.isLoading(),
     reload: () => {
-      this.data.reload();
+      reloadList(this.data);
     },
   };
 
@@ -223,6 +245,19 @@ export class MyCasesPage {
   }
 
   isEmpty = (): boolean => (this.safeValue()?.data ?? []).length === 0;
+
+  /** N-08: where the empty state's call to action goes */
+  readonly firstCaseRoute: readonly unknown[] = ['/social-cases', 'new'];
+
+  /** N-08: do the page's own parameters (the text search) filter anything? The table's filters are the table's */
+  isFiltered = (): boolean => paramsFiltered(this.params() as unknown as Record<string, unknown>, { status: 'all' });
+
+  /**
+   * N-08: the page's empty slot is for a list that never had a record —
+   * empty, unfiltered AND not reloading (while a reload runs after "clear the
+   * filters" the old empty result is still held; that instant is not "no data")
+   */
+  isFirstRun = (): boolean => this.isEmpty() && !this.isFiltered() && !this.data.isLoading();
 
   familyOpen = signal(false);
   familyLoading = signal(false);
@@ -245,7 +280,7 @@ export class MyCasesPage {
     return [
       { icon: 'users-group', label: 'case.actions.family', handler: () => { this.openFamily(row); } },
       { icon: 'eye', label: 'case.actions.details', handler: () => { this.openDetails(row); } },
-      { icon: 'pencil', label: 'common.edit', route: ['/cases', row.id, 'edit'], visible: this.canManage() },
+      { icon: 'pencil', label: 'common.edit', route: ['/social-cases', row.id, 'edit'], visible: this.canManage() },
       {
         icon: row.is_active ? 'check' : 'x',
         label: row.is_active ? 'case.actions.deactivate' : 'case.actions.activate',
@@ -268,7 +303,7 @@ export class MyCasesPage {
       return;
     }
     this.params.update((p) => ({ ...p, page: event.page, per_page: event.per_page, sort: event.sort ?? '' }));
-    this.data.reload();
+    reloadList(this.data);
   }
 
   /** localized enum label with the raw-code fallback (never blank) */
@@ -320,7 +355,7 @@ export class MyCasesPage {
   openDetailPage(): void {
     const q = this.quickDetail();
     if (q) {
-      void this.router.navigate(['/cases', q.id]);
+      void this.router.navigate(['/social-cases', q.id]);
     }
   }
 
@@ -340,11 +375,14 @@ export class MyCasesPage {
   }
 
   toggleActive(row: Row): void {
+    if (this.acting()) {
+      return;
+    }
     this.acting.set(true);
     void firstValueFrom(this.api.action(`/social-cases/${row.id}/toggle-active`)).then((res) => {
       this.acting.set(false);
       this.toast.success(res.message);
-      this.data.reload();
+      reloadList(this.data);
     }).catch((err: unknown) => {
       this.acting.set(false);
       this.toast.apiError((err as HttpErrorResponse).error?.message ?? 'errors.generic', (err as HttpErrorResponse).error?.code);

@@ -13,12 +13,12 @@ import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/da
 import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
 import { journalMoneyClass, journalStampClass } from '@shared/lib/journal-style';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { warnMissingTranslation } from '@core/i18n/missing-key';
 import type { ListResponse } from '@shared/models/api.models';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface Row {
   id: number;
@@ -52,9 +52,9 @@ const TYPE_VALUES = [
 @Component({
   selector: 'app-my-movements',
   standalone: true,
-  imports: [AppTabsComponent, 
+  imports: [DatetimeCellComponent, AppTabsComponent, 
     TranslatePipe, PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
-    EmptyStateComponent, MoneyPipe, DatetimePipe, EnumLabelPipe, StatusStampComponent,
+    EmptyStateComponent, MoneyPipe, EnumLabelPipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -68,16 +68,18 @@ const TYPE_VALUES = [
       @if (data.value(); as page) {
         <div class="kpi-grid">
           <app-stat-tile [label]="'custody.my_movements.custodies_count'" [value]="summaryValue('custodies_count')" accent="custodies" iconName="wallet" />
-          <app-stat-tile [label]="'custody.my_movements.total_received'" [value]="summaryValue('total_received')" [money]="true" />
-          <app-stat-tile [label]="'custody.my_movements.total_spent'" [value]="summaryValue('total_spent')" [money]="true" />
-          <app-stat-tile [label]="'custody.my_movements.total_returned'" [value]="summaryValue('total_returned')" [money]="true" />
-          <app-stat-tile [label]="'custody.my_movements.remaining'" [value]="summaryValue('remaining')" [money]="true" />
+          <app-stat-tile [label]="'custody.my_movements.total_received'" [value]="summaryValue('total_received')" [money]="true" iconName="received" accent="custodies" />
+          <app-stat-tile [label]="'custody.my_movements.total_spent'" [value]="summaryValue('total_spent')" [money]="true" iconName="expense" accent="custodies" />
+          <app-stat-tile [label]="'custody.my_movements.total_returned'" [value]="summaryValue('total_returned')" [money]="true" iconName="return" accent="custodies" />
+          <app-stat-tile [label]="'custody.my_movements.remaining'" [value]="summaryValue('remaining')" [money]="true" iconName="money" accent="custodies" />
         </div>
 
       <!-- T6-11/T6-30: the type chips become tabs — no page-level filter markup -->
       <app-tabs id="my-movements" [tabs]="typeTabs()" [(active)]="typeTab" (tabChange)="setParam('type', $event)" />
 
-      <app-data-table listUrl="/agent/transactions"
+      <app-data-table
+        [exportQuery]="tableExportQuery()" listUrl="/agent/transactions"
+        [phoneFirst]="['date', 'type', 'amount']"
         [tableKey]="tableKey"
         [columns]="columns"
         [rows]="page.data"
@@ -90,13 +92,13 @@ const TYPE_VALUES = [
         (pageChange)="onPage($event)"
       >
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
-        <ng-template appCell="date" let-row><span class="u-bidi u-muted">{{ row.date | datetime }}</span></ng-template>
+        <ng-template appCell="date" let-row><app-datetime-cell [value]="row.date" /></ng-template>
         <ng-template appCell="type" let-row><span class="stamp" [class]="stampClass(row.type)">{{ row.type | enumLabel: 'transaction_type' }}</span>
 @if (row.type === 'custody_close') {
   <app-status-stamp [status]="'closed'" namespace="custody_status" />
 }</ng-template>
         <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
-        <ng-template appCell="amount" let-row><span class="u-bidi" [class]="moneyClass(row.type)">{{ row.amount | money }}</span></ng-template>
+        <ng-template appCell="amount" let-row><span class="u-bidi" [class]="moneyClass(row.type)">{{ row.amount | money: false }}</span></ng-template>
         <div empty>
           <app-empty-state [title]="'custody.my_movements.empty' | translate" [text]="'common.no_data' | translate" accent="custodies" iconName="wallet" />
         </div>
@@ -128,6 +130,16 @@ export class MyMovementsPage {
     { value: 'custody_transfer_out', label: 'custody.my_movements.tab_sent' },
     { value: 'custody_transfer_in', label: 'custody.my_movements.tab_received' },
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal<MyMovementsParams>({ page: 1, per_page: 25, q: '', type: 'all' });
 

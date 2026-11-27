@@ -5,16 +5,15 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { apiFilterDefs, filterParams, type TableQuery } from '@shared/lib/table-filters';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ListResponse } from '@shared/models/api.models';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface Row {
   id: number;
@@ -30,27 +29,25 @@ interface Row {
 @Component({
   selector: 'app-edit-requests',
   standalone: true,
-  imports: [SectionNavComponent, 
-    TranslatePipe,
+  imports: [DatetimeCellComponent, TranslatePipe,
     PageHeaderComponent, AsyncPageComponent, StatTileComponent, DataTableComponent, TableCellDirective, 
-    EmptyStateComponent, MoneyPipe, DatetimePipe, StatusStampComponent,
+    EmptyStateComponent, MoneyPipe, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'expense.edit_requests.title' | translate" accent="expenses" iconName="receipt-2">
 
-    <app-section-nav module="expenses" />
-
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty">
       @if (data.value(); as page) {
         <div class="kpi-grid">
         <app-stat-tile [label]="'expense.edit_requests.pending'" [value]="summaryValue('pending')" accent="expenses" iconName="receipt-2" />
-        <app-stat-tile [label]="'expense.edit_requests.approved'" [value]="summaryValue('approved')" />
-        <app-stat-tile [label]="'expense.edit_requests.rejected'" [value]="summaryValue('rejected')" />
+        <app-stat-tile [label]="'expense.edit_requests.approved'" [value]="summaryValue('approved')" iconName="approved" accent="expenses" />
+        <app-stat-tile [label]="'expense.edit_requests.rejected'" [value]="summaryValue('rejected')" iconName="declined" accent="expenses" />
         </div>
 
 
-      <app-data-table listUrl="/expenses/edit-requests"
+      <app-data-table [phoneFirst]="['expense_id', 'status', 'requested_amount']"
+        [exportQuery]="tableExportQuery()" listUrl="/expenses/edit-requests"
         [tableKey]="tableKey"
         [columns]="columns"
         [rows]="page.data"
@@ -65,10 +62,10 @@ interface Row {
         <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
         <ng-template appCell="expense_id" let-row>{{ row.expense_id ?? '—' }}</ng-template>
         <ng-template appCell="requested_by" let-row>{{ row.requested_by ?? '—' }}</ng-template>
-        <ng-template appCell="original_amount" let-row><span class="u-bidi">{{ row.original_amount | money }}</span></ng-template>
-        <ng-template appCell="requested_amount" let-row><span class="u-bidi">{{ row.requested_amount | money }}</span></ng-template>
+        <ng-template appCell="original_amount" let-row><span class="u-bidi">{{ row.original_amount | money: false }}</span></ng-template>
+        <ng-template appCell="requested_amount" let-row><span class="u-bidi">{{ row.requested_amount | money: false }}</span></ng-template>
         <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="edit_request" /></ng-template>
-        <ng-template appCell="requested_at" let-row><span class="u-bidi">{{ row.requested_at | datetime }}</span></ng-template>
+        <ng-template appCell="requested_at" let-row><app-datetime-cell [value]="row.requested_at" /></ng-template>
       </app-data-table>
       }
       <div empty>
@@ -90,6 +87,16 @@ export class EditRequestsPage {
     { field: 'status', header: 'common.status', sortable: true },
     { field: 'requested_at', header: 'common.date', sortable: true }
   ];
+
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
 
   params = signal<{ page: number; per_page: number; q: string; sort?: string; status: string }>({ page: 1, per_page: 25, q: '', sort: '', status: 'all' });
 

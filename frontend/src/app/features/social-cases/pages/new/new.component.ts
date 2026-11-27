@@ -26,6 +26,7 @@ import { RowActionsComponent } from '@shared/ui/row-actions/row-actions.componen
 import type { RowActionItem } from '@shared/ui/row-actions/row-actions.component';
 import type { ActionResponse, ItemResponse, Lookups } from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 /** One family-members repeater row (controller: family_members[i][…]). */
 interface MemberRow {
@@ -106,7 +107,7 @@ const MAX_DOC_SIZE = 5_000_000;
 @Component({
   selector: 'app-case-form',
   standalone: true,
-  imports: [
+  imports: [ValidSubmitDirective, 
     TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, InputNumberModule,
     TextareaModule, SelectModule, FileUploadModule, PageHeaderComponent,
     FieldComponent, FormSectionComponent, ConfirmDeleteComponent, RowActionsComponent, AsyncPageComponent, ActionButtonComponent,
@@ -115,13 +116,13 @@ const MAX_DOC_SIZE = 5_000_000;
   template: `
     <app-page-header [title]="isEdit() ? ('case.form.edit_title' | translate) : ('case.form.create_title' | translate)" accent="cases" iconName="heart-handshake">
       <div actions>
-        <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/cases" />
+        <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/social-cases" />
       </div>
     </app-page-header>
     <!-- T5-07: a failed edit-load shows the error state with retry instead of a
          blank form that could be saved over the real case -->
-    <app-async-page [resource]="pageState" variant="form" [backLink]="['/cases']">
-      <form (ngSubmit)="save()" #f="ngForm">
+    <app-async-page [resource]="pageState" variant="form" [backLink]="['/social-cases']">
+      <form (ngSubmit)="vs.validate() && save()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
         <app-form-section [title]="'case.form.section_basics'">
           <app-field label="case.form.name" controlId="c-name" [required]="true" [error]="serverFieldError(error(), 'name')">
             <input pInputText id="c-name" name="name" class="u-full" [(ngModel)]="model.name" required maxlength="200" />
@@ -287,8 +288,8 @@ const MAX_DOC_SIZE = 5_000_000;
 
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
-          <app-action-button kind="back" label="common.back" [route]="['/cases']" />
-          <p-button type="submit" [label]="isEdit() ? ('case.form.submit_update' | translate) : ('case.form.submit_create' | translate)" [loading]="sending()" [disabled]="f.invalid || sending()" />
+          <app-action-button kind="back" label="common.back" [route]="['/social-cases']" />
+          <p-button type="submit" [label]="isEdit() ? ('case.form.submit_update' | translate) : ('case.form.submit_create' | translate)" [loading]="sending()" [disabled]="sending()" />
         </div>
       </form>
     </app-async-page>
@@ -595,6 +596,9 @@ export class CaseFormPage implements OnInit {
   }
 
   save(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.error.set(null);
     const id = this.id();
@@ -611,7 +615,7 @@ export class CaseFormPage implements OnInit {
       .then((res) => {
         this.sending.set(false);
         this.toast.success(res.message);
-        void this.router.navigateByUrl(id ? `/cases/${id}` : '/cases');
+        void this.router.navigateByUrl(id ? `/cases/${id}` : '/social-cases');
       })
       .catch((err: unknown) => {
         this.sending.set(false);

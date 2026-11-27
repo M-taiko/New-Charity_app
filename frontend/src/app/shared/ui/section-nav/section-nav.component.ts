@@ -51,8 +51,8 @@ const SECTION_NAVS: Record<string, SectionNavItem[]> = {
     { label: 'nav.suppliers', route: '/procurement/suppliers', requires: 'may_manage_treasury', icon: 'truck-delivery' },
   ],
   cases: [
-    { label: 'nav.cases', route: '/cases', icon: 'heart-handshake' },
-    { label: 'nav.my_cases', route: '/cases/mine', icon: 'user' },
+    { label: 'nav.cases', route: '/social-cases', icon: 'heart-handshake' },
+    { label: 'nav.my_cases', route: '/social-cases/mine', icon: 'user' },
   ],
 };
 

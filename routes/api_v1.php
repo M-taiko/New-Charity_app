@@ -13,6 +13,7 @@
  */
 
 use App\Http\Controllers\Api\V1\AuthController as ApiAuth;
+use App\Http\Controllers\Api\V1\BulkActionController;
 use App\Http\Controllers\Api\V1\CustodyController as ApiCustody;
 use App\Http\Controllers\Api\V1\CustodyTransferController as ApiTransfer;
 use App\Http\Controllers\Api\V1\DashboardController as ApiDashboard;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\V1\ExpenseItemController as ApiDirections;
 use App\Http\Controllers\Api\V1\HrController as ApiHr;
 use App\Http\Controllers\Api\V1\LookupController as ApiLookup;
 use App\Http\Controllers\Api\V1\ProcurementController as ApiProcurement;
+use App\Http\Controllers\Api\V1\SearchController;
 use App\Http\Controllers\Api\V1\ReportController as ApiReport;
 use App\Http\Controllers\Api\V1\SocialCaseController as ApiCases;
 use App\Http\Controllers\Api\V1\SystemController as ApiSystem;
@@ -62,6 +64,8 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
         Route::post('auth/logout', [ApiAuth::class, 'logout']);
         Route::get('me', [ApiAuth::class, 'me']);
         Route::get('lookups', [ApiLookup::class, 'index']);
+        // N-01: records for the command palette — grouped, scoped by each list's own rule
+        Route::get('search', SearchController::class);
 
         // Actions on the old controllers share the JSON converter middleware.
         Route::middleware(ApiV1Response::class)->group(function () {
@@ -70,7 +74,10 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::get('treasury', [ApiTreasury::class, 'index']);
             Route::post('treasury', [TreasuryController::class, 'store']);
             Route::get('treasury/transfer/form', fn () => response()->json(['data' => []]));
-            Route::get('treasury/{treasury}', [ApiTreasury::class, 'show']);
+            // ids are numeric: without the constraint these show-routes were
+            // registered first and swallowed the sibling "…/export" URLs
+            // ("export" bound as the model id → 404 on every export)
+            Route::get('treasury/{treasury}', [ApiTreasury::class, 'show'])->whereNumber('treasury');
             Route::post('treasury/{treasury}/add-donation', [TreasuryController::class, 'addDonation']);
             Route::post('treasury/{treasury}/update', [TreasuryController::class, 'update']);
             Route::post('treasury/{treasury}/delete', [TreasuryController::class, 'destroy']);
@@ -83,7 +90,7 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::get('custodies/tracking', [ApiCustody::class, 'tracking']);
             Route::get('custodies/movements', [ApiCustody::class, 'movements']);
             Route::get('custodies/return-requests', [ApiCustody::class, 'returnRequests']);
-            Route::get('custodies/{custody}', [ApiCustody::class, 'show']);
+            Route::get('custodies/{custody}', [ApiCustody::class, 'show'])->whereNumber('custody');
             Route::post('custodies/{custody}/update', [CustodyController::class, 'update']);
             Route::post('custodies/{custody}/delete', [CustodyController::class, 'destroy']);
             Route::post('custodies/{custody}/accept', [CustodyController::class, 'accept']);
@@ -107,10 +114,11 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             // ── Transfers ──────────────────────────────────────
             Route::get('custody-transfers', [ApiTransfer::class, 'index']);
             Route::post('custody-transfers', [CustodyTransferController::class, 'store']);
-            Route::get('custody-transfers/{custodyTransfer}', [ApiTransfer::class, 'show']);
+            Route::get('custody-transfers/{custodyTransfer}', [ApiTransfer::class, 'show'])->whereNumber('custodyTransfer');
             Route::post('custody-transfers/{custodyTransfer}/approve', [CustodyTransferController::class, 'approve']);
             Route::post('custody-transfers/{custodyTransfer}/reject', [CustodyTransferController::class, 'reject']);
             Route::post('custody-transfers/{custodyTransfer}/cancel', [CustodyTransferController::class, 'cancel']);
+            Route::post('custody-transfers/{custodyTransfer}/restore', [CustodyTransferController::class, 'restore']); // N-06: undo of a cancel
 
             // ── Expenses ───────────────────────────────────────
             Route::get('expenses', [ApiExpense::class, 'index']);
@@ -118,15 +126,19 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::get('expenses/quick', fn () => response()->json(['data' => []]));
             Route::post('expenses/quick-store', [ExpenseController::class, 'quickStore']);
             Route::get('expenses/edit-requests', [ApiExpense::class, 'editRequests']);
-            Route::get('expenses/edit-requests/{editRequest}', [ApiExpense::class, 'editRequestShow']);
+            Route::get('expenses/edit-requests/{editRequest}', [ApiExpense::class, 'editRequestShow'])->whereNumber('editRequest');
             Route::post('expenses/edit-requests/{editRequest}/approve', [ExpenseEditRequestController::class, 'approve']);
             Route::post('expenses/edit-requests/{editRequest}/reject', [ExpenseEditRequestController::class, 'reject']);
             Route::get('my-expenses', [ApiExpense::class, 'mine']);
-            Route::get('expenses/{expense}', [ApiExpense::class, 'show']);
+            Route::get('expenses/{expense}', [ApiExpense::class, 'show'])->whereNumber('expense');
             Route::post('expenses/{expense}/update', [ExpenseController::class, 'update']);
             Route::post('expenses/{expense}/delete', [ExpenseController::class, 'destroy']);
             Route::post('expenses/{expense}/mark-reviewed', [ExpenseController::class, 'markReviewed']);
             Route::post('expenses/{expense}/unreview', [ExpenseController::class, 'unreview']);
+            Route::post('expenses/{expense}/review-undo', [ExpenseController::class, 'reviewUndo']);   // N-06: undo of a review
+            Route::post('expenses/{expense}/unreview-undo', [ExpenseController::class, 'unreviewUndo']); // N-06: undo of an unreview
+            // N-04: review or unreview several at once — every id judged on its own
+            Route::post('expenses/bulk-review', [BulkActionController::class, 'reviewExpenses']);
             Route::post('expenses/{expense}/edit-request', [ExpenseEditRequestController::class, 'store']);
             Route::get('expenses/{expense}/download-attachment', [ExpenseController::class, 'downloadAttachment'])
                 ->withoutMiddleware(ApiV1Response::class);
@@ -167,18 +179,22 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::get('social-cases', [ApiCases::class, 'index']);
             Route::post('social-cases', [SocialCaseController::class, 'store']);
             Route::get('my-cases', [ApiCases::class, 'mine']);
-            Route::get('social-cases/{socialCase}', [ApiCases::class, 'show']);
+            Route::get('social-cases/{socialCase}', [ApiCases::class, 'show'])->whereNumber('socialCase');
             Route::post('social-cases/{socialCase}/update', [SocialCaseController::class, 'update']);
             Route::post('social-cases/{socialCase}/delete', [SocialCaseController::class, 'destroy']);
             Route::post('social-cases/{socialCase}/approve', [SocialCaseController::class, 'approve']);
             Route::post('social-cases/{socialCase}/reject', [SocialCaseController::class, 'reject']);
             Route::post('social-cases/{socialCase}/toggle-active', [SocialCaseController::class, 'toggleActive']);
+            // N-04: activate or deactivate several at once — every id judged on its own
+            Route::post('social-cases/bulk-active', [BulkActionController::class, 'setCasesActive']);
             Route::get('social-cases/{socialCase}/family-members', [SocialCaseController::class, 'getFamilyMembers']);
             Route::post('case-documents/{document}/delete', [SocialCaseController::class, 'removeDocument']);
 
             // ── HR ─────────────────────────────────────────────
             Route::get('hr/dashboard', [ApiHr::class, 'dashboard']);
             Route::get('hr/employees', [ApiHr::class, 'employees']);
+            // numeric-only so it never shadows hr/employees/export
+            Route::get('hr/employees/{employee}', [ApiHr::class, 'employeeShow'])->whereNumber('employee');
             Route::post('hr/employees', [HrController::class, 'store']);
             Route::post('hr/employees/{id}/update', [HrController::class, 'update']);
             Route::get('hr/attendance', [ApiHr::class, 'attendance']);
@@ -277,6 +293,7 @@ Route::prefix('api/v1')->middleware(['web', 'throttle:' . config('api.throttle_m
             Route::get('notifications/poll', [NotificationController::class, 'poll']);
             Route::post('notifications/mark-all-read', [NotificationController::class, 'markAllRead']);
             Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+            Route::post('notifications/unread', [NotificationController::class, 'markUnread']); // N-06: undo of marking read
             Route::get('broadcasts', [ApiSystem::class, 'broadcasts']);
             Route::post('broadcasts', [BroadcastController::class, 'store']);
             Route::post('broadcasts/active', [ApiSystem::class, 'activeBroadcast']);

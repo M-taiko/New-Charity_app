@@ -1,8 +1,18 @@
-import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
-import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
-import { MotionService } from '@core/motion/motion.service';
+import { ChangeDetectionStrategy, Component, HostListener } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
 
+/**
+ * Route changes are an INSTANT SPA swap — the shell (sidebar, top bar) never
+ * disappears and the new page's content replaces the old one in place.
+ *
+ * The previous version re-animated the whole <body> from `opacity: 0` on
+ * every navigation and fired a View Transition whose callback did nothing,
+ * so it cross-faded to an empty outlet: the page went fully blank and faded
+ * back in on every click. Route chunks are now preloaded
+ * (`withPreloading(PreloadAllModules)`) and the optional "full motion"
+ * cross-fade is the router's own `withViewTransitions()`, which keeps the
+ * OLD page on screen until the new route has actually rendered.
+ */
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -11,46 +21,6 @@ import { MotionService } from '@core/motion/motion.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent {
-  private motion = inject(MotionService);
-  private router = inject(Router);
-  /** increments per navigation — the rich mode page-enter animation replays */
-  readonly navCount = signal(0);
-
-  constructor() {
-    // T6-50.1: each route opens with a transition in Full mode — the View
-    // Transitions API where available, otherwise the CSS page-enter classes
-    // (motion.scss) do the fade+slide per page type.
-    this.router.events
-      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
-      .subscribe((event) => {
-        this.navCount.update((n) => n + 1);
-        if (this.motion.level() !== 'full') {
-          return;
-        }
-        const doc = document as Document & {
-          startViewTransition?: (cb: () => void) => {
-            updateCallbackDone: Promise<void>;
-            finished: Promise<void>;
-          };
-        };
-        // the CSS fallback (data-motion=full + .page-enter) covers Chrome 109;
-        // startViewTransition is the smoother path on newer engines. Skipped
-        // while the tab is hidden — a transition on a hidden document rejects
-        // with InvalidStateError — and rejections (rapid navigation aborts)
-        // are expected, so they are swallowed.
-        if (typeof doc.startViewTransition === 'function' && !document.hidden) {
-          const transition = doc.startViewTransition(() => undefined);
-          transition.updateCallbackDone.catch(() => undefined);
-          transition.finished.catch(() => undefined);
-        }
-        document.body.classList.remove('page-enter');
-        // force reflow so the same class re-triggers on route change
-        void document.body.offsetWidth;
-        document.body.classList.add('page-enter');
-        setTimeout(() => { document.body.classList.remove('page-enter'); }, 400);
-      });
-  }
-
   /**
    * Nothing in the app is draggable except table column headers (T6-17):
    * kill every native drag (links, images, SVG icons, selected text) at the

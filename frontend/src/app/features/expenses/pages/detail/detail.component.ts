@@ -13,7 +13,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { ContentDialogComponent } from '@shared/ui/content-dialog/content-dialog.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
-import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.component';
+import { KeyValueListComponent, type KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
@@ -24,6 +24,7 @@ import { MoneyPipe } from '@shared/pipes/money.pipe';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
+import { reloadList } from '@shared/lib/list-state';
 
 /** Expense details (plan 20, T3-20): summary tiles, grouped info cards, review
  *  panel, the full Blade action set (delete / request edit / review) and an
@@ -67,9 +68,9 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
           <!-- summary band: amount / type / date / source -->
           <div class="kpi-grid">
             <app-stat-tile [label]="'expense.detail.amount'" [value]="e.amount" [money]="true" accent="expenses" iconName="receipt-2" />
-            <app-stat-tile [label]="'expense.detail.type'" [value]="typeLabel(e)" />
-            <app-stat-tile [label]="'expense.detail.date'" [value]="fmtDate(e.expense_date)" />
-            <app-stat-tile [label]="'expense.detail.source_tile'" [value]="sourceLabel(e)" />
+            <app-stat-tile [label]="'expense.detail.type'" [value]="typeLabel(e)" iconName="myExpense" accent="expenses" />
+            <app-stat-tile [label]="'expense.detail.date'" [value]="fmtDate(e.expense_date)" iconName="calendar" accent="expenses" />
+            <app-stat-tile [label]="'expense.detail.source_tile'" [value]="sourceLabel(e)" iconName="wallet" accent="expenses" />
           </div>
 
           <div class="detail-grid u-mt-2">
@@ -105,7 +106,7 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
           @if (lineItems().length) {
             <section class="chart-card u-mt-4">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'expense.detail.line_items' | translate }}</span></div>
-              <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="lineItemColumns" [rows]="lineItems()">
+              <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [phoneFirst]="['description', 'total']" [columns]="lineItemColumns" [rows]="lineItems()">
                 <ng-template appCell="description" let-item>{{ item.description }}</ng-template>
                 <ng-template appCell="quantity" let-item><span class="u-bidi">{{ item.quantity }}</span></ng-template>
                 <ng-template appCell="unit_price" let-item>{{ item.unit_price | money: false }}</ng-template>
@@ -177,6 +178,7 @@ import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
         #confirmDelete
         [path]="'/expenses/' + id() + '/delete'"
         [entity]="'#' + id()"
+        [details]="deleteDetails()"
         (deleted)="afterDelete()"
       />
     </app-print-sheet>
@@ -340,13 +342,39 @@ export class ExpenseDetailPage {
     ];
   }
 
-  act(path: 'mark-reviewed' | 'unreview'): void {
+  /** N-06: what the delete confirm is about — the money first */
+  readonly deleteDetails = computed<readonly KeyValueItem[]>(() => {
+    const e = this.safeValue();
+    if (e === null) {
+      return [];
+    }
+    return [
+      { label: 'common.amount_egp', value: this.money.transform(e.amount, false) },
+      { label: 'expense.list.col_user', value: e.user ?? '—' },
+      { label: 'common.date', value: this.dateTime.transform(e.expense_date ?? e.created_at, false) },
+    ];
+  });
+
+  /**
+   * A review decision, or its undo (N-06): the toast offers the inverse for a
+   * few seconds after a decision; an undo has no undo.
+   */
+  act(path: 'mark-reviewed' | 'unreview' | 'review-undo' | 'unreview-undo'): void {
+    if (this.sending()) {
+      return;
+    }
+    const undoPath = path === 'mark-reviewed' ? 'review-undo' : path === 'unreview' ? 'unreview-undo' : null;
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>(`/expenses/${this.id()}/${path}`, {}))
       .then((res) => {
         this.sending.set(false);
-        this.toast.success(res.message);
-        this.data.reload();
+        if (undoPath === null) {
+          this.toast.info(res.message);
+        } else {
+          const undo = (): void => { this.act(undoPath); };
+          this.toast.success(res.message, { undo });
+        }
+        reloadList(this.data);
       })
       .catch((err: unknown) => { this.toast.apiError((err as HttpErrorResponse).error?.message ?? 'errors.generic'); });
   }

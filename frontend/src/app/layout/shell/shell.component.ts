@@ -1,18 +1,31 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { HttpClient } from '@angular/common/http';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { map, startWith, filter } from 'rxjs';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '@core/auth/auth.service';
 import { LocalStorageService } from '@core/storage/local-storage.service';
+import { iconSymbol } from '@shared/ui/icon/icon-symbol';
 import type { NavItem } from './nav-items';
 import { NAV_GROUPS } from './nav-items';
 import { TopbarComponent } from '../topbar/topbar.component';
 import { ToastHostComponent } from '@shared/ui/toast-host/toast-host.component';
+import type { ItemResponse } from '@shared/models/api.models';
+
+/** /lookups attention_counts (D-01 badges) — null for viewers */
+interface AttentionCounts {
+  pending_custodies: number;
+  pending_edit_requests: number;
+}
 
 /**
- * App shell (plan 19): right-side sidebar in RTL, 56px top bar, content on a
- * 12-column grid; phones get a bottom bar with the most-used items.
+ * App shell (plan 19 + D-01): right-side RTL sidebar (256px / 64 collapsed),
+ * 64px top bar; phones get a drawer + bottom bar. The sidebar is the Stitch
+ * _2 aside: 4 groups, ~40px rows with 28px icon tiles, accordion children,
+ * and a BRAND-BROWN active state (primary-container row + filled tile) —
+ * never per-module accent colours.
  */
 @Component({
   selector: 'app-shell',
@@ -33,21 +46,91 @@ import { ToastHostComponent } from '@shared/ui/toast-host/toast-host.component';
           @for (group of visibleGroups(); track group.label) {
             <div class="sidebar__group-label">{{ group.label | translate }}</div>
             @for (item of group.items; track item.label) {
-              <a
-                class="sidebar__link"
-                [class.sidebar__link--active]="isActive(item)"
-                [attr.data-accent]="isActive(item) ? accentFor(item) : null"
-                [attr.aria-current]="isActive(item) ? 'page' : null"
-                [routerLink]="item.route"
-                [attr.title]="collapsed() ? (item.label | translate) : null"
-              >
-                <span class="sidebar__link-tile">
-                  <svg class="sidebar__link-icon" aria-hidden="true">
-                    <use [attr.href]="iconHref(item.icon)" />
-                  </svg>
-                </span>
-                <span class="sidebar__link-label">{{ item.label | translate }}</span>
-              </a>
+              @if (item.children && item.children.length > 0) {
+                <div class="sidebar__branch" [class.sidebar__branch--open]="isOpen(item)">
+                  <div class="sidebar__branch-row">
+                    @if (item.route; as route) {
+                      <a
+                        class="sidebar__link"
+                        [class.sidebar__link--active]="isActive(item)"
+                        [attr.aria-current]="isExact(item) ? 'page' : null"
+                        [routerLink]="route"
+                        [attr.title]="collapsed() ? (item.label | translate) : null"
+                      >
+                        <span class="sidebar__link-tile">
+                          <svg class="sidebar__link-icon" aria-hidden="true">
+                            <use [attr.href]="iconHref(item.icon)" />
+                          </svg>
+                        </span>
+                        <span class="sidebar__link-label">{{ item.label | translate }}</span>
+                      </a>
+                    } @else {
+                      <button type="button" class="sidebar__link" (click)="toggleOpen(item)">
+                        <span class="sidebar__link-tile">
+                          <svg class="sidebar__link-icon" aria-hidden="true">
+                            <use [attr.href]="iconHref(item.icon)" />
+                          </svg>
+                        </span>
+                        <span class="sidebar__link-label">{{ item.label | translate }}</span>
+                      </button>
+                    }
+                    @if (badgeFor(item); as badge) {
+                      <span class="sidebar__badge u-bidi">{{ badge }}</span>
+                    }
+                    <button
+                      type="button"
+                      class="sidebar__chevron"
+                      (click)="toggleOpen(item)"
+                      [attr.aria-expanded]="isOpen(item)"
+                      [attr.aria-label]="item.label | translate"
+                    >
+                      <svg class="sidebar__chevron-icon" aria-hidden="true">
+                        <use [attr.href]="iconHref('chevronDown')" />
+                      </svg>
+                    </button>
+                  </div>
+                  @if (isOpen(item)) {
+                    <div class="sidebar__children">
+                      @for (child of item.children; track child.label) {
+                        <a
+                          class="sidebar__link sidebar__link--child"
+                          [class.sidebar__link--active]="isActive(child)"
+                          [attr.aria-current]="isExact(child) ? 'page' : null"
+                          [routerLink]="child.route!"
+                        >
+                          <span class="sidebar__link-tile">
+                            <svg class="sidebar__link-icon" aria-hidden="true">
+                              <use [attr.href]="iconHref(child.icon)" />
+                            </svg>
+                          </span>
+                          <span class="sidebar__link-label">{{ child.label | translate }}</span>
+                          @if (badgeFor(child); as badge) {
+                            <span class="sidebar__badge u-bidi">{{ badge }}</span>
+                          }
+                        </a>
+                      }
+                    </div>
+                  }
+                </div>
+              } @else {
+                <a
+                  class="sidebar__link"
+                  [class.sidebar__link--active]="isActive(item)"
+                  [attr.aria-current]="isExact(item) ? 'page' : null"
+                  [routerLink]="item.route"
+                  [attr.title]="collapsed() ? (item.label | translate) : null"
+                >
+                  <span class="sidebar__link-tile">
+                    <svg class="sidebar__link-icon" aria-hidden="true">
+                      <use [attr.href]="iconHref(item.icon)" />
+                    </svg>
+                  </span>
+                  <span class="sidebar__link-label">{{ item.label | translate }}</span>
+                  @if (badgeFor(item); as badge) {
+                    <span class="sidebar__badge u-bidi">{{ badge }}</span>
+                  }
+                </a>
+              }
             }
           }
         </nav>
@@ -61,7 +144,7 @@ import { ToastHostComponent } from '@shared/ui/toast-host/toast-host.component';
           <!-- right-side RTL sidebar: expanded collapses toward the right edge, collapsed expands into content -->
           <span class="sidebar__link-tile">
             <svg class="sidebar__link-icon" aria-hidden="true">
-              <use [attr.href]="iconHref(collapsed() ? 'chevron-left' : 'chevron-right')" />
+              <use [attr.href]="iconHref(collapsed() ? 'chevronLeft' : 'chevronRight')" />
             </svg>
           </span>
           <span class="sidebar__link-label">{{ (collapsed() ? 'nav.expand' : 'nav.collapse') | translate }}</span>
@@ -76,19 +159,20 @@ import { ToastHostComponent } from '@shared/ui/toast-host/toast-host.component';
         <main class="app-shell__content" id="main-content" tabindex="-1">
           <router-outlet />
         </main>
-      </div>
-    </div>
 
-    <!-- orientation lock: phones only — desktops and tablets are unaffected -->
-    <div class="orientation-lock" dir="rtl" aria-hidden="false" role="alert">
-      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="7" y="3" width="10" height="18" rx="2" />
-        <path d="M2 12a10 10 0 0 1 3.5-7.6" />
-        <path d="M2 12a10 10 0 0 0 3.5 7.6" />
-        <path d="M2 12h4" />
-      </svg>
-      <p class="orientation-lock__title">{{ 'a11y.portrait_only' | translate }}</p>
-      <p class="orientation-lock__text">{{ 'a11y.rotate_device' | translate }}</p>
+        <!-- X-06: field agents record expenses on phones — a labelled
+             floating button (icon + "تسجيل مصروف"), PHONES ONLY. The first
+             version had an invisible icon and showed at every width under
+             1024px, where it floated over the page as a mystery circle. -->
+        @if (canQuickExpense()) {
+          <a class="agent-fab" routerLink="/expenses/new">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <use [attr.href]="iconHref('add')" />
+            </svg>
+            <span class="agent-fab__label">{{ 'dashboard.agent.quick_expense' | translate }}</span>
+          </a>
+        }
+      </div>
     </div>
 
     <!-- the one toast host for the whole app (was never mounted — toasts vanished) -->
@@ -101,29 +185,52 @@ export class ShellComponent {
   private auth = inject(AuthService);
   private storage = inject(LocalStorageService);
   private router = inject(Router);
+  private http = inject(HttpClient);
 
   /** mobile drawer (phones): the sidebar becomes an overlay */
   readonly menuOpen = signal(false);
 
+  /** X-06: the quick-expense FAB shows for spenders (agents) on phones */
+  readonly canQuickExpense = computed(() => this.auth.can('spend_money'));
+
   readonly collapsed = signal(this.storage.get('sidebar.collapsed', false));
   readonly me = this.auth.me;
+
+  /** D-01: accordion parents remembered open across sessions (by label key) */
+  private readonly openParents = signal<ReadonlySet<string>>(
+    new Set(this.storage.get<string[]>('sidebar.openParents', ['/custodies'])),
+  );
+
+  /** D-01 badge counts — one cacheable /lookups call, refreshed with the shell */
+  readonly attentionCounts = signal<AttentionCounts | null>(null);
+
+  /** every visible item flattened WITH its children (active + badges) */
+  private visibleItemsFlat = computed<NavItem[]>(() =>
+    this.visibleGroups().flatMap((group) =>
+      group.items.flatMap((item) => [item, ...(item.children ?? [])]),
+    ),
+  );
 
   readonly visibleGroups = computed(() => {
     const abilities = this.auth.abilities();
     if (!abilities) {
       return [];
     }
+    const canSee = (item: NavItem): boolean => {
+      if (item.hiddenWhen?.(abilities)) {
+        return false;
+      }
+      if (!item.requires) {
+        return true;
+      }
+      return this.auth.can(item.requires);
+    };
     return NAV_GROUPS.map((group) => ({
       ...group,
-      items: group.items.filter((item) => {
-        if (item.hiddenWhen?.(abilities)) {
-          return false;
-        }
-        if (!item.requires) {
-          return true;
-        }
-        return this.auth.can(item.requires);
-      }),
+      items: group.items
+        .map((item) => ({ ...item, children: (item.children ?? []).filter(canSee) }))
+        // a parent shows when IT is visible or any child is (مصروفاتي for agents)
+        .filter((item) => canSee(item) || (item.children?.length ?? 0) > 0),
     })).filter((group) => group.items.length > 0);
   });
 
@@ -139,29 +246,64 @@ export class ShellComponent {
     { initialValue: this.router.url },
   );
 
-  /** exact match only — substring matching made /custodies light up on /custodies/tracking */
-  isActive(item: NavItem): boolean {
+  /**
+   * B-10: longest-prefix match over every visible item (children included) —
+   * exactly ONE highlighted link per route. `/custodies/tracking` beats
+   * `/custodies`; `/custodies/101` highlights "العهد".
+   */
+  readonly activeItem = computed<NavItem | null>(() => {
     const path = this.currentPath().split('?')[0];
-    return item.route === '/dashboard'
-      ? path === '/dashboard' || path === '/'
-      : item.route === path;
+    let best: NavItem | null = null;
+    for (const item of this.visibleItemsFlat()) {
+      const route = item.route ?? '';
+      if (route === '') {
+        continue;
+      }
+      const matches =
+        route === '/dashboard'
+          ? path === '/dashboard' || path === '/'
+          : path === route || path.startsWith(route + '/');
+      if (matches && (best === null || route.length > (best.route?.length ?? 0))) {
+        best = item;
+      }
+    }
+    return best;
+  });
+
+  isActive(item: NavItem): boolean {
+    return this.activeItem() === item;
   }
 
-  /**
-   * T7-09: the module accent of a nav entry, derived from its route — the
-   * active link's indicator and icon carry the module color.
-   */
-  accentFor(item: NavItem): string {
-    const route = item.route ?? '';
-    if (route.startsWith('/custodies') || route.startsWith('/transfers')) return 'custodies';
-    if (route.startsWith('/expenses')) return 'expenses';
-    if (route.startsWith('/treasury')) return 'treasury';
-    if (route.startsWith('/cases')) return 'cases';
-    if (route.startsWith('/hr')) return 'hr';
-    if (route.startsWith('/tasks') || route.startsWith('/chat')) return 'tasks';
-    if (route.startsWith('/procurement')) return 'procurement';
-    if (route.startsWith('/reports')) return 'reports';
-    return '';
+  /** aria-current="page" only on the exact match, not the section parent */
+  isExact(item: NavItem): boolean {
+    const path = this.currentPath().split('?')[0];
+    return this.isActive(item) && (path === item.route || (item.route === '/dashboard' && path === '/'));
+  }
+
+  /** accordion open state — parents are keyed by their label */
+  isOpen(item: NavItem): boolean {
+    return this.openParents().has(item.label);
+  }
+
+  toggleOpen(item: NavItem): void {
+    const next = new Set(this.openParents());
+    if (next.has(item.label)) {
+      next.delete(item.label);
+    } else {
+      next.add(item.label);
+    }
+    this.openParents.set(next);
+    this.storage.set('sidebar.openParents', [...next]);
+  }
+
+  /** D-01: the numeric badge of an item, when its queue is non-empty */
+  badgeFor(item: NavItem): number | null {
+    const counts = this.attentionCounts();
+    if (!counts || !item.badgeKey) {
+      return null;
+    }
+    const value = counts[item.badgeKey];
+    return value > 0 ? value : null;
   }
 
   constructor() {
@@ -171,9 +313,36 @@ export class ShellComponent {
       this.menuOpen.set(false);
     });
 
-    // best-effort OS-level lock; browsers require fullscreen — CSS overlay covers the rest
-    const orientation = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
-    orientation?.lock?.('portrait')?.catch(() => undefined);
+    // the active child auto-opens its parent accordion (once, on load)
+    effect(() => {
+      const active = this.activeItem();
+      if (!active) {
+        return;
+      }
+      for (const item of this.visibleGroups().flatMap((g) => g.items)) {
+        if ((item.children ?? []).some((child) => child.route === active.route) && !this.openParents().has(item.label)) {
+          this.toggleOpen(item);
+        }
+      }
+    });
+
+    // D-01 badges — /lookups is cacheable; keep a 60s sessionStorage copy so
+    // full page loads (and the e2e matrix) do not hammer the endpoint
+    const cacheKey = 'sidebar.attention_counts';
+    const cached = this.storage.get<{ at: number; counts: AttentionCounts } | null>(cacheKey, null);
+    if (cached && Date.now() - cached.at < 60_000) {
+      this.attentionCounts.set(cached.counts);
+    } else {
+      void firstValueFrom(this.http.get<ItemResponse<{ attention_counts: AttentionCounts | null }>>('/lookups'))
+        .then((res) => {
+          const counts = res.data?.attention_counts ?? null;
+          this.attentionCounts.set(counts);
+          if (counts) {
+            this.storage.set(cacheKey, { at: Date.now(), counts });
+          }
+        })
+        .catch(() => { return undefined; });
+    }
   }
 
   toggle(): void {
@@ -181,9 +350,9 @@ export class ShellComponent {
     this.storage.set('sidebar.collapsed', this.collapsed());
   }
 
-  /** sprite href for a Tabler icon name (kept simple — inline concatenation
+  /** sprite href for an icon name (kept simple — inline concatenation
    *  in the template trips an esbuild incremental-cache quirk, NG8002) */
   iconHref(icon: string): string {
-    return `assets/icons/sprite.svg#tabler-${icon}`;
+    return `assets/icons/sprite.svg#tabler-${iconSymbol(icon)}`;
   }
 }

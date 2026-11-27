@@ -20,27 +20,20 @@ import { KeyValueListComponent } from '@shared/ui/key-value-list/key-value-list.
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import type { ActionResponse } from '@shared/models/api.models';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
+import { AvatarComponent } from '@shared/ui/avatar/avatar.component';
 
 /** My profile (plan 20, T3-103): name, password, picture upload, animation setting. */
 @Component({
   selector: 'app-profile-page',
   standalone: true,
-  imports: [TranslatePipe, FormsModule, ButtonModule, InputTextModule, SelectModule, PageHeaderComponent, KeyValueListComponent, FieldComponent, FormSectionComponent],
+  imports: [ValidSubmitDirective, TranslatePipe, FormsModule, ButtonModule, InputTextModule, SelectModule, PageHeaderComponent, KeyValueListComponent, FieldComponent, FormSectionComponent, AvatarComponent],
   styles: `
     .profile-avatar {
       width: 64px;
       height: 64px;
+      flex-shrink: 0;
       font-size: var(--text-lg);
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .profile-avatar img {
-      width: 100%;
-      height: 100%;
-      border-radius: var(--radius-full);
-      object-fit: cover;
     }
 
     .profile-picture-controls {
@@ -74,12 +67,8 @@ import type { ActionResponse } from '@shared/models/api.models';
       <section class="form-section">
         <h3 class="form-section__title">{{ 'profile.picture' | translate }}</h3>
         <div class="u-flex u-gap-3 u-flex-wrap">
-          <span class="user-chip__avatar profile-avatar">
-            @if (avatarSrc(); as avatar) {
-              <img [src]="avatar" [alt]="name()" />
-            } @else {
-              {{ initials() }}
-            }
+          <span class="profile-avatar">
+            <app-avatar [name]="name()" [picture]="avatarSrc()" [size]="64" />
           </span>
           <div class="u-column u-gap-2 profile-picture-controls">
             <input
@@ -117,7 +106,7 @@ import type { ActionResponse } from '@shared/models/api.models';
         </div>
       </section>
     </form>
-    <form (ngSubmit)="savePassword()" #pf="ngForm">
+    <form (ngSubmit)="vs.validate() && savePassword()" #pf="ngForm" appValidSubmit #vs="appValidSubmit">
       <app-form-section>
         <app-field label="profile.current_password" controlId="p-current" [required]="true">
           <input pInputText id="p-current" type="password" [(ngModel)]="currentPassword" name="current" required class="u-full" />
@@ -129,7 +118,7 @@ import type { ActionResponse } from '@shared/models/api.models';
           <input pInputText id="p-confirm" type="password" [(ngModel)]="confirmPassword" name="confirm" required class="u-full" />
         </app-field>
       </app-form-section>
-      <p-button type="submit" [label]="'profile.update_password' | translate" [loading]="sending()" [disabled]="pf.invalid || sending()" />
+      <p-button type="submit" [label]="'profile.update_password' | translate" [loading]="sending()" [disabled]="sending()" />
     </form>
     <app-form-section>
       <app-field label="profile.motion.full" controlId="p-motion">
@@ -162,19 +151,11 @@ export class ProfilePage implements OnDestroy {
   readonly pictureError = signal<string | null>(null);
   readonly pictureSending = signal(false);
 
-  /** the stored picture from /me — /storage/app/public/<path> as in the Blade profile */
+  /** the stored picture from /me — /storage/<path> via the public disk symlink */
   readonly currentPicture = computed(() => {
     const path = this.auth.me()?.profile_picture;
-    return path ? `/storage/app/public/${path}` : null;
+    return path ? `/storage/${path}` : null;
   });
-
-  readonly initials = computed(() =>
-    (this.auth.me()?.name ?? '?')
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part.charAt(0))
-      .join(''),
-  );
 
   /** preview shows the freshly picked file, else the stored picture */
   readonly avatarSrc = computed(() => this.previewUrl() ?? this.currentPicture());
@@ -228,6 +209,9 @@ export class ProfilePage implements OnDestroy {
   }
 
   savePicture(): void {
+    if (this.pictureSending()) {
+      return;
+    }
     const file = this.selectedFile();
     if (!file) {
       return;
@@ -263,6 +247,9 @@ export class ProfilePage implements OnDestroy {
   }
 
   saveName(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>('/profile/name', { name: this.name() }))
       .then((res) => { this.sending.set(false); this.toast.success(res.message); this.auth.loadMe().subscribe(); })
@@ -270,6 +257,9 @@ export class ProfilePage implements OnDestroy {
   }
 
   savePassword(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.newPassword() !== this.confirmPassword()) {
       this.toast.error('validation.password_match');
       return;

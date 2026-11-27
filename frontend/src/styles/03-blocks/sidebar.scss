@@ -1,6 +1,7 @@
-/* Sidebar — the Stitch shell pattern (RD-2.1). 256px (token), icon tiles on
-   every nav item, primary-container active state with the module accent kept
-   (T7-09). Token-driven: one set of rules renders both themes. */
+/* Sidebar — the Stitch _2 aside (D-01). 256px (token), icon tiles on every
+   nav item, primary-container active state in BRAND BROWN (no module
+   accents), accordion children, numeric badges. Token-driven: one set of
+   rules renders both themes. */
 .sidebar {
   width: var(--sidebar-w);
   background: var(--color-surface);
@@ -71,39 +72,62 @@
 }
 
 /* ── Nav groups: label-sm muted headers, 24px between groups ── */
+/* R3-02: gap 0 — the old 32px nav gap sat between EVERY child (labels,
+   branches, links) and made a 66px pitch for 40px links. Separation now
+   comes from the group label's own margins; item pitch ≈ 42px. */
 .sidebar nav {
   flex: 1;
   padding: var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: 0;
 }
 
 .sidebar__group-label {
-  padding: 0 var(--space-2) var(--space-1);
+  padding: 0 var(--space-2) 1px;
+  margin-block: var(--space-2) 0;
   font-size: 11px;
   font-weight: 500;
   color: var(--color-text-muted);
   white-space: nowrap;
+  line-height: 1.2;
+}
+
+.sidebar nav > .sidebar__group-label:first-child {
+  margin-block-start: 0;
 }
 
 .sidebar--collapsed .sidebar__group-label,
 .sidebar--collapsed .sidebar__brand-text,
-.sidebar--collapsed .sidebar__link-label {
+.sidebar--collapsed .sidebar__link-label,
+.sidebar--collapsed .sidebar__badge,
+.sidebar--collapsed .sidebar__chevron,
+.sidebar--collapsed .sidebar__children {
   display: none;
 }
 
-/* ── Nav items: icon in a 28px tile + body-md label ── */
+/* ── Nav items: ~40px rows, icon in a 28px tile + body-md label.
+   R2-01: route-less accordion parents render as <button> — reset the UA
+   chrome (grey fill + 2px border) so links and buttons look identical ── */
 .sidebar__link {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-height: 40px;
   padding: var(--space-1) var(--space-2);
-  margin-block: 1px;
+  margin-block: 0;
   border-radius: var(--radius-m);
   color: var(--color-text-muted);
   text-decoration: none;
   white-space: nowrap;
+  /* button reset (no-op for the <a> variants) */
+  appearance: none;
+  background: none;
+  border: 0;
+  font: inherit;
+  width: 100%;
+  text-align: start;
+  cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
 }
 
@@ -136,9 +160,9 @@
   font-weight: 400;
 }
 
-/* ── Active: primary-container bg, on-primary-container label-lg w600, tile
-       flips to primary with a white glyph. T7-09: the module accent variants
-       swap the tint + tile color so each module stays recognizable. ── */
+/* ── Active: primary-container bg, on-primary-container label w600, tile
+       flips to primary with a white glyph — BRAND BROWN always (D-01);
+       the per-module accent variants are retired ── */
 .sidebar__link--active {
   background: var(--color-primary-soft);
   color: var(--color-on-primary-soft);
@@ -158,16 +182,83 @@
   }
 }
 
-@each $module in (custodies, expenses, treasury, cases, hr, tasks, procurement, reports) {
-  .sidebar__link[data-accent='#{$module}'] {
-    background: var(--accent-#{$module}-soft);
-    color: var(--color-text);
+/* ── D-01 accordion parents: row link + chevron toggle, children indented ── */
+.sidebar__branch-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
 
-    .sidebar__link-tile {
-      background: var(--accent-#{$module});
-      color: var(--color-on-primary);
-    }
-  }
+.sidebar__branch-row .sidebar__link {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar__chevron {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: var(--space-1);
+  border-radius: var(--radius-s);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar__chevron:hover {
+  background: var(--color-surface-inset);
+  color: var(--color-text);
+}
+
+.sidebar__chevron:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.sidebar__chevron-icon {
+  width: 14px;
+  height: 14px;
+  transition: rotate var(--dur-fast) var(--ease-out);
+}
+
+.sidebar__branch--open .sidebar__chevron-icon {
+  rotate: 180deg;
+}
+
+.sidebar__children {
+  display: flex;
+  flex-direction: column;
+  padding-inline-start: calc(var(--space-4) + var(--space-2));
+  margin-block: 1px;
+}
+
+.sidebar__link--child {
+  min-height: 36px;
+  font-size: var(--text-xs);
+}
+
+/* D-01: numeric badge (Stitch badge-numeric) — primary-container chip */
+.sidebar__badge {
+  min-width: 20px;
+  height: 20px;
+  padding-inline: 6px;
+  margin-inline-start: auto;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar__link--child .sidebar__badge {
+  margin-inline-start: auto;
 }
 
 /* ── Collapse toggle pinned at the foot ── */

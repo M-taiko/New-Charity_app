@@ -78,6 +78,9 @@ export class SettingsPage {
   }
 
   saveInfo(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.error.set(null);
     void firstValueFrom(this.http.post<ActionResponse>('/settings', { organization_name: this.orgName(), organization_email: this.orgEmail() }))
@@ -90,6 +93,9 @@ export class SettingsPage {
   }
 
   saveLogo(): void {
+    if (this.sending()) {
+      return;
+    }
     if (!this.logoFile) {
       return;
     }

@@ -78,24 +78,24 @@ interface GovData {
 
           <div class="kpi-grid">
             <app-stat-tile [label]="'report.governorates.col_total'" [value]="d.grand_total.total" accent="reports" iconName="report-analytics" />
-            <app-stat-tile [label]="'report.governorates.col_approved'" [value]="d.grand_total.approved" />
-            <app-stat-tile [label]="'report.governorates.col_pending'" [value]="d.grand_total.pending" />
-            <app-stat-tile [label]="'report.governorates.col_rejected'" [value]="d.grand_total.rejected" />
-            <app-stat-tile [label]="'report.governorates.col_spent'" [value]="d.grand_total.expenses_total" [money]="true" />
+            <app-stat-tile [label]="'report.governorates.col_approved'" [value]="d.grand_total.approved" iconName="approved" accent="reports" />
+            <app-stat-tile [label]="'report.governorates.col_pending'" [value]="d.grand_total.pending" iconName="pending" accent="reports" />
+            <app-stat-tile [label]="'report.governorates.col_rejected'" [value]="d.grand_total.rejected" iconName="declined" accent="reports" />
+            <app-stat-tile [label]="'report.governorates.col_spent'" [value]="d.grand_total.expenses_total" [money]="true" iconName="expense" accent="reports" />
           </div>
 
           <p class="u-muted u-small u-mb-4">{{ 'report.governorates.click_hint' | translate }}</p>
-          <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/governorates" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.governorates" [emptyLabel]="'report.governorates.empty'">
-            <ng-template appCell="label" let-row><a [routerLink]="['/cases']" [queryParams]="{ governorate: row.label }">{{ row.label }}</a>
+          <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/governorates" mode="static" [autoFilters]="true" [phoneFirst]="['label', 'total']" [columns]="cols" [rows]="d.governorates" [emptyLabel]="'report.governorates.empty'">
+            <ng-template appCell="label" let-row><a [routerLink]="['/social-cases']" [queryParams]="{ governorate: row.label }">{{ row.label }}</a>
 @if (!row.standard) {
   <span class="stamp">{{ 'report.governorates.non_standard' | translate }}</span>
 }</ng-template>
-            <ng-template appCell="total" let-row><span class="money u-bidi">{{ row.total | money }}</span></ng-template>
+            <ng-template appCell="total" let-row><span class="money u-bidi">{{ row.total | money: false }}</span></ng-template>
             <ng-template appCell="approved" let-row><span class="u-bidi">{{ row.approved }}</span></ng-template>
             <ng-template appCell="pending" let-row><span class="u-bidi">{{ row.pending }}</span></ng-template>
             <ng-template appCell="rejected" let-row><span class="u-bidi">{{ row.rejected }}</span></ng-template>
-            <ng-template appCell="expenses_total" let-row><span class="u-bidi">{{ row.expenses_total | money }}</span></ng-template>
-            <ng-template appCell="average" let-row><span class="u-bidi">{{ row.average | money }}</span></ng-template>
+            <ng-template appCell="expenses_total" let-row><span class="u-bidi">{{ row.expenses_total | money: false }}</span></ng-template>
+            <ng-template appCell="average" let-row><span class="u-bidi">{{ row.average | money: false }}</span></ng-template>
             <!-- T7-04: totals row follows the column order — per-column footer cells -->
             <ng-template appFooterCell="label">{{ 'common.total' | translate }}</ng-template>
             <ng-template appFooterCell="total"><span class="u-bidi">{{ d.grand_total.total }}</span></ng-template>

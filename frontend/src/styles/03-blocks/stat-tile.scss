@@ -1,5 +1,7 @@
 .stat-tile {
-  height: 100%;
+  /* R3-01 / global equal height: no percentage height — the host fills its
+     row with flex (kpi-grid.scss "Equal height: GLOBAL") and this card
+     grows inside it; standalone tiles simply size to content */
   box-sizing: border-box;
   background: var(--color-surface);
   border: 1px solid var(--color-hairline);
@@ -16,12 +18,39 @@
   background: var(--color-surface-inset);
 }
 
+/* B-05: header row = label at inline-start, module icon at inline-end
+   (Stitch _2) — one shared edge for label, value and caption below. */
+.stat-tile__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .stat-tile__label {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-1);
+  min-width: 0;
+  /* a narrow tile (five-up rows) wraps a long label — it never runs past
+     the card edge beside the icon circle */
+  overflow-wrap: anywhere;
+}
+
+/* 36px soft circle holding the 20px module glyph (D-05). Every tile of a KPI
+   row has one (R4-04); the glyph takes the row's module accent. */
+.stat-tile__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-inset);
+  color: var(--color-text-muted);
   flex-shrink: 0;
 }
 
@@ -29,21 +58,46 @@
   font-family: var(--font-display);
   font-size: var(--text-2xl);
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.3333;
   direction: ltr;
   unicode-bidi: isolate;
-  text-align: start;
+  /* B-05: `end` inside the LTR-isolated block = the RIGHT edge, which is the
+     RTL layout's inline-start — label, value and caption now share it */
+  text-align: end;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-tile__value--hero {
   font-size: var(--text-hero);
 }
 
+/* `.stat-tile__number` (the figure) and `.stat-tile__currency` are the two
+   flex items of the value line — see the component; the unit wraps on its
+   own in a narrow tile, and a textual figure (a type, a date) still wraps */
 .stat-tile__currency {
   font-family: var(--font-ui);
   font-size: var(--text-xs);
   font-weight: 400;
   color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* N-09: the figure's box takes the FINAL figure's width (the sizer holds it,
+   invisible) and the animated number lies over it — the count-up changes
+   text, never layout */
+.stat-tile__figure {
+  position: relative;
+  display: inline-block;
+  min-width: 0;
+}
+
+.stat-tile__figure > .stat-tile__number {
+  position: absolute;
+  inset: 0;
+}
+
+.stat-tile__sizer {
+  visibility: hidden;
 }
 
 .stat-tile__caption {
@@ -51,54 +105,95 @@
   color: var(--color-text-muted);
 }
 
+/* D-05 delta chip: ▲/▼ percent vs the previous period — text colours pass
+   AA on the card surface in both themes (B-03 text-token hues) */
+.stat-tile__delta {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--status-active-bg);
+  color: var(--status-active-text);
+}
+
+.stat-tile__delta--down {
+  background: var(--status-danger-bg);
+  color: var(--status-danger-text);
+}
+
 .stat-tile__spark {
   margin-block-start: var(--space-2);
 }
 
-/* ── RD-3.2 pattern 2 — top-accent card: 4px status bar, value in status color ── */
-.stat-tile--accent-top {
-  border-block-start: 4px solid var(--status-neutral-fg);
+/* N-09: the delta row and the sparkline reserved for a request still running
+   (`reserveSpark`) — in the tile, not on screen */
+.stat-tile__delta--reserved,
+.stat-tile__spark--reserved {
+  visibility: hidden;
 }
 
-.stat-tile--accent-success {
-  border-block-start-color: var(--status-active-fg);
-}
-
+/* ── Value tone (RD-3.2 pattern 2, reshaped by R4-04): the status colour goes
+   to the FIGURE only, where it carries meaning — incoming green, outgoing
+   red. The 4px top bar is retired: one row, one card shape, and never four
+   different coloured bars over four totals. ── */
 .stat-tile--accent-success .stat-tile__value {
   color: var(--status-active-fg);
-}
-
-.stat-tile--accent-warning {
-  border-block-start-color: var(--status-warning-fg);
 }
 
 .stat-tile--accent-warning .stat-tile__value {
   color: var(--status-warning-fg);
 }
 
-.stat-tile--accent-danger {
-  border-block-start-color: var(--status-danger-fg);
-}
-
 .stat-tile--accent-danger .stat-tile__value {
   color: var(--status-danger-fg);
-}
-
-.stat-tile--accent-info {
-  border-block-start-color: var(--status-info-fg);
 }
 
 .stat-tile--accent-info .stat-tile__value {
   color: var(--status-info-fg);
 }
 
-.stat-tile--accent-primary {
-  border-block-start-color: var(--color-primary);
-}
-
 .stat-tile--accent-primary .stat-tile__value {
   color: var(--color-primary);
 }
+
+/* ── Narrow tile — the host is the query container its card reads its width
+   from. A five-up row at a 1280px viewport gives a tile 182px: tighter
+   padding and a smaller figure keep a money value on one line, and the
+   currency unit may drop to its own line rather than overflow. ── */
+app-stat-tile {
+  container-type: inline-size;
+}
+
+/* stylelint-disable plugin/no-unsupported-browser-features -- in every browser of .browserslistrc (Safari 16.0+) */
+@container (max-width: 200px) {
+  .stat-tile {
+    padding-inline: var(--space-4);
+  }
+
+  .stat-tile--tinted {
+    padding-inline: var(--space-3);
+  }
+
+  .stat-tile__value {
+    flex-wrap: wrap;
+    font-size: var(--text-xl);
+  }
+
+  .stat-tile__value--hero {
+    font-size: var(--text-2xl);
+  }
+
+  .stat-tile__icon {
+    width: 32px;
+    height: 32px;
+  }
+}
+/* stylelint-enable plugin/no-unsupported-browser-features */
 
 /* ── RD-4.10: tinted mini-cards — tint background + tinted border, value in
    the status color (the custody-detail summary row) ── */

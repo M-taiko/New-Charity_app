@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { iconHref } from './icon-symbol';
 
 /**
  * Icon from the generated Tabler sprite (plan 11.6). Domain concepts map to
@@ -68,7 +69,7 @@ export class IconComponent {
   /** domain accent chip: custodies|expenses|treasury|cases|hr|tasks|procurement|reports */
   chip = input<ModuleAccent | ''>('');
 
-  href = computed(() => `assets/icons/sprite.svg#tabler-${this.name()}`);
+  href = computed(() => iconHref(this.name()));
 
   hostClass = computed(() => {
     const chip = this.chip();

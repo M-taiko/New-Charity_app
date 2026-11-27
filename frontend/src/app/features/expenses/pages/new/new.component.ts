@@ -26,6 +26,7 @@ import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ActionResponse, DirectionNode, ItemResponse} from '@shared/models/api.models';
 import type { ListResponse } from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 interface UserCustody { id: number; reason: string; remaining: string; total_available: string }
 interface ApprovedCase { id: number; name: string }
@@ -40,7 +41,7 @@ interface ApprovedCase { id: number; name: string }
 @Component({
   selector: 'app-expense-form',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, AsyncPageComponent, FormSectionComponent, FieldComponent, DirectionPickerComponent, LineItemsEditorComponent, AttachmentFieldComponent, MoneyPipe, DatetimePipe, ActionButtonComponent],
+  imports: [ValidSubmitDirective, TranslatePipe, RouterLink, FormsModule, ButtonModule, InputNumberModule, InputTextModule, TextareaModule, SelectModule, DatePickerModule, PageHeaderComponent, AsyncPageComponent, FormSectionComponent, FieldComponent, DirectionPickerComponent, LineItemsEditorComponent, AttachmentFieldComponent, MoneyPipe, DatetimePipe, ActionButtonComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (isEdit() && safeExisting(); as e) {
@@ -59,7 +60,7 @@ interface ApprovedCase { id: number; name: string }
       </div>
     </app-page-header>
     <app-async-page [resource]="existing" variant="form" [backLink]="['/expenses']">
-      <form (ngSubmit)="submit()" #f="ngForm">
+      <form (ngSubmit)="vs.validate() && submit()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
         <app-form-section title="expense.form.section_basics">
           @if (!isEdit()) {
             <app-field label="expense.form.source" controlId="source">
@@ -146,7 +147,7 @@ interface ApprovedCase { id: number; name: string }
         @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
         <div class="sticky-actions">
           <app-action-button kind="back" label="common.back" [route]="['/expenses']" />
-          <p-button type="submit" [label]="'expense.form.submit' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
+          <p-button type="submit" [label]="'expense.form.submit' | translate" [loading]="sending()" [disabled]="sending()" />
         </div>
       </form>
     </app-async-page>
@@ -344,6 +345,9 @@ export class ExpenseFormPage {
   }
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     if (this.amount() === null) {
       return;
     }

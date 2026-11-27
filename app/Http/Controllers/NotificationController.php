@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Notification;
 use App\Support\Api\NotificationLink;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 class NotificationController extends Controller
 {
@@ -45,17 +46,52 @@ class NotificationController extends Controller
      */
     public function markAllRead(Request $request)
     {
+        // N-06: one instant for the whole batch — markUnread puts back exactly what
+        // this call changed (every notification whose read_at is this instant or later)
+        $markedAt = now();
+
         Notification::where('user_id', auth()->id())
             ->where('is_read', false)
-            ->update(['is_read' => true, 'read_at' => now()]);
+            ->update(['is_read' => true, 'read_at' => $markedAt]);
 
         // the SPA's /api/v1 call expects a JSON envelope with the message;
         // the Blade web form keeps the redirect + flash
         if ($request->expectsJson()) {
-            return response()->json(['message' => 'تم تعليم جميع الإشعارات كمقروءة']);
+            return response()->json([
+                'message' => 'تم تعليم جميع الإشعارات كمقروءة',
+                'data' => ['marked_at' => $markedAt->toIso8601String()],
+            ]);
         }
 
         return back()->with('success', 'تم تعليم جميع الإشعارات كمقروءة');
+    }
+
+    /**
+     * Undo of marking notifications read (N-06) — the SPA's undo button.
+     * `since`: everything of this user read at that instant or after (what
+     * markAllRead returned); `ids`: these few. Only the user's own rows move.
+     */
+    public function markUnread(Request $request)
+    {
+        $data = $request->validate([
+            'since' => 'nullable|required_without:ids|date',
+            'ids' => 'nullable|required_without:since|array|min:1|max:500',
+            'ids.*' => 'integer',
+        ]);
+
+        $query = Notification::where('user_id', $request->user()->id)->where('is_read', true);
+        if (!empty($data['since'])) {
+            // a Carbon, so the grammar writes it in the app's timezone — not the raw ISO string
+            $query->where('read_at', '>=', Carbon::parse($data['since']));
+        } else {
+            $query->whereIn('id', $data['ids']);
+        }
+        $count = $query->update(['is_read' => false, 'read_at' => null]);
+
+        return response()->json([
+            'message' => 'تم التراجع: أعيدت الإشعارات إلى غير مقروءة',
+            'data' => ['count' => $count],
+        ]);
     }
 
     /**

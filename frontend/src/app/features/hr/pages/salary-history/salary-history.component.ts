@@ -33,11 +33,11 @@ interface SalaryRow { id: number; year: number; month: number; base_salary: stri
 
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty" [backLink]="['/hr/employees']">
       @if (data.value(); as page) {
-        <app-data-table mode="static" [listUrl]="'/hr/employees/' + id() + '/salary-history'" [filters]="metaFilters()" [columns]="columns" [rows]="page.data" [emptyLabel]="'hr.salaries.empty'">
+        <app-data-table [phoneFirst]="['year', 'month', 'status', 'final_salary']" mode="static" [listUrl]="'/hr/employees/' + id() + '/salary-history'" [filters]="metaFilters()" [columns]="columns" [rows]="page.data" [emptyLabel]="'hr.salaries.empty'">
           <ng-template appCell="year" let-row><span class="u-bidi">{{ row.year }}</span></ng-template>
           <ng-template appCell="month" let-row><span class="u-bidi">{{ row.month }}</span></ng-template>
-          <ng-template appCell="base_salary" let-row><span class="u-bidi">{{ row.base_salary | money }}</span></ng-template>
-          <ng-template appCell="final_salary" let-row><span class="u-bidi">{{ row.final_salary | money }}</span></ng-template>
+          <ng-template appCell="base_salary" let-row><span class="u-bidi">{{ row.base_salary | money: false }}</span></ng-template>
+          <ng-template appCell="final_salary" let-row><span class="u-bidi">{{ row.final_salary | money: false }}</span></ng-template>
           <ng-template appCell="status" let-row><app-status-stamp [status]="row.status" namespace="salary" /></ng-template>
           <ng-template appCell="actions" let-row><a [routerLink]="['/hr/salaries', row.id]">{{ 'common.view' | translate }}</a></ng-template>
         </app-data-table>

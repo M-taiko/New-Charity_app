@@ -28,6 +28,17 @@
   flex-wrap: wrap;
 }
 
+/* the row of buttons app-page-actions lays out (R5-01). This is the flex
+   container: the buttons' custom-element hosts are its items, so the gap is
+   real air between them — it used to sit on the host around a block div,
+   where it spread nothing and the buttons touched. */
+.page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .page-header__meta {
   display: flex;
   gap: var(--space-2);

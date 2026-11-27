@@ -3,10 +3,11 @@ import { ChangeDetectionStrategy, Component, effect, inject, signal, viewChild }
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
-import { HttpClient } from '@angular/common/http';
 import { PollingService } from '@core/polling/polling.service';
+import { NotificationReadService } from '@core/notifications/notification-read.service';
 import { LocalStorageService } from '@core/storage/local-storage.service';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
+import { iconSymbol } from '@shared/ui/icon/icon-symbol';
 
 /**
  * Notification bell (plan 11.15): unread count, dropdown, mark-all-read, and
@@ -40,7 +41,7 @@ import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
         <div class="notification-bell__panel" role="dialog" [attr.aria-label]="'nav.notifications' | translate">
           <div class="notification-bell__head">
             <strong class="notification-bell__title">{{ 'nav.notifications' | translate }}</strong>
-            <p-button [label]="'notifications.mark_all' | translate" size="small" [text]="true" (onClick)="markAll()" />
+            <p-button [label]="'notifications.mark_all' | translate" size="small" [text]="true" [disabled]="markingAll()" [loading]="markingAll()" (onClick)="markAll()" />
           </div>
           <div class="notification-bell__list">
             @for (item of latest(); track item.id) {
@@ -69,7 +70,7 @@ import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
               [attr.aria-label]="(muted() ? 'notifications.unmute' : 'notifications.mute') | translate"
             >
               <svg width="14" height="14" aria-hidden="true">
-                <use [attr.href]="'assets/icons/sprite.svg#tabler-' + (muted() ? 'closed' : 'bell')" />
+                <use [attr.href]="'assets/icons/sprite.svg#tabler-' + iconSymbol(muted() ? 'closed' : 'bell')" />
               </svg>
             </button>
           </div>
@@ -124,8 +125,10 @@ import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NotificationBellComponent implements OnDestroy {
+  readonly iconSymbol = iconSymbol;
+
   private polling = inject(PollingService);
-  private http = inject(HttpClient);
+  private reads = inject(NotificationReadService);
   private storage = inject(LocalStorageService);
   private root = viewChild<ElementRef<HTMLElement>>('root');
 
@@ -171,17 +174,24 @@ export class NotificationBellComponent implements OnDestroy {
     this.storage.set('notifications.muted', this.muted());
   }
 
+  /** N-06: every read offers its undo in the toast; one mark-all at a time */
+  readonly markingAll = signal(false);
+
   markAll(): void {
-    this.http.post('/notifications/mark-all-read', {}).subscribe(() => { this.polling.refreshNow(); });
+    if (this.markingAll()) {
+      return;
+    }
+    this.markingAll.set(true);
+    void this.reads.readAll().then(() => {
+      this.markingAll.set(false);
+    });
   }
 
   /** close the dropdown, mark the item read, and let the anchor navigate */
   openItem(item: { id: number; is_read: boolean }): void {
     this.openSignal.set(false);
     if (!item.is_read) {
-      this.http.post(`/notifications/${item.id}/read`, {}).subscribe({
-        complete: () => { this.polling.refreshNow(); },
-      });
+      void this.reads.read(item.id);
     }
   }
 

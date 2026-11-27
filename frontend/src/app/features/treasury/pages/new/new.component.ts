@@ -18,6 +18,7 @@ import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 /**
  * New + edit treasury form (plan 20): one component serving both routes —
@@ -26,7 +27,7 @@ import { ActionButtonComponent } from '@shared/ui/actions/action-button.componen
 @Component({
   selector: 'app-treasury-form',
   standalone: true,
-  imports: [
+  imports: [ValidSubmitDirective, 
     TranslatePipe, RouterLink, FormsModule, ButtonModule, InputTextModule, TextareaModule,
     PageHeaderComponent, FieldComponent, FormSectionComponent, AsyncPageComponent, ActionButtonComponent,
   ],
@@ -39,7 +40,7 @@ import { ActionButtonComponent } from '@shared/ui/actions/action-button.componen
     <!-- T5-07: a failed edit-load shows the error state with retry instead of a
          blank form that could be saved over the real treasury -->
     <app-async-page [resource]="pageState" variant="form" [backLink]="['/treasury']">
-      <form (ngSubmit)="save()" #f="ngForm">
+      <form (ngSubmit)="vs.validate() && save()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
         <app-form-section>
           <app-field label="treasury.form.name" controlId="treasury-name" [required]="true" [error]="serverFieldError(error(), 'name')">
             <input pInputText id="treasury-name" name="name" class="u-full" [(ngModel)]="name" required />
@@ -53,7 +54,7 @@ import { ActionButtonComponent } from '@shared/ui/actions/action-button.componen
         }
         <div class="sticky-actions">
           <app-action-button kind="back" label="common.back" [route]="['/treasury']" />
-          <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
+          <p-button type="submit" [label]="'common.save' | translate" [loading]="sending()" [disabled]="sending()" />
         </div>
       </form>
     </app-async-page>
@@ -136,6 +137,9 @@ export class TreasuryFormPage implements OnInit {
   }
 
   save(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.error.set(null);
     const body = { name: this.name(), notes: this.notes() };

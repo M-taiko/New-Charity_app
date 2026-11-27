@@ -26,6 +26,8 @@ Thumbs.db
 # Local working docs and data (never deploy)
 /.kilo
 /Task*.md
+# the review rounds' task lists, moved out of the application root (R5-04.2)
+/docs/reviews/
 /CLIENT_FEEDBACK_TASKS.md
 /PRE_IMPLEMENTATION_VERIFICATION.md
 /LOCAL_SETUP_TASK.md

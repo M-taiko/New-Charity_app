@@ -11,14 +11,15 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
+import { ProgressCellComponent } from '@shared/ui/data-table/progress-cell.component';
 import { PrintSheetComponent } from '@shared/ui/print-sheet/print-sheet.component';
 import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import type { ItemResponse } from '@shared/models/api.models';
 import { FieldComponent } from '@shared/ui/field/field.component';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
 
 interface AnalyticsRow {
   id: number;
@@ -60,11 +61,11 @@ interface DrillExpense {
 @Component({
   selector: 'app-directions-report',
   standalone: true,
-  imports: [
+  imports: [ProgressCellComponent, DatetimeCellComponent, 
     FieldComponent, TranslatePipe, ContentDialogComponent, RouterLink, FormsModule, ButtonModule, DatePickerModule,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent,
     DataTableComponent, TableCellDirective, 
-    PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe, DatetimePipe,
+    PrintSheetComponent, StatTileComponent, ChartCardComponent, MoneyPipe,
     ActionButtonComponent,
   ],
   template: `
@@ -90,19 +91,24 @@ interface DrillExpense {
           </div>
 
           <!-- RD-4.9: four KPI cards — rose / primary / blue / green -->
-          <div class="kpi-grid kpi-grid--4">
-            <app-stat-tile [label]="'common.total'" [value]="d.grand_total" [money]="true" tone="danger" accent="reports" iconName="report-analytics" />
-            <app-stat-tile [label]="'report.directions.rows_count'" [value]="d.rows.length" tone="primary" />
-            <app-stat-tile [label]="'report.directions.operations'" [value]="operationsCount()" tone="info" />
-            <app-stat-tile [label]="'report.directions.col_average'" [value]="averageAmount()" [money]="true" tone="success" />
+          <div class="kpi-grid">
+            <app-stat-tile [label]="'common.total'" [value]="d.grand_total" [money]="true" accent="reports" iconName="report-analytics" />
+            <app-stat-tile [label]="'report.directions.rows_count'" [value]="d.rows.length" iconName="records" accent="reports" />
+            <app-stat-tile [label]="'report.directions.operations'" [value]="operationsCount()" iconName="history" accent="reports" />
+            <app-stat-tile [label]="'report.directions.col_average'" [value]="averageAmount()" [money]="true" iconName="average" accent="reports" />
           </div>
 
+          <!-- _9: donut (توزيع المصروفات) + horizontal ranked bar of the top
+               directions by spent amount -->
           <div class="kpi-grid u-mt-4">
-            <app-chart-card [title]="'report.directions.charts'" [series]="rootsSeries()" />
+            <app-chart-card [title]="'report.directions.charts'" [series]="rootsSeries()" [height]="240" accent="reports" iconName="report-analytics" />
+            @if (topAmountsSeries().length > 0) {
+              <app-chart-card [title]="'report.directions.amounts_chart'" [series]="topAmountsSeries()" chartType="bar" orientation="y" legendVariant="list" [height]="240" accent="reports" iconName="report-analytics" />
+            }
           </div>
 
           <div class="u-mt-4">
-            <app-data-table [exportQuery]="exportQuery()" listUrl="/reports/categories-analytics" mode="static" [autoFilters]="true" [title]="'report.directions.details'" [columns]="rowCols" [rows]="d.rows" [emptyLabel]="'report.directions.empty'">
+            <app-data-table [phoneFirst]="['level', 'name', 'total_amount']" [exportQuery]="exportQuery()" listUrl="/reports/categories-analytics" mode="static" [autoFilters]="true" [title]="'report.directions.details'" [columns]="rowCols" [rows]="d.rows" [emptyLabel]="'report.directions.empty'">
               <ng-template appCell="level" let-row><span class="stamp">{{ levelKey(row.level) | translate }}</span></ng-template>
               <ng-template appCell="name" let-row>
                 {{ row.name }}
@@ -112,11 +118,13 @@ interface DrillExpense {
               </ng-template>
               <ng-template appCell="code" let-row><span class="money money--neg u-bidi u-fw-semibold">{{ row.code ?? '—' }}</span></ng-template>
               <ng-template appCell="parent_name" let-row>{{ row.parent_name ?? '—' }}</ng-template>
-              <ng-template appCell="total_amount" let-row><span class="money money--pos u-bidi u-fw-semibold">{{ row.total_amount | money }}</span></ng-template>
+              <ng-template appCell="total_amount" let-row><span class="money money--pos u-bidi u-fw-semibold">{{ row.total_amount | money: false }}</span></ng-template>
               <ng-template appCell="expense_count" let-row><span class="u-bidi">{{ row.expense_count }}</span></ng-template>
-              <ng-template appCell="average_amount" let-row><span class="u-bidi">{{ row.average_amount | money }}</span></ng-template>
+              <ng-template appCell="average_amount" let-row><span class="u-bidi">{{ row.average_amount | money: false }}</span></ng-template>
               <ng-template appCell="reviewed_by" let-row>{{ row.reviewed_by ?? '—' }}</ng-template>
-              <ng-template appCell="percentage" let-row><span class="stamp stamp--info u-bidi">{{ row.percentage }}%</span></ng-template>
+              <ng-template appCell="percentage" let-row>
+                <app-progress-cell [ratio]="row.percentage / 100" [label]="row.name" />
+              </ng-template>
             </app-data-table>
           </div>
         }
@@ -135,12 +143,12 @@ interface DrillExpense {
         @if (drillLoading()) {
           <div class="skeleton skeleton--tile" role="status"></div>
         } @else {
-          <app-data-table mode="static" [autoFilters]="true" [columns]="drillCols" [rows]="drillRows()" [emptyLabel]="'report.directions.empty_drill'">
-            <ng-template appCell="created_at" let-row><span class="u-bidi">{{ row.created_at | datetime }}</span></ng-template>
+          <app-data-table [phoneFirst]="['created_at', 'amount']" mode="static" [autoFilters]="true" [columns]="drillCols" [rows]="drillRows()" [emptyLabel]="'report.directions.empty_drill'">
+            <ng-template appCell="created_at" let-row><app-datetime-cell [value]="row.created_at" /></ng-template>
             <ng-template appCell="description" let-row>{{ row.description ?? '—' }}</ng-template>
             <ng-template appCell="created_by" let-row>{{ row.created_by ?? '—' }}</ng-template>
             <ng-template appCell="approved_by" let-row>{{ row.approved_by ?? '—' }}</ng-template>
-            <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money }}</span></ng-template>
+            <ng-template appCell="amount" let-row><span class="u-bidi">{{ row.amount | money: false }}</span></ng-template>
             <ng-template appCell="actions" let-row><a [routerLink]="['/expenses', row.id]">{{ 'common.view' | translate }}</a></ng-template>
           </app-data-table>
           <p class="u-flex u-flex-between u-mt-2">
@@ -200,11 +208,21 @@ export class DirectionsReportPage {
   drillTitle = signal('');
   drillRows = signal<DrillExpense[]>([]);
 
+  /** N-07: each point names its category, so a category is the same colour here,
+   *  in the top-amounts bars and in the dashboard's donut */
   rootsSeries = computed(() =>
     (this.data.value()?.rows ?? [])
       .filter((r) => r.level === 1)
       .slice(0, 6)
-      .map((r) => ({ label: r.name, value: parseFloat(r.total_amount) || 0 })),
+      .map((r) => ({ label: r.name, value: parseFloat(r.total_amount) || 0, id: r.id })),
+  );
+
+  /** _9: the top directions by spent amount — the ranked horizontal bar */
+  topAmountsSeries = computed(() =>
+    [...(this.data.value()?.rows ?? [])]
+      .sort((a, b) => (parseFloat(b.total_amount) || 0) - (parseFloat(a.total_amount) || 0))
+      .slice(0, 8)
+      .map((r) => ({ label: r.name, value: parseFloat(r.total_amount) || 0, id: r.id })),
   );
 
   operationsCount = computed(() =>

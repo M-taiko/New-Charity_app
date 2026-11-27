@@ -18,6 +18,7 @@ import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import { AttachmentFieldComponent } from '@shared/ui/attachment-field/attachment-field.component';
 import type { ActionResponse } from '@shared/models/api.models';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 type MaintenanceForm = Record<string, string | number | boolean | null | undefined | string[]>;
 
@@ -27,7 +28,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
 @Component({
   selector: 'app-maintenance-form',
   standalone: true,
-  imports: [ButtonModule, FormsModule, InputTextModule, TextareaModule, AttachmentFieldComponent, PageHeaderComponent, RouterLink, SelectModule, TranslatePipe, FieldComponent, FormSectionComponent],
+  imports: [ValidSubmitDirective, ButtonModule, FormsModule, InputTextModule, TextareaModule, AttachmentFieldComponent, PageHeaderComponent, RouterLink, SelectModule, TranslatePipe, FieldComponent, FormSectionComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-page-header [title]="'procurement.maintenance.form.title' | translate" accent="procurement" iconName="shopping-cart">
@@ -35,7 +36,7 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/procurement/maintenance" />
       </div>
     </app-page-header>
-    <form (ngSubmit)="save()" #f="ngForm">
+    <form (ngSubmit)="vs.validate() && save()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
       <app-form-section>
         <app-field label="procurement.maintenance.form.problem_title" [controlId]="fid('title')" [required]="true" [error]="serverFieldError(error(), 'title')">
           <input pInputText [id]="fid('title')" name="title" [(ngModel)]="model.title" required class="u-full" />
@@ -50,12 +51,14 @@ const PRIORITIES = ['low', 'medium', 'high', 'urgent'] as const;
           <textarea pTextarea [id]="fid('description')" name="description" rows="3" [(ngModel)]="model.description" class="u-full"></textarea>
         </app-field>
         <app-field label="procurement.maintenance.form.attachment" [error]="serverFieldError(error(), 'attachment')">
-          <app-attachment-field [maxSize]="2000000" (fileChange)="attachmentFile = $event" />
+          <!-- N-05: this endpoint takes no Word document (its rule: pdf, jpg, jpeg, png) — the
+               field's picker, hint and message say so, instead of offering one the server refuses -->
+          <app-attachment-field [maxSize]="2000000" [types]="['pdf', 'jpg', 'jpeg', 'png']" hint="common.file_hint_images_pdf" (fileChange)="attachmentFile = $event" />
         </app-field>
       </app-form-section>
       @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
       <div class="sticky-actions">
-        <p-button type="submit" [label]="'procurement.maintenance.form.submit' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
+        <p-button type="submit" [label]="'procurement.maintenance.form.submit' | translate" [loading]="sending()" [disabled]="sending()" />
       </div>
     </form>
   `,
@@ -102,6 +105,10 @@ export class MaintenanceFormPage {
   }
 
   save(): void {
+    // N-06: the request takes time (an attachment may be shrunk first) — a second submit waits for it
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.error.set(null);
     void firstValueFrom(this.submit$())

@@ -13,6 +13,9 @@ import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.compo
 import { ReasonDialogComponent } from '@shared/ui/reason-dialog/reason-dialog.component';
 import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
+import type { KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
+import { reloadList } from '@shared/lib/list-state';
+import { apiFailure } from '@shared/lib/server-field-errors';
 import type { ActionResponse, ItemResponse } from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 
@@ -74,6 +77,7 @@ interface TransferDetail {
       [header]="'transfer.detail.confirm_reject' | translate"
       [label]="'transfer.detail.reject_reason' | translate"
       [submitLabel]="'transfer.detail.confirm_reject' | translate"
+      [details]="decisionDetails()"
       [sending]="sending()"
       [error]="actionError()"
       (submit)="submitReject($event)"
@@ -86,6 +90,7 @@ interface TransferDetail {
       [message]="'transfer.detail.accept_confirm'"
       [confirmLabel]="'transfer.detail.accept' | translate"
       confirmKind="accept"
+      [details]="decisionDetails()"
       (confirmed)="accept()"
     />
 
@@ -96,6 +101,7 @@ interface TransferDetail {
       [message]="'transfers.cancel_confirm'"
       [confirmLabel]="'transfers.cancel' | translate"
       confirmKind="cancel"
+      [details]="decisionDetails()"
       (confirmed)="cancelTransfer()"
     />
   `,
@@ -103,6 +109,7 @@ interface TransferDetail {
 export class TransferDetailPage {
   private http = inject(HttpClient);
   private toast = inject(ToastService);
+  private moneyPipe = new MoneyPipe();
 
   id = input.required<number>();
   sending = signal(false);
@@ -131,22 +138,54 @@ export class TransferDetailPage {
   /** T6-80: the sender or a manager may cancel while pending */
   readonly canCancel = computed(() => this.safeValue()?.can_cancel === true);
 
-  /** T6-80: cancel this pending transfer (sender/manager only) */
+  /** T6-80 + N-06: cancel this pending transfer, then offer the restore from the toast */
   cancelTransfer(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.actionError.set(null);
-    void firstValueFrom(this.http.post<ActionResponse>(`/custody-transfers/${this.id()}/cancel`, {}))
+    const id = this.id();
+    void firstValueFrom(this.http.post<ActionResponse>(`/custody-transfers/${id}/cancel`, {}))
       .then((res) => {
         this.sending.set(false);
-        this.toast.success(res.message);
-        this.data.reload();
+        this.toast.success(res.message, { undo: () => { this.restore(id); } });
+        reloadList(this.data);
       })
-      .catch((err: HttpErrorResponse) => {
+      .catch((err: unknown) => {
         this.sending.set(false);
-        this.actionError.set(err);
-        this.toast.apiError(err.error?.message ?? 'errors.generic', err.error?.code);
+        this.actionError.set(err instanceof HttpErrorResponse ? err : null);
+        const failure = apiFailure(err);
+        this.toast.apiError(failure.message, failure.code);
       });
   }
+
+  /** N-06: the inverse of a cancel — back to pending, the amount frozen again */
+  private restore(id: number): void {
+    void firstValueFrom(this.http.post<ActionResponse>(`/custody-transfers/${id}/restore`, {}))
+      .then((res) => {
+        this.toast.info(res.message);
+        reloadList(this.data);
+      })
+      .catch((err: unknown) => {
+        const failure = apiFailure(err);
+        this.toast.apiError(failure.message, failure.code);
+        reloadList(this.data);
+      });
+  }
+
+  /** N-06: what each money confirm is about — the amount, then the two parties */
+  readonly decisionDetails = computed<readonly KeyValueItem[]>(() => {
+    const t = this.safeValue();
+    if (t === null) {
+      return [];
+    }
+    return [
+      { label: 'common.amount_egp', value: this.moneyPipe.transform(t.amount, false) },
+      { label: 'glossary.sender', value: t.sender ?? '—' },
+      { label: 'glossary.receiver', value: t.receiver ?? '—' },
+    ];
+  });
 
   keyValues(t: TransferDetail): { label: string; value: string }[] {
     return [
@@ -165,6 +204,9 @@ export class TransferDetailPage {
 
   /** POST approve — keeps the custody_id payload the API expects (T26/T32) */
   accept(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     void firstValueFrom(
       this.http.post<ActionResponse>(`/custody-transfers/${this.id()}/approve`, {
@@ -182,10 +224,14 @@ export class TransferDetailPage {
 
   /** POST reject with the typed reason (custodies-list flow: dialog → toast → reload) */
   submitReject(reason: string): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.actionError.set(null);
+    // POST reject — the endpoint validates `rejection_reason` (it was sent as `reason`, which it refused)
     void firstValueFrom(
-      this.http.post<ActionResponse>(`/custody-transfers/${this.id()}/reject`, { reason }),
+      this.http.post<ActionResponse>(`/custody-transfers/${this.id()}/reject`, { rejection_reason: reason }),
     ).then((res) => {
       this.sending.set(false);
       this.rejectDialogRef()?.done();

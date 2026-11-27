@@ -63,7 +63,8 @@ interface Row {
           <app-stat-tile [label]="'hr.salaries.detail.title'" [value]="summaryValue('total_final')" [money]="true" accent="hr" iconName="briefcase" />
         </div>
 
-        <app-data-table listUrl="/hr/salaries"
+        <app-data-table [phoneFirst]="['employee', 'status', 'final_salary']"
+        [exportQuery]="tableExportQuery()" listUrl="/hr/salaries"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -83,8 +84,8 @@ interface Row {
           <ng-template appCell="employee" let-row>{{ row.employee ?? '—' }}</ng-template>
           <ng-template appCell="year" let-row>{{ row.year ?? '—' }}</ng-template>
           <ng-template appCell="month" let-row>{{ row.month ?? '—' }}</ng-template>
-          <ng-template appCell="base_salary" let-row><span class="u-bidi">{{ row.base_salary | money }}</span></ng-template>
-          <ng-template appCell="final_salary" let-row><span class="u-bidi">{{ row.final_salary | money }}</span></ng-template>
+          <ng-template appCell="base_salary" let-row><span class="u-bidi">{{ row.base_salary | money: false }}</span></ng-template>
+          <ng-template appCell="final_salary" let-row><span class="u-bidi">{{ row.final_salary | money: false }}</span></ng-template>
           <ng-template appCell="status" let-row><app-status-stamp [status]="row.status ?? ''" namespace="salary" /></ng-template>
           <div empty>
             <app-empty-state [title]="'hr.salaries.empty' | translate" [text]="'common.no_data' | translate" accent="hr" iconName="briefcase" />
@@ -126,6 +127,16 @@ export class SalariesPage {
   ];
 
   /** T3-90: month/year filters (defaults = the current month), also feed the export */
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
+
   params = signal({ page: 1, per_page: 25, q: '', status: 'all', month: new Date().getMonth() + 1, year: new Date().getFullYear() });
 
   data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string; month: number; year: number }>({
@@ -178,6 +189,9 @@ export class SalariesPage {
   ];
 
   submit(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     void firstValueFrom(this.http.post<ActionResponse>('/hr/salaries/calculate', this.form)).then((res) => {
       this.sending.set(false);

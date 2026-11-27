@@ -76,9 +76,9 @@
   border-radius: var(--radius-s);
 }
 
-/* ── Mobile row-actions dropdown (T4-24) ─────────────────────────── */
+/* ── Row-actions "⋯" dropdown (T4-24 + D-06) ──────────────────────── */
 .row-actions-menu {
-  display: none;
+  display: block;
   position: relative;
 }
 
@@ -162,7 +162,14 @@
   pointer-events: none;
 }
 
-/* Under 640 px the inline icon row collapses into the ⋯ dropdown */
+/* D-06: with no overflow actions the ⋯ button disappears on desktop;
+   under 640 px the inline icons collapse and the menu carries everything */
+@media (min-width: 641px) {
+  .row-actions-host--all-visible .row-actions-menu {
+    display: none;
+  }
+}
+
 @media (max-width: 640px) {
   .row-actions-host .row-actions {
     display: none;

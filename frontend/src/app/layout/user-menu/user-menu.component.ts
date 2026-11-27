@@ -8,6 +8,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { MotionService } from '@core/motion/motion.service';
 import { ThemeService } from '@core/theme/theme.service';
 import { IconComponent } from '@shared/ui/icon/icon.component';
+import { AvatarComponent } from '@shared/ui/avatar/avatar.component';
 
 /** Menu entry carrying the sprite icon name (the app has no PrimeIcons font). */
 type UserMenuItem = MenuItem & { iconName?: string };
@@ -16,7 +17,7 @@ type UserMenuItem = MenuItem & { iconName?: string };
 @Component({
   selector: 'app-user-menu',
   standalone: true,
-  imports: [TranslatePipe, RouterLink, MenuModule, SharedModule, IconComponent],
+  imports: [TranslatePipe, RouterLink, MenuModule, SharedModule, IconComponent, AvatarComponent],
   template: `
     <p-menu #menu [model]="items()" [popup]="true" appendTo="body">
       <!-- custom item template: sprite icons via <app-icon> instead of pi pi-* font glyphs -->
@@ -41,27 +42,23 @@ type UserMenuItem = MenuItem & { iconName?: string };
       class="topbar__icon-btn user-chip"
       (click)="menu.toggle($event)"
       [attr.aria-label]="'user.menu' | translate"
+      [title]="allRoles()"
     >
-      @if (pictureUrl()) {
-        <img
-          class="user-chip__avatar user-chip__avatar--img"
-          [src]="pictureUrl()"
-          [alt]="name()"
-        />
-      } @else {
-        <span class="user-chip__avatar">{{ initials() }}</span>
-      }
+      <!-- R4-07: initials whenever there is no usable photo; the first role
+           plus "+N", with every role in the tooltip -->
+      <span class="user-chip__avatar">
+        <app-avatar [name]="name()" [picture]="pictureUrl()" [size]="36" />
+      </span>
       <span class="user-chip__text">
         <span class="user-chip__name">{{ name() }}</span>
-        <span class="user-chip__role">{{ roles() }}</span>
+        <span class="user-chip__role">
+          {{ firstRole() }}
+          @if (moreRolesCount() > 0) {
+            <span class="u-bidi">+{{ moreRolesCount() }}</span>
+          }
+        </span>
       </span>
     </button>
-  `,
-  styles: `
-    .user-chip__avatar--img {
-      object-fit: cover;
-      display: inline-flex;
-    }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -73,22 +70,20 @@ export class UserMenuComponent {
 
   readonly name = computed(() => this.auth.me()?.name ?? '');
 
-  /** role line under the name (RD-2.2 user chip) */
-  readonly roles = computed(() => (this.auth.me()?.roles ?? []).join(this.t('common.list_separator')));
+  /** every role, joined for menus and tooltips (RD-2.2 user chip) */
+  readonly allRoles = computed(() => (this.auth.me()?.roles ?? []).join(this.t('common.list_separator')));
+
+  /** R4-07: the role line shows ONE role — all of them were joined and then
+   * truncated to "مدير، محاسب، مندوب، باحث اج…" */
+  readonly firstRole = computed(() => (this.auth.me()?.roles ?? [])[0] ?? '');
+
+  readonly moreRolesCount = computed(() => Math.max(0, (this.auth.me()?.roles ?? []).length - 1));
 
   /** profile picture served from the public storage disk (T3-103); null → initials */
   readonly pictureUrl = computed(() => {
     const path = this.auth.me()?.profile_picture;
-    return path ? `/storage/app/public/${path}` : null;
+    return path ? `/storage/${path}` : null;
   });
-
-  readonly initials = computed(() =>
-    (this.auth.me()?.name ?? '?')
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part.charAt(0))
-      .join(''),
-  );
 
   private t(key: string): string {
     const result = this.translate.instant(key);
@@ -97,7 +92,7 @@ export class UserMenuComponent {
 
   items = computed<UserMenuItem[]>(() => {
     const name = this.auth.me()?.name ?? '';
-    const roles = (this.auth.me()?.roles ?? []).join(this.t('common.list_separator'));
+    const roles = this.allRoles();
     const level = this.motion.level();
     const motionLabels: Record<string, string> = {
       full: this.t('profile.motion.full'),

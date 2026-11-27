@@ -74,7 +74,7 @@ interface ComparisonRow {
           @if (comparison(item); as rows) {
             <section class="chart-card u-mt-4">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'expense.edit_requests.detail.comparison' | translate }}</span></div>
-              <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [columns]="comparisonColumns" [rows]="rows">
+              <app-data-table mode="static" [autoFilters]="true" [staticPaginated]="false" [phoneFirst]="['field']" [columns]="comparisonColumns" [rows]="rows">
                 <ng-template appCell="field" let-row>{{ row.label | translate }}</ng-template>
                 <ng-template appCell="before" let-row><span class="u-bidi">{{ row.before }}</span></ng-template>
                 <ng-template appCell="after" let-row><span class="u-bidi">{{ row.after }}</span></ng-template>
@@ -231,6 +231,9 @@ export class EditRequestDetailPage {
   }
 
   approve(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.actionError.set(null);
     void firstValueFrom(this.http.post<ActionResponse>(`/expenses/edit-requests/${this.id()}/approve`, {}))
@@ -247,6 +250,9 @@ export class EditRequestDetailPage {
   }
 
   reject(reason: string): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.actionError.set(null);
     void firstValueFrom(

@@ -1,7 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import type { HttpErrorResponse } from '@angular/common/http';
@@ -283,7 +283,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
           <button
             type="submit"
             class="login__submit"
-            [disabled]="form.invalid || sending()"
+            [disabled]="sending()"
             [class.is-sending]="sending()"
           >
             @if (sending()) {
@@ -293,7 +293,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
           </button>
 
           <div class="login__ledger-rule" aria-hidden="true"></div>
-          <p class="login__footer-note" dir="ltr">
+          <p class="login__footer-note">
             © {{ year }}
             <a href="https://masarsoft.io" target="_blank">{{ 'common.company' | translate }}.</a>
             {{ 'common.rights' | translate }}
@@ -307,6 +307,7 @@ import type { ApiErrorBody } from '@shared/models/api.models';
 export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  private translate = inject(TranslateService);
 
   year = new Date().getFullYear();
   email = signal('');
@@ -316,7 +317,19 @@ export class LoginComponent {
   error = signal('');
   showPassword = signal(false);
 
+  private readonly formEl = viewChild<ElementRef<HTMLFormElement>>('form');
+
   submit(): void {
+    // P-09: the submit button never looks dead — validate on submit and move
+    // focus to the first invalid field instead of disabling up front
+    if (this.email().trim() === '' || this.password() === '') {
+      this.error.set(this.translate.instant('auth.login.required_hint'));
+      const first = this.email().trim() === ''
+        ? this.formEl()?.nativeElement.querySelector<HTMLInputElement>('#email')
+        : this.formEl()?.nativeElement.querySelector<HTMLInputElement>('#password');
+      first?.focus();
+      return;
+    }
     this.error.set('');
     this.sending.set(true);
     this.auth.login(this.email(), this.password(), this.remember()).subscribe({
@@ -327,7 +340,9 @@ export class LoginComponent {
       error: (err: HttpErrorResponse) => {
         this.sending.set(false);
         const body = err.error as ApiErrorBody | null;
-        this.error.set(body?.message ?? 'errors.generic');
+        // the banner renders this string verbatim — translate the fallback
+        // key or the raw "errors.generic" leaks onto the screen
+        this.error.set(body?.message ?? this.translate.instant('errors.generic'));
       },
     });
   }

@@ -31,8 +31,10 @@
 @use '03-blocks/empty-state';
 @use '03-blocks/skeleton';
 @use '03-blocks/timeline';
+@use '03-blocks/notices';
 @use '03-blocks/chart-card';
 @use '03-blocks/dialog';
+@use '03-blocks/quick-view';
 @use '03-blocks/toast-host';
 @use '03-blocks/notification-bell';
 @use '03-blocks/theme-toggle';
@@ -42,6 +44,7 @@
 @use '03-blocks/chat';
 @use '03-blocks/login';
 @use '03-blocks/segmented-bar';
+@use '03-blocks/segmented-links';
 @use '03-blocks/line-items';
 @use '03-blocks/page-states';
 @use '04-utilities/utilities';

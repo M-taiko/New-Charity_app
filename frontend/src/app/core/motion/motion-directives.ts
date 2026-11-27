@@ -9,34 +9,29 @@ import { MotionService } from '@core/motion/motion.service';
  * Transform/opacity only; `will-change` only during the animation.
  */
 
-/** Page/section enter transition: fade + slide, once, on first appearance (Full). */
+/**
+ * Page enter reveal — RETIRED. It started every page (and its staggered
+ * children) at `opacity: 0` and faded them in, which read as a blank flash
+ * on every route change. Route swaps are instant now; the optional
+ * cross-fade is the router's `withViewTransitions` (old → new, never blank).
+ * The selector stays so the existing `[appReveal]` attributes keep working.
+ */
 @Directive({ selector: '[appReveal]' })
 export class RevealDirective implements OnInit {
-  /** page type varies the direction: list (up) | detail (side) | form (scale) */
+  /** page type (kept for template compatibility — no visual effect) */
   variant = input<'list' | 'detail' | 'form'>('list');
-  /** stagger direct children instead of the host itself (truthy number) */
+  /** stagger direct children (kept for template compatibility — no visual effect) */
   stagger = input(0, { transform: numberAttribute });
-  /** ms between staggered children (40–60 per spec) */
+  /** ms between staggered children (kept for template compatibility) */
   step = input(48);
 
-  private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private motion = inject(MotionService);
 
   ngOnInit(): void {
-    if (this.motion.level() !== 'full') {
-      return;
-    }
-    const el = this.host.nativeElement;
-    el.classList.add('page-enter', `page-enter--${this.variant()}`);
-    if (this.stagger() > 0) {
-      const children = Array.from(el.children) as HTMLElement[];
-      children.forEach((child, i) => {
-        child.classList.add('reveal-item');
-        child.style.animationDelay = `${Math.min(i * this.step(), 480)}ms`;
-      });
-    }
-    // clean the animation classes once done so later changes don't replay
-    setTimeout(() => { el.classList.remove('page-enter', `page-enter--${this.variant()}`); }, 700);
+    void this.motion.level();
+    void this.variant();
+    void this.stagger();
+    void this.step();
   }
 }
 

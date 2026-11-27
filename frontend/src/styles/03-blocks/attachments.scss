@@ -16,3 +16,46 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* ── N-05: camera capture and the chosen file's preview ──────────────────── */
+
+.attachment-field__pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* the camera button exists on phones only. On a wider screen the field is
+   exactly what it was: not in the layout, and not in the tab order */
+p-button.attachment-field__capture {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  p-button.attachment-field__capture {
+    display: inline-flex;
+  }
+}
+
+/* the chosen file: thumbnail, name, size and its own "remove" */
+.attachment-field__preview .attachment-field__thumb {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--color-hairline);
+}
+
+/* inside the one-line file box the meta may wrap on as many lines as it needs */
+.attachment-field__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.attachment-field__meta .field__hint {
+  white-space: normal;
+}

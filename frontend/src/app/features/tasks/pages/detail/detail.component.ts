@@ -340,6 +340,9 @@ export class TaskDetailPage {
   }
 
   delegate(task: TaskDetail): void {
+    if (this.delegateSending()) {
+      return;
+    }
     if (this.delegateUserId() === null || this.delegateUserId() === task.assigned_to_id) {
       this.delegateInvalid.set(true);
       return;

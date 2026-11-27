@@ -44,7 +44,9 @@ final class SocialCaseController extends Controller
     /** @return array<string, string> */
     private function casesSortable(): array
     {
-        return ['date' => 'created_at', 'created_at' => 'created_at', 'name' => 'name', 'amount' => 'assistance_amount', 'phone' => 'phone', 'governorate' => 'city', 'researcher' => 'researcher_id', 'status' => 'status'];
+        // `social_cases` has no assistance_amount column: the amount it holds is the requested one
+        // (sorting by "amount" used to answer an SQL error and empty the whole list)
+        return ['date' => 'created_at', 'created_at' => 'created_at', 'name' => 'name', 'amount' => 'requested_amount', 'phone' => 'phone', 'governorate' => 'city', 'researcher' => 'researcher_id', 'status' => 'status'];
     }
 
     /** @return array<string, array{type:string, column?:string, options?:callable}> */

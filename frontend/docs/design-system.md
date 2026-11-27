@@ -38,9 +38,42 @@ per theme; tinted mini-card borders `--tint-blue/rose/green/amber-border`.
 - **Soft buttons** (RD-3.1): action-kinds with `variant: 'soft'` render tint
   bg + semantic fg (`.p-button-soft`); in-table "view" row action rests as
   the soft blue pill (`severity: 'info'`).
-- **Stat tiles** (RD-3.2): `tone` adds the top-accent card (4px status bar +
-  colored value), `circle` the circular icon chip, `tinted` the tint-bg
-  mini-cards (custody detail); `kpi-grid--2/4/5/6` are the Stitch grids.
+- **KPI rows & stat tiles** (RD-3.2, reshaped by R4-04) — ONE rule for every
+  page. A `.kpi-grid` is a CSS grid whose column count follows from two things
+  only: how wide the row is (1 column below 376px, 2 / 3 / 4 / 5 from
+  376 / 572 / 768 / 964px — a 180px tile plus 16px gaps) and how many tiles it
+  holds (5 → 5, 6 → 3+3, 7 → 4+3, 8 → 4+4, 11 → 4+4+3; the last row is never a
+  lone tile). At a 1280px viewport the row is 976px and five tiles sit five-up
+  at 182px; a tile narrower than 200px tightens its padding and figure. There
+  are no `kpi-grid--N` modifiers any more. Every tile carries its icon (a 20px
+  glyph in a 36px soft circle, in the row's module accent) — a row never mixes
+  tiles with and without one. `tone` colours the VALUE only, where colour
+  carries meaning (incoming green, outgoing red) and never on a zero figure;
+  the 4px top-accent bar is retired. `tinted` keeps the custody-detail
+  mini-cards.
+- **Avatars** (R4-07): `app-avatar` shows the photo when there is a usable one
+  — present, loaded, at least half the size it is shown at — otherwise the
+  initials on the primary container. A stored picture can be a 1×1 pixel or a
+  dead link; both fall back to initials and never flash.
+- **LTR values in RTL cells** (R4-03): `app-ltr-cell` for an e-mail address or
+  a Latin identifier. Left as bare cell text the browser ellipsized such a
+  value at its START; isolated and laid out LTR it truncates at its end, stays
+  aligned under its header and carries its full text in a `title`.
+- **Role pills** (R4-03): `.role-pills` / `.role-pill` — small NEUTRAL chips, a
+  role is a label, not a status (stays `app-status-stamp`); two at most, the
+  rest folded into `+N`.
+- **Notifications timeline** (R4-06): `.notices` — rows grouped under
+  اليوم / أمس / أقدم; an unread row has a brand dot, a bold title and a
+  visually-hidden "غير مقروء"; the message wraps in full; the whole row is a
+  link to the related record (a button when there is none) that also marks it
+  read. The page's one header action is "mark all read".
+- **Chart numbers** (R4-02): every number Chart.js paints goes through
+  `shared/lib/chart-format.ts` — Western digits, compact ticks, the sign in
+  front, and each value pinned between LEFT-TO-RIGHT MARKs. A canvas that
+  inherits the page's RTL direction paints `-400K` as `400K-`; a real minus on
+  its own does not fix that, the LRM pins do. Chart.js has no root
+  `rtl`/`textDirection` switch for axis ticks (only its legend and tooltip
+  plugins read one), so Arabic category labels keep the page's direction.
 - **Status pills** (RD-3.3): stamps are rounded-full tint+fg pills; money
   color code `.money--pos/neg/link` (green/rose/blue).
 - **Spending ratio** (RD-3.3): `app-progress-cell` — slim bar + tabular %.
@@ -93,6 +126,14 @@ Every page composes the same skeleton, in this order:
 - **`app-row-actions`** renders per-row actions: icon buttons with
   aria-label/tooltip, destructive actions last and distinct, collapsing to a
   labelled "⋯" menu under 640 px.
+- **No focus, no scroll on load** (B-06, root-caused in R4): PrimeNG's
+  `AutoFocus` directive writes a live `autofocus` attribute on every
+  `<p-button>` (it receives `undefined` where it expects `false`).
+  Chromium focuses such a button and scrolls it into view — on a phone the
+  first button below the fold made the page open halfway down
+  (/expenses 523px, /dashboard 1,106px at 360px). `core/primeng/
+  autofocus-default.ts` stops the attribute before it reaches the DOM; the app
+  never uses native autofocus.
 - Dialogs are fixed: reject/cancel/resolve → `app-reason-dialog`; delete →
   `app-confirm-delete`; any other modal form → `app-form-dialog`. No page
   hand-rolls a reason/confirm form, and **native browser dialogs
@@ -145,8 +186,27 @@ colors: pending amber, approved green, rejected red, info blue, closed gray.
   live here, never as header buttons.
 - **Header rule** — max 3 visible buttons: 1 primary (+ creation variants in a
   split button) and up to 2 secondary; everything else in a `p-menu` More menu.
+  `app-page-actions` enforces it (R5-01): the first action of a primary kind is
+  THE filled button, the other visible ones render secondary, and a fourth
+  action moves into "⋯" — as does any action marked `menu: true` (the custody
+  detail's Print). The buttons sit `--space-2` (8px) apart and are one size.
+  `app-action-button` renders an anchor for a route and a real `<button>` for
+  a handler; PrimeNG's `.p-button-sm` lives in a cascade layer and loses to the
+  unlayered `button { font: inherit }` reset, so the bar restates the small
+  size for the real button (30px, 12px label). Outside the bar a small
+  `<p-button>` still renders at the default size — known, measured, reported
+  in the round-5 changelog.
 - **Detail pages** — status decisions in ONE `sticky-actions` bar, primary
-  decision first, destructive last.
+  decision first, destructive last. The page renders the bar only when it has
+  a decision to offer (`@if (hasStickyAction())`); an empty 25px strip under
+  the header is worse than no bar. `.sticky-actions:empty { display: none }`
+  is the net.
+- **Dark theme and text buttons** — the dark general `.p-button` rule paints
+  the cream fill; its hover/active ink is scoped to filled buttons
+  (`:not(.p-button-text, .p-button-outlined, .p-button-soft)`). Applied to
+  every button it turned "تعديل" and each "⋯" trigger from 17:1 to 1.17:1 the
+  moment the pointer arrived. `e2e/button-states.spec.ts` measures every
+  button kind at rest and under the pointer in both themes.
 - **`app-tabs`** — the only tabs pattern (accessible tablist, count badges,
   `?tab=` sync, arrow keys). No page stacks two tables; multi-section pages
   tab them (custody/case detail, tracking, my custodies).
@@ -165,29 +225,111 @@ colors: pending amber, approved green, rejected red, info blue, closed gray.
   `<ng-template appCell="field" let-row>` so header, data and totals always
   move together; `pinned` columns (actions) stay last, not draggable or
   resizable; min width 80px; widths/order/sort persist per user.
+- **Columns fit their content (R4)** — the table uses automatic layout:
+  every column is as wide as what it holds (numbers, dates and short labels
+  on one line; a long text column wraps only past 28rem). The table fills its
+  card when there is room; when the columns need more than the card is wide
+  the table gets wider and **scrolls left/right inside its card** — on any
+  screen. There is NO mobile-card variant: phones and desktops see the same
+  table. Actions columns get an explicit width
+  (`max(160, minWidth)`) because fixed widths are what `table-layout`
+  honours; the labelled workflow button in an actions cell fills the width
+  left beside the icon slots.
 - **Filters (T6-30)** — the table owns filtering: `filters` (JSON defs) or the
   API's `meta.filters`, or `autoFilters` derivation. One "Filters" control
   with chips + active count + `?filter[…]=` URL mirroring everywhere. The
   backend allowlist (`ApiList::paginate(filterable:)`) rejects unknown filter
   keys with 422 `filter.invalid`. Custom renderers (the expense direction
   cascade) ride `appFilterCustom`.
-- **Export/Print (T6-71/T6-70)** — every table toolbar has Export ▾
-  (xlsx/pdf/csv via the authenticated blob client; the backend runs the SAME
-  query, capped at 2000 rows, audit-logged) and a Print menu (portrait/
-  landscape A4 via CSS named pages, repeated headers, actions column hidden,
-  static tables can print all rows). Charts flatten to images on beforeprint.
+- **Export/Print (T6-71/T6-70, R4)** — the table's "⋯" menu has exactly
+  **Excel (xlsx)**, **PDF** and one **Print** action (always portrait). CSV
+  was removed (a duplicate of Excel). Export downloads through the
+  authenticated blob client as `<table>-<date>.<ext>`; the file replays
+  EXACTLY the params the list was fetched with (`tableExportQuery()` on the
+  page → `[exportQuery]`, plus the table's live sort/search) so it always
+  matches what is on screen; the backend caps at 2000 rows and audit-logs.
+  `tests/Feature/ExportRoutesTest.php` asserts every export route returns a
+  real file for both formats (the `…/{id}` show-routes once swallowed the
+  `…/export` URLs → 404; ids are now `whereNumber`).
+- **Phones (R5-03)** — below 768px a table keeps its key columns in reach. On
+  a wider screen nothing in this bullet applies.
+  - **Every table declares its phone order**: `[phoneFirst]="['title',
+    'status', 'amount']"` — those columns lead, the rest keep their order,
+    actions stay last (all 49 tables do; the matrix fails one that does not).
+  - **The first column is pinned** to the start edge (`position: sticky`),
+    at most 160px wide, with a hairline divider on its exposed edge.
+    **It is the first cell that RENDERS, not the first in the document.**
+    A selectable table puts its selection cell first in every row and hides
+    it on a phone; rules written as `th:first-child` pinned that hidden cell
+    and the real first column scrolled away, on two lists, while the gate —
+    reading the same cell — stayed green. The pinning, the start fade's
+    offset, the row's focus ring and the selection tint all follow the first
+    rendered cell (`:where([data-selectable='true']) … :nth-child(2)`, which
+    adds the condition without adding specificity).
+  - **A table wider than its card says so**: an edge fade on each side that
+    still has columns behind it (`appScrollEdges` → `data-scroll-start/end`
+    on the card) and one line above the table, "اسحب لرؤية بقية الأعمدة".
+    A fade is opaque AT ITS EDGE and clears inward. A gradient's first colour
+    sits opposite to its direction (`to right, surface, transparent` is
+    surface on the LEFT) and gradients do not follow `dir`, so each edge
+    states its paint for LTR and for RTL — round 5 shipped both mirrored, and
+    the structural check was green the whole time because the elements existed.
+    The start fade begins after the pinned column — at the width of the first
+    cell that renders.
+  - **A scrolling table switches to `border-collapse: separate`**, phones
+    only: a sticky cell cannot carry a collapsed border. Nothing else changes
+    — every row keeps its line, the last one included, whose line is also what
+    separates the body from a totals row (footer cells draw no top border).
+- **Row selection and bulk actions (N-04)** — `selectable` adds a checkbox
+  column, select-all-on-page and a bar fixed to the bottom of the viewport
+  while at least one row is selected (`bulkActions`, each behind a confirm
+  with the count and the exact total). A filter, a search or a sort change
+  clears the selection. On a phone the column is hidden and the boxes sit in
+  the first, pinned cell. The server answers per id — never all-or-nothing.
+- **Saved views (N-02)** — `savedViews` on the table adds "العروض المحفوظة":
+  filters, search, sort and hidden columns under a name, at most ten, per
+  table and per user (`shared/lib/saved-views.ts`). The filters panel and the
+  views panel are never open together.
+- **Quick view (N-03)** — `rowActivatable` makes a row focusable: a click on
+  it, or Enter / Space, opens `app-quick-view` (a drawer on the start side,
+  420px, the whole screen on a phone). A click on a link or a button inside
+  the row is that control's. The address, the filters and the scroll do not
+  change; the focus goes back to the row.
+- **Two empty states, never the same words (N-08)** — "no data at all" is the
+  page's onboarding (`app-empty-state` with a title, a hint and a call to
+  action the role may do); "no results for this filter" keeps the toolbar and
+  offers "مسح الفلاتر". **"No results" is read only from rows that answer the
+  search on screen**: from a change in the search box or a filter until a
+  request that began after it has ended, the table shows its loading body.
+  The table narrows the rows it holds by the search text as the user types —
+  rows that are the previous answer must not be called empty.
+
+### Charts — `app-chart-card` (R5-02)
+
+A chart with nothing to plot does not draw an empty axis. When every value of
+every series is 0, missing or non-finite — or there is no series at all —
+(`chartIsEmpty(series, compare)`, `shared/lib/chart-series.ts`) the card shows
+the shared `app-empty-state` instead of the canvas: module accent, icon, and
+either the page's own `emptyLabel` ("لا توجد مصروفات خلال آخر 7 أيام" on the
+dashboard) or `chart.empty`. The card's "view all" link stays. A chart that
+has data but whose every series is switched off in the legend keeps its legend
+and shows `chart.all_hidden`, because the legend is the way back.
 
 ### Motion levels (T6-50)
 
 `MotionService` is the single source: `data-motion="off|lite|full"` +
 `--motion-scale` 0/1/2. **off** = completely static (no CSS
 animations/transitions, no count-up, Chart.js `animation:false`, ripple off,
-no shimmer, no smooth scroll). **lite** = the old full (count-up, 350ms chart
-entrance, standard transitions). **full** = lite + page-enter transitions
-(View Transitions API when available), card reveals (`appReveal`,
-`appCardReveal`), overlay/dialog entrance animations, micro-interactions
-(button press, hover lift, stamp pop), staggered chart entrances (800ms),
-list FLIP (`appFlip` via @formkit/auto-animate). prefers-reduced-motion
+no shimmer, no smooth scroll). **lite** = count-up, 350ms chart
+entrance, standard transitions. **full** = lite + the router's own
+cross-fade on route change (`withViewTransitions`: old page → new page,
+never through a blank), card reveals on scroll (`appCardReveal`),
+overlay/dialog entrance animations, micro-interactions (button press,
+hover lift, stamp pop), staggered chart entrances (800ms), list FLIP
+(`appFlip` via @formkit/auto-animate). **Content is never hidden to be
+animated**: the page-enter fade (`appReveal`) was retired because it
+rendered every page at opacity 0 on navigation — the "blank then show"
+flash. Route chunks are preloaded (`PreloadAllModules`). prefers-reduced-motion
 defaults new users to off; a saved choice always wins.
 
 ### Transfers (T6-80)
@@ -206,3 +348,47 @@ mode at phone width and list anything unfinished (manual pass, not
 automated). Printable pages default portrait; tables with 7+ columns
 (custody movements, governorates, items, researchers, salaries) print
 landscape via `app-print-sheet orientation="landscape"`.
+
+### The visual matrix and its gates (`e2e/gates.ts`)
+
+`npm run e2e -- visual-matrix.spec.ts` visits every route × light/dark ×
+360/1280 against the PHP server and the packed `public/app`, runs every gate
+per visit and saves a whole-page screenshot per visit under
+`e2e/screenshots/<route>__<theme>__<viewport>.png`.
+
+Each gate is a pair: a `measure…` function that runs in the page and a
+`…Violations` function that decides. `e2e/gates.spec.ts` feeds every gate the
+defect it was written for and asserts it is reported — **a gate that cannot
+fail there is not a gate** (`npm run e2e -- gates.spec.ts`, 57 tests).
+
+| Gate | Fails when |
+|---|---|
+| theme painted | `data-theme` is not the requested one, or the page background's luminance is ≥ 0.2 in a dark run / ≤ 0.8 in a light run. (R4-01: for three rounds every "dark" screenshot was light — the theme was set on the document before `goto()`, the navigation discarded it and the app restored its saved theme. The theme is now seeded through storage.) |
+| no raw literal in a cell | a table cell's whole text is `true` / `false` / `null` / `undefined` / `NaN` / `[object Object]` (R4-03) |
+| KPI row | tiles of different width in one grid, a lone tile on the last wrapped row, an icon on some tiles but not all, more than one top-accent colour (R4-04) |
+| action area (R5-01) | a page header carries more than one filled primary button (a split button counts as one), two of its buttons are closer than 8px on the same row, or the action area holds an element with a size and nothing visible in it (the empty 25px sticky bar) |
+| chart card (R5-02) | a card rendered by `app-chart-card` has nothing to plot and still draws a canvas, or shows no empty state; one with data renders neither a canvas nor a table; every series is hidden and there is no legend to turn them back on |
+| phone table (R5-03) | below 768px: a table does not say which columns lead (`[phoneFirst]`), does not start with them, scrolls without a pinned first column / edge fade / hint line, pins one wider than 160px, paints a fade's opaque end away from its edge, has its divider on the far side of the pinned column, or loses the line under its last row. At 768px and above: any of that appears on a desktop table. **The first column is the first cell that renders — a hidden cell is not a column** (round 6 pinned the hidden selection cell of a selectable table and this gate, reading that cell, stayed green): it is read in the header and in the first body row, and a pinned header alone is reported. |
+| stray surface | a card, input, table cell or chrome element paints in the other theme's colour (light in dark, dark in light) |
+| page at its top | a fresh navigation does not land at scrollY 0 |
+| the older gates | sideways scroll (also while loading), console/page errors, raw i18n keys, empty `<main>`, focus stolen on load, unresolved sprite refs, ellipsized numbers/dates, more than one active sidebar item, sidebar pitch > 48px, clipped header/action cells (1280), dashboard tile geometry and donut centre, unequal card heights and a row touching the next block, action buttons of different width (1280), a mobile-card variant |
+
+Two things the matrix cannot see have a spec of their own, because a picture
+never shows them:
+
+- `e2e/button-states.spec.ts` — hover. For every kind of button on ten pages,
+  in both themes: the label's contrast against its real painted background
+  (alpha tints composited) at rest and with the pointer on it, ≥ 4.5:1.
+  `KNOWN_FAILURES` lists the ones reported and not fixed; an entry that stops
+  failing fails the run, so the list cannot go stale.
+- `e2e/notifications-unread.spec.ts` — a state the seeded data does not have.
+  The account has no unread notification, so every matrix picture shows read
+  rows; this spec answers the list request itself (nothing is written to the
+  database) and asserts the unread marker.
+
+How the matrix seeds the theme and takes its screenshots matters as much as
+the gates: the theme goes through `localStorage` (what the app restores), the
+fonts are awaited, and a whole-page screenshot is taken with the real viewport
+made as tall as the document — Playwright's `fullPage: true` lets Chromium
+relayout the page for a moment and produced frames with the sidebar pushed
+out of frame.

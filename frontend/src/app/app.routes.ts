@@ -42,13 +42,12 @@ export const routes: Routes = [
         loadChildren: () => import('@features/reports/reports.routes').then((m) => m.REPORTS_ROUTES),
       },
       {
-        path: 'cases',
-        loadChildren: () => import('@features/social-cases/social-cases.routes').then((m) => m.CASES_ROUTES),
-      },
-      {
         path: 'social-cases',
         loadChildren: () => import('@features/social-cases/social-cases.routes').then((m) => m.CASES_ROUTES),
       },
+      // B-10: /cases and /social-cases were duplicate route trees —
+      // /social-cases is canonical; the old prefix redirects with its children
+      { path: 'cases', redirectTo: 'social-cases' },
       { path: 'hr', loadChildren: () => import('@features/hr/hr.routes').then((m) => m.HR_ROUTES) },
       {
         path: 'procurement',

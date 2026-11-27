@@ -19,6 +19,7 @@ import { serverFieldError } from '@shared/lib/server-field-errors';
 import { FormSectionComponent } from '@shared/ui/form-section/form-section.component';
 import type { ActionResponse } from '@shared/models/api.models';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
+import { ValidSubmitDirective } from '@shared/ui/form/valid-submit.directive';
 
 type TaskForm = Record<string, string | number | boolean | null | undefined | string[]>;
 
@@ -28,7 +29,7 @@ type TaskForm = Record<string, string | number | boolean | null | undefined | st
 @Component({
   selector: 'app-task-form',
   standalone: true,
-  imports: [
+  imports: [ValidSubmitDirective, 
     ButtonModule, DatePickerModule, FormsModule, InputTextModule, PageHeaderComponent, RouterLink,
     SelectModule, TextareaModule, TranslatePipe, FieldComponent, FormSectionComponent, ActionButtonComponent,
   ],
@@ -39,7 +40,7 @@ type TaskForm = Record<string, string | number | boolean | null | undefined | st
         <p-button [label]="'common.back_to_list' | translate" size="small" [text]="true" routerLink="/tasks" />
       </div>
     </app-page-header>
-    <form (ngSubmit)="save()" #f="ngForm">
+    <form (ngSubmit)="vs.validate() && save()" #f="ngForm" appValidSubmit #vs="appValidSubmit">
       <app-form-section>
         <app-field label="task.form.task_title" controlId="task-title" [required]="true" [error]="serverFieldError(error(), 'title')">
           <input pInputText id="task-title" name="title" class="u-full" [(ngModel)]="model.title" required />
@@ -60,7 +61,7 @@ type TaskForm = Record<string, string | number | boolean | null | undefined | st
       @if (alert(); as msg) { <div class="dialog__alert" role="alert">{{ msg }}</div> }
       <div class="sticky-actions">
         <app-action-button kind="back" label="common.back" [route]="['/tasks']" />
-        <p-button type="submit" [label]="'task.form.submit' | translate" [loading]="sending()" [disabled]="f.invalid || sending()" />
+        <p-button type="submit" [label]="'task.form.submit' | translate" [loading]="sending()" [disabled]="sending()" />
       </div>
     </form>
   `,
@@ -112,6 +113,9 @@ export class TaskFormPage implements OnInit {
   }
 
   save(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.error.set(null);
     void firstValueFrom(this.http.post<ActionResponse>('/tasks', this.model)).then((res) => {

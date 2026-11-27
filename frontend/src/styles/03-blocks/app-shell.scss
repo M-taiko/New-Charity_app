@@ -31,37 +31,59 @@
   }
 }
 
-/* ── Orientation lock — portrait-only on phones ( tablets/desktops unaffected ) ── */
-.orientation-lock {
+/* ── Orientation lock REMOVED (X-06): it blocked landscape reading of wide
+   tables and rendered with role="alert" even when display:none. Phones may
+   rotate freely; wide tables scroll horizontally. ── */
+
+/* B-11/B-12: the off-canvas drawer (translateX beyond the viewport) must not
+   extend the page's scroll area — `clip` (not `hidden`) so no scroll
+   container is created and sticky positioning keeps working */
+@media (max-width: 1023px) {
+  html,
+  body {
+    overflow-x: clip;
+  }
+}
+
+/* ── X-06: the agent's quick-expense floating button — a LABELLED pill
+   (icon + text), PHONES ONLY (≤640px). It used to be an unlabelled circle
+   at every width under 1024px with an invisible icon — it floated over the
+   page as a mystery circle. ── */
+.agent-fab {
   display: none;
 }
 
-@media (orientation: landscape) and (max-height: 500px) {
-  .orientation-lock {
+@media (max-width: 640px) {
+  .agent-fab {
     position: fixed;
-    inset: 0;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
+    inset-block-end: var(--space-4);
+    inset-inline-start: var(--space-4);
+    z-index: 940;
+    height: 48px;
+    padding-inline: var(--space-5);
+    border-radius: var(--radius-full);
+    background: var(--color-primary);
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: var(--space-3);
-    padding: var(--space-6);
-    text-align: center;
-    background: var(--color-bg);
-    color: var(--color-text);
-  }
-
-  .orientation-lock__title {
-    font-family: var(--font-display);
-    font-size: var(--text-lg);
-    font-weight: 700;
-  }
-
-  .orientation-lock__text {
+    gap: var(--space-2);
     font-size: var(--text-sm);
-    color: var(--color-text-muted);
-    max-width: 320px;
+    font-weight: 600;
+    white-space: nowrap;
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.25%);
+    text-decoration: none;
+  }
+
+  /* the label colour needs the compound selector: the dark theme's blanket
+     `a { color: cream }` rule (0,1,1) beat `.agent-fab` (0,1,0) and painted the
+     label cream-on-cream — the pill was a blank blob on every dark phone page
+     (found by the first real dark matrix run) */
+  .app-shell .agent-fab {
+    color: var(--color-on-primary);
+  }
+
+  .agent-fab:focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
   }
 }
 
@@ -79,19 +101,13 @@
   border-inline-end: 1px solid var(--color-hairline);
 }
 
+/* the avatar box — `app-avatar` inside paints itself (photo, or the initials
+   on the primary container) */
 .user-chip__avatar {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  border-radius: var(--radius-full);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-hairline);
-  color: var(--color-primary);
   font-size: var(--text-2xs);
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .user-chip__text {

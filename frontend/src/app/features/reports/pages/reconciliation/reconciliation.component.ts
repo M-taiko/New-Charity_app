@@ -48,20 +48,20 @@ interface ReconciliationData {
         @if (data.value(); as d) {
           <div class="kpi-grid">
             <app-stat-tile [label]="'report.reconciliation.col_actual'" [value]="d.totals.actual_balance" [money]="true" accent="reports" iconName="report-analytics" />
-            <app-stat-tile [label]="'report.reconciliation.col_expected'" [value]="d.totals.expected_balance" [money]="true" />
-            <app-stat-tile [label]="'report.reconciliation.col_difference'" [value]="d.totals.difference" [money]="true" [inset]="true" />
-            <app-stat-tile [label]="'common.status'" [value]="d.totals.is_reconciled ? ('report.reconciliation.reconciled' | translate) : ('report.reconciliation.not_reconciled' | translate)" />
+            <app-stat-tile [label]="'report.reconciliation.col_expected'" [value]="d.totals.expected_balance" [money]="true" iconName="target" accent="reports" />
+            <app-stat-tile [label]="'report.reconciliation.col_difference'" [value]="d.totals.difference" [money]="true" [inset]="true" iconName="sliders" accent="reports" />
+            <app-stat-tile [label]="'common.status'" [value]="d.totals.is_reconciled ? ('report.reconciliation.reconciled' | translate) : ('report.reconciliation.not_reconciled' | translate)" iconName="info" accent="reports" />
           </div>
 
-          <app-data-table listUrl="/reports/reconciliation" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.treasuries" [emptyLabel]="'report.reconciliation.empty'">
+          <app-data-table listUrl="/reports/reconciliation" mode="static" [autoFilters]="true" [phoneFirst]="['treasury', 'actual_balance', 'difference', 'expected_balance']" [columns]="cols" [rows]="d.treasuries" [emptyLabel]="'report.reconciliation.empty'">
             <ng-template appCell="treasury" let-row>{{ row.treasury.name }}</ng-template>
-            <ng-template appCell="donations" let-row><span class="u-bidi">{{ row.donations | money }}</span></ng-template>
-            <ng-template appCell="custodies_issued" let-row><span class="u-bidi">{{ row.custodies_issued | money }}</span></ng-template>
-            <ng-template appCell="custodies_returned" let-row><span class="u-bidi">{{ row.custodies_returned | money }}</span></ng-template>
-            <ng-template appCell="direct_expenses" let-row><span class="u-bidi">{{ row.direct_expenses | money }}</span></ng-template>
-            <ng-template appCell="net_transfers" let-row><span class="u-bidi">{{ netTransfers(row) | money }}</span></ng-template>
-            <ng-template appCell="expected_balance" let-row><span class="u-bidi">{{ row.expected_balance | money }}</span></ng-template>
-            <ng-template appCell="actual_balance" let-row><span class="u-bidi">{{ row.actual_balance | money }}</span></ng-template>
+            <ng-template appCell="donations" let-row><span class="u-bidi">{{ row.donations | money: false }}</span></ng-template>
+            <ng-template appCell="custodies_issued" let-row><span class="u-bidi">{{ row.custodies_issued | money: false }}</span></ng-template>
+            <ng-template appCell="custodies_returned" let-row><span class="u-bidi">{{ row.custodies_returned | money: false }}</span></ng-template>
+            <ng-template appCell="direct_expenses" let-row><span class="u-bidi">{{ row.direct_expenses | money: false }}</span></ng-template>
+            <ng-template appCell="net_transfers" let-row><span class="u-bidi">{{ netTransfers(row) | money: false }}</span></ng-template>
+            <ng-template appCell="expected_balance" let-row><span class="u-bidi">{{ row.expected_balance | money: false }}</span></ng-template>
+            <ng-template appCell="actual_balance" let-row><span class="u-bidi">{{ row.actual_balance | money: false }}</span></ng-template>
             <ng-template appCell="difference" let-row>@if (row.is_reconciled) {
   <span class="stamp">{{ 'report.reconciliation.reconciled' | translate }}</span>
 } @else {

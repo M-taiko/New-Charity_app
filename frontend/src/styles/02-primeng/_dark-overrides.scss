@@ -1,11 +1,14 @@
 /* ── Light mode primary buttons — white text on brand brown ──
    PrimeNG preset sets contrastColor but CSS layer ordering can
-   prevent it from applying. Force it explicitly. */
-:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined, .p-button-text, .p-button-secondary, .p-button-danger) {
+   prevent it from applying. Force it explicitly.
+   .p-button-soft must stay excluded (B-02): soft tint buttons carry
+   their own semantic foreground from _polish.scss — forcing white here
+   made them unreadable (white on near-white tint). */
+:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined, .p-button-text, .p-button-secondary, .p-button-danger, .p-button-soft) {
   color: var(--palette-white);
 }
 
-:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined, .p-button-text, .p-button-secondary, .p-button-danger):hover {
+:root:not([data-theme="dark"]) .p-button:not(.p-button-outlined, .p-button-text, .p-button-secondary, .p-button-danger, .p-button-soft):hover {
   color: var(--palette-white);
 }
 
@@ -78,13 +81,19 @@
     border-color: var(--color-primary);
     color: var(--color-on-primary);
 
-    &:hover:not(:disabled) {
+    /* The hover / active paint is for buttons that carry the CREAM FILL —
+       dark ink only reads on it. Text, outlined and soft buttons have their
+       own foreground (_polish.scss), but this rule outranked it the moment
+       the pointer arrived: every "تعديل", every "⋯" menu trigger went from
+       17:1 to 1.17:1 (ink on their dark hover background). They are excluded
+       here; the same exclusions the light rule above already has. */
+    &:not(.p-button-text, .p-button-outlined, .p-button-soft):hover:not(:disabled) {
       background: var(--color-primary-hover);
       border-color: var(--color-primary-hover);
       color: var(--color-on-primary);
     }
 
-    &:active:not(:disabled) {
+    &:not(.p-button-text, .p-button-outlined, .p-button-soft):active:not(:disabled) {
       background: var(--color-primary-hover);
       color: var(--color-on-primary);
     }
@@ -104,6 +113,11 @@
 
   .p-button-text {
     background: transparent;
+    /* A text button has no border in the light theme (its rule above leaves
+       text buttons out); the general rule here painted it cream, so every
+       "تعديل" and "⋯" looked outlined in dark and far heavier than in light.
+       One style in both themes: text buttons are text. */
+    border-color: transparent;
     color: var(--palette-cream);
     &:hover { background: var(--dark-1); }
   }
@@ -541,6 +555,10 @@
 
   // Links
   a { color: var(--palette-cream); }
+
+  // …except the skip link, which sits on the primary fill: in dark the
+  // primary IS cream, so the blanket colour above made it cream-on-cream
+  .skip-link { color: var(--color-on-primary); }
 
   // Scroll lock overlay tint
   ::selection {

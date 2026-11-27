@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { TranslatePipe } from '@ngx-translate/core';
+import { iconHref } from '@shared/ui/icon/icon-symbol';
 
 export interface RibbonStep {
   label: string; // i18n key
@@ -35,8 +36,7 @@ export interface RibbonStep {
           <svg class="flow-ribbon__node-icon" aria-hidden="true">
             <use
               [attr.href]="
-                'assets/icons/sprite.svg#tabler-'
-                + (step.state === 'done' ? 'check' : step.state === 'current' ? 'clock' : 'lock')
+                iconHref(step.state === 'done' ? 'check' : step.state === 'current' ? 'clock' : 'lock')
               "
             />
           </svg>
@@ -48,5 +48,7 @@ export interface RibbonStep {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FlowRibbonComponent {
+  readonly iconHref = iconHref;
+
   steps = input.required<RibbonStep[]>();
 }

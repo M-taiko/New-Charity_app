@@ -20,6 +20,8 @@ export interface PageAction {
   disabled?: boolean;
   /** false hides the action entirely (role checks) */
   visible?: boolean;
+  /** R5-01: always lives in the More menu, never as a button (e.g. print on a page that has a real primary) */
+  menu?: boolean;
 }
 
 /** kinds that may occupy the single primary slot */
@@ -30,6 +32,10 @@ const PRIMARY_KINDS: readonly string[] = ['save', 'create', 'submit', 'apply', '
  * it — at most ONE primary action and TWO secondary actions render as
  * buttons, everything else folds into a "More" menu. Pages declare WHAT the
  * actions are; this component decides where they land.
+ *
+ * R5-01: the row of buttons is `.page-actions` itself. The flex + gap classes
+ * used to sit on this component's HOST, around a plain block div — a flex row
+ * with a single child — so the buttons inside touched with no gap at all.
  */
 @Component({
   selector: 'app-page-actions',
@@ -37,7 +43,8 @@ const PRIMARY_KINDS: readonly string[] = ['save', 'create', 'submit', 'apply', '
   imports: [MenuModule, ActionButtonComponent],
   template: `
     <div class="page-actions">
-      @for (action of visibleActions(); track action.label) {        <app-action-button
+      @for (action of visibleActions(); track action.label) {
+        <app-action-button
           [kind]="action.kind"
           [label]="action.label"
           size="small"
@@ -55,7 +62,6 @@ const PRIMARY_KINDS: readonly string[] = ['save', 'create', 'submit', 'apply', '
     </div>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'u-flex u-gap-2 u-flex-wrap' },
 })
 export class PageActionsComponent {
   private router = inject(Router);
@@ -67,7 +73,9 @@ export class PageActionsComponent {
 
   /** the first primary action renders as THE primary button; extras overflow */
   private primary = computed(() => {
-    const primaries = this.open().filter((a) => PRIMARY_KINDS.includes(a.kind));
+    // an action pinned to the menu can never be the primary
+    const candidates = this.open().filter((a) => !a.menu);
+    const primaries = candidates.filter((a) => PRIMARY_KINDS.includes(a.kind));
     if (primaries.length > 1 && typeof ngDevMode !== 'undefined' && ngDevMode) {
       // eslint-disable-next-line no-console -- dev-time rule check (T7-10)
       console.warn(`[page-actions] ${primaries.length} primary actions declared — only the first renders as primary, the rest moved to More`);
@@ -77,13 +85,15 @@ export class PageActionsComponent {
 
   visibleActions = computed<PageAction[]>(() => {
     const primary = this.primary();
-    const secondary = this.open().filter((a) => a !== primary).slice(0, primary ? 2 : 3);
-    return primary ? [primary, ...secondary] : secondary;
+    const buttons = this.open().filter((a) => !a.menu && a !== primary).slice(0, primary ? 2 : 3);
+    return primary ? [primary, ...buttons] : buttons;
   });
 
   overflowActions = computed<PageAction[]>(() => {
-    const visible = this.visibleActions();
-    return this.open().filter((a) => !visible.includes(a));
+    const visible = new Set(this.visibleActions());
+    // menu-pinned actions come first, in the order the page listed them
+    const pinned = this.open().filter((a) => a.menu);
+    return [...pinned, ...this.open().filter((a) => !a.menu && !visible.has(a))];
   });
 
   overflowItems = computed<MenuItem[]>(() =>

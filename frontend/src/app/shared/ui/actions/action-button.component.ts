@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { TranslatePipe } from '@ngx-translate/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { ButtonModule } from 'primeng/button';
 import { RouterLink } from '@angular/router';
+import { iconHref } from '@shared/ui/icon/icon-symbol';
 import type { ActionKind } from './action-kind';
 import { actionStyle } from './action-kind';
 
@@ -10,11 +11,13 @@ import { actionStyle } from './action-kind';
   selector: 'app-action-icon',
   standalone: true,
   template: `<svg width="16" height="16" aria-hidden="true" focusable="false">
-    <use [attr.href]="'assets/icons/sprite.svg#tabler-' + name()" />
+    <use [attr.href]="iconHref(name())" />
   </svg>`,
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ActionIconComponent {
+  readonly iconHref = iconHref;
+
   name = input.required<string>();
 }
 
@@ -38,7 +41,7 @@ export class ActionIconComponent {
         [text]="style().variant === 'text'"
         [class.p-button-soft]="style().variant === 'soft'"
         [size]="size()"
-        [ariaLabel]="ariaLabel()"
+        [ariaLabel]="accessibleName()"
         [routerLink]="link"
         [queryParams]="queryParams()"
       >
@@ -56,7 +59,7 @@ export class ActionIconComponent {
         [size]="size()"
         [loading]="loading()"
         [disabled]="disabled()"
-        [ariaLabel]="ariaLabel()"
+        [ariaLabel]="accessibleName()"
         (onClick)="action.emit($event)"
       >
         @if (showIcon() && style().icon) {
@@ -81,6 +84,22 @@ export class ActionButtonComponent {
   queryParams = input<Record<string, unknown> | null>(null);
   /** accessible name — required for icon-only buttons (already-translated text) */
   ariaLabel = input('');
+
+  private translate = inject(TranslateService);
+
+  /**
+   * N-06: the button's accessible name. An explicit `ariaLabel` wins. Otherwise
+   * the label's own text: a row button collapses to its icon below 1280px
+   * (R2-05), and a label hidden by CSS must not take the name with it.
+   */
+  readonly accessibleName = computed(() => {
+    const explicit = this.ariaLabel();
+    const text = this.label();
+    if (explicit !== '') {
+      return explicit;
+    }
+    return text === '' ? '' : this.translate.instant(text);
+  });
 
   action = output<MouseEvent>();
 

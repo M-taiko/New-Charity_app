@@ -8,16 +8,19 @@ import { firstValueFrom } from 'rxjs';
 import { ApiClient } from '@core/http/api-client';
 import { ToastService } from '@core/errors/toast.service';
 import type { ActionResponse, ApiErrorBody } from '@shared/models/api.models';
+import { KeyValueListComponent, type KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
 
 /**
  * The one delete flow in the app (T3-01): confirm dialog → POST {path} →
  * success toast / server business-rule message via toast.apiError. Pages only
  * react to the `deleted` output (reload the list or navigate back).
+ *
+ * N-06: `details` says what is being deleted — an expense's amount and date.
  */
 @Component({
   selector: 'app-confirm-delete',
   standalone: true,
-  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule],
+  imports: [ SharedModule,TranslatePipe, DialogModule, ButtonModule, KeyValueListComponent],
   template: `
     <p-dialog appendTo="body"
       [visible]="visible()"
@@ -32,6 +35,11 @@ import type { ActionResponse, ApiErrorBody } from '@shared/models/api.models';
       [style]="{ width: 'min(440px, 94vw)' }"
     >
       <p>{{ 'common.delete_message' | translate: { name: entity() } }}</p>
+      @if (details().length) {
+        <div class="confirm-details">
+          <app-key-value-list [items]="details()" />
+        </div>
+      }
       @if (alert()) {
         <div class="dialog__alert" role="alert">
           <svg width="16" height="16" aria-hidden="true">
@@ -55,6 +63,8 @@ export class ConfirmDeleteComponent {
   path = input.required<string>();
   /** display name of the record, interpolated into the message */
   entity = input('');
+  /** what is being deleted (N-06), pre-rendered by the page */
+  details = input<readonly KeyValueItem[]>([]);
 
   deleted = output<ActionResponse>();
 
@@ -81,6 +91,9 @@ export class ConfirmDeleteComponent {
   }
 
   confirm(): void {
+    if (this.sending()) {
+      return;
+    }
     this.sending.set(true);
     this.failure.set(null);
     void firstValueFrom(this.api.remove(this.path()))

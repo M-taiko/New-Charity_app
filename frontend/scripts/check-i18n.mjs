@@ -88,6 +88,16 @@ function walk(dir) {
     for (const match of text.matchAll(/\.instant\('([a-z0-9_.]+)'/g)) {
       used.add(match[1]);
     }
+    // R2-01: literal keys referenced from config objects (nav items, action
+    // kinds, table columns, widget defs) — `label: 'a.b'`, `labelKey:`,
+    // `titleKey:`, `header:`. Dotted two-plus-segment values only, so plain
+    // words (icons, severities) never trip it.
+    for (const field of ['label', 'labelKey', 'titleKey', 'header']) {
+      const fieldRe = new RegExp('\\b' + field + ":\\s*'([a-z0-9_]+(?:\\.[a-z0-9_]+)+)'", 'g');
+      for (const match of text.matchAll(fieldRe)) {
+        used.add(match[1]);
+      }
+    }
 
     if (rel.includes('assets')) {
       continue;

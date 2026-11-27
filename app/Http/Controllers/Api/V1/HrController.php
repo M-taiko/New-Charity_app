@@ -41,6 +41,28 @@ final class HrController extends Controller
         ]);
     }
 
+    /**
+     * GET /api/v1/hr/employees/{employee} — the edit form's record (the
+     * salary-history row shape plus every fillable field the form posts back).
+     */
+    public function employeeShow(Request $request, Employee $employee): JsonResponse
+    {
+        $employee->load('user');
+
+        return response()->json([
+            'data' => [
+                'id' => $employee->id,
+                'user_id' => $employee->user_id,
+                'name' => $employee->user?->name,
+                'department' => $employee->department,
+                'job_title' => $employee->job_title,
+                'hire_date' => $employee->hire_date !== null ? substr((string) $employee->hire_date, 0, 10) : null,
+                'salary' => $this->money($employee->salary),
+                'status' => $employee->status,
+            ],
+        ]);
+    }
+
     public function employees(Request $request): JsonResponse
     {
         $paginator = ApiList::paginate(

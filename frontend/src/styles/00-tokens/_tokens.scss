@@ -140,17 +140,25 @@
   --color-info: var(--semantic-info);
   --color-info-soft: #eff6ff;
 
-  // Status tint set (RD-1.1) — solid hexes in light
+  // Status tint set (RD-1.1) — solid hexes in light.
+  // *-fg = the bright semantic hue for icons/dots/borders;
+  // *-text = the AA-passing dark foreground for pill labels, soft buttons
+  // and delta chips on the tint (B-03 — text on tints must be dark).
   --status-active-bg: #ecfdf5;
   --status-active-fg: #10b981;
+  --status-active-text: #047857;
   --status-info-bg: #eff6ff;
   --status-info-fg: #3b82f6;
+  --status-info-text: #1d4ed8;
   --status-warning-bg: #fffbeb;
   --status-warning-fg: #d97706;
+  --status-warning-text: #b45309;
   --status-danger-bg: #fff1f2;
   --status-danger-fg: #f43f5e;
+  --status-danger-text: #be123c;
   --status-neutral-bg: #e2e8f0;
   --status-neutral-fg: #6e655e;
+  --status-neutral-text: #57534e;
   --notification-dot: #ef4444;
 
   // Chart palette (RD-1.1) — fed to Chart.js
@@ -233,17 +241,24 @@
   --color-info: #60a5fa;
   --color-info-soft: rgb(96 165 250 / 16%);
 
-  // Status tint set — channel-alpha backgrounds + 400-level foregrounds
+  // Status tint set — channel-alpha backgrounds + 400-level foregrounds.
+  // The light theme needs darker *-text colors; on dark surfaces the bright
+  // foregrounds themselves pass AA, so text mirrors fg (B-03).
   --status-active-bg: rgb(52 211 153 / 16%);
   --status-active-fg: #34d399;
+  --status-active-text: #34d399;
   --status-info-bg: rgb(96 165 250 / 16%);
   --status-info-fg: #60a5fa;
+  --status-info-text: #60a5fa;
   --status-warning-bg: rgb(251 191 36 / 16%);
   --status-warning-fg: #fbbf24;
+  --status-warning-text: #fbbf24;
   --status-danger-bg: rgb(251 113 133 / 16%);
   --status-danger-fg: #fb7185;
+  --status-danger-text: #fb7185;
   --status-neutral-bg: #2a2825;
   --status-neutral-fg: #beafa7;
+  --status-neutral-text: #beafa7;
   --notification-dot: #ef4444;
 
   // Chart palette — same hues at 400-level brightness (RD-1.1)

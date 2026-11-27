@@ -3,12 +3,13 @@ import { RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { SelectModule } from 'primeng/select';
+import { MenuModule } from 'primeng/menu';
+import { PopoverModule, Popover } from 'primeng/popover';
+import { ButtonModule } from 'primeng/button';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
-import { ThemeService } from '@core/theme/theme.service';
-import { chartPalette } from '@shared/lib/chart-colors';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
 import { ChartCardComponent } from '@shared/ui/chart-card/chart-card.component';
 import type { ChartSeries } from '@shared/ui/chart-card/chart-card.component';
@@ -17,15 +18,19 @@ import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { MoneyPipe } from '@shared/pipes/money.pipe';
-import { CountUpDirective } from '@core/motion/motion-directives';
-import { AutoRefreshComponent } from '@shared/ui/auto-refresh/auto-refresh.component';
+import type { KeyValueItem } from '@shared/ui/key-value-list/key-value-list.component';
+import { reloadList } from '@shared/lib/list-state';
+import { apiFailure } from '@shared/lib/server-field-errors';
 import { ActionButtonComponent } from '@shared/ui/actions/action-button.component';
 import { LocalStorageService } from '@core/storage/local-storage.service';
 import { ApiClient } from '@core/http/api-client';
 import { ToastService } from '@core/errors/toast.service';
 import { BalanceRingComponent } from '@shared/ui/balance-ring/balance-ring.component';
+import { entityColor } from '@shared/lib/chart-colors';
 import { ConfirmDialogComponent } from '@shared/ui/confirm-dialog/confirm-dialog.component';
+import { ActionIconComponent } from '@shared/ui/actions/action-button.component';
 import type { ItemResponse } from '@shared/models/api.models';
+import type { MenuItem } from 'primeng/api';
 
 interface AgentStats {
   received: string;
@@ -53,6 +58,10 @@ interface DashboardData {
   total_treasury_and_custodies: string;
   total_custodies_amount: string;
   active_custodies: number;
+  /** B-08: status=pending custodies — its own attention row */
+  pending_custodies: number;
+  /** B-08: active custodies with money left and no expense for 7+ days */
+  custodies_needing_follow_up: number;
   pending_cases: number;
   today_expenses: string;
   total_spent: string;
@@ -94,7 +103,8 @@ interface PerformanceData {
   aging: { bucket: string; count: number; total: string }[];
   case_funnel: { stage: string; count: number }[];
   approval_rate: number;
-  spending_by_direction: { label: string; value: string }[];
+  /** `id` is the expense category's id (N-07) — a response cached before it was added may omit it */
+  spending_by_direction: { id?: number; label: string; value: string }[];
   hr: { attendance_today: Record<string, number>; pending_salaries: { count: number; total: string }; kpi_achievement: number };
 }
 
@@ -105,6 +115,9 @@ interface MineTransfer {
   status: string;
   notes: string | null;
   created_at: string | null;
+  /** the same endpoint's party names (N-06: shown in the confirm) */
+  sender?: string | null;
+  receiver?: string | null;
 }
 
 interface MineTransfers {
@@ -131,6 +144,11 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
   { id: 'activity', titleKey: 'dashboard.bento.activity' },
 ];
 
+/** N-09: same widgets in the same order */
+function sameWidgetOrder(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((id, i) => id === b[i]);
+}
+
 /**
  * The dashboard rewrite (Task6 T6-60): a responsive bento grid — 1 column on
  * phones, 2 on tablets, 12-col spans on desktop. Every widget is a card with
@@ -149,7 +167,11 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
     DatePipe,
     RouterLink,
     ActionButtonComponent,
+    ActionIconComponent,
     SelectModule,
+    MenuModule,
+    PopoverModule,
+    ButtonModule,
     FormsModule,
     AsyncPageComponent,
     ChartCardComponent,
@@ -158,8 +180,6 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
     IconComponent,
     DatetimePipe,
     MoneyPipe,
-    CountUpDirective,
-    AutoRefreshComponent,
     BalanceRingComponent,
     ConfirmDialogComponent,
   ],
@@ -173,98 +193,59 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
       <div class="dash-topbar__actions u-flex u-gap-2 u-flex-wrap">
         <p-select appendTo="body" inputId="dash-range" [options]="rangeOptions" optionLabel="label" optionValue="value"
                   [ngModel]="range()" (ngModelChange)="setRange($event)" name="range" styleClass="dash-topbar__select" />
-        <app-auto-refresh key="dashboard" (refresh)="data.reload()" />
-        <app-action-button kind="customize" label="dashboard.bento.customize" size="small" (action)="customizeOpen.set(!customizeOpen())" />
+        <!-- P-01: quiet "⋯" menu — refresh + the customize popover live here,
+             the header keeps ONE primary (create custody) -->
+        <p-button [text]="true" [rounded]="true" severity="secondary" [ariaLabel]="'dashboard.bento.more' | translate" (onClick)="headerMenu.toggle($event)">
+          <app-action-icon name="dots-vertical" />
+        </p-button>
+        <p-menu #headerMenu [model]="headerMenuItems()" popup="true" appendTo="body" />
+        <p-popover #customizePop appendTo="body">
+          <div class="dash-customize__pop">
+            <strong class="dash-customize__title">{{ 'dashboard.bento.customize' | translate }}</strong>
+            <div class="u-flex u-gap-2 u-flex-wrap">
+              @for (w of allWidgets(); track w.id) {
+                <label class="dash-customize__item">
+                  <input type="checkbox" [checked]="isWidgetVisible(w.id)" (change)="toggleWidget(w.id)" />
+                  {{ w.titleKey | translate }}
+                </label>
+              }
+            </div>
+          </div>
+        </p-popover>
         @if (canCreateCustody()) {
           <app-action-button kind="create" label="custody.list.create" [route]="['/custodies', 'new']" />
         }
       </div>
     </div>
 
-    @if (customizeOpen()) {
-      <section class="chart-card dash-customize">
-        <div class="chart-card__head"><span class="chart-card__title">{{ 'dashboard.bento.customize' | translate }}</span></div>
-        <div class="u-flex u-gap-2 u-flex-wrap">
-          @for (w of allWidgets(); track w.id) {
-            <label class="dash-customize__item">
-              <input type="checkbox" [checked]="isWidgetVisible(w.id)" (change)="toggleWidget(w.id)" />
-              {{ w.titleKey | translate }}
-            </label>
-          }
-        </div>
-      </section>
-    }
-
-    <app-async-page [resource]="data" variant="list">
+    <app-async-page [resource]="data" variant="list" [hold]="!layoutSettled()">
       @if (data.value(); as d) {
+        <!-- N-09: laid out once — only when the widget order can no longer change under it -->
+        @if (layoutSettled()) {
         <div class="bento">
-          <!-- KPI strip (RD-4.1): the Stitch 4-card row — icon, headline value, caption -->
+          <!-- KPI strip (RD-4.1 → R2-03): the Stitch 4-card row sits DIRECTLY
+               on the page — no wrapper card around the tiles -->
           @if (visible('kpi')) {
-            <section class="bento__widget bento__widget--full" [attr.aria-label]="'dashboard.bento.kpi' | translate">
+            <section class="bento__widget bento__widget--full bento__widget--bare" [attr.aria-label]="'dashboard.bento.kpi' | translate">
               @if (d.view === 'finance') {
-                <div class="kpi-grid kpi-grid--4">
-                  <app-stat-tile
-                    class="tile-link"
-                    label="dashboard.finance.treasury_balance"
-                    [value]="d.treasury_balance"
-                    [money]="true"
-                    iconName="custody"
-                    accent="treasury"
-                    caption="dashboard.finance.available_now"
-                  />
-                  <app-stat-tile
-                    class="tile-link"
-                    label="dashboard.finance.total_custodies"
-                    [value]="d.total_custodies_amount"
-                    [money]="true"
-                    iconName="myExpense"
-                    accent="custodies"
-                    caption="dashboard.finance.n_active_custodies"
-                    [captionParams]="{ n: d.active_custodies }"
-                  />
-                  <app-stat-tile
-                    class="tile-link"
-                    label="dashboard.finance.total_spent"
-                    [value]="d.total_spent"
-                    [money]="true"
-                    iconName="myExpense"
-                    accent="expenses"
-                    caption="dashboard.finance.today_expenses_hint"
-                    [captionParams]="{ n: d.today_expenses | money: false }"
-                  />
-                  <app-stat-tile
-                    class="tile-link"
-                    label="dashboard.finance.agents_count"
-                    [value]="d.agents_evaluation.length"
-                    iconName="users"
-                    accent="hr"
-                    caption="dashboard.finance.pending_cases_hint"
-                    [captionParams]="{ n: d.pending_cases }"
-                  />
+                <div class="kpi-grid">
+                  <app-stat-tile class="tile-link" label="dashboard.finance.treasury_balance" [value]="d.treasury_balance" [money]="true" iconName="custody" accent="treasury" caption="dashboard.finance.available_now" />
+                  <!-- N-09: the two tiles that get a delta + sparkline from the
+                       slower /performance request reserve those rows from the
+                       first frame (reserveSpark) — the row used to grow by
+                       67px when that request landed and push the page down -->
+                  <app-stat-tile class="tile-link" label="dashboard.finance.total_custodies" [value]="d.total_custodies_amount" [money]="true" iconName="myExpense" accent="custodies" caption="dashboard.finance.n_active_custodies" [captionParams]="{ n: d.active_custodies }" [delta]="perfDelta('custodies')" [spark]="perfSpark('custodies')" [reserveSpark]="true" />
+                  <app-stat-tile class="tile-link" label="dashboard.finance.total_spent" [value]="d.total_spent" [money]="true" iconName="myExpense" accent="expenses" caption="dashboard.finance.today_expenses_hint" [captionParams]="{ n: d.today_expenses | money: false }" [delta]="perfDelta('expenses')" [spark]="perfSpark('expenses')" [reserveSpark]="true" />
+                  <app-stat-tile class="tile-link" label="dashboard.finance.agents_count" [value]="d.agents_evaluation.length" iconName="users" accent="hr" caption="dashboard.finance.pending_cases_hint" [captionParams]="{ n: d.pending_cases }" />
                 </div>
               } @else if (d.view === 'agent' && d.agent_stats; as a) {
-                <div class="dash-kpis">
-                  <div class="dash-kpi">
-                    <span class="dash-kpi__label">{{ 'dashboard.agent.remaining' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="toNum(a.remaining)">{{ a.remaining | money: false }}</span>
-                  </div>
-                  <div class="dash-kpi">
-                    <span class="dash-kpi__label">{{ 'dashboard.agent.received' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="toNum(a.received)">{{ a.received | money: false }}</span>
-                  </div>
-                  <div class="dash-kpi">
-                    <span class="dash-kpi__label">{{ 'dashboard.agent.spent' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="toNum(a.spent)">{{ a.spent | money: false }}</span>
-                  </div>
-                  <div class="dash-kpi">
-                    <span class="dash-kpi__label">{{ 'dashboard.agent.returned' | translate }}</span>
-                    <span class="dash-kpi__value u-bidi" [appCountUp]="toNum(a.returned)">{{ a.returned | money: false }}</span>
-                  </div>
+                <div class="kpi-grid">
+                  <app-stat-tile label="dashboard.agent.remaining" [value]="a.remaining" [money]="true" iconName="custody" accent="custodies" />
+                  <app-stat-tile label="dashboard.agent.received" [value]="a.received" [money]="true" iconName="transfer" accent="treasury" />
+                  <app-stat-tile label="dashboard.agent.spent" [value]="a.spent" [money]="true" iconName="myExpense" accent="expenses" />
+                  <app-stat-tile label="dashboard.agent.returned" [value]="a.returned" [money]="true" iconName="return" accent="reports" />
                   @if (toNum(a.frozen) > 0) {
-                    <div class="dash-kpi">
-                      <span class="dash-kpi__label">{{ 'dashboard.agent.frozen' | translate }}</span>
-                      <span class="dash-kpi__value u-bidi" [appCountUp]="toNum(a.frozen)">{{ a.frozen | money: false }}</span>
-                    </div>
+                    <app-stat-tile label="dashboard.agent.frozen" [value]="a.frozen" [money]="true" iconName="clock" accent="tasks" />
                   }
                 </div>
 
@@ -305,11 +286,11 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
                   </div>
                 </div>
               } @else if (d.view === 'researcher' && d.researcher_stats; as r) {
-                <div class="dash-kpis">
-                  <div class="dash-kpi"><span class="dash-kpi__label">{{ 'dashboard.researcher.total_cases' | translate }}</span><span class="dash-kpi__value u-bidi" [appCountUp]="r.total_cases">{{ r.total_cases }}</span></div>
-                  <div class="dash-kpi"><span class="dash-kpi__label">{{ 'dashboard.researcher.approved' | translate }}</span><span class="dash-kpi__value u-bidi" [appCountUp]="r.approved_cases">{{ r.approved_cases }}</span></div>
-                  <div class="dash-kpi"><span class="dash-kpi__label">{{ 'dashboard.researcher.pending' | translate }}</span><span class="dash-kpi__value u-bidi" [appCountUp]="r.pending_cases">{{ r.pending_cases }}</span></div>
-                  <div class="dash-kpi"><span class="dash-kpi__label">{{ 'dashboard.researcher.approval_rate' | translate }}</span><span class="dash-kpi__value u-bidi">{{ r.approval_rate }}%</span></div>
+                <div class="kpi-grid">
+                  <app-stat-tile label="dashboard.researcher.total_cases" [value]="r.total_cases" iconName="case" accent="cases" />
+                  <app-stat-tile label="dashboard.researcher.approved" [value]="r.approved_cases" iconName="success" accent="treasury" />
+                  <app-stat-tile label="dashboard.researcher.pending" [value]="r.pending_cases" iconName="clock" accent="expenses" />
+                  <app-stat-tile label="dashboard.researcher.approval_rate" [value]="r.approval_rate + '%'" iconName="percentage" accent="reports" />
                 </div>
 
                 <!-- T7-08: researcher variant widgets — my-cases funnel + gauge -->
@@ -349,53 +330,47 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
             </section>
           }
 
-          <!-- Needs attention (RD-4.1): rows with circular count badges -->
+          <!-- Needs attention (RD-4.1 + B-08): three DISTINCT rows, each
+               deep-linking to its pre-filtered list -->
           @if (visible('attention')) {
             <section class="bento__widget">
               <div class="chart-card__head"><span class="chart-card__title">{{ 'dashboard.bento.attention' | translate }}</span></div>
               <ul class="dash-attention">
                 <li>
-                  <a routerLink="/custodies">
-                    {{ 'dashboard.finance.active_custodies' | translate }}
-                    <span class="dash-attention__count u-bidi">{{ d.active_custodies }}</span>
+                  <a routerLink="/custodies" [queryParams]="{ status: 'pending' }">
+                    {{ 'dashboard.attention.pending_custodies' | translate }}
+                    <span class="dash-attention__count dash-attention__count--neutral u-bidi">{{ d.pending_custodies }}</span>
                   </a>
                 </li>
                 <li>
-                  <a routerLink="/cases">
+                  <a routerLink="/social-cases" [queryParams]="{ status: 'pending' }">
                     {{ 'dashboard.finance.pending_cases' | translate }}
                     <span class="dash-attention__count dash-attention__count--neutral u-bidi">{{ d.pending_cases }}</span>
                   </a>
                 </li>
                 <li>
                   <a routerLink="/custodies/tracking">
-                    {{ 'nav.custody_tracking' | translate }}
-                    <span class="dash-attention__count dash-attention__count--primary u-bidi">{{ d.active_custodies }}</span>
+                    {{ 'dashboard.attention.follow_up' | translate }}
+                    <span class="dash-attention__count dash-attention__count--primary u-bidi">{{ d.custodies_needing_follow_up }}</span>
                   </a>
                 </li>
               </ul>
             </section>
           }
 
-          <!-- Insights (T7-08): KPI sparklines + deltas, aging buckets, case funnel
-               with approval gauge, spending-by-direction donut — lazy endpoint -->
-          @if (visible('insights') && d.view === 'finance' && perf.value(); as p) {
-            <section class="bento__widget bento__widget--full">
-              <div class="chart-card__head"><span class="chart-card__title">{{ 'dashboard.bento.insights' | translate }}</span></div>
-              <div class="dash-insights">
-                @for (card of insightCards; track card.key) {
-                  <div class="dash-insight">
-                    <span class="dash-insight__label">{{ card.label | translate }}</span>
-                    <span class="dash-insight__value u-bidi">{{ p.kpis[card.key].value | money: false }}</span>
-                    <span class="dash-insight__delta" [class.is-up]="p.kpis[card.key].delta >= 0" [class.is-down]="p.kpis[card.key].delta < 0">
-                      {{ p.kpis[card.key].delta >= 0 ? '▲' : '▼' }} {{ abs(p.kpis[card.key].delta) }}% · {{ 'dashboard.insights.vs_prev' | translate }}
-                    </span>
-                    <svg class="dash-spark" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
-                      <polyline [attr.points]="sparkPoints(p.kpis[card.key].spark)" />
-                    </svg>
-                  </div>
-                }
-              </div>
-
+          <!-- Insights (T7-08 → P-01): aging buckets + case funnel moved out of
+               the main flow into a collapsed "additional analytics" section;
+               the KPI delta/spark cards merged INTO the KPI row above -->
+          <!-- N-09: the collapsed details box is laid out from the first frame;
+               only its (hidden) content waits for /performance. The whole box
+               used to be inserted when that request landed, pushing the two
+               rows under it down -->
+          @if (visible('insights') && d.view === 'finance') {
+            <details class="bento__widget bento__widget--full dash-extra">
+              <summary class="dash-extra__summary">
+                <span class="chart-card__title">{{ 'dashboard.insights.extra' | translate }}</span>
+              </summary>
+              @if (perf.value(); as p) {
               <div class="dash-insight-cols">
                 <div>
                   <h3 class="dash-rank__title">{{ 'dashboard.insights.aging' | translate }}</h3>
@@ -427,49 +402,45 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
                   </p>
                 </div>
               </div>
-
-              @if (spendingSeries().length > 0) {
-                <app-chart-card [title]="'dashboard.insights.spending'" [series]="spendingSeries()" [height]="180" />
               }
-            </section>
+            </details>
           }
 
-          <!-- Money flow (T6-60.4): bar chart + HTML legend list, never canvas legends -->
+          <!-- Money flow (T6-60.4 → P-01 row 3 → R2-03): the chart card IS the
+               widget — no card-in-card, one title + one toggle per chart -->
           @if (visible('money-flow')) {
-            <section class="bento__widget bento__widget--full">
-              <div class="chart-card__head">
-                <span class="chart-card__title">{{ 'dashboard.bento.money_flow' | translate }}</span>
-                <a routerLink="/reports" class="dash-viewall">{{ 'dashboard.bento.view_all' | translate }}</a>
-              </div>
-              <app-chart-card [title]="'dashboard.finance.charts.expenses_by_day' | translate" [series]="byDaySeries()" chartType="bar" [height]="200" />
-              @if (directionTop().length > 0) {
-                <ul class="dash-legend">
-                  @for (item of directionTop(); track item.label) {
-                    <li>
-                      <span class="dash-legend__chip" [style.background]="item.color"></span>
-                      <span class="dash-legend__label">{{ item.label }}</span>
-                      <span class="dash-legend__value u-bidi">{{ item.value | money: false }}</span>
-                    </li>
-                  }
-                </ul>
-              }
+            <section class="bento__widget bento__widget--wide bento__widget--bare">
+              <app-chart-card [title]="'dashboard.finance.charts.expenses_by_day'" [series]="byDaySeries()" chartType="bar" [height]="220"
+                              viewAllRoute="/reports" emptyLabel="dashboard.finance.charts.no_expenses_7d" accent="expenses" iconName="expense" />
+            </section>
+            <!-- N-09: the donut card is there from the first frame — loading,
+                 then drawn in a body that already had its height. It used to
+                 appear when /performance landed and make this row 200px taller -->
+            <section class="bento__widget bento__widget--bare">
+              <app-chart-card [title]="'dashboard.insights.spending'" [series]="spendingSeries()" chartType="doughnut" legendVariant="ranked" [height]="170" accent="expenses" iconName="expense" [loading]="perf.isLoading()" />
             </section>
           }
 
-          <!-- Performance (T6-60.5): ranked lists with progress bars + star rating -->
+          <!-- Performance (T6-60.5 → P-01 row 4): agent ranking. N-07: each bar
+               wears its entity's colour — an agent here is the same colour as in
+               the agents-balance report (entityColor), never a rank colour -->
           @if (visible('performance') && d.view === 'finance') {
-            <section class="bento__widget bento__widget--wide">
-              <div class="chart-card__head"><span class="chart-card__title">{{ 'dashboard.bento.performance' | translate }}</span></div>
+            <section class="bento__widget">
+              <div class="chart-card__head">
+                <span class="chart-card__title">{{ 'dashboard.bento.performance' | translate }}</span>
+              </div>
               <h3 class="dash-rank__title">{{ 'dashboard.finance.agents_eval' | translate }}</h3>
               <ol class="dash-rank">
                 @for (agent of topAgents(); track agent.agent.id) {
                   <li>
                     <span class="dash-rank__name">{{ agent.agent.name }}</span>
                     <span class="dash-rank__bar">
-                      <span class="dash-rank__fill" [style.width.%]="ratingPercent(agent.rating)"></span>
+                      <span class="dash-rank__fill" [style.width.%]="ratingPercent(agent.rating)" [style.background]="entityColor(agent.agent.id)"></span>
                     </span>
                     <span class="dash-rank__score u-bidi">★ {{ agent.rating | number: '1.1-1' }}</span>
                   </li>
+                } @empty {
+                  <li><span class="u-muted">{{ 'common.no_data' | translate }}</span></li>
                 }
               </ol>
               <h3 class="dash-rank__title">{{ 'dashboard.finance.researchers_eval' | translate }}</h3>
@@ -478,10 +449,12 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
                   <li>
                     <span class="dash-rank__name">{{ researcher.researcher.name }}</span>
                     <span class="dash-rank__bar">
-                      <span class="dash-rank__fill dash-rank__fill--alt" [style.width.%]="researcher.approval_rate"></span>
+                      <span class="dash-rank__fill" [style.width.%]="researcher.approval_rate" [style.background]="entityColor(researcher.researcher.id)"></span>
                     </span>
                     <span class="dash-rank__score u-bidi">{{ researcher.approval_rate }}%</span>
                   </li>
+                } @empty {
+                  <li><span class="u-muted">{{ 'common.no_data' | translate }}</span></li>
                 }
               </ol>
             </section>
@@ -496,7 +469,7 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
                 <ul class="dash-activity">
                   @for (c of r.recent_cases.slice(0, 6); track c.id) {
                     <li>
-                      <a [routerLink]="['/cases', c.id]">{{ c.name }}</a>
+                      <a [routerLink]="['/social-cases', c.id]">{{ c.name }}</a>
                       <app-status-stamp [status]="c.status" namespace="social_case" />
                       <span class="u-small u-muted u-bidi">{{ c.created_at | datetime: false }}</span>
                     </li>
@@ -524,22 +497,27 @@ const DEFAULT_WIDGETS: WidgetDef[] = [
             </section>
           }
         </div>
+        }
       }
     </app-async-page>
 
-          <!-- T7-08: agent transfer decisions — the same endpoints custodies/mine uses -->
-      <app-confirm-dialog #acceptDlg header="dashboard.agent.accept_transfer" message="dashboard.agent.accept_confirm" confirmLabel="dashboard.agent.accept_transfer" confirmKind="accept" (confirmed)="submitAccept()" />
-      <app-confirm-dialog #cancelDlg header="dashboard.agent.cancel_transfer" message="dashboard.agent.cancel_confirm" confirmLabel="dashboard.agent.cancel_transfer" confirmKind="cancel" (confirmed)="submitCancel()" />
+          <!-- T7-08: agent transfer decisions — the same endpoints custodies/mine uses.
+               N-06: each confirm shows the money it moves -->
+      <app-confirm-dialog #acceptDlg header="dashboard.agent.accept_transfer" message="dashboard.agent.accept_confirm" confirmLabel="dashboard.agent.accept_transfer" confirmKind="accept" [details]="transferDetails()" (confirmed)="submitAccept()" />
+      <app-confirm-dialog #cancelDlg header="dashboard.agent.cancel_transfer" message="dashboard.agent.cancel_confirm" confirmLabel="dashboard.agent.cancel_transfer" confirmKind="cancel" [details]="transferDetails()" (confirmed)="submitCancel()" />
   `,
 })
 export class DashboardPage {
   private http = inject(HttpClient);
   private api = inject(ApiClient);
   private toast = inject(ToastService);
+  private moneyPipe = new MoneyPipe();
   private auth = inject(AuthService);
   private storage = inject(LocalStorageService);
   private translate = inject(TranslateService);
-  private themeSvc = inject(ThemeService);
+
+  /** the customize popover (P-01: opened from the "⋯" header menu) */
+  private readonly customizePop = viewChild.required<Popover>('customizePop');
 
   /** RD-4.1: the header CTA only for users who may create custodies */
   canCreateCustody = computed(() => this.auth.can('may_create_custody'));
@@ -554,10 +532,41 @@ export class DashboardPage {
     { label: this.translate.instant('dashboard.range.year'), value: 'year' },
   ];
 
+  /** P-01: refresh + customize live in the quiet "⋯" menu — the header keeps
+   *  ONE primary action (create custody) + the range chip */
+  readonly headerMenuItems = computed<MenuItem[]>(() => [
+    {
+      label: this.translate.instant('dashboard.bento.customize'),
+      command: (event) => {
+        this.customizePop().show(event.originalEvent);
+      },
+    },
+    {
+      label: this.translate.instant('dashboard.bento.refresh_now'),
+      command: () => {
+        this.data.reload();
+        this.perf.reload();
+      },
+    },
+  ]);
+
   range = signal<string>('30d');
-  customizeOpen = signal(false);
+  /** this device's copy of the user's widget order — null on a first visit (or a damaged copy) */
+  private readonly storedOrder: string[] | null = this.readStoredOrder();
+
+  private readStoredOrder(): string[] | null {
+    const stored: unknown = this.storage.get<unknown>('dashboard.widgets', null);
+    return Array.isArray(stored) && stored.every((id) => typeof id === 'string') ? stored : null;
+  }
   /** widget ids in the user's saved order; missing = hidden (T6-60: GET/POST dashboard/layout) */
-  widgetOrder = signal<string[]>(this.storage.get('dashboard.widgets', DEFAULT_WIDGETS.map((w) => w.id)));
+  widgetOrder = signal<string[]>(this.storedOrder ?? DEFAULT_WIDGETS.map((w) => w.id));
+  /**
+   * N-09: true once the widgets can be laid out without being rearranged
+   * afterwards — at once when this device already holds the user's order,
+   * otherwise once the server has answered (or failed). An order that arrived
+   * after the first frame used to move every widget on the page.
+   */
+  readonly layoutSettled = signal(this.storedOrder !== null);
 
   constructor() {
     // T6-60: the layout lives on the server per user; localStorage is the
@@ -566,14 +575,21 @@ export class DashboardPage {
       .then((res) => {
         const server = res.data?.widgets;
         if (Array.isArray(server) && server.length > 0) {
-          this.widgetOrder.set(server);
           this.storage.set('dashboard.widgets', server);
+          // a different order saved on another device is kept for the NEXT
+          // visit: applying it under the user would rearrange the page
+          if (this.storedOrder === null || sameWidgetOrder(this.storedOrder, server)) {
+            this.widgetOrder.set(server);
+          }
         } else {
           // seed the server with the local/default order
           void firstValueFrom(this.http.post('/dashboard/layout', { widgets: this.widgetOrder() })).catch(() => undefined);
         }
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        this.layoutSettled.set(true);
+      });
   }
 
   userName = computed(() => this.auth.me()?.name ?? '');
@@ -652,6 +668,9 @@ export class DashboardPage {
 
   /** POST /custody-transfers/{id}/approve — the same call custodies/mine makes */
   submitAccept(): void {
+    if (this.transferBusy() !== null) {
+      return;
+    }
     const t = this.transferTarget();
     if (t === null) {
       return;
@@ -661,16 +680,16 @@ export class DashboardPage {
       .then((res) => {
         this.transferBusy.set(null);
         this.toast.success(res.message);
-        this.mine.reload();
+        reloadList(this.mine);
       })
-      .catch((err: unknown) => {
-        this.transferBusy.set(null);
-        this.toast.apiError((err as { error?: { message?: string } })?.error?.message ?? 'errors.generic');
-      });
+      .catch((err: unknown) => { this.failRequest(err); });
   }
 
-  /** POST /custody-transfers/{id}/cancel — the sender's cancel (T6-80 flow) */
+  /** POST /custody-transfers/{id}/cancel — the sender's cancel (T6-80 flow), with its restore in the toast (N-06) */
   submitCancel(): void {
+    if (this.transferBusy() !== null) {
+      return;
+    }
     const t = this.transferTarget();
     if (t === null) {
       return;
@@ -679,40 +698,62 @@ export class DashboardPage {
     void firstValueFrom(this.api.action(`/custody-transfers/${t.id}/cancel`))
       .then((res) => {
         this.transferBusy.set(null);
-        this.toast.success(res.message);
-        this.mine.reload();
+        this.toast.success(res.message, { undo: () => { this.restoreTransfer(t.id); } });
+        reloadList(this.mine);
       })
       .catch((err: unknown) => {
         this.transferBusy.set(null);
-        this.toast.apiError((err as { error?: { message?: string } })?.error?.message ?? 'errors.generic');
+        this.failRequest(err);
       });
   }
 
-  /** the four insight KPI cards (T7-08), in display order — literal i18n keys */
-  readonly insightCards: readonly { key: 'expenses' | 'income' | 'custodies' | 'cases'; label: string }[] = [
-    { key: 'expenses', label: 'dashboard.insights.expenses' },
-    { key: 'income', label: 'dashboard.insights.income' },
-    { key: 'custodies', label: 'dashboard.insights.custodies' },
-    { key: 'cases', label: 'dashboard.insights.cases' },
-  ];
-
-  /** sparkline polyline points for a 100x24 viewBox */
-  sparkPoints(spark: { v: string }[] | undefined): string {
-    const values = (spark ?? []).map((p) => Number.parseFloat(p.v) || 0);
-    if (values.length < 2) {
-      return '';
-    }
-    const max = Math.max(...values);
-    const min = Math.min(...values);
-    const span = max - min || 1;
-    return values
-      .map((v, i) => `${(i / (values.length - 1)) * 100},${20 - ((v - min) / span) * 18}`)
-      .join(' ');
+  /** N-06: the inverse of a cancel — back to pending, the amount frozen again */
+  private restoreTransfer(id: number): void {
+    void firstValueFrom(this.api.action(`/custody-transfers/${id}/restore`))
+      .then((res) => {
+        this.toast.info(res.message);
+        reloadList(this.mine);
+      })
+      .catch((err: unknown) => {
+        this.failRequest(err);
+        reloadList(this.mine);
+      });
   }
+
+  /** the server's own message, or the generic one */
+  private failRequest(err: unknown): void {
+    const failure = apiFailure(err);
+    this.toast.apiError(failure.message, failure.code);
+  }
+
+  /** N-06: what a transfer confirm is about — the amount, then the parties */
+  readonly transferDetails = computed<readonly KeyValueItem[]>(() => {
+    const t = this.transferTarget();
+    if (t === null) {
+      return [];
+    }
+    return [
+      { label: 'common.amount_egp', value: this.moneyPipe.transform(t.amount, false) },
+      ...(t.sender === undefined ? [] : [{ label: 'glossary.sender', value: t.sender ?? '—' }]),
+      ...(t.receiver === undefined ? [] : [{ label: 'glossary.receiver', value: t.receiver ?? '—' }]),
+    ];
+  });
 
   /** the biggest funnel stage scales the bars */
   funnelMax(): number {
     return Math.max(1, ...(this.perf.value()?.case_funnel ?? []).map((s) => s.count));
+  }
+
+  /** D-05: the KPI tile's delta vs the previous period (null hides the chip) */
+  perfDelta(key: 'expenses' | 'income' | 'custodies' | 'cases'): number | null {
+    const kpi = this.perf.value()?.kpis[key];
+    return kpi ? kpi.delta : null;
+  }
+
+  /** D-05: the KPI tile's sparkline values (oldest first) */
+  perfSpark(key: 'expenses' | 'income' | 'custodies' | 'cases'): number[] {
+    const kpi = this.perf.value()?.kpis[key];
+    return (kpi?.spark ?? []).map((p) => Number.parseFloat(p.v) || 0);
   }
 
   agingMax(): number {
@@ -720,12 +761,11 @@ export class DashboardPage {
   }
 
   spendingSeries = computed<ChartSeries[]>(() =>
-    (this.perf.value()?.spending_by_direction ?? []).map((row) => ({ label: row.label, value: this.toNum(row.value) })),
+    (this.perf.value()?.spending_by_direction ?? []).map((row) => ({ label: row.label, value: this.toNum(row.value), id: row.id })),
   );
 
-  abs(n: number): number {
-    return Math.abs(n);
-  }
+  /** N-07: an agent's / a researcher's colour on the ranking bars — the same one everywhere else */
+  entityColor = entityColor;
 
   readonly allWidgets = signal<WidgetDef[]>(DEFAULT_WIDGETS);
 
@@ -767,9 +807,6 @@ export class DashboardPage {
     (this.data.value()?.direction_figures?.by_day ?? []).map((day) => ({ label: day.label, value: day.amount })),
   );
 
-  /** legend palette from the --chart-* tokens (RD-1.6) — HTML chips, not canvas dots */
-  readonly legendPalette = computed(() => chartPalette(this.themeSvc));
-
   topAgents = computed(() =>
     [...(this.data.value()?.agents_evaluation ?? [])].sort((a, b) => b.rating - a.rating).slice(0, 6),
   );
@@ -777,13 +814,6 @@ export class DashboardPage {
   topResearchers = computed(() =>
     [...(this.data.value()?.researchers_evaluation ?? [])].sort((a, b) => b.approval_rate - a.approval_rate).slice(0, 6),
   );
-
-  directionTop(): { label: string; value: number; color: string }[] {
-    const palette = this.legendPalette();
-    return this.byDaySeries()
-      .slice(0, 6)
-      .map((s, i) => ({ label: s.label, value: s.value, color: palette[i % palette.length] }));
-  }
 
   /** the compact quick-action chips per role (T6-60.2) */
   quickActions(view: string): { route: string; icon: string; accent: 'custodies' | 'expenses' | 'treasury' | 'cases' | 'hr' | 'tasks'; label: string }[] {
@@ -797,16 +827,16 @@ export class DashboardPage {
     }
     if (view === 'researcher') {
       return [
-        { route: '/cases/new', icon: 'heart-handshake', accent: 'cases', label: 'dashboard.researcher.new_case' },
-        { route: '/cases/mine', icon: 'user', accent: 'cases', label: 'nav.my_cases' },
+        { route: '/social-cases/new', icon: 'heart-handshake', accent: 'cases', label: 'dashboard.researcher.new_case' },
+        { route: '/social-cases/mine', icon: 'user', accent: 'cases', label: 'nav.my_cases' },
         { route: '/tasks', icon: 'list-check', accent: 'tasks', label: 'nav.tasks' },
       ];
     }
     return [
       { route: '/custodies/new', icon: 'wallet', accent: 'custodies', label: 'custody.list.create' },
       { route: '/expenses/new', icon: 'receipt', accent: 'expenses', label: 'expense.list.title' },
-      { route: '/treasury/transfer', icon: 'arrows-exchange', accent: 'treasury', label: 'treasury.transfer.title' },
-      { route: '/cases', icon: 'heart-handshake', accent: 'cases', label: 'nav.cases' },
+      { route: '/treasury/transfer', icon: 'arrows-exchange', accent: 'treasury', label: 'dashboard.quick.transfer' },
+      { route: '/social-cases', icon: 'heart-handshake', accent: 'cases', label: 'nav.cases' },
       { route: '/hr', icon: 'briefcase', accent: 'hr', label: 'nav.hr' },
       { route: '/reports', icon: 'report-analytics', accent: 'cases', label: 'nav.reports' },
     ];

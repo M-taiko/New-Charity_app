@@ -37,7 +37,7 @@ export class FilterCustomDirective {
   imports: [TranslatePipe, FormsModule, ButtonModule, SelectModule, MultiSelectModule, InputTextModule, DatePickerModule, ToggleSwitchModule, NgTemplateOutlet],
   template: `
     <div class="table-filters">
-      <p-button [outlined]="true" size="small" severity="secondary" (onClick)="panelOpen() ? panelOpen.set(false) : panelOpen.set(true)">
+      <p-button [outlined]="true" size="small" severity="secondary" (onClick)="toggle()">
         <span class="u-flex u-gap-1 u-center">
           <svg width="16" height="16" aria-hidden="true"><use href="assets/icons/sprite.svg#tabler-filter" /></svg>
           {{ 'common.filters' | translate }}
@@ -98,7 +98,7 @@ export class FilterCustomDirective {
                   @if (customTemplates()[def.key]; as tpl) {
                     <ng-container
                       [ngTemplateOutlet]="tpl"
-                      [ngTemplateOutletContext]="{ $implicit: draft()[def.key], key: def.key, set: makeSetter(def.key) }"
+                      [ngTemplateOutletContext]="customContext(def)"
                     />
                   } @else {
                     <span class="u-small u-muted">{{ 'common.filter_custom' | translate }}</span>
@@ -216,11 +216,22 @@ export class TableFiltersComponent {
   rows = input<unknown[]>([]);
 
   applied = output<Record<string, TableFilterValue | undefined>>();
+  /** N-02: the panel was opened — the table closes the saved-views panel, the two never lie on top of each other */
+  opened = output();
 
   panelOpen = signal(false);
   draft = signal<Record<string, TableFilterValue | undefined>>({});
   private translate = inject(TranslateService);
   private router = inject(Router);
+
+  toggle(): void {
+    if (this.panelOpen()) {
+      this.panelOpen.set(false);
+      return;
+    }
+    this.panelOpen.set(true);
+    this.opened.emit();
+  }
 
   readonly visibleDefs = computed(() =>
     this.defs()
@@ -254,6 +265,17 @@ export class TableFiltersComponent {
   /** setter handed to custom filter renderers via the template context */
   makeSetter(key: string): (value: unknown) => void {
     return (value: unknown) => { this.draft.update((d) => ({ ...d, [key]: value as TableFilterValue })); };
+  }
+
+  /**
+   * The context a custom filter template receives through `let-ctx` — the
+   * documented contract `{ $implicit: currentValue, key, set }`. `let-ctx`
+   * binds to the context's `$implicit`, so that has to BE this object: it
+   * used to be the bare value, and the template read `.$implicit` and `.set`
+   * off it — a TypeError on every open, and the filter could never be set.
+   */
+  customContext(def: TableFilterDef): { $implicit: { $implicit: TableFilterValue | undefined; key: string; set: (value: unknown) => void } } {
+    return { $implicit: { $implicit: this.draft()[def.key], key: def.key, set: this.makeSetter(def.key) } };
   }
 
   optionsFor(def: TableFilterDef): { value: unknown; label: string }[] {
@@ -341,8 +363,8 @@ export class TableFiltersComponent {
     return String(value);
   }
 
-  /** mirror active filters into ?filter[key]=… so links and refresh work (T6-30) */
-  private syncUrl(values: Record<string, TableFilterValue | undefined>): void {
+  /** mirror active filters into ?filter[key]=… so links and refresh work (T6-30); the table's saved views use it too (N-02) */
+  syncUrl(values: Record<string, TableFilterValue | undefined>): void {
     const params: Record<string, string> = {};
     for (const def of this.defs()) {
       const value = values[def.key];

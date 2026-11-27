@@ -5,7 +5,6 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SectionNavComponent } from '@shared/ui/section-nav/section-nav.component';
 import { AsyncPageComponent } from '@shared/ui/async-page/async-page.component';
@@ -26,49 +25,47 @@ interface HrData {
 @Component({
   selector: 'app-hr-dashboard',
   standalone: true,
-  imports: [SectionNavComponent, 
-    TranslatePipe, RouterLink, ButtonModule,
+  imports: [SectionNavComponent,
+    TranslatePipe, RouterLink,
     PageHeaderComponent, AsyncPageComponent, EmptyStateComponent, StatTileComponent,
   ],
   template: `
-    <app-page-header [title]="'hr.dashboard.title' | translate" accent="hr" iconName="briefcase">
-      <div actions class="u-flex u-gap-2">
-        <p-button [label]="'hr.dashboard.view_employees' | translate" size="small" [outlined]="true" routerLink="/hr/employees" />
-        <p-button [label]="'hr.dashboard.view_attendance' | translate" size="small" [outlined]="true" routerLink="/hr/attendance" />
-        <p-button [label]="'hr.dashboard.view_kpi' | translate" size="small" [outlined]="true" routerLink="/hr/kpi" />
-      </div>
-    </app-page-header>
+    <!-- R4-05: ONE navigation layer. The section nav below is the module's
+         navigation; the header used to repeat three of its destinations as
+         outlined buttons (عرض جميع الموظفين · إدارة الحضور · إدارة KPI). -->
+    <app-page-header [title]="'hr.dashboard.title' | translate" accent="hr" iconName="briefcase" />
 
     <app-section-nav module="hr" />
 
     <app-async-page [resource]="data" variant="list" [empty]="isEmpty" [backLink]="['/dashboard']">
       @if (data.value(); as d) {
+        <!-- R4-04: one KPI row — eight equal tiles (4 + 4 at 1280). They were
+             split over two grids of 3 and 5, i.e. three 315px tiles above five
+             narrower ones -->
         <div class="kpi-grid">
           <a class="tile-link" routerLink="/hr/salaries" [title]="'common.open_page' | translate">
             <app-stat-tile [label]="'hr.dashboard.total_salaries'" [value]="d.total_salaries" [money]="true" accent="hr" iconName="briefcase" />
           </a>
           <a class="tile-link" routerLink="/hr/employees" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'hr.dashboard.employees'" [value]="d.employees_count" />
+            <app-stat-tile [label]="'hr.dashboard.employees'" [value]="d.employees_count" accent="hr" iconName="users" />
           </a>
           <a class="tile-link" routerLink="/hr/employees" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'hr.dashboard.active_employees'" [value]="d.active_employees" />
-          </a>
-        </div>
-        <div class="kpi-grid">
-          <a class="tile-link" routerLink="/hr/salaries" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'hr.dashboard.pending_salaries'" [value]="d.pending_salaries" />
+            <app-stat-tile [label]="'hr.dashboard.active_employees'" [value]="d.active_employees" accent="hr" iconName="activeUser" />
           </a>
           <a class="tile-link" routerLink="/hr/salaries" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'hr.dashboard.approved_salaries'" [value]="d.approved_salaries" />
+            <app-stat-tile [label]="'hr.dashboard.pending_salaries'" [value]="d.pending_salaries" accent="hr" iconName="pending" />
           </a>
           <a class="tile-link" routerLink="/hr/salaries" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'hr.dashboard.recorded_salaries'" [value]="d.recorded_salaries" />
+            <app-stat-tile [label]="'hr.dashboard.approved_salaries'" [value]="d.approved_salaries" accent="hr" iconName="approved" />
+          </a>
+          <a class="tile-link" routerLink="/hr/salaries" [title]="'common.open_page' | translate">
+            <app-stat-tile [label]="'hr.dashboard.recorded_salaries'" [value]="d.recorded_salaries" accent="hr" iconName="file" />
           </a>
           <a class="tile-link" routerLink="/hr/attendance" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'hr.dashboard.today_attendance'" [value]="d.today_attendance" />
+            <app-stat-tile [label]="'hr.dashboard.today_attendance'" [value]="d.today_attendance" accent="hr" iconName="attendance" />
           </a>
           <a class="tile-link" routerLink="/hr/kpi" [title]="'common.open_page' | translate">
-            <app-stat-tile [label]="'hr.dashboard.kpi_achievement'" [value]="kpiAchievement() === null ? '—' : kpiAchievement() + '%'" />
+            <app-stat-tile [label]="'hr.dashboard.kpi_achievement'" [value]="kpiAchievement() === null ? '—' : kpiAchievement() + '%'" accent="hr" iconName="target" />
           </a>
         </div>
       }

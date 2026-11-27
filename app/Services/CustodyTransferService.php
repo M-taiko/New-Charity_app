@@ -453,6 +453,85 @@ class CustodyTransferService
         });
     }
 
+    /**
+     * Undo of cancelTransfer (N-06): the cancelled transfer goes back to
+     * `pending` and its amount is frozen again — under the same rules as a new
+     * request (the custody is still the sender's, still open, and still holds
+     * the amount). Only who cancelled, and only for minutes after (the undo
+     * toast is on screen for eight seconds); an old cancellation stays final.
+     *
+     * @param  int  $restorerId  the user who cancelled the transfer
+     * @throws \RuntimeException  restore.not_cancelled | restore.not_allowed | restore.expired
+     * @throws \Exception        the custody/status rules, with their own messages
+     */
+    public function restoreTransfer($transfer, $restorerId)
+    {
+        return DB::transaction(function () use ($transfer, $restorerId) {
+            // lock in the same order as cancelTransfer: the transfer, then its custody
+            $transfer = CustodyTransfer::where('id', $transfer->id)->lockForUpdate()->firstOrFail();
+
+            if ($transfer->status !== 'cancelled') {
+                throw new \RuntimeException('restore.not_cancelled');
+            }
+            if ((int) $transfer->cancelled_by !== (int) $restorerId) {
+                throw new \RuntimeException('restore.not_allowed');
+            }
+            if ($transfer->cancelled_at === null || $transfer->cancelled_at->lt(now()->subMinutes(10))) {
+                throw new \RuntimeException('restore.expired');
+            }
+
+            $custody = Custody::where('id', $transfer->custody_id)->lockForUpdate()->firstOrFail();
+
+            if ((int) $custody->agent_id !== (int) $transfer->from_agent_id) {
+                throw new \Exception('هذه العهدة لا تخص هذا المندوب');
+            }
+            if (!in_array($custody->status, ['accepted', 'active', 'partially_returned'])) {
+                throw new \Exception('العهدة يجب أن تكون في حالة مقبولة أو نشطة');
+            }
+            $amount = round((float) $transfer->amount, 2);
+            $available = round((float) $custody->getRemainingBalance(), 2);
+            if ($available < $amount) {
+                throw new TransferBalanceException(
+                    'الرصيد المتاح في العهدة لا يكفي لإعادة هذا التحويل. المتاح: '
+                    . number_format($available, 2) . ' ج.م، المطلوب: ' . number_format($amount, 2) . ' ج.م'
+                );
+            }
+
+            // تجميد المبلغ من جديد، كما في الطلب الجديد
+            $custody->increment('pending_transfer_out', $amount);
+
+            $transfer->update([
+                'status' => 'pending',
+                'cancelled_at' => null,
+                'cancelled_by' => null,
+            ]);
+
+            $restorer = \App\Models\User::find($restorerId);
+
+            // the receiver was told the transfer was cancelled — tell them it is back
+            if ((int) $transfer->to_agent_id !== (int) $restorerId) {
+                $this->notifyUser(
+                    $transfer->to_agent_id,
+                    'أعيد تحويل عهدة',
+                    "أعاد {$restorer?->name} تحويل {$transfer->amount} ج.م الوارد إليك - بانتظار قرارك",
+                    'info',
+                    $transfer->id,
+                    'custody_transfer'
+                );
+            }
+
+            \App\Services\ActivityLogService::log(
+                'updated',
+                "أعاد {$restorer?->name} تحويل عهدة #{$transfer->id} بقيمة {$transfer->amount} ج.م بعد إلغائه",
+                $transfer,
+                ['status' => 'pending', 'amount' => $amount, 'undo_of' => 'cancelled'],
+                $restorerId
+            );
+
+            return $transfer->fresh();
+        });
+    }
+
     private function notifyUser($userId, $title, $message, $type, $relatedId, $relatedType)
     {
         Notification::create([

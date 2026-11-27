@@ -10,10 +10,12 @@ import { StatTileComponent } from '@shared/ui/stat-tile/stat-tile.component';
 import { DataTableComponent, TableCellDirective } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { RowActionsComponent, type RowActionItem } from '@shared/ui/row-actions/row-actions.component';
-import { DatetimePipe } from '@shared/pipes/datetime.pipe';
 import { StatusStampComponent } from '@shared/ui/status-stamp/status-stamp.component';
 import type { ListResponse } from '@shared/models/api.models';
 import { EnumLabelPipe } from '@shared/pipes/enum-label.pipe';
+import { DatetimeCellComponent } from '@shared/ui/datetime-cell/datetime-cell.component';
+import type { TableQuery } from '@shared/lib/table-filters';
+import { paramsFiltered, reloadList } from '@shared/lib/list-state';
 
 interface Row {
   id: number;
@@ -30,10 +32,10 @@ interface Row {
 @Component({
   selector: 'app-list-page',
   standalone: true,
-  imports: [ EnumLabelPipe,
+  imports: [DatetimeCellComponent,  EnumLabelPipe,
     TranslatePipe, PageHeaderComponent, AsyncPageComponent, StatTileComponent,
     DataTableComponent, TableCellDirective, 
-    EmptyStateComponent, RowActionsComponent, DatetimePipe, StatusStampComponent,
+    EmptyStateComponent, RowActionsComponent, StatusStampComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -43,15 +45,18 @@ interface Row {
       </div>
     </app-page-header>
 
-    <app-async-page [resource]="pageResource" variant="list" [empty]="isEmpty">
+    <!-- N-08: "no data at all" is this page's empty slot; "no results for this
+         search" keeps the table, with its way back -->
+    <app-async-page [resource]="pageResource" variant="list" [empty]="isFirstRun">
       @if (data.value(); as page) {
         <div class="kpi-grid">
           <app-stat-tile [label]="'task.list.pending'" [value]="summaryValue('pending')" accent="tasks" iconName="list-check" />
-          <app-stat-tile [label]="'task.list.in_progress'" [value]="summaryValue('in_progress')" />
-          <app-stat-tile [label]="'task.list.completed'" [value]="summaryValue('completed')" />
+          <app-stat-tile [label]="'task.list.in_progress'" [value]="summaryValue('in_progress')" iconName="inProgress" accent="tasks" />
+          <app-stat-tile [label]="'task.list.completed'" [value]="summaryValue('completed')" iconName="approved" accent="tasks" />
         </div>
 
-        <app-data-table listUrl="/tasks"
+        <app-data-table [phoneFirst]="['title', 'status']"
+        [exportQuery]="tableExportQuery()" listUrl="/tasks"
           [tableKey]="tableKey"
           [columns]="columns"
           [rows]="page.data"
@@ -59,18 +64,28 @@ interface Row {
           [perPage]="params().per_page"
           [loading]="data.isLoading()"
           (pageChange)="onPage($event)"
+          (queryChange)="onQuery($event)"
         >
           <div toolbar class="u-flex u-gap-2 u-flex-wrap"></div>
           <ng-template appCell="title" let-row>{{ row.title ?? '—' }}</ng-template>
           <ng-template appCell="assigned_to" let-row>{{ row.assigned_to ?? '—' }}</ng-template>
           <ng-template appCell="status" let-row><app-status-stamp [status]="row.status ?? ''" namespace="task" /></ng-template>
           <ng-template appCell="priority" let-row><span class="stamp" [class]="priorityStamp(row.priority)">{{ row.priority | enumLabel: 'priority' }}</span></ng-template>
-          <ng-template appCell="due_date" let-row><span class="u-bidi">{{ row.due_date | datetime }}</span></ng-template>
+          <ng-template appCell="due_date" let-row><app-datetime-cell [value]="row.due_date" /></ng-template>
           <ng-template appCell="actions" let-row><app-row-actions [actions]="actionsFor(row)" /></ng-template>
         </app-data-table>
       }
       <div empty>
-        <app-empty-state [title]="'task.list.empty' | translate" [text]="'common.no_data' | translate" accent="tasks" iconName="list-check" />
+        <!-- N-08: no task at all yet — the first one is one click away. Any
+             signed-in user may create a task (TaskController) -->
+        <app-empty-state
+          [title]="'task.list.empty_first' | translate"
+          [hint]="'task.list.empty_first_hint' | translate"
+          accent="tasks"
+          iconName="list-check"
+          [actionLabel]="'task.list.create_first'"
+          [actionRoute]="firstTaskRoute"
+        />
       </div>
     </app-async-page>
   `,
@@ -97,6 +112,16 @@ export class TaskListPage {
     { field: 'actions', header: 'common.actions', sortable: false }
   ];
 
+
+  /** the export replays EXACTLY the params this list was fetched with
+   *  (minus paging) — the file always matches the table on screen */
+  tableExportQuery(): Record<string, string> {
+    const query = cleanParams(this.params());
+    delete query.page;
+    delete query.per_page;
+    return query;
+  }
+
   params = signal({ page: 1, per_page: 25, q: '', status: 'all' });
 
   data = resource<ListResponse<Row>, { page: number; per_page: number; q: string; status: string }>({
@@ -116,7 +141,7 @@ export class TaskListPage {
     },
     isLoading: () => this.data.isLoading(),
     reload: () => {
-      this.data.reload();
+      reloadList(this.data);
     },
   };
 
@@ -150,8 +175,34 @@ export class TaskListPage {
       return;
     }
     this.params.update((p) => ({ ...p, page: event.page, per_page: event.per_page, sort }));
-    this.data.reload();
+    reloadList(this.data);
   }
+
+  /** N-08: where the empty state's call to action goes */
+  readonly firstTaskRoute: readonly unknown[] = ['/tasks', 'new'];
+
+  /**
+   * N-08: the table's search box reaches the server. It used to be typed into
+   * nothing: the table emitted its query and nobody listened. Paging is
+   * `onPage`'s; only the text is handled here.
+   */
+  onQuery(query: TableQuery): void {
+    if (this.params().q === query.q) {
+      return;
+    }
+    this.params.update((p) => ({ ...p, q: query.q, page: 1 }));
+    reloadList(this.data);
+  }
+
+  /** N-08: do the parameters filter anything? Then an empty list is "no results", not "no data" */
+  isFiltered = (): boolean => paramsFiltered(this.params() as unknown as Record<string, unknown>, { status: 'all' });
+
+  /**
+   * N-08: the page's empty slot is for a list that never had a record —
+   * empty, unfiltered AND not reloading (while a reload runs after "clear the
+   * filters" the old empty result is still held; that instant is not "no data")
+   */
+  isFirstRun = (): boolean => this.isEmpty() && !this.isFiltered() && !this.data.isLoading();
 }
 
 function cleanParams(params: Record<string, string | number>): Record<string, string> {

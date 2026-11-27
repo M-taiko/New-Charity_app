@@ -38,18 +38,18 @@ interface ResearchersData {
         @if (data.value(); as d) {
           <div class="kpi-grid">
             <app-stat-tile [label]="'report.researchers.researchers_count'" [value]="d.summary.researchers_count" accent="reports" iconName="report-analytics" />
-            <app-stat-tile [label]="'report.researchers.total_cases'" [value]="d.summary.total_cases" />
-            <app-stat-tile [label]="'report.researchers.approved_cases'" [value]="d.summary.approved_cases" />
-            <app-stat-tile [label]="'report.researchers.total_spent'" [value]="d.summary.total_spent" [money]="true" />
+            <app-stat-tile [label]="'report.researchers.total_cases'" [value]="d.summary.total_cases" iconName="case" accent="reports" />
+            <app-stat-tile [label]="'report.researchers.approved_cases'" [value]="d.summary.approved_cases" iconName="approved" accent="reports" />
+            <app-stat-tile [label]="'report.researchers.total_spent'" [value]="d.summary.total_spent" [money]="true" iconName="expense" accent="reports" />
           </div>
 
-          <app-data-table listUrl="/analytics/researchers" mode="static" [autoFilters]="true" [columns]="cols" [rows]="d.researchers" [emptyLabel]="'report.researchers.empty'">
+          <app-data-table listUrl="/analytics/researchers" mode="static" [autoFilters]="true" [phoneFirst]="['researcher', 'total_cases']" [columns]="cols" [rows]="d.researchers" [emptyLabel]="'report.researchers.empty'">
             <ng-template appCell="researcher" let-row>{{ row.researcher.name }}</ng-template>
             <ng-template appCell="total_cases" let-row><span class="u-bidi">{{ row.total_cases }}</span></ng-template>
             <ng-template appCell="approved" let-row><span class="u-bidi">{{ row.approved }}</span></ng-template>
             <ng-template appCell="rejected" let-row><span class="u-bidi">{{ row.rejected }}</span></ng-template>
             <ng-template appCell="pending" let-row><span class="u-bidi">{{ row.pending }}</span></ng-template>
-            <ng-template appCell="total_spent" let-row><span class="u-bidi">{{ row.total_spent | money }}</span></ng-template>
+            <ng-template appCell="total_spent" let-row><span class="u-bidi">{{ row.total_spent | money: false }}</span></ng-template>
             <ng-template appCell="approval_rate" let-row><span class="u-bidi">{{ row.approval_rate }}%</span></ng-template>
           </app-data-table>
         }
